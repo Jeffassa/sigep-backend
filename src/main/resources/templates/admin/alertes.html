@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('SIGEP | Alertes')}"></head>
+<body class="bg-background text-on-surface min-h-screen pb-24 md:pb-0">
+
+<div th:replace="~{admin/fragments :: topbar('alertes')}"></div>
+
+<main class="max-w-container-max mx-auto px-margin-mobile md:px-gutter py-lg">
+
+    <div class="mb-lg">
+        <h1 class="font-headline-xl text-headline-xl text-primary mb-2">Alertes</h1>
+        <p class="font-body-md text-body-md text-on-surface-variant">Points nécessitant l'attention de l'administration.</p>
+    </div>
+
+    <!-- Résumé -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-gutter mb-lg">
+        <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 flex items-center gap-4">
+            <div class="p-3 bg-error-container rounded-lg">
+                <span class="material-symbols-outlined text-error">event_busy</span>
+            </div>
+            <div>
+                <p class="font-headline-lg text-headline-lg text-error" th:text="${seancesNonEmargees.size()}">0</p>
+                <p class="font-label-sm text-label-sm font-bold text-on-surface-variant uppercase tracking-wider">Émargements manquants</p>
+            </div>
+        </div>
+        <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 flex items-center gap-4">
+            <div class="p-3 bg-secondary-container/20 rounded-lg">
+                <span class="material-symbols-outlined text-secondary">history_toggle_off</span>
+            </div>
+            <div>
+                <p class="font-headline-lg text-headline-lg text-secondary" th:text="${rattrapagesEnAttente.size()}">0</p>
+                <p class="font-label-sm text-label-sm font-bold text-on-surface-variant uppercase tracking-wider">Rattrapages en attente</p>
+            </div>
+        </div>
+        <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 flex items-center gap-4">
+            <div class="p-3 bg-primary-container/10 rounded-lg">
+                <span class="material-symbols-outlined text-primary">person_alert</span>
+            </div>
+            <div>
+                <p class="font-headline-lg text-headline-lg text-primary" th:text="${enseignantsEnAttente.size()}">0</p>
+                <p class="font-label-sm text-label-sm font-bold text-on-surface-variant uppercase tracking-wider">Enseignants à valider</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 1. Séances non émargées -->
+    <section class="bg-surface-container-lowest rounded-xl border border-outline-variant overflow-hidden shadow-sm mb-lg">
+        <div class="px-md py-4 border-b border-outline-variant flex items-center gap-2">
+            <span class="material-symbols-outlined text-error">event_busy</span>
+            <h2 class="font-headline-md text-headline-md text-primary">Séances passées non émargées</h2>
+        </div>
+        <div class="overflow-x-auto custom-scrollbar">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                <tr class="bg-surface-container border-b border-outline-variant">
+                    <th class="px-md py-3 font-label-sm text-label-sm text-outline uppercase tracking-wider">Date</th>
+                    <th class="px-md py-3 font-label-sm text-label-sm text-outline uppercase tracking-wider">Horaire</th>
+                    <th class="px-md py-3 font-label-sm text-label-sm text-outline uppercase tracking-wider">Matière</th>
+                    <th class="px-md py-3 font-label-sm text-label-sm text-outline uppercase tracking-wider">Classe</th>
+                    <th class="px-md py-3 font-label-sm text-label-sm text-outline uppercase tracking-wider">Salle</th>
+                    <th class="px-md py-3 font-label-sm text-label-sm text-outline uppercase tracking-wider">Enseignant</th>
+                </tr>
+                </thead>
+                <tbody class="divide-y divide-outline-variant">
+                <tr th:if="${seancesNonEmargees.isEmpty()}">
+                    <td colspan="6" class="px-md py-10 text-center text-on-surface-variant">
+                        <span class="material-symbols-outlined text-[40px] block mb-2">check_circle</span>
+                        Aucun émargement manquant. Tout est à jour.
+                    </td>
+                </tr>
+                <tr th:each="s : ${seancesNonEmargees}" class="zebra-stripe hover:bg-surface-container-high transition-colors">
+                    <td class="px-md py-3 font-body-sm text-body-sm text-on-surface-variant"
+                        th:text="${#temporals.format(s.date, 'dd/MM/yyyy')}">--</td>
+                    <td class="px-md py-3 font-body-sm text-body-sm text-on-surface-variant">
+                        <span th:text="${#temporals.format(s.heureDebut, 'HH:mm')}">--</span> -
+                        <span th:text="${#temporals.format(s.heureFin, 'HH:mm')}">--</span>
+                    </td>
+                    <td class="px-md py-3 font-label-md text-label-md text-on-surface" th:text="${s.matiere.libelle}">Matière</td>
+                    <td class="px-md py-3 font-body-sm text-body-sm text-on-surface-variant" th:text="${s.classe.code}">Classe</td>
+                    <td class="px-md py-3 font-body-sm text-body-sm text-on-surface-variant" th:text="${s.salle.code}">Salle</td>
+                    <td class="px-md py-3 font-body-sm text-body-sm text-on-surface-variant"
+                        th:text="${s.enseignant.prenom + ' ' + s.enseignant.nom}">Enseignant</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- 2. Rattrapages en attente -->
+    <section class="bg-surface-container-lowest rounded-xl border border-outline-variant overflow-hidden shadow-sm mb-lg">
+        <div class="px-md py-4 border-b border-outline-variant flex items-center gap-2">
+            <span class="material-symbols-outlined text-secondary">history_toggle_off</span>
+            <h2 class="font-headline-md text-headline-md text-primary">Demandes de rattrapage en attente</h2>
+        </div>
+        <div class="overflow-x-auto custom-scrollbar">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                <tr class="bg-surface-container border-b border-outline-variant">
+                    <th class="px-md py-3 font-label-sm text-label-sm text-outline uppercase tracking-wider">Enseignant</th>
+                    <th class="px-md py-3 font-label-sm text-label-sm text-outline uppercase tracking-wider">Matière</th>
+                    <th class="px-md py-3 font-label-sm text-label-sm text-outline uppercase tracking-wider">Classe</th>
+                    <th class="px-md py-3 font-label-sm text-label-sm text-outline uppercase tracking-wider">Date souhaitée</th>
+                    <th class="px-md py-3 font-label-sm text-label-sm text-outline uppercase tracking-wider">Motif</th>
+                </tr>
+                </thead>
+                <tbody class="divide-y divide-outline-variant">
+                <tr th:if="${rattrapagesEnAttente.isEmpty()}">
+                    <td colspan="5" class="px-md py-10 text-center text-on-surface-variant">
+                        <span class="material-symbols-outlined text-[40px] block mb-2">check_circle</span>
+                        Aucune demande en attente.
+                    </td>
+                </tr>
+                <tr th:each="d : ${rattrapagesEnAttente}" class="zebra-stripe hover:bg-surface-container-high transition-colors">
+                    <td class="px-md py-3 font-label-md text-label-md text-on-surface"
+                        th:text="${d.enseignant.prenom + ' ' + d.enseignant.nom}">Enseignant</td>
+                    <td class="px-md py-3 font-body-sm text-body-sm text-on-surface-variant" th:text="${d.matiere.libelle}">Matière</td>
+                    <td class="px-md py-3 font-body-sm text-body-sm text-on-surface-variant" th:text="${d.classe.code}">Classe</td>
+                    <td class="px-md py-3 font-body-sm text-body-sm text-on-surface-variant">
+                        <span th:text="${#temporals.format(d.dateSouhaitee, 'dd/MM/yyyy')}">--</span>
+                        <span th:text="${#temporals.format(d.heureSouhaitee, 'HH:mm')}">--</span>
+                    </td>
+                    <td class="px-md py-3 font-body-sm text-body-sm text-on-surface-variant max-w-[260px] truncate" th:text="${d.motif}">Motif</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- 3. Enseignants en attente de validation -->
+    <section class="bg-surface-container-lowest rounded-xl border border-outline-variant overflow-hidden shadow-sm">
+        <div class="px-md py-4 border-b border-outline-variant flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary">person_alert</span>
+                <h2 class="font-headline-md text-headline-md text-primary">Enseignants en attente de validation</h2>
+            </div>
+            <a th:href="@{/admin/enseignants}"
+               class="font-label-sm text-label-sm font-bold text-primary hover:underline">Gérer les enseignants →</a>
+        </div>
+        <div class="overflow-x-auto custom-scrollbar">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                <tr class="bg-surface-container border-b border-outline-variant">
+                    <th class="px-md py-3 font-label-sm text-label-sm text-outline uppercase tracking-wider">Matricule</th>
+                    <th class="px-md py-3 font-label-sm text-label-sm text-outline uppercase tracking-wider">Nom</th>
+                    <th class="px-md py-3 font-label-sm text-label-sm text-outline uppercase tracking-wider">Département</th>
+                    <th class="px-md py-3 font-label-sm text-label-sm text-outline uppercase tracking-wider">Grade</th>
+                </tr>
+                </thead>
+                <tbody class="divide-y divide-outline-variant">
+                <tr th:if="${enseignantsEnAttente.isEmpty()}">
+                    <td colspan="4" class="px-md py-10 text-center text-on-surface-variant">
+                        <span class="material-symbols-outlined text-[40px] block mb-2">check_circle</span>
+                        Aucun enseignant en attente de validation.
+                    </td>
+                </tr>
+                <tr th:each="e : ${enseignantsEnAttente}" class="zebra-stripe hover:bg-surface-container-high transition-colors">
+                    <td class="px-md py-3 font-body-sm text-body-sm font-mono font-semibold text-primary" th:text="${e.matricule}">MAT</td>
+                    <td class="px-md py-3 font-label-md text-label-md text-on-surface" th:text="${e.prenom + ' ' + e.nom}">Nom</td>
+                    <td class="px-md py-3 font-body-sm text-body-sm text-on-surface-variant" th:text="${e.departement}">—</td>
+                    <td class="px-md py-3 font-body-sm text-body-sm text-on-surface-variant" th:text="${e.grade}">—</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+<div th:replace="~{admin/fragments :: bottomnav('alertes')}"></div>
+
+</body>
+</html>

@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('SIGEP | Tableau de Bord')}"></head>
+<body class="bg-background text-on-surface min-h-screen pb-24 md:pb-0">
+
+<div th:replace="~{admin/fragments :: topbar('dashboard')}"></div>
+
+<main class="max-w-container-max mx-auto px-margin-mobile md:px-gutter py-md">
+
+    <!-- Welcome Header -->
+    <section class="mb-md">
+        <h1 class="font-headline-xl text-headline-xl text-primary">Tableau de Bord Stratégique</h1>
+        <p class="font-body-md text-body-md text-on-surface-variant">Suivi de la performance académique et de l'excellence institutionnelle.</p>
+    </section>
+
+    <!-- KPI Bento Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter mb-md">
+        <!-- Total Enseignants -->
+        <div class="bg-surface-container-lowest border border-outline-variant p-md rounded-xl flex flex-col justify-between hover:shadow-lg transition-shadow">
+            <div class="flex justify-between items-start">
+                <div class="p-2 bg-primary-container/10 rounded-lg">
+                    <span class="material-symbols-outlined text-primary">groups</span>
+                </div>
+                <span class="font-label-sm text-label-sm text-on-surface-variant">Corps enseignant</span>
+            </div>
+            <div class="mt-4">
+                <p class="font-label-md text-label-md font-bold text-on-surface-variant uppercase tracking-wider">Total Enseignants</p>
+                <p id="kpiTotalEnseignants" class="font-headline-xl text-headline-xl text-primary" th:text="${totalEnseignants}">0</p>
+            </div>
+        </div>
+        <!-- Taux d'Émargement -->
+        <div class="bg-surface-container-lowest border border-outline-variant p-md rounded-xl flex flex-col justify-between hover:shadow-lg transition-shadow">
+            <div class="flex justify-between items-start">
+                <div class="p-2 bg-secondary-container/20 rounded-lg">
+                    <span class="material-symbols-outlined text-secondary">check_circle</span>
+                </div>
+                <span class="font-label-sm text-label-sm text-secondary font-bold">Cette semaine</span>
+            </div>
+            <div class="mt-4">
+                <p class="font-label-md text-label-md font-bold text-on-surface-variant uppercase tracking-wider">Taux d'Émargement</p>
+                <p class="font-headline-xl text-headline-xl text-secondary"><span id="kpiTaux" th:text="${tauxEmargement}">0</span>%</p>
+            </div>
+        </div>
+        <!-- Rattrapages en attente -->
+        <div class="bg-surface-container-lowest border border-outline-variant p-md rounded-xl flex flex-col justify-between hover:shadow-lg transition-shadow">
+            <div class="flex justify-between items-start">
+                <div class="p-2 bg-error-container rounded-lg">
+                    <span class="material-symbols-outlined text-error">history_toggle_off</span>
+                </div>
+                <span class="font-label-sm text-label-sm text-error font-bold">Action Requise</span>
+            </div>
+            <div class="mt-4">
+                <p class="font-label-md text-label-md font-bold text-on-surface-variant uppercase tracking-wider">Rattrapages en attente</p>
+                <p id="kpiRattrapages" class="font-headline-xl text-headline-xl text-error" th:text="${rattrapagesEnAttente}">0</p>
+            </div>
+        </div>
+        <!-- Heures Effectuées -->
+        <div class="bg-surface-container-lowest border border-outline-variant p-md rounded-xl flex flex-col justify-between hover:shadow-lg transition-shadow">
+            <div class="flex justify-between items-start">
+                <div class="p-2 bg-tertiary-fixed rounded-lg">
+                    <span class="material-symbols-outlined text-tertiary">schedule</span>
+                </div>
+                <span class="font-label-sm text-label-sm text-on-surface-variant">Semaine en cours</span>
+            </div>
+            <div class="mt-4">
+                <p class="font-label-md text-label-md font-bold text-on-surface-variant uppercase tracking-wider">Heures Effectuées</p>
+                <p class="font-headline-xl text-headline-xl text-primary"><span id="kpiHeures" th:text="${heuresEffectuees}">0</span> h</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trends & Activities -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-gutter">
+
+        <!-- Chart -->
+        <div class="lg:col-span-2 bg-surface-container-lowest border border-outline-variant rounded-xl p-md overflow-hidden flex flex-col">
+            <div class="flex justify-between items-center mb-md">
+                <h2 class="font-headline-md text-headline-md text-primary">Tendances d'Émargement Hebdomadaire</h2>
+                <span class="px-3 py-1 font-label-sm text-label-sm border border-outline-variant rounded-full bg-surface">Semaine</span>
+            </div>
+            <div id="chartBars" class="flex-grow flex items-end gap-3 h-64 mt-4">
+                <th:block th:each="taux, stat : ${tauxParJour}">
+                    <div class="flex-grow flex flex-col items-center group">
+                        <div class="w-full bg-primary-fixed rounded-t-lg transition-all duration-500 group-hover:bg-primary-container relative"
+                             th:style="'height: ' + ${taux > 5 ? taux : 5} + '%;'">
+                            <span class="absolute -top-8 left-1/2 -translate-x-1/2 font-label-sm text-label-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap"
+                                  th:text="${#numbers.formatDecimal(taux, 1, 0) + '%'}">0%</span>
+                        </div>
+                        <span class="mt-2 font-label-sm text-label-sm text-on-surface-variant"
+                              th:text="${ {'Lun','Mar','Mer','Jeu','Ven','Sam'}[stat.index] }">Lun</span>
+                    </div>
+                </th:block>
+            </div>
+            <div class="mt-md pt-md border-t border-outline-variant flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span class="w-3 h-3 rounded-full bg-primary-container inline-block"></span>
+                    <span class="font-label-sm text-label-sm text-on-surface-variant">Présence confirmée</span>
+                </div>
+                <p class="font-label-sm text-label-sm text-on-surface-variant italic">Mise à jour en temps réel.</p>
+            </div>
+        </div>
+
+        <!-- Recent Activities -->
+        <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-md flex flex-col">
+            <div class="flex justify-between items-center mb-md">
+                <h2 class="font-headline-md text-headline-md text-primary">Activités Récentes</h2>
+                <a th:href="@{/admin/alertes}" class="text-primary font-label-sm text-label-sm font-bold hover:underline">Voir tout</a>
+            </div>
+            <div class="space-y-2 custom-scrollbar overflow-y-auto max-h-[360px] pr-2">
+                <p th:if="${activitesRecentes.isEmpty()}" class="text-on-surface-variant font-body-sm text-body-sm py-8 text-center">
+                    Aucune activité récente.
+                </p>
+                <div th:each="a : ${activitesRecentes}"
+                     class="flex gap-3 p-3 hover:bg-surface-container transition-colors rounded-lg">
+                    <div class="shrink-0 w-10 h-10 rounded-full bg-primary-fixed flex items-center justify-center font-bold text-primary text-label-sm"
+                         th:text="${#strings.substring(a.enseignant.nom, 0, 1) + #strings.substring(a.enseignant.prenom, 0, 1)}">AB</div>
+                    <div class="flex-grow min-w-0">
+                        <div class="flex justify-between items-start gap-2">
+                            <p class="font-label-md text-label-md font-bold text-on-surface truncate"
+                               th:text="${a.enseignant.prenom + ' ' + a.enseignant.nom}">Nom</p>
+                            <span class="text-[10px] text-on-surface-variant uppercase font-bold whitespace-nowrap"
+                                  th:text="${#temporals.format(a.dateCreation, 'dd/MM HH:mm')}">--</span>
+                        </div>
+                        <p class="font-label-sm text-label-sm text-on-surface-variant truncate"
+                           th:text="${'Rattrapage : ' + a.matiere.libelle}">Rattrapage</p>
+                        <div class="mt-1 flex items-center gap-1 text-[10px] font-bold"
+                             th:classappend="${a.statut.name() == 'ACCEPTE'} ? 'text-primary' : (${a.statut.name() == 'REFUSE'} ? 'text-error' : 'text-secondary')">
+                            <span class="material-symbols-outlined text-[12px]"
+                                  th:text="${a.statut.name() == 'ACCEPTE'} ? 'verified' : (${a.statut.name() == 'REFUSE'} ? 'cancel' : 'schedule')">schedule</span>
+                            <span th:text="${a.statut.name() == 'ACCEPTE'} ? 'Accepté' : (${a.statut.name() == 'REFUSE'} ? 'Refusé' : 'En attente')">En attente</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Insights & Tools -->
+    <div class="mt-md grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-gutter pb-xl">
+        <!-- Aperçu Stratégique -->
+        <div class="bg-primary border border-outline p-md rounded-xl text-on-primary flex flex-col justify-between overflow-hidden relative">
+            <div class="relative z-10">
+                <h3 class="font-headline-md text-headline-md mb-2">Aperçu Stratégique</h3>
+                <p class="font-body-sm text-body-sm opacity-90 mb-4">
+                    Taux d'émargement : <strong id="apercuTaux" th:text="${tauxEmargement + '%'}">0%</strong> cette semaine.
+                    <span id="apercuRattrapagesWrap" th:style="${rattrapagesEnAttente > 0} ? '' : 'display:none'">
+                        <span id="apercuRattrapages" th:text="${rattrapagesEnAttente}">0</span> rattrapage(s) en attente de validation.
+                    </span>
+                </p>
+            </div>
+            <a th:href="@{/admin/alertes}" class="relative z-10 w-fit bg-on-primary text-primary px-4 py-2 rounded font-bold font-label-md text-label-md transition-transform active:scale-95">
+                Voir les alertes
+            </a>
+            <div class="absolute -right-4 -bottom-4 opacity-10">
+                <span class="material-symbols-outlined text-[120px]">analytics</span>
+            </div>
+        </div>
+
+        <!-- Outils d'Administration -->
+        <div class="lg:col-span-2 bg-surface-container-lowest border border-outline-variant rounded-xl p-md">
+            <h3 class="font-headline-md text-headline-md text-primary mb-md">Outils d'Administration</h3>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <a th:href="@{/admin/enseignants}"
+                   class="flex flex-col items-center justify-center p-4 bg-surface-container-high rounded-xl hover:bg-primary hover:text-on-primary transition-all group cursor-pointer">
+                    <span class="material-symbols-outlined mb-2 text-primary group-hover:text-on-primary">person_add</span>
+                    <span class="font-label-sm text-label-sm font-bold text-center">Enseignants</span>
+                </a>
+                <a th:href="@{/admin/alertes}"
+                   class="relative flex flex-col items-center justify-center p-4 bg-surface-container-high rounded-xl hover:bg-primary hover:text-on-primary transition-all group cursor-pointer">
+                    <span class="material-symbols-outlined mb-2 text-primary group-hover:text-on-primary">assignment_late</span>
+                    <span class="font-label-sm text-label-sm font-bold text-center">Alertes</span>
+                    <span id="alertesBadge" th:if="${alertesCount > 0}" th:text="${alertesCount}"
+                          class="absolute top-2 right-2 min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-error text-on-error text-[10px] font-bold rounded-full">0</span>
+                </a>
+                <a th:href="@{/admin/facultes}"
+                   class="flex flex-col items-center justify-center p-4 bg-surface-container-high rounded-xl hover:bg-primary hover:text-on-primary transition-all group cursor-pointer">
+                    <span class="material-symbols-outlined mb-2 text-primary group-hover:text-on-primary">groups_3</span>
+                    <span class="font-label-sm text-label-sm font-bold text-center">Facultés</span>
+                </a>
+                <a th:href="@{/admin/rapports}"
+                   class="flex flex-col items-center justify-center p-4 bg-surface-container-high rounded-xl hover:bg-primary hover:text-on-primary transition-all group cursor-pointer">
+                    <span class="material-symbols-outlined mb-2 text-primary group-hover:text-on-primary">cloud_download</span>
+                    <span class="font-label-sm text-label-sm font-bold text-center">Rapports PDF</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</main>
+
+<div th:replace="~{admin/fragments :: bottomnav('dashboard')}"></div>
+
+<script th:inline="none">
+    (function () {
+        const JOURS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+        const STATS_URL = '/admin/api/stats';
+
+        function setText(id, value) {
+            const el = document.getElementById(id);
+            if (el && el.textContent !== String(value)) el.textContent = value;
+        }
+
+        function renderChart(tauxParJour) {
+            const container = document.getElementById('chartBars');
+            if (!container || !Array.isArray(tauxParJour)) return;
+            container.innerHTML = tauxParJour.map(function (taux, i) {
+                const t = Number(taux) || 0;
+                const h = t > 5 ? t : 5;
+                const label = (Math.round(t * 10) / 10) + '%';
+                return '<div class="flex-grow flex flex-col items-center group">' +
+                    '<div class="w-full bg-primary-fixed rounded-t-lg transition-all duration-500 group-hover:bg-primary-container relative" ' +
+                    'style="height: ' + h + '%;">' +
+                    '<span class="absolute -top-8 left-1/2 -translate-x-1/2 font-label-sm text-label-sm font-bold opacity-0 ' +
+                    'group-hover:opacity-100 transition-opacity whitespace-nowrap">' + label + '</span>' +
+                    '</div>' +
+                    '<span class="mt-2 font-label-sm text-label-sm text-on-surface-variant">' + (JOURS[i] || '') + '</span>' +
+                    '</div>';
+            }).join('');
+        }
+
+        function updateBadge(count) {
+            count = Number(count) || 0;
+            ['alertesBadge', 'topbarAlertBadge'].forEach(function (id) {
+                const b = document.getElementById(id);
+                if (b) { b.textContent = count; b.style.display = count > 0 ? '' : 'none'; }
+            });
+        }
+
+        function applyStats(s) {
+            setText('kpiTotalEnseignants', s.totalEnseignants);
+            setText('kpiTaux', s.tauxEmargement);
+            setText('kpiRattrapages', s.rattrapagesEnAttente);
+            setText('kpiHeures', s.heuresEffectuees);
+            setText('apercuTaux', s.tauxEmargement + '%');
+            setText('apercuRattrapages', s.rattrapagesEnAttente);
+            const wrap = document.getElementById('apercuRattrapagesWrap');
+            if (wrap) wrap.style.display = (Number(s.rattrapagesEnAttente) || 0) > 0 ? '' : 'none';
+            renderChart(s.tauxParJour);
+            updateBadge(s.alertesCount);
+        }
+
+        async function refresh() {
+            try {
+                const res = await fetch(STATS_URL, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } });
+                if (!res.ok) return;
+                applyStats(await res.json());
+            } catch (e) { /* silencieux */ }
+        }
+
+        setInterval(refresh, 1000);
+        refresh();
+    })();
+</script>
+
+</body>
+</html>
