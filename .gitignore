@@ -1,6 +1,11 @@
 HELP.md
 target/
 
+### Secrets — ne jamais committer ###
+.env
+*.env
+!.env.example
+
 ### Rapports PDF générés à l'exécution ###
 rapports/
 .mvn/wrapper/maven-wrapper.jar

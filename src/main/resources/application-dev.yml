@@ -1,0 +1,22 @@
+# =====================================================================
+# Profil DEV — valeurs locales uniquement (NE PAS utiliser en production)
+# Activation : --spring.profiles.active=dev
+#   (ex. ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev)
+# En production, NE PAS activer ce profil : définir les variables
+# d'environnement (voir .env.example).
+# =====================================================================
+spring:
+  datasource:
+    password: ${DB_PASSWORD:sigep_secret_password}
+  jpa:
+    hibernate:
+      ddl-auto: ${JPA_DDL_AUTO:update}
+    show-sql: ${JPA_SHOW_SQL:true}
+
+app:
+  jwt:
+    # Clés de DEV uniquement — régénérées/différentes en production
+    secret: ${JWT_SECRET:ZGV2LXNpZ2VwLWp3dC1zZWNyZXQta2V5LW5vdC1mb3ItcHJvZHVjdGlvbi0yMDI2}
+    qr-secret: ${JWT_QR_SECRET:ZGV2LXFyLXNpZ2VwLXNlY3JldC1rZXktbm90LWZvci1wcm9kdWN0aW9uLTIwMjY=}
+  admin:
+    password: ${ADMIN_PASSWORD:Admin@2026}

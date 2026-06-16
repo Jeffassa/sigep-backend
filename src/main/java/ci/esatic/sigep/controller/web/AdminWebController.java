@@ -217,6 +217,12 @@ public class AdminWebController {
                                    @RequestParam String email,
                                    @RequestParam String password,
                                    RedirectAttributes ra) {
+        if (password == null || password.length() < 8
+                || !password.matches("^(?=.*[A-Za-z])(?=.*\\d).+$")) {
+            ra.addFlashAttribute("error",
+                    "Le mot de passe doit faire au moins 8 caractères et contenir une lettre et un chiffre.");
+            return "redirect:/admin/enseignants/nouveau";
+        }
         if (enseignantRepository.existsByMatricule(matricule)) {
             ra.addFlashAttribute("error", "Ce matricule existe deja : " + matricule);
             return "redirect:/admin/enseignants/nouveau";
