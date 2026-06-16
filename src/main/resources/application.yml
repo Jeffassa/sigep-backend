@@ -4,8 +4,8 @@ spring:
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/sigep_db}
     username: ${DB_USERNAME:postgres}
-    # SECURITE : définir DB_PASSWORD en variable d'environnement en production
-    password: ${DB_PASSWORD:sigep_secret_password}
+    # SECURITE : DB_PASSWORD est OBLIGATOIRE (aucune valeur par défaut). Voir .env.example
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
   jackson:
     serialization:
@@ -14,8 +14,8 @@ spring:
       fail-on-unknown-properties: false
   jpa:
     hibernate:
-      # SECURITE : changer en 'validate' ou 'none' en production
-      ddl-auto: update
+      # SECURITE : 'validate' par défaut (prod) ; mettre 'update' en dev via JPA_DDL_AUTO
+      ddl-auto: ${JPA_DDL_AUTO:validate}
     show-sql: ${JPA_SHOW_SQL:false}
     properties:
       hibernate:
@@ -30,12 +30,20 @@ server:
 
 app:
   jwt:
-    # SECURITE : définir JWT_SECRET en variable d'environnement en production (min 256 bits)
-    secret: ${JWT_SECRET:c2lnZXAtYmFja2VuZC1qd3Qtc2VjcmV0LWtleS1mb3ItZXNhdGljLTIwMjYtcHJvZA==}
+    # SECURITE : JWT_SECRET OBLIGATOIRE en variable d'environnement (min 256 bits, base64). Voir .env.example
+    secret: ${JWT_SECRET}
     expiration: ${JWT_EXPIRATION:86400000}
-    # SECURITE : clé distincte pour les tokens QR (ne jamais utiliser la même que jwt.secret)
-    qr-secret: ${JWT_QR_SECRET:cXItc2lnZXAtc2VjcmV0LWtleS1mb3ItcXItdG9rZW5zLWVzYXRpYy0yMDI2}
+    # SECURITE : clé distincte pour les tokens QR (ne jamais utiliser la même que jwt.secret) — OBLIGATOIRE
+    qr-secret: ${JWT_QR_SECRET}
   rapports:
     dossier: ${RAPPORTS_DOSSIER:rapports}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:8080,http://localhost:3000}
+  admin:
+    # Compte admin initial. Si ADMIN_PASSWORD est vide, un mot de passe aléatoire
+    # est généré au démarrage et affiché UNE fois dans les logs (à changer ensuite).
+    email: ${ADMIN_EMAIL:admin@esatic.ci}
+    password: ${ADMIN_PASSWORD:}
+  security:
+    # Ne faire confiance au header X-Forwarded-For QUE derrière un reverse proxy de confiance.
+    trust-forwarded-for: ${TRUST_FORWARDED_FOR:false}
