@@ -15,7 +15,7 @@ spring:
   jpa:
     hibernate:
       # SECURITE : changer en 'validate' ou 'none' en production
-    ddl-auto: update
+      ddl-auto: update
     show-sql: ${JPA_SHOW_SQL:false}
     properties:
       hibernate:
