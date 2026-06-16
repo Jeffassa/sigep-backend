@@ -80,10 +80,12 @@
                         Mot de passe <span class="text-error">*</span>
                     </label>
                     <div class="relative">
-                        <input type="password" name="password" id="passwordField" required minlength="6"
+                        <input type="password" name="password" id="passwordField" required minlength="8"
+                               pattern="^(?=.*[A-Za-z])(?=.*\d).+$"
+                               title="Au moins 8 caractères, avec une lettre et un chiffre"
                                class="w-full h-11 px-4 pr-10 border border-outline-variant rounded-lg bg-surface-container-low text-on-surface
                                       focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
-                               placeholder="Min. 6 caractères"/>
+                               placeholder="Min. 8 caractères, 1 lettre + 1 chiffre"/>
                         <button type="button" onclick="togglePassword()"
                                 class="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary transition-colors">
                             <span class="material-symbols-outlined text-[20px]" id="eyeIcon">visibility</span>

@@ -5,6 +5,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -28,6 +29,13 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
     private static final String LOGIN_PATH = "/api/auth/login";
 
     private final ConcurrentHashMap<String, Deque<Long>> attempts = new ConcurrentHashMap<>();
+
+    /**
+     * Ne faire confiance à X-Forwarded-For QUE derrière un reverse proxy de confiance.
+     * Sinon un client peut falsifier ce header et contourner le rate-limiting.
+     */
+    @Value("${app.security.trust-forwarded-for:false}")
+    private boolean trustForwardedFor;
 
     @Override
     protected void doFilterInternal(
@@ -69,11 +77,17 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
         return attempts.get(ip).size() > MAX_ATTEMPTS;
     }
 
-    /** Respecte le header X-Forwarded-For positionné par un reverse proxy. */
+    /**
+     * Résout l'IP cliente. N'utilise X-Forwarded-For que si l'application est
+     * explicitement déclarée derrière un proxy de confiance (trustForwardedFor=true),
+     * car ce header est falsifiable par le client en accès direct.
+     */
     private String resolveClientIp(HttpServletRequest request) {
-        String xff = request.getHeader("X-Forwarded-For");
-        if (xff != null && !xff.isBlank()) {
-            return xff.split(",")[0].trim();
+        if (trustForwardedFor) {
+            String xff = request.getHeader("X-Forwarded-For");
+            if (xff != null && !xff.isBlank()) {
+                return xff.split(",")[0].trim();
+            }
         }
         return request.getRemoteAddr();
     }
