@@ -2,10 +2,8 @@ package ci.esatic.sigep.controller.web;
 
 import ci.esatic.sigep.entity.*;
 import ci.esatic.sigep.repository.*;
-import ci.esatic.sigep.service.ImportService;
 import ci.esatic.sigep.service.RapportService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.multipart.MultipartFile;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpHeaders;
@@ -37,7 +35,6 @@ public class AdminWebController {
     private final PasswordEncoder passwordEncoder;
     private final RapportService rapportService;
     private final FaculteRepository faculteRepository;
-    private final ImportService importService;
 
     // ─── COMMUN ───────────────────────────────────────────────────────────────
 
@@ -301,32 +298,6 @@ public class AdminWebController {
             ra.addFlashAttribute("success", result.size() + " rapport(s) genere(s) avec succes.");
         } catch (Exception e) {
             ra.addFlashAttribute("error", "Erreur lors de la generation : " + e.getMessage());
-        }
-        return "redirect:/admin/rapports";
-    }
-
-    @PostMapping("/admin/import/planning")
-    public String importPlanningWeb(@RequestParam("file") MultipartFile file, RedirectAttributes ra) {
-        if (file == null || file.isEmpty()) {
-            ra.addFlashAttribute("error", "Veuillez sélectionner un fichier.");
-            return "redirect:/admin/rapports";
-        }
-        String filename = file.getOriginalFilename();
-        String lower = filename == null ? "" : filename.toLowerCase();
-        if (!lower.endsWith(".csv") && !lower.endsWith(".xlsx")) {
-            ra.addFlashAttribute("error", "Format non supporté. Utilisez .csv ou .xlsx.");
-            return "redirect:/admin/rapports";
-        }
-        if (file.getSize() > 5 * 1024 * 1024L) {
-            ra.addFlashAttribute("error", "Fichier trop volumineux (max 5 Mo).");
-            return "redirect:/admin/rapports";
-        }
-        try {
-            var result = importService.importerPlanning(file);
-            ra.addFlashAttribute("success",
-                    result.getOrDefault("totalImporte", 0) + " séance(s) importée(s) depuis " + filename + ".");
-        } catch (Exception e) {
-            ra.addFlashAttribute("error", "Le fichier contient des données invalides ou non reconnues.");
         }
         return "redirect:/admin/rapports";
     }

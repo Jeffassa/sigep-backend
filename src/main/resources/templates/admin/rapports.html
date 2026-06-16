@@ -21,45 +21,27 @@
         <span class="material-symbols-rounded text-[18px]">error</span><span th:text="${error}">Erreur</span>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 mb-6">
-        <!-- Import -->
-        <section class="lg:col-span-7 glass rounded-3xl p-7" data-reveal>
-            <h2 class="font-serif text-[24px] mb-1">Import de planning</h2>
-            <p class="text-[13px] text-muted mb-5">.csv ou .xlsx · max 5 Mo</p>
-            <form th:action="@{/admin/import/planning}" method="post" enctype="multipart/form-data" id="importForm">
-                <div id="drop-zone"
-                     class="flex flex-col items-center justify-center text-center border-2 border-dashed border-line rounded-2xl px-6 py-12 cursor-pointer transition hover:bg-black/5">
-                    <span class="material-symbols-rounded text-[44px] mb-3">cloud_upload</span>
-                    <p class="font-serif text-[20px] mb-1">Glissez-déposez votre fichier</p>
-                    <p class="text-[12px] text-muted mb-5 font-mono">DATE ; HEURE_DEBUT ; HEURE_FIN ; MATRICULE ; CODE_MATIERE ; CODE_CLASSE ; CODE_SALLE</p>
-                    <button type="button" id="browseBtn" class="btn btn-ink h-10 px-5 rounded-xl text-[13px] font-medium">Parcourir</button>
-                    <input accept=".csv,.xlsx" class="hidden" id="file-input" name="file" type="file"/>
-                    <p id="selectedFile" class="mt-4 font-mono text-[12px]"></p>
-                </div>
-            </form>
-        </section>
-
-        <!-- Génération -->
-        <section class="lg:col-span-5 glass rounded-3xl p-7" data-reveal>
-            <h2 class="font-serif text-[24px] mb-1">Générer les rapports</h2>
-            <p class="text-[13px] text-muted mb-5">Un PDF par enseignant sur la période.</p>
-            <form th:action="@{/admin/rapports/generer}" method="post" id="formGenerer" class="space-y-4">
-                <div>
-                    <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Date de début</label>
-                    <input type="date" name="debut" id="dateDebut" required
-                           class="w-full h-11 px-4 rounded-xl bg-white/55 border border-line focus:ring-0 focus:border-ink transition"/>
-                </div>
-                <div>
-                    <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Date de fin</label>
-                    <input type="date" name="fin" id="dateFin" required
-                           class="w-full h-11 px-4 rounded-xl bg-white/55 border border-line focus:ring-0 focus:border-ink transition"/>
-                </div>
-                <button type="submit" class="btn btn-ink w-full h-12 rounded-xl font-medium flex items-center justify-center gap-2">
-                    <span class="material-symbols-rounded text-[20px]">picture_as_pdf</span> Générer pour tous
-                </button>
-            </form>
-        </section>
-    </div>
+    <!-- Génération -->
+    <section class="glass rounded-3xl p-7 mb-6" data-reveal>
+        <h2 class="font-serif text-[24px] mb-1">Générer les rapports</h2>
+        <p class="text-[13px] text-muted mb-5">Un PDF individuel (matricule + nom) par enseignant, sur la période choisie.</p>
+        <form th:action="@{/admin/rapports/generer}" method="post" id="formGenerer"
+              class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+            <div>
+                <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Date de début</label>
+                <input type="date" name="debut" id="dateDebut" required
+                       class="w-full h-11 px-4 rounded-xl bg-white/55 border border-line focus:ring-0 focus:border-ink transition"/>
+            </div>
+            <div>
+                <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Date de fin</label>
+                <input type="date" name="fin" id="dateFin" required
+                       class="w-full h-11 px-4 rounded-xl bg-white/55 border border-line focus:ring-0 focus:border-ink transition"/>
+            </div>
+            <button type="submit" class="btn btn-ink h-11 rounded-xl font-medium flex items-center justify-center gap-2">
+                <span class="material-symbols-rounded text-[20px]">picture_as_pdf</span> Générer
+            </button>
+        </form>
+    </section>
 
     <!-- Table rapports -->
     <section class="glass rounded-3xl overflow-hidden" data-reveal>
@@ -115,19 +97,6 @@
 
 <script>
     (function () {
-        const dz = document.getElementById('drop-zone'), fi = document.getElementById('file-input'),
-              bb = document.getElementById('browseBtn'), sf = document.getElementById('selectedFile'),
-              form = document.getElementById('importForm');
-        if (dz && fi) {
-            const submit = () => { if (fi.files && fi.files.length) { sf.textContent = 'Import : ' + fi.files[0].name; form.submit(); } };
-            bb.addEventListener('click', e => { e.stopPropagation(); fi.click(); });
-            dz.addEventListener('click', () => fi.click());
-            fi.addEventListener('change', submit);
-            ['dragenter','dragover','dragleave','drop'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); }));
-            ['dragenter','dragover'].forEach(ev => dz.addEventListener(ev, () => dz.classList.add('bg-black/5')));
-            ['dragleave','drop'].forEach(ev => dz.addEventListener(ev, () => dz.classList.remove('bg-black/5')));
-            dz.addEventListener('drop', e => { if (e.dataTransfer.files.length) { fi.files = e.dataTransfer.files; submit(); } });
-        }
         const d = document.getElementById('dateDebut'), f = document.getElementById('dateFin'), fg = document.getElementById('formGenerer');
         if (d && f && fg) {
             const sync = () => { f.min = d.value||''; d.max = f.value||'';
