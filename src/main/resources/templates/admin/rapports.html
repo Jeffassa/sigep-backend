@@ -1,153 +1,105 @@
 <!DOCTYPE html>
 <html lang="fr" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{admin/fragments :: head('SIGEP | Import & Rapports')}"></head>
-<body class="bg-background text-on-surface min-h-screen pb-24 md:pb-0">
+<head th:replace="~{admin/fragments :: head('SIGEP | Rapports & Import')}"></head>
+<body>
 
 <div th:replace="~{admin/fragments :: topbar('rapports')}"></div>
 
-<main class="max-w-container-max mx-auto px-margin-mobile md:px-gutter py-md mb-xl">
+<main class="max-w-[1240px] mx-auto px-5 md:px-8 py-10 pb-36">
 
-    <!-- Titre -->
-    <div class="mb-lg">
-        <h2 class="font-headline-xl text-headline-xl text-primary mb-2">Import &amp; Rapports</h2>
-        <p class="font-body-md text-body-md text-on-surface-variant max-w-2xl">
-            Synchronisez les emplois du temps et générez les rapports d'émargement par période.
-        </p>
+    <div class="mb-8" data-reveal>
+        <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mb-2">Données</p>
+        <h1 class="font-serif text-[clamp(34px,5vw,52px)] leading-[1.02] tracking-tight">Rapports &amp; import</h1>
+        <p class="text-[15px] text-muted mt-2">Synchronisez les plannings et générez les rapports d'émargement.</p>
     </div>
 
-    <!-- Flash -->
-    <div th:if="${success}"
-         class="flex items-center gap-2 p-3 mb-6 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
-        <span class="material-symbols-outlined text-[18px]">check_circle</span>
-        <span th:text="${success}">Opération réussie.</span>
+    <div th:if="${success}" class="glass rounded-2xl p-3.5 mb-5 flex items-center gap-2 text-[13px]" data-reveal>
+        <span class="material-symbols-rounded text-[18px]">check_circle</span><span th:text="${success}">OK</span>
     </div>
-    <div th:if="${error}"
-         class="flex items-center gap-2 p-3 mb-6 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-        <span class="material-symbols-outlined text-[18px]">error</span>
-        <span th:text="${error}">Erreur.</span>
+    <div th:if="${error}" class="glass rounded-2xl p-3.5 mb-5 flex items-center gap-2 text-[13px]" data-reveal
+         style="border-color:rgba(186,26,26,.3)">
+        <span class="material-symbols-rounded text-[18px]">error</span><span th:text="${error}">Erreur</span>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter mb-md">
-
-        <!-- Upload planning -->
-        <section class="lg:col-span-7 bg-surface-container-lowest border border-outline-variant p-md rounded-xl"
-                 style="border-left: 4px solid #000666;">
-            <h3 class="font-headline-md text-headline-md text-primary mb-md flex items-center gap-2">
-                <span class="material-symbols-outlined">upload_file</span>
-                Synchronisation des plannings
-            </h3>
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 mb-6">
+        <!-- Import -->
+        <section class="lg:col-span-7 glass rounded-3xl p-7" data-reveal>
+            <h2 class="font-serif text-[24px] mb-1">Import de planning</h2>
+            <p class="text-[13px] text-muted mb-5">.csv ou .xlsx · max 5 Mo</p>
             <form th:action="@{/admin/import/planning}" method="post" enctype="multipart/form-data" id="importForm">
                 <div id="drop-zone"
-                     class="flex flex-col items-center justify-center border-2 border-dashed border-outline-variant rounded-xl p-xl bg-surface-container-low hover:bg-surface-container transition-all cursor-pointer group">
-                    <span class="material-symbols-outlined text-primary text-6xl mb-base group-hover:scale-110 transition-transform">cloud_upload</span>
-                    <p class="font-headline-md text-headline-md text-primary mb-xs">Glissez-déposez le fichier planning</p>
-                    <p class="text-on-surface-variant font-body-sm text-body-sm mb-md text-center">
-                        Formats supportés : .csv, .xlsx (max 5 Mo).<br/>
-                        Colonnes : DATE ; HEURE_DEBUT ; HEURE_FIN ; MATRICULE ; CODE_MATIERE ; CODE_CLASSE ; CODE_SALLE
-                    </p>
-                    <button type="button" id="browseBtn"
-                            class="bg-primary text-on-primary px-lg py-sm font-label-md rounded shadow-sm hover:opacity-90 active:opacity-80 transition-all">
-                        Parcourir les fichiers
-                    </button>
+                     class="flex flex-col items-center justify-center text-center border-2 border-dashed border-line rounded-2xl px-6 py-12 cursor-pointer transition hover:bg-black/5">
+                    <span class="material-symbols-rounded text-[44px] mb-3">cloud_upload</span>
+                    <p class="font-serif text-[20px] mb-1">Glissez-déposez votre fichier</p>
+                    <p class="text-[12px] text-muted mb-5 font-mono">DATE ; HEURE_DEBUT ; HEURE_FIN ; MATRICULE ; CODE_MATIERE ; CODE_CLASSE ; CODE_SALLE</p>
+                    <button type="button" id="browseBtn" class="btn btn-ink h-10 px-5 rounded-xl text-[13px] font-medium">Parcourir</button>
                     <input accept=".csv,.xlsx" class="hidden" id="file-input" name="file" type="file"/>
-                    <p id="selectedFile" class="mt-md font-label-sm text-label-sm text-primary font-bold"></p>
+                    <p id="selectedFile" class="mt-4 font-mono text-[12px]"></p>
                 </div>
             </form>
         </section>
 
-        <!-- Génération de rapports -->
-        <section class="lg:col-span-5 bg-surface-container-lowest border border-outline-variant p-md rounded-xl">
-            <h3 class="font-headline-md text-headline-md text-primary mb-md flex items-center gap-2">
-                <span class="material-symbols-outlined">picture_as_pdf</span>
-                Générer des rapports
-            </h3>
-            <form th:action="@{/admin/rapports/generer}" method="post" id="formGenerer" class="space-y-md">
+        <!-- Génération -->
+        <section class="lg:col-span-5 glass rounded-3xl p-7" data-reveal>
+            <h2 class="font-serif text-[24px] mb-1">Générer les rapports</h2>
+            <p class="text-[13px] text-muted mb-5">Un PDF par enseignant sur la période.</p>
+            <form th:action="@{/admin/rapports/generer}" method="post" id="formGenerer" class="space-y-4">
                 <div>
-                    <label class="block font-label-sm text-label-sm text-on-surface-variant mb-xs uppercase tracking-wider">
-                        Date de début <span class="text-error">*</span>
-                    </label>
+                    <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Date de début</label>
                     <input type="date" name="debut" id="dateDebut" required
-                           class="w-full h-11 px-4 border border-outline-variant rounded-lg bg-surface-bright text-on-surface
-                                  focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"/>
+                           class="w-full h-11 px-4 rounded-xl bg-white/55 border border-line focus:ring-0 focus:border-ink transition"/>
                 </div>
                 <div>
-                    <label class="block font-label-sm text-label-sm text-on-surface-variant mb-xs uppercase tracking-wider">
-                        Date de fin <span class="text-error">*</span>
-                    </label>
+                    <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Date de fin</label>
                     <input type="date" name="fin" id="dateFin" required
-                           class="w-full h-11 px-4 border border-outline-variant rounded-lg bg-surface-bright text-on-surface
-                                  focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"/>
+                           class="w-full h-11 px-4 rounded-xl bg-white/55 border border-line focus:ring-0 focus:border-ink transition"/>
                 </div>
-                <button type="submit"
-                        class="w-full h-11 bg-secondary-container text-on-secondary-container font-label-md rounded-lg flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-sm">
-                    <span class="material-symbols-outlined text-[20px]">analytics</span>
-                    Générer pour tous les enseignants
+                <button type="submit" class="btn btn-ink w-full h-12 rounded-xl font-medium flex items-center justify-center gap-2">
+                    <span class="material-symbols-rounded text-[20px]">picture_as_pdf</span> Générer pour tous
                 </button>
-                <p class="font-label-sm text-label-sm text-on-surface-variant">
-                    Un rapport PDF individuel (matricule + nom) sera généré pour chaque enseignant.
-                </p>
             </form>
         </section>
     </div>
 
-    <!-- Table des rapports -->
-    <section class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm">
-        <div class="p-md border-b border-outline-variant flex flex-col md:flex-row justify-between items-start md:items-center gap-md">
-            <div>
-                <h3 class="font-headline-md text-headline-md text-primary">Rapports générés</h3>
-                <p class="font-label-sm text-label-sm text-on-surface-variant"
-                   th:text="${rapports.size()} + ' rapport(s) disponible(s)'">0 rapport(s)</p>
-            </div>
+    <!-- Table rapports -->
+    <section class="glass rounded-3xl overflow-hidden" data-reveal>
+        <div class="px-7 py-5 border-b border-line flex items-center justify-between">
+            <h2 class="font-serif text-[22px]">Rapports générés</h2>
+            <span class="font-mono text-[11px] text-muted" th:text="${rapports.size()} + ' fichier(s)'">0</span>
         </div>
-        <div class="overflow-x-auto custom-scrollbar">
-            <table class="w-full text-left border-collapse">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
                 <thead>
-                <tr class="bg-surface-container-low border-b border-outline-variant">
-                    <th class="px-md py-3 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Enseignant</th>
-                    <th class="px-md py-3 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Période</th>
-                    <th class="px-md py-3 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Type</th>
-                    <th class="px-md py-3 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Fichier</th>
-                    <th class="px-md py-3 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Généré le</th>
-                    <th class="px-md py-3 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider text-right">Action</th>
+                <tr class="border-b border-line">
+                    <th class="px-6 py-4 font-mono text-[10px] uppercase tracking-wider text-muted">Enseignant</th>
+                    <th class="px-6 py-4 font-mono text-[10px] uppercase tracking-wider text-muted">Période</th>
+                    <th class="px-6 py-4 font-mono text-[10px] uppercase tracking-wider text-muted">Type</th>
+                    <th class="px-6 py-4 font-mono text-[10px] uppercase tracking-wider text-muted">Généré le</th>
+                    <th class="px-6 py-4 font-mono text-[10px] uppercase tracking-wider text-muted text-right">Action</th>
                 </tr>
                 </thead>
-                <tbody class="divide-y divide-outline-variant">
+                <tbody>
                 <tr th:if="${rapports.isEmpty()}">
-                    <td colspan="6" class="px-md py-12 text-center text-on-surface-variant">
-                        <span class="material-symbols-outlined text-[48px] block mb-2">description</span>
-                        Aucun rapport généré. Utilisez le formulaire ci-dessus.
+                    <td colspan="5" class="px-6 py-16 text-center text-muted">
+                        <span class="material-symbols-rounded text-[40px] block mb-2 opacity-40">description</span>
+                        Aucun rapport généré.
                     </td>
                 </tr>
-                <tr th:each="rapport : ${rapports}" class="zebra-stripe hover:bg-surface-container-high transition-colors">
-                    <td class="px-md py-4">
-                        <div class="flex items-center gap-2">
-                            <div class="w-8 h-8 rounded bg-primary-fixed flex items-center justify-center">
-                                <span class="material-symbols-outlined text-primary text-[16px]">person</span>
-                            </div>
-                            <span class="font-label-md text-label-md text-on-surface"
-                                  th:text="${rapport.enseignantPrenom + ' ' + rapport.enseignantNom}">Nom</span>
-                        </div>
+                <tr th:each="rapport : ${rapports}" class="zebra border-b border-line/60">
+                    <td class="px-6 py-4 text-[14px] font-medium" th:text="${rapport.enseignantPrenom + ' ' + rapport.enseignantNom}">Nom</td>
+                    <td class="px-6 py-4 font-mono text-[12px] text-muted">
+                        <span th:text="${#temporals.format(rapport.periodeDebut,'dd/MM/yy')}">--</span> →
+                        <span th:text="${#temporals.format(rapport.periodeFin,'dd/MM/yy')}">--</span>
                     </td>
-                    <td class="px-md py-4 font-body-sm text-body-sm text-on-surface-variant">
-                        <span th:text="${#temporals.format(rapport.periodeDebut, 'dd/MM/yyyy')}">--</span> →
-                        <span th:text="${#temporals.format(rapport.periodeFin, 'dd/MM/yyyy')}">--</span>
+                    <td class="px-6 py-4">
+                        <span class="font-mono text-[10px] uppercase tracking-wider px-2 py-1 rounded-full border border-line"
+                              th:text="${rapport.type?.name() == 'HEBDOMADAIRE'} ? 'Hebdo' : 'Ponctuel'">type</span>
                     </td>
-                    <td class="px-md py-4">
-                        <span th:if="${rapport.type?.name() == 'HEBDOMADAIRE'}"
-                              class="px-2 py-1 bg-tertiary-fixed text-on-tertiary-fixed font-label-sm text-label-sm rounded">Hebdomadaire</span>
-                        <span th:if="${rapport.type?.name() == 'PONCTUEL'}"
-                              class="px-2 py-1 bg-secondary-fixed text-on-secondary-fixed-variant font-label-sm text-label-sm rounded">Ponctuel</span>
-                    </td>
-                    <td class="px-md py-4 font-body-sm text-body-sm text-on-surface-variant font-mono truncate max-w-[200px]"
-                        th:text="${rapport.nomFichier}">fichier.pdf</td>
-                    <td class="px-md py-4 font-body-sm text-body-sm text-on-surface-variant">
-                        <span th:text="${#temporals.format(rapport.dateGeneration, 'dd/MM/yyyy HH:mm')}">--</span>
-                    </td>
-                    <td class="px-md py-4 text-right">
+                    <td class="px-6 py-4 font-mono text-[12px] text-muted" th:text="${#temporals.format(rapport.dateGeneration,'dd/MM/yy HH:mm')}">--</td>
+                    <td class="px-6 py-4 text-right">
                         <a th:href="@{'/admin/rapports/' + ${rapport.id} + '/telecharger'}"
-                           class="inline-flex items-center gap-1 px-3 py-1.5 bg-primary text-on-primary rounded-lg font-label-sm text-label-sm hover:opacity-90 active:scale-95 transition-all">
-                            <span class="material-symbols-outlined text-[16px]">download</span>
-                            Télécharger
+                           class="btn btn-ink inline-flex items-center gap-1.5 px-3.5 h-9 rounded-xl text-[12px] font-medium">
+                            <span class="material-symbols-rounded text-[16px]">download</span> PDF
                         </a>
                     </td>
                 </tr>
@@ -157,64 +109,32 @@
     </section>
 </main>
 
-<div th:replace="~{admin/fragments :: bottomnav('rapports')}"></div>
+<div th:replace="~{admin/fragments :: dock('rapports')}"></div>
+<div th:replace="~{admin/fragments :: palette}"></div>
+<div th:replace="~{admin/fragments :: scripts}"></div>
 
 <script>
-    // ── Upload : parcourir + drag & drop + soumission auto ──
     (function () {
-        const dropZone = document.getElementById('drop-zone');
-        const fileInput = document.getElementById('file-input');
-        const browseBtn = document.getElementById('browseBtn');
-        const selectedFile = document.getElementById('selectedFile');
-        const importForm = document.getElementById('importForm');
-        if (!dropZone || !fileInput) return;
-
-        function submitWithFile() {
-            if (fileInput.files && fileInput.files.length > 0) {
-                selectedFile.textContent = 'Import en cours : ' + fileInput.files[0].name;
-                importForm.submit();
-            }
+        const dz = document.getElementById('drop-zone'), fi = document.getElementById('file-input'),
+              bb = document.getElementById('browseBtn'), sf = document.getElementById('selectedFile'),
+              form = document.getElementById('importForm');
+        if (dz && fi) {
+            const submit = () => { if (fi.files && fi.files.length) { sf.textContent = 'Import : ' + fi.files[0].name; form.submit(); } };
+            bb.addEventListener('click', e => { e.stopPropagation(); fi.click(); });
+            dz.addEventListener('click', () => fi.click());
+            fi.addEventListener('change', submit);
+            ['dragenter','dragover','dragleave','drop'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); }));
+            ['dragenter','dragover'].forEach(ev => dz.addEventListener(ev, () => dz.classList.add('bg-black/5')));
+            ['dragleave','drop'].forEach(ev => dz.addEventListener(ev, () => dz.classList.remove('bg-black/5')));
+            dz.addEventListener('drop', e => { if (e.dataTransfer.files.length) { fi.files = e.dataTransfer.files; submit(); } });
         }
-
-        browseBtn.addEventListener('click', function (e) { e.stopPropagation(); fileInput.click(); });
-        dropZone.addEventListener('click', function () { fileInput.click(); });
-        fileInput.addEventListener('change', submitWithFile);
-
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(function (evt) {
-            dropZone.addEventListener(evt, function (e) { e.preventDefault(); e.stopPropagation(); }, false);
-        });
-        ['dragenter', 'dragover'].forEach(function (evt) {
-            dropZone.addEventListener(evt, function () { dropZone.classList.add('border-primary', 'bg-primary-fixed'); });
-        });
-        ['dragleave', 'drop'].forEach(function (evt) {
-            dropZone.addEventListener(evt, function () { dropZone.classList.remove('border-primary', 'bg-primary-fixed'); });
-        });
-        dropZone.addEventListener('drop', function (e) {
-            if (e.dataTransfer.files && e.dataTransfer.files.length) {
-                fileInput.files = e.dataTransfer.files;
-                submitWithFile();
-            }
-        });
-    })();
-
-    // ── Validation des dates de génération ──
-    (function () {
-        const debut = document.getElementById('dateDebut');
-        const fin = document.getElementById('dateFin');
-        const form = document.getElementById('formGenerer');
-        if (!debut || !fin || !form) return;
-        function sync() {
-            fin.min = debut.value || '';
-            debut.max = fin.value || '';
-            if (debut.value && fin.value && debut.value > fin.value) {
-                fin.setCustomValidity('La date de fin doit être postérieure ou égale à la date de début.');
-            } else {
-                fin.setCustomValidity('');
-            }
+        const d = document.getElementById('dateDebut'), f = document.getElementById('dateFin'), fg = document.getElementById('formGenerer');
+        if (d && f && fg) {
+            const sync = () => { f.min = d.value||''; d.max = f.value||'';
+                f.setCustomValidity(d.value && f.value && d.value > f.value ? 'La date de fin doit suivre la date de début.' : ''); };
+            d.addEventListener('change', sync); f.addEventListener('change', sync);
+            fg.addEventListener('submit', e => { sync(); if (!fg.reportValidity()) e.preventDefault(); });
         }
-        debut.addEventListener('change', sync);
-        fin.addEventListener('change', sync);
-        form.addEventListener('submit', function (e) { sync(); if (!form.reportValidity()) e.preventDefault(); });
     })();
 </script>
 

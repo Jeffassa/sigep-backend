@@ -1,161 +1,308 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 
-<!-- ===================== HEAD COMMUN ===================== -->
+<!-- ============================ HEAD COMMUN ============================ -->
 <head th:fragment="head(pageTitle)">
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
     <title th:text="${pageTitle}">SIGEP</title>
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-    <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f8f9fb; -webkit-font-smoothing: antialiased; }
-        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
-        .fill-icon { font-variation-settings: 'FILL' 1; }
-        .tonal-card { background: #ffffff; border: 1px solid #c6c5d4; transition: transform 0.2s ease, box-shadow 0.2s ease; }
-        .tonal-card:hover { box-shadow: 0px 4px 12px rgba(26, 35, 126, 0.08); transform: translateY(-2px); }
-        .zebra-stripe:nth-child(even) { background-color: #f2f4f6; }
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-    </style>
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+
+    <!-- Polices : Instrument Serif (display) · Geist (UI) · JetBrains Mono (data) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.cdnfonts.com/css/geist" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet"/>
+
     <script>
         tailwind.config = {
-            darkMode: "class",
             theme: {
                 extend: {
-                    "colors": {
-                        "primary": "#000666", "on-primary": "#ffffff",
-                        "primary-container": "#1a237e", "on-primary-container": "#8690ee",
-                        "primary-fixed": "#e0e0ff", "primary-fixed-dim": "#bdc2ff",
-                        "on-primary-fixed": "#000767", "on-primary-fixed-variant": "#343d96",
-                        "inverse-primary": "#bdc2ff", "surface-tint": "#4c56af",
-                        "secondary": "#795900", "on-secondary": "#ffffff",
-                        "secondary-container": "#fec330", "on-secondary-container": "#6f5100",
-                        "secondary-fixed": "#ffdfa0", "secondary-fixed-dim": "#f8bd2a",
-                        "on-secondary-fixed": "#261a00", "on-secondary-fixed-variant": "#5c4300",
-                        "tertiary": "#071e27", "on-tertiary": "#ffffff",
-                        "tertiary-container": "#1e333c", "on-tertiary-container": "#859ba6",
-                        "tertiary-fixed": "#cfe6f2", "tertiary-fixed-dim": "#b4cad6",
-                        "on-tertiary-fixed": "#071e27", "on-tertiary-fixed-variant": "#354a53",
-                        "error": "#ba1a1a", "on-error": "#ffffff",
-                        "error-container": "#ffdad6", "on-error-container": "#93000a",
-                        "background": "#f8f9fb", "on-background": "#191c1e",
-                        "surface": "#f8f9fb", "on-surface": "#191c1e",
-                        "surface-variant": "#e0e3e5", "on-surface-variant": "#454652",
-                        "surface-dim": "#d8dadc", "surface-bright": "#f8f9fb",
-                        "surface-container-lowest": "#ffffff", "surface-container-low": "#f2f4f6",
-                        "surface-container": "#eceef0", "surface-container-high": "#e6e8ea",
-                        "surface-container-highest": "#e0e3e5",
-                        "outline": "#767683", "outline-variant": "#c6c5d4",
-                        "inverse-surface": "#2d3133", "inverse-on-surface": "#eff1f3"
+                    colors: {
+                        ink: "#0a0a0a", "ink-2": "#1c1c1e", muted: "#6b6b70",
+                        line: "rgba(10,10,10,0.10)", paper: "#f4f4f5"
                     },
-                    "borderRadius": { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" },
-                    "spacing": {
-                        "xl": "64px", "lg": "48px", "md": "24px", "sm": "12px", "base": "8px", "xs": "4px",
-                        "gutter": "24px", "margin-mobile": "16px", "container-max": "1280px"
-                    },
-                    "fontFamily": {
-                        "label-sm": ["Inter"], "label-md": ["Inter"], "headline-md": ["Inter"],
-                        "headline-lg": ["Inter"], "body-sm": ["Inter"], "headline-lg-mobile": ["Inter"],
-                        "body-lg": ["Inter"], "headline-xl": ["Inter"], "body-md": ["Inter"]
-                    },
-                    "fontSize": {
-                        "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
-                        "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600"}],
-                        "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
-                        "headline-lg": ["28px", {"lineHeight": "36px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
-                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
-                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
-                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
-                        "headline-xl": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
-                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+                    fontFamily: {
+                        serif: ['"Instrument Serif"', 'ui-serif', 'Georgia', 'serif'],
+                        sans: ['"Geist"', '"Geist Sans"', 'system-ui', '-apple-system', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace']
                     }
                 }
             }
         }
     </script>
+
+    <style>
+        :root {
+            --ink: #0a0a0a; --muted: #6b6b70;
+            --ease: cubic-bezier(.16,1,.3,1);
+            --glass-bg: rgba(255,255,255,0.55);
+            --glass-brd: rgba(255,255,255,0.75);
+        }
+        * { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+        body {
+            font-family: 'Geist','Geist Sans',system-ui,-apple-system,sans-serif;
+            color: var(--ink); background: #f4f4f5; min-height: 100vh;
+        }
+        /* Profondeur en niveaux de gris pour révéler le flou du verre */
+        body::before {
+            content:''; position:fixed; inset:0; z-index:-1; pointer-events:none;
+            background:
+              radial-gradient(38% 48% at 12% 8%, rgba(0,0,0,.06), transparent 70%),
+              radial-gradient(36% 46% at 88% 16%, rgba(0,0,0,.05), transparent 70%),
+              radial-gradient(60% 60% at 50% 108%, rgba(0,0,0,.07), transparent 70%),
+              linear-gradient(180deg,#f7f7f8,#eeeef0);
+        }
+        .font-serif { font-family:'Instrument Serif',serif; }
+        .font-mono  { font-family:'JetBrains Mono',monospace; }
+        .material-symbols-rounded { font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24; }
+        .fill { font-variation-settings:'FILL' 1; }
+
+        /* ---------- Glassmorphism ---------- */
+        .glass {
+            background: var(--glass-bg);
+            backdrop-filter: blur(22px) saturate(150%);
+            -webkit-backdrop-filter: blur(22px) saturate(150%);
+            border: 1px solid var(--glass-brd);
+            box-shadow: 0 10px 40px rgba(0,0,0,.07), inset 0 1px 0 rgba(255,255,255,.6);
+        }
+        .glass-strong {
+            background: rgba(255,255,255,0.72);
+            backdrop-filter: blur(30px) saturate(160%);
+            -webkit-backdrop-filter: blur(30px) saturate(160%);
+            border: 1px solid var(--glass-brd);
+            box-shadow: 0 20px 60px rgba(0,0,0,.12);
+        }
+        .glass-card { transition: transform .5s var(--ease), box-shadow .5s var(--ease); }
+        .glass-card:hover { transform: translateY(-4px); box-shadow: 0 22px 60px rgba(0,0,0,.12); }
+
+        /* ---------- Animations d'entrée ---------- */
+        @keyframes rise { from { opacity:0; transform: translateY(16px); } to { opacity:1; transform:none; } }
+        .reveal { animation: rise .7s var(--ease) both; }
+        @media (prefers-reduced-motion: reduce) { .reveal { animation: none; } }
+
+        /* ---------- Boutons ---------- */
+        .btn { transition: transform .4s var(--ease), opacity .3s, background .3s; }
+        .btn:active { transform: scale(.96); }
+        .btn-ink { background: var(--ink); color:#fff; }
+        .btn-ink:hover { opacity:.88; }
+
+        /* ---------- Dock macOS ---------- */
+        .dock {
+            position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%);
+            display: flex; align-items: flex-end; gap: 10px; padding: 10px 14px;
+            border-radius: 26px; z-index: 60;
+        }
+        .dock-item {
+            --s: 46px; width: var(--s); height: var(--s);
+            display:flex; align-items:center; justify-content:center;
+            border-radius: 14px; position: relative; flex: 0 0 auto;
+            background: rgba(255,255,255,.5); border:1px solid rgba(255,255,255,.65);
+            color: var(--ink); transition: transform .18s var(--ease), background .3s;
+            transform-origin: bottom center;
+        }
+        .dock-item .material-symbols-rounded { font-size: 24px; }
+        .dock-item:hover { background:#0a0a0a; color:#fff; }
+        .dock-item.active::after {
+            content:''; position:absolute; bottom:-7px; left:50%; transform:translateX(-50%);
+            width:4px; height:4px; border-radius:50%; background: var(--ink);
+        }
+        .dock-tip {
+            position:absolute; bottom: calc(100% + 10px); left:50%; transform:translateX(-50%) scale(.9);
+            background:#0a0a0a; color:#fff; font-size:11px; padding:4px 9px; border-radius:8px;
+            white-space:nowrap; opacity:0; pointer-events:none; transition:opacity .2s, transform .2s var(--ease);
+            font-family:'Geist',sans-serif;
+        }
+        .dock-item:hover .dock-tip { opacity:1; transform:translateX(-50%) scale(1); }
+
+        /* ---------- Palette ⌘K ---------- */
+        .palette-overlay {
+            position: fixed; inset: 0; z-index: 100; display:none;
+            align-items: flex-start; justify-content: center; padding-top: 14vh;
+            background: rgba(10,10,12,.32); backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+        .palette-overlay.open { display:flex; animation: rise .3s var(--ease) both; }
+        .palette {
+            width: min(92vw, 620px); border-radius: 20px; overflow: hidden;
+        }
+        .palette input {
+            width:100%; border:0; outline:0; background:transparent;
+            font-family:'Geist',sans-serif; font-size:18px; color:var(--ink); padding: 18px 20px;
+        }
+        .palette input::placeholder { color: var(--muted); }
+        .palette-item {
+            display:flex; align-items:center; gap:12px; padding:11px 16px; cursor:pointer;
+            border-radius: 12px; margin: 2px 8px; transition: background .15s;
+        }
+        .palette-item[aria-selected="true"], .palette-item:hover { background: rgba(10,10,10,.07); }
+        .palette-item .material-symbols-rounded { font-size:20px; color:var(--ink); }
+        .kbd {
+            font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted);
+            border:1px solid var(--line); border-radius:6px; padding:2px 6px; background:rgba(255,255,255,.5);
+        }
+
+        /* ---------- Scrollbar ---------- */
+        ::-webkit-scrollbar { width:8px; height:8px; }
+        ::-webkit-scrollbar-thumb { background: rgba(10,10,10,.18); border-radius:10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(10,10,10,.3); }
+
+        /* ---------- Tables ---------- */
+        .zebra:nth-child(even) { background: rgba(255,255,255,.35); }
+        table tbody tr { transition: background .2s; }
+        table tbody tr:hover { background: rgba(10,10,10,.04); }
+    </style>
 </head>
 
 <body>
 
-<!-- ===================== TOP APP BAR ===================== -->
-<header th:fragment="topbar(active)" class="bg-surface border-b border-outline-variant sticky top-0 z-40">
-    <div class="flex justify-between items-center w-full px-margin-mobile md:px-gutter max-w-container-max mx-auto h-16">
-        <div class="flex items-center gap-4">
-            <span class="font-headline-lg text-headline-lg font-black text-primary tracking-tight">SIGEP</span>
-            <nav class="hidden md:flex gap-1 ml-6">
-                <a th:href="@{/admin/dashboard}"
-                   th:classappend="${active == 'dashboard'} ? 'text-primary font-bold bg-surface-container-high' : 'text-on-surface-variant hover:bg-surface-container-high'"
-                   class="font-label-md text-label-md px-3 py-1.5 rounded-lg transition-colors">Dashboard</a>
-                <a th:href="@{/admin/enseignants}"
-                   th:classappend="${active == 'enseignants'} ? 'text-primary font-bold bg-surface-container-high' : 'text-on-surface-variant hover:bg-surface-container-high'"
-                   class="font-label-md text-label-md px-3 py-1.5 rounded-lg transition-colors">Enseignants</a>
-                <a th:href="@{/admin/rapports}"
-                   th:classappend="${active == 'rapports'} ? 'text-primary font-bold bg-surface-container-high' : 'text-on-surface-variant hover:bg-surface-container-high'"
-                   class="font-label-md text-label-md px-3 py-1.5 rounded-lg transition-colors">Reports</a>
-                <a th:href="@{/admin/facultes}"
-                   th:classappend="${active == 'facultes'} ? 'text-primary font-bold bg-surface-container-high' : 'text-on-surface-variant hover:bg-surface-container-high'"
-                   class="font-label-md text-label-md px-3 py-1.5 rounded-lg transition-colors">Facultés</a>
-                <a th:href="@{/admin/alertes}"
-                   th:classappend="${active == 'alertes'} ? 'text-primary font-bold bg-surface-container-high' : 'text-on-surface-variant hover:bg-surface-container-high'"
-                   class="font-label-md text-label-md px-3 py-1.5 rounded-lg transition-colors">Alertes</a>
-            </nav>
-        </div>
+<!-- ============================ TOP BAR ============================ -->
+<header th:fragment="topbar(active)"
+        class="glass sticky top-0 z-50 border-x-0 border-t-0" style="border-radius:0;">
+    <div class="max-w-[1240px] mx-auto h-16 px-5 md:px-8 flex items-center justify-between">
+        <a th:href="@{/admin/dashboard}" class="flex items-baseline gap-2 group">
+            <span class="font-serif text-[30px] leading-none tracking-tight">SIGEP</span>
+            <span class="hidden sm:inline font-mono text-[10px] uppercase tracking-[0.25em] text-muted mb-[2px]">ESATIC</span>
+        </a>
+
         <div class="flex items-center gap-3">
-            <a th:href="@{/admin/alertes}"
-               class="p-2 text-on-surface-variant hover:bg-surface-container-high rounded-full transition-colors relative"
-               title="Alertes">
-                <span class="material-symbols-outlined">notifications</span>
-                <span id="topbarAlertBadge" th:if="${alertesCount != null and alertesCount > 0}" th:text="${alertesCount}"
-                      class="absolute top-0 right-0 min-w-[16px] h-[16px] px-1 flex items-center justify-center bg-error text-on-error text-[10px] font-bold rounded-full">0</span>
-            </a>
-            <div class="flex items-center gap-3 pl-3 border-l border-outline-variant">
-                <div class="text-right hidden sm:block">
-                    <p class="font-label-md text-label-md font-bold text-on-surface">Admin Principal</p>
-                    <p class="font-label-sm text-label-sm text-on-surface-variant">Administration Centrale</p>
+            <button type="button" onclick="window.__openPalette&&window.__openPalette()"
+                    class="btn glass flex items-center gap-2 px-3.5 h-10 rounded-full text-[13px] text-muted hover:text-ink">
+                <span class="material-symbols-rounded text-[18px]">search</span>
+                <span class="hidden sm:inline">Rechercher</span>
+                <span class="kbd hidden sm:inline">⌘K</span>
+            </button>
+            <div class="flex items-center gap-2.5 pl-3 border-l border-line">
+                <div class="text-right hidden md:block leading-tight">
+                    <p class="text-[13px] font-medium">Admin Principal</p>
+                    <p class="font-mono text-[10px] text-muted uppercase tracking-wider">Administration</p>
                 </div>
-                <div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-on-primary font-bold text-label-md">AP</div>
-                <a th:href="@{/admin/logout}"
-                   class="p-2 text-on-surface-variant hover:bg-surface-container-high rounded-full transition-colors"
-                   title="Déconnexion">
-                    <span class="material-symbols-outlined">logout</span>
-                </a>
+                <div class="w-9 h-9 rounded-full bg-ink text-white flex items-center justify-center font-serif text-[15px]">A</div>
             </div>
         </div>
     </div>
 </header>
 
-<!-- ===================== BOTTOM NAV MOBILE ===================== -->
-<nav th:fragment="bottomnav(active)"
-     class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center bg-surface border-t border-outline-variant py-2 px-4 shadow-lg">
-    <a th:href="@{/admin/dashboard}"
-       th:classappend="${active == 'dashboard'} ? 'bg-secondary-container text-on-secondary-container rounded-full px-4 py-1' : 'text-on-surface-variant p-2'"
-       class="flex flex-col items-center justify-center transition-transform active:scale-95">
-        <span class="material-symbols-outlined">dashboard</span>
-        <span class="font-label-sm text-label-sm">Home</span>
+<!-- ============================ DOCK macOS ============================ -->
+<nav th:fragment="dock(active)" class="dock glass-strong" id="dock" aria-label="Navigation principale">
+    <a th:href="@{/admin/dashboard}" class="dock-item" th:classappend="${active=='dashboard'}?'active':''" data-label="Tableau de bord">
+        <span class="material-symbols-rounded">dashboard</span><span class="dock-tip">Tableau de bord</span>
     </a>
-    <a th:href="@{/admin/enseignants}"
-       th:classappend="${active == 'enseignants'} ? 'bg-secondary-container text-on-secondary-container rounded-full px-4 py-1' : 'text-on-surface-variant p-2'"
-       class="flex flex-col items-center justify-center transition-transform active:scale-95">
-        <span class="material-symbols-outlined">group</span>
-        <span class="font-label-sm text-label-sm">Enseignants</span>
+    <a th:href="@{/admin/enseignants}" class="dock-item" th:classappend="${active=='enseignants'}?'active':''" data-label="Enseignants">
+        <span class="material-symbols-rounded">groups</span><span class="dock-tip">Enseignants</span>
     </a>
-    <a th:href="@{/admin/rapports}"
-       th:classappend="${active == 'rapports'} ? 'bg-secondary-container text-on-secondary-container rounded-full px-4 py-1' : 'text-on-surface-variant p-2'"
-       class="flex flex-col items-center justify-center transition-transform active:scale-95">
-        <span class="material-symbols-outlined">description</span>
-        <span class="font-label-sm text-label-sm">Reports</span>
+    <a th:href="@{/admin/rapports}" class="dock-item" th:classappend="${active=='rapports'}?'active':''" data-label="Rapports">
+        <span class="material-symbols-rounded">description</span><span class="dock-tip">Rapports</span>
     </a>
-    <a th:href="@{/admin/alertes}"
-       th:classappend="${active == 'alertes'} ? 'bg-secondary-container text-on-secondary-container rounded-full px-4 py-1' : 'text-on-surface-variant p-2'"
-       class="flex flex-col items-center justify-center transition-transform active:scale-95">
-        <span class="material-symbols-outlined">notifications</span>
-        <span class="font-label-sm text-label-sm">Alertes</span>
+    <a th:href="@{/admin/facultes}" class="dock-item" th:classappend="${active=='facultes'}?'active':''" data-label="Facultés">
+        <span class="material-symbols-rounded">account_balance</span><span class="dock-tip">Facultés</span>
+    </a>
+    <a th:href="@{/admin/alertes}" class="dock-item" th:classappend="${active=='alertes'}?'active':''" data-label="Alertes" style="position:relative;">
+        <span class="material-symbols-rounded">notifications</span><span class="dock-tip">Alertes</span>
+        <span th:if="${alertesCount != null and alertesCount > 0}"
+              class="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-1 bg-ink text-white text-[9px] font-mono rounded-full flex items-center justify-center"
+              th:text="${alertesCount}">0</span>
+    </a>
+    <span class="w-px h-7 self-center bg-line mx-1"></span>
+    <a th:href="@{/admin/logout}" class="dock-item" data-label="Déconnexion">
+        <span class="material-symbols-rounded">logout</span><span class="dock-tip">Déconnexion</span>
     </a>
 </nav>
+
+<!-- ============================ PALETTE ⌘K ============================ -->
+<div th:fragment="palette" class="palette-overlay" id="paletteOverlay" onclick="if(event.target===this)window.__closePalette()">
+    <div class="palette glass-strong" role="dialog" aria-label="Palette de commandes">
+        <div class="flex items-center gap-2 px-4 border-b border-line">
+            <span class="material-symbols-rounded text-muted">search</span>
+            <input id="paletteInput" type="text" placeholder="Rechercher une page, une action…" autocomplete="off"/>
+            <span class="kbd">ESC</span>
+        </div>
+        <div id="paletteList" class="py-2 max-h-[52vh] overflow-y-auto">
+            <a class="palette-item" th:href="@{/admin/dashboard}" data-key="tableau de bord dashboard accueil">
+                <span class="material-symbols-rounded">dashboard</span><span>Tableau de bord</span></a>
+            <a class="palette-item" th:href="@{/admin/enseignants}" data-key="enseignants professeurs liste">
+                <span class="material-symbols-rounded">groups</span><span>Enseignants</span></a>
+            <a class="palette-item" th:href="@{/admin/enseignants/nouveau}" data-key="nouvel enseignant ajouter creer">
+                <span class="material-symbols-rounded">person_add</span><span>Nouvel enseignant</span></a>
+            <a class="palette-item" th:href="@{/admin/rapports}" data-key="rapports pdf import generer">
+                <span class="material-symbols-rounded">description</span><span>Rapports &amp; import</span></a>
+            <a class="palette-item" th:href="@{/admin/facultes}" data-key="facultes departements">
+                <span class="material-symbols-rounded">account_balance</span><span>Facultés</span></a>
+            <a class="palette-item" th:href="@{/admin/alertes}" data-key="alertes emargements manquants rattrapages">
+                <span class="material-symbols-rounded">notifications</span><span>Alertes</span></a>
+            <a class="palette-item" th:href="@{/admin/logout}" data-key="deconnexion logout sortir quitter">
+                <span class="material-symbols-rounded">logout</span><span>Déconnexion</span></a>
+        </div>
+    </div>
+</div>
+
+<!-- ============================ SCRIPTS ============================ -->
+<th:block th:fragment="scripts">
+<script>
+(function () {
+    /* ----- Dock : magnification façon macOS ----- */
+    const dock = document.getElementById('dock');
+    if (dock) {
+        const items = Array.from(dock.querySelectorAll('.dock-item'));
+        const BASE = 46, MAX = 24, RANGE = 90;
+        dock.addEventListener('mousemove', (e) => {
+            items.forEach(it => {
+                const r = it.getBoundingClientRect();
+                const c = r.left + r.width / 2;
+                const d = Math.abs(e.clientX - c);
+                const boost = d < RANGE ? (1 - d / RANGE) * MAX : 0;
+                const s = BASE + boost;
+                it.style.width = s + 'px'; it.style.height = s + 'px';
+                it.style.marginBottom = (boost * 0.35) + 'px';
+            });
+        });
+        dock.addEventListener('mouseleave', () => {
+            items.forEach(it => { it.style.width = BASE+'px'; it.style.height = BASE+'px'; it.style.marginBottom='0'; });
+        });
+    }
+
+    /* ----- Palette ⌘K ----- */
+    const overlay = document.getElementById('paletteOverlay');
+    const input = document.getElementById('paletteInput');
+    const list = document.getElementById('paletteList');
+    if (overlay && input && list) {
+        const items = () => Array.from(list.querySelectorAll('.palette-item')).filter(i => i.style.display !== 'none');
+        let sel = 0;
+        const mark = () => items().forEach((it, i) => it.setAttribute('aria-selected', i === sel ? 'true' : 'false'));
+        window.__openPalette = () => {
+            overlay.classList.add('open'); input.value=''; filter(); input.focus();
+        };
+        window.__closePalette = () => overlay.classList.remove('open');
+        function filter() {
+            const q = input.value.toLowerCase().trim();
+            list.querySelectorAll('.palette-item').forEach(it => {
+                const k = (it.getAttribute('data-key') || '') + ' ' + it.textContent.toLowerCase();
+                it.style.display = (!q || k.includes(q)) ? '' : 'none';
+            });
+            sel = 0; mark();
+        }
+        input.addEventListener('input', filter);
+        document.addEventListener('keydown', (e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault();
+                overlay.classList.contains('open') ? window.__closePalette() : window.__openPalette(); return; }
+            if (!overlay.classList.contains('open')) return;
+            const its = items();
+            if (e.key === 'Escape') { window.__closePalette(); }
+            else if (e.key === 'ArrowDown') { e.preventDefault(); sel = Math.min(sel+1, its.length-1); mark(); its[sel]?.scrollIntoView({block:'nearest'}); }
+            else if (e.key === 'ArrowUp') { e.preventDefault(); sel = Math.max(sel-1, 0); mark(); its[sel]?.scrollIntoView({block:'nearest'}); }
+            else if (e.key === 'Enter') { e.preventDefault(); its[sel]?.click(); }
+        });
+    }
+
+    /* ----- Révélation progressive au chargement ----- */
+    document.querySelectorAll('[data-reveal]').forEach((el, i) => {
+        el.classList.add('reveal');
+        el.style.animationDelay = (i * 60) + 'ms';
+    });
+})();
+</script>
+</th:block>
 
 </body>
 </html>

@@ -86,7 +86,7 @@ class AdminWebIntegrationTest {
     void dashboard_devraitSeRendreCorrectement() throws Exception {
         mockMvc.perform(get("/admin/dashboard"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Tableau de Bord")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Tableau de bord")));
     }
 
     @Test
