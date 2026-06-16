@@ -86,9 +86,10 @@
               th:text="${alertesCount}">0</span>
     </a>
     <span class="w-px h-7 self-center bg-line mx-1"></span>
-    <a th:href="@{/admin/logout}" class="dock-item" data-label="Déconnexion">
+    <button type="button" onclick="window.__logout&amp;&amp;window.__logout()" class="dock-item" data-label="Déconnexion">
         <span class="material-symbols-rounded">logout</span><span class="dock-tip">Déconnexion</span>
-    </a>
+    </button>
+    <form id="logoutForm" th:action="@{/admin/logout}" method="post" class="hidden"></form>
 </nav>
 
 <!-- ============================ PALETTE ⌘K ============================ -->
@@ -112,8 +113,10 @@
                 <span class="material-symbols-rounded">account_balance</span><span>Facultés</span></a>
             <a class="palette-item" th:href="@{/admin/alertes}" data-key="alertes emargements manquants rattrapages">
                 <span class="material-symbols-rounded">notifications</span><span>Alertes</span></a>
-            <a class="palette-item" th:href="@{/admin/logout}" data-key="deconnexion logout sortir quitter">
-                <span class="material-symbols-rounded">logout</span><span>Déconnexion</span></a>
+            <button type="button" class="palette-item" onclick="window.__logout&amp;&amp;window.__logout()"
+                    data-key="deconnexion logout sortir quitter"
+                    style="width:calc(100% - 16px);border:0;background:transparent;font:inherit;cursor:pointer;text-align:left;">
+                <span class="material-symbols-rounded">logout</span><span>Déconnexion</span></button>
         </div>
     </div>
 </div>
@@ -122,6 +125,9 @@
 <th:block th:fragment="scripts">
 <script>
 (function () {
+    /* ----- Déconnexion via POST (CSRF) ----- */
+    window.__logout = function () { var f = document.getElementById('logoutForm'); if (f) f.submit(); };
+
     /* ----- Dock : magnification façon macOS ----- */
     const dock = document.getElementById('dock');
     if (dock) {
