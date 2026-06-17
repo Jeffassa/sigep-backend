@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('SIGEP | Référentiels')}"></head>
+<body class="bg-background text-on-surface min-h-screen pb-24 md:pb-0">
+
+<div th:replace="~{admin/fragments :: topbar('referentiels')}"></div>
+
+<main class="max-w-container-max mx-auto px-margin-mobile md:px-gutter py-lg">
+
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-md mb-lg">
+        <div>
+            <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mb-2">Données académiques</p>
+            <h1 class="font-serif text-[clamp(34px,5vw,52px)] leading-[1.02] tracking-tight">Référentiels</h1>
+            <p class="font-body-md text-body-md text-on-surface-variant mt-1">Matières, classes et salles utilisées dans les emplois du temps.</p>
+        </div>
+        <a th:href="@{/admin/planning/modele}"
+           class="btn btn-ink h-12 px-6 rounded-2xl flex items-center gap-2 text-[14px] font-medium w-fit">
+            <span class="material-symbols-rounded text-[20px]">download</span> Modèle d'emploi du temps
+        </a>
+    </div>
+
+    <div th:if="${success}" class="glass rounded-2xl p-3.5 mb-5 flex items-center gap-2 text-[13px]">
+        <span class="material-symbols-rounded text-[18px]">check_circle</span><span th:text="${success}">OK</span>
+    </div>
+    <div th:if="${error}" class="glass rounded-2xl p-3.5 mb-5 flex items-center gap-2 text-[13px]" style="border-color:rgba(186,26,26,.3)">
+        <span class="material-symbols-rounded text-[18px]">error</span><span th:text="${error}">Erreur</span>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+        <!-- ===== MATIÈRES ===== -->
+        <section class="glass rounded-3xl p-6">
+            <h2 class="font-serif text-[24px] mb-4 flex items-center gap-2">
+                <span class="material-symbols-rounded">menu_book</span> Matières</h2>
+            <form th:action="@{/admin/matieres}" method="post" class="space-y-2 mb-5">
+                <input type="text" name="code" required placeholder="Code (ex : INF301)"
+                       class="w-full h-11 px-4 rounded-xl bg-white/55 border border-line focus:ring-0 focus:border-ink transition uppercase"/>
+                <input type="text" name="libelle" required placeholder="Libellé (ex : Algorithmique)"
+                       class="w-full h-11 px-4 rounded-xl bg-white/55 border border-line focus:ring-0 focus:border-ink transition"/>
+                <button type="submit" class="btn btn-ink w-full h-11 rounded-xl font-medium flex items-center justify-center gap-2">
+                    <span class="material-symbols-rounded text-[18px]">add</span> Ajouter</button>
+            </form>
+            <div class="space-y-2">
+                <p th:if="${matieres.isEmpty()}" class="text-[13px] text-muted text-center py-4">Aucune matière.</p>
+                <div th:each="x : ${matieres}" class="flex items-center gap-2 p-2.5 rounded-xl bg-white/40 border border-line">
+                    <span class="font-mono text-[12px] font-bold" th:text="${x.code}">CODE</span>
+                    <span class="text-[13px] text-muted flex-grow truncate" th:text="${x.libelle}">Libellé</span>
+                    <form th:action="@{'/admin/matieres/' + ${x.id} + '/supprimer'}" method="post"
+                          onsubmit="return confirm('Supprimer cette matière ?');">
+                        <button type="submit" class="w-8 h-8 rounded-lg border border-line flex items-center justify-center hover:bg-ink hover:text-white transition">
+                            <span class="material-symbols-rounded text-[15px]">delete</span></button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== CLASSES ===== -->
+        <section class="glass rounded-3xl p-6">
+            <h2 class="font-serif text-[24px] mb-4 flex items-center gap-2">
+                <span class="material-symbols-rounded">groups</span> Classes</h2>
+            <form th:action="@{/admin/classes}" method="post" class="space-y-2 mb-5">
+                <input type="text" name="code" required placeholder="Code (ex : L3GL)"
+                       class="w-full h-11 px-4 rounded-xl bg-white/55 border border-line focus:ring-0 focus:border-ink transition uppercase"/>
+                <input type="text" name="libelle" required placeholder="Libellé (ex : L3 Génie Logiciel)"
+                       class="w-full h-11 px-4 rounded-xl bg-white/55 border border-line focus:ring-0 focus:border-ink transition"/>
+                <div class="flex gap-2">
+                    <input type="text" name="filiere" placeholder="Filière"
+                           class="w-2/3 h-11 px-4 rounded-xl bg-white/55 border border-line focus:ring-0 focus:border-ink transition"/>
+                    <input type="number" name="niveau" placeholder="Niveau"
+                           class="w-1/3 h-11 px-3 rounded-xl bg-white/55 border border-line focus:ring-0 focus:border-ink transition"/>
+                </div>
+                <button type="submit" class="btn btn-ink w-full h-11 rounded-xl font-medium flex items-center justify-center gap-2">
+                    <span class="material-symbols-rounded text-[18px]">add</span> Ajouter</button>
+            </form>
+            <div class="space-y-2">
+                <p th:if="${classes.isEmpty()}" class="text-[13px] text-muted text-center py-4">Aucune classe.</p>
+                <div th:each="x : ${classes}" class="flex items-center gap-2 p-2.5 rounded-xl bg-white/40 border border-line">
+                    <span class="font-mono text-[12px] font-bold" th:text="${x.code}">CODE</span>
+                    <span class="text-[13px] text-muted flex-grow truncate" th:text="${x.libelle}">Libellé</span>
+                    <form th:action="@{'/admin/classes/' + ${x.id} + '/supprimer'}" method="post"
+                          onsubmit="return confirm('Supprimer cette classe ?');">
+                        <button type="submit" class="w-8 h-8 rounded-lg border border-line flex items-center justify-center hover:bg-ink hover:text-white transition">
+                            <span class="material-symbols-rounded text-[15px]">delete</span></button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== SALLES ===== -->
+        <section class="glass rounded-3xl p-6">
+            <h2 class="font-serif text-[24px] mb-4 flex items-center gap-2">
+                <span class="material-symbols-rounded">meeting_room</span> Salles</h2>
+            <form th:action="@{/admin/salles}" method="post" class="space-y-2 mb-5">
+                <input type="text" name="code" required placeholder="Code (ex : A101)"
+                       class="w-full h-11 px-4 rounded-xl bg-white/55 border border-line focus:ring-0 focus:border-ink transition uppercase"/>
+                <div class="flex gap-2">
+                    <input type="text" name="batiment" placeholder="Bâtiment"
+                           class="w-2/3 h-11 px-4 rounded-xl bg-white/55 border border-line focus:ring-0 focus:border-ink transition"/>
+                    <input type="number" name="capacite" placeholder="Capacité"
+                           class="w-1/3 h-11 px-3 rounded-xl bg-white/55 border border-line focus:ring-0 focus:border-ink transition"/>
+                </div>
+                <button type="submit" class="btn btn-ink w-full h-11 rounded-xl font-medium flex items-center justify-center gap-2">
+                    <span class="material-symbols-rounded text-[18px]">add</span> Ajouter</button>
+            </form>
+            <div class="space-y-2">
+                <p th:if="${salles.isEmpty()}" class="text-[13px] text-muted text-center py-4">Aucune salle.</p>
+                <div th:each="x : ${salles}" class="flex items-center gap-2 p-2.5 rounded-xl bg-white/40 border border-line">
+                    <span class="font-mono text-[12px] font-bold" th:text="${x.code}">CODE</span>
+                    <span class="text-[13px] text-muted flex-grow truncate" th:text="${x.batiment}">Bât.</span>
+                    <form th:action="@{'/admin/salles/' + ${x.id} + '/supprimer'}" method="post"
+                          onsubmit="return confirm('Supprimer cette salle ?');">
+                        <button type="submit" class="w-8 h-8 rounded-lg border border-line flex items-center justify-center hover:bg-ink hover:text-white transition">
+                            <span class="material-symbols-rounded text-[15px]">delete</span></button>
+                    </form>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <p class="font-mono text-[12px] text-muted mt-6">
+        Le modèle d'emploi du temps utilise ces codes (colonnes CODE_MATIERE / CODE_CLASSE / CODE_SALLE).
+        Créez d'abord vos matières, classes et salles, puis téléchargez le modèle à remplir.
+    </p>
+</main>
+
+<div th:replace="~{admin/fragments :: dock('referentiels')}"></div>
+<div th:replace="~{admin/fragments :: palette}"></div>
+<div th:replace="~{admin/fragments :: scripts}"></div>
+
+</body>
+</html>

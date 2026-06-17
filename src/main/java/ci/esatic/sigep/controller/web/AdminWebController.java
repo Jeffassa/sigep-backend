@@ -35,6 +35,9 @@ public class AdminWebController {
     private final PasswordEncoder passwordEncoder;
     private final RapportService rapportService;
     private final FaculteRepository faculteRepository;
+    private final MatiereRepository matiereRepository;
+    private final ClasseRepository classeRepository;
+    private final SalleRepository salleRepository;
 
     // ─── COMMUN ───────────────────────────────────────────────────────────────
 
@@ -125,6 +128,122 @@ public class AdminWebController {
         model.addAttribute("enseignantsEnAttente",
                 enseignantRepository.findByStatutOrderByNomAsc(StatutEnseignant.PENDING));
         return "admin/alertes";
+    }
+
+    // ─── REFERENTIELS (matieres / classes / salles) ────────────────────────────
+
+    @GetMapping("/admin/referentiels")
+    public String referentiels(Model model) {
+        model.addAttribute("matieres", matiereRepository.findAll());
+        model.addAttribute("classes", classeRepository.findAll());
+        model.addAttribute("salles", salleRepository.findAll());
+        return "admin/referentiels";
+    }
+
+    // --- Matières ---
+    @PostMapping("/admin/matieres")
+    public String creerMatiere(@RequestParam String code, @RequestParam String libelle,
+                               @RequestParam(required = false) String description, RedirectAttributes ra) {
+        String c = code == null ? "" : code.trim().toUpperCase();
+        if (c.isEmpty() || libelle == null || libelle.isBlank()) {
+            ra.addFlashAttribute("error", "Le code et le libellé de la matière sont obligatoires.");
+        } else if (matiereRepository.existsByCode(c)) {
+            ra.addFlashAttribute("error", "Ce code matière existe déjà : " + c);
+        } else {
+            matiereRepository.save(Matiere.builder().code(c).libelle(libelle.trim())
+                    .description(description != null ? description.trim() : null).build());
+            ra.addFlashAttribute("success", "Matière « " + c + " » ajoutée.");
+        }
+        return "redirect:/admin/referentiels";
+    }
+
+    @PostMapping("/admin/matieres/{id}/supprimer")
+    public String supprimerMatiere(@PathVariable Long id, RedirectAttributes ra) {
+        try {
+            matiereRepository.deleteById(id);
+            ra.addFlashAttribute("success", "Matière supprimée.");
+        } catch (Exception e) {
+            ra.addFlashAttribute("error", "Suppression impossible : cette matière est utilisée par des séances.");
+        }
+        return "redirect:/admin/referentiels";
+    }
+
+    // --- Classes ---
+    @PostMapping("/admin/classes")
+    public String creerClasse(@RequestParam String code, @RequestParam String libelle,
+                              @RequestParam(required = false) String filiere,
+                              @RequestParam(required = false) Integer niveau, RedirectAttributes ra) {
+        String c = code == null ? "" : code.trim().toUpperCase();
+        if (c.isEmpty() || libelle == null || libelle.isBlank()) {
+            ra.addFlashAttribute("error", "Le code et le libellé de la classe sont obligatoires.");
+        } else if (classeRepository.existsByCode(c)) {
+            ra.addFlashAttribute("error", "Ce code classe existe déjà : " + c);
+        } else {
+            classeRepository.save(Classe.builder().code(c).libelle(libelle.trim())
+                    .filiere(filiere != null ? filiere.trim() : null).niveau(niveau).build());
+            ra.addFlashAttribute("success", "Classe « " + c + " » ajoutée.");
+        }
+        return "redirect:/admin/referentiels";
+    }
+
+    @PostMapping("/admin/classes/{id}/supprimer")
+    public String supprimerClasse(@PathVariable Long id, RedirectAttributes ra) {
+        try {
+            classeRepository.deleteById(id);
+            ra.addFlashAttribute("success", "Classe supprimée.");
+        } catch (Exception e) {
+            ra.addFlashAttribute("error", "Suppression impossible : cette classe est utilisée par des séances.");
+        }
+        return "redirect:/admin/referentiels";
+    }
+
+    // --- Salles ---
+    @PostMapping("/admin/salles")
+    public String creerSalle(@RequestParam String code, @RequestParam(required = false) String batiment,
+                             @RequestParam(required = false) Integer capacite, RedirectAttributes ra) {
+        String c = code == null ? "" : code.trim().toUpperCase();
+        if (c.isEmpty()) {
+            ra.addFlashAttribute("error", "Le code de la salle est obligatoire.");
+        } else if (salleRepository.existsByCode(c)) {
+            ra.addFlashAttribute("error", "Ce code salle existe déjà : " + c);
+        } else {
+            salleRepository.save(Salle.builder().code(c)
+                    .batiment(batiment != null ? batiment.trim() : null).capacite(capacite).build());
+            ra.addFlashAttribute("success", "Salle « " + c + " » ajoutée.");
+        }
+        return "redirect:/admin/referentiels";
+    }
+
+    @PostMapping("/admin/salles/{id}/supprimer")
+    public String supprimerSalle(@PathVariable Long id, RedirectAttributes ra) {
+        try {
+            salleRepository.deleteById(id);
+            ra.addFlashAttribute("success", "Salle supprimée.");
+        } catch (Exception e) {
+            ra.addFlashAttribute("error", "Suppression impossible : cette salle est utilisée par des séances.");
+        }
+        return "redirect:/admin/referentiels";
+    }
+
+    // --- Modèle d'emploi du temps (CSV téléchargeable) ---
+    @GetMapping("/admin/planning/modele")
+    public ResponseEntity<byte[]> modeleEmploiDuTemps() {
+        String m  = matiereRepository.findAll().stream().findFirst().map(Matiere::getCode).orElse("CODE_MATIERE");
+        String cl = classeRepository.findAll().stream().findFirst().map(Classe::getCode).orElse("CODE_CLASSE");
+        String sa = salleRepository.findAll().stream().findFirst().map(Salle::getCode).orElse("CODE_SALLE");
+        String today = LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("DATE;HEURE_DEBUT;HEURE_FIN;CODE_MATIERE;CODE_CLASSE;CODE_SALLE\r\n");
+        sb.append(today).append(";08:00;10:00;").append(m).append(';').append(cl).append(';').append(sa).append("\r\n");
+        sb.append(today).append(";10:15;12:15;").append(m).append(';').append(cl).append(';').append(sa).append("\r\n");
+
+        // BOM UTF-8 pour qu'Excel ouvre correctement les accents
+        byte[] bytes = ("﻿" + sb).getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"modele_emploi_du_temps.csv\"")
+                .body(bytes);
     }
 
     // ─── FACULTES ─────────────────────────────────────────────────────────────
