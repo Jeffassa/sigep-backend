@@ -71,6 +71,38 @@ public class JwtService {
         }
     }
 
+    // ─── QR universel d'émargement ──────────────────────────────────────────
+    // Un seul QR (affiché sur un écran), renouvelé toutes les 30 s. Il ne cible
+    // aucune salle : il sert uniquement de preuve de présence au moment du scan.
+
+    private static final String QR_UNIVERSAL_TYPE = "QR_UNIVERSAL";
+
+    public String generateUniversalQrToken(long expirationMs) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("type", QR_UNIVERSAL_TYPE);
+        return Jwts.builder()
+                .claims(claims)
+                .subject("SIGEP-EMARGEMENT")
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + expirationMs))
+                .signWith(getQrSigningKey())
+                .compact();
+    }
+
+    public boolean isUniversalQrTokenValid(String token) {
+        try {
+            Claims claims = Jwts.parser()
+                    .verifyWith(getQrSigningKey())
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+            boolean expired = claims.getExpiration().before(new Date());
+            return QR_UNIVERSAL_TYPE.equals(claims.get("type")) && !expired;
+        } catch (JwtException e) {
+            return false;
+        }
+    }
+
     private String buildToken(Map<String, Object> extraClaims, UserDetails userDetails, long expiration) {
         return Jwts.builder()
                 .claims(extraClaims)

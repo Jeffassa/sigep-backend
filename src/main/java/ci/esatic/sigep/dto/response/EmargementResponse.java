@@ -18,6 +18,7 @@ public class EmargementResponse {
     private String classeLibelle;
     private String salleLibelle;
     private LocalDateTime dateHeure;
+    private boolean enRetard;
     private String enseignantNom;
     private String enseignantPrenom;
 }

@@ -98,7 +98,7 @@ class EmargementIntegrationTest {
 
     @Test
     void emargement_completDevraitReussirEtPersister() throws Exception {
-        String qrToken = jwtService.generateQrToken(SALLE_CODE, 30_000L);
+        String qrToken = jwtService.generateUniversalQrToken(30_000L);
         String body = objectMapper.writeValueAsString(Map.of(
                 "seanceId", seanceId, "qrToken", qrToken, "signatureBase64", SIGNATURE));
 
@@ -132,7 +132,7 @@ class EmargementIntegrationTest {
 
     @Test
     void emargement_devraitEchouerSansToken() throws Exception {
-        String qrToken = jwtService.generateQrToken(SALLE_CODE, 30_000L);
+        String qrToken = jwtService.generateUniversalQrToken(30_000L);
         String body = objectMapper.writeValueAsString(Map.of(
                 "seanceId", seanceId, "qrToken", qrToken, "signatureBase64", SIGNATURE));
 

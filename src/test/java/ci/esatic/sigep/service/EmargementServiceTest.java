@@ -105,7 +105,7 @@ class EmargementServiceTest {
             when(enseignantRepository.findByUserId(USER_ID)).thenReturn(Optional.of(enseignant));
             when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seance));
             when(emargementRepository.existsBySeanceId(SEANCE_ID)).thenReturn(false);
-            when(qrCodeService.validateQrToken("valid-token", "A101")).thenReturn(true);
+            when(qrCodeService.validateUniversalToken("valid-token")).thenReturn(true);
             when(seanceRepository.save(any())).thenReturn(seance);
             when(emargementRepository.save(any())).thenReturn(saved);
 
@@ -203,23 +203,45 @@ class EmargementServiceTest {
     }
 
     @Test
-    void emarger_devraitEchouerSiDelaiDepasse() {
-        // FIXED_NOW=10h00, heureFin=07h00 → finAutorisee=07h30, 10h00 > 07h30 → délai dépassé
+    void emarger_devraitReussirEnRetardSiSeanceTerminee() {
+        // FIXED_NOW=10h00, heureFin=07h00 → séance terminée : émargement tardif AUTORISÉ, marqué "en retard"
         try (MockedStatic<LocalTime> lt = mockStatic(LocalTime.class, CALLS_REAL_METHODS)) {
             lt.when(LocalTime::now).thenReturn(FIXED_NOW);
 
             Seance seance = Seance.builder()
                     .id(SEANCE_ID).date(LocalDate.now())
                     .heureDebut(LocalTime.of(5, 0)).heureFin(LocalTime.of(7, 0))
-                    .enseignant(enseignant).salle(salle).matiere(matiere).classe(classe).build();
+                    .enseignant(enseignant).salle(salle).matiere(matiere).classe(classe)
+                    .statut(StatutSeance.A_FAIRE).build();
 
             when(enseignantRepository.findByUserId(USER_ID)).thenReturn(Optional.of(enseignant));
             when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seance));
             when(emargementRepository.existsBySeanceId(SEANCE_ID)).thenReturn(false);
+            when(qrCodeService.validateUniversalToken("valid-token")).thenReturn(true);
+            when(seanceRepository.save(any())).thenReturn(seance);
+            when(emargementRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-            assertThatThrownBy(() -> emargementService.emarger(USER_ID, buildRequest("t", SIGNATURE_VALIDE)))
+            EmargementResponse result = emargementService.emarger(USER_ID, buildRequest("valid-token", SIGNATURE_VALIDE));
+
+            assertThat(result).isNotNull();
+            assertThat(result.isEnRetard()).isTrue();
+        }
+    }
+
+    @Test
+    void emarger_devraitEchouerSiQrUniverselExpire() {
+        try (MockedStatic<LocalTime> lt = mockStatic(LocalTime.class, CALLS_REAL_METHODS)) {
+            lt.when(LocalTime::now).thenReturn(FIXED_NOW);
+
+            Seance seance = seanceDansLaFenetre();
+            when(enseignantRepository.findByUserId(USER_ID)).thenReturn(Optional.of(enseignant));
+            when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seance));
+            when(emargementRepository.existsBySeanceId(SEANCE_ID)).thenReturn(false);
+            when(qrCodeService.validateUniversalToken(any())).thenReturn(false);
+
+            assertThatThrownBy(() -> emargementService.emarger(USER_ID, buildRequest("expire", SIGNATURE_VALIDE)))
                     .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("delai depasse");
+                    .hasMessageContaining("QR Code invalide");
         }
     }
 
@@ -236,7 +258,7 @@ class EmargementServiceTest {
             when(enseignantRepository.findByUserId(USER_ID)).thenReturn(Optional.of(enseignant));
             when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seance));
             when(emargementRepository.existsBySeanceId(SEANCE_ID)).thenReturn(false);
-            when(qrCodeService.validateQrToken("mauvais-token", "A101")).thenReturn(false);
+            when(qrCodeService.validateUniversalToken("mauvais-token")).thenReturn(false);
 
             assertThatThrownBy(() -> emargementService.emarger(USER_ID, buildRequest("mauvais-token", SIGNATURE_VALIDE)))
                     .isInstanceOf(IllegalArgumentException.class)
@@ -257,7 +279,7 @@ class EmargementServiceTest {
             when(enseignantRepository.findByUserId(USER_ID)).thenReturn(Optional.of(enseignant));
             when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seance));
             when(emargementRepository.existsBySeanceId(SEANCE_ID)).thenReturn(false);
-            when(qrCodeService.validateQrToken(any(), any())).thenReturn(true);
+            when(qrCodeService.validateUniversalToken(any())).thenReturn(true);
 
             assertThatThrownBy(() -> emargementService.emarger(USER_ID, buildRequest("valid-token", "")))
                     .isInstanceOf(IllegalArgumentException.class)
@@ -274,7 +296,7 @@ class EmargementServiceTest {
             when(enseignantRepository.findByUserId(USER_ID)).thenReturn(Optional.of(enseignant));
             when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seance));
             when(emargementRepository.existsBySeanceId(SEANCE_ID)).thenReturn(false);
-            when(qrCodeService.validateQrToken(any(), any())).thenReturn(true);
+            when(qrCodeService.validateUniversalToken(any())).thenReturn(true);
 
             assertThatThrownBy(() -> emargementService.emarger(USER_ID, buildRequest("valid-token", "pas@du@base64!!")))
                     .isInstanceOf(IllegalArgumentException.class)

@@ -45,6 +45,21 @@ public class QrCodeService {
         return jwtService.isQrTokenValid(token, salleCode);
     }
 
+    /** QR universel d'émargement (un seul écran, renouvelé toutes les 30 s). */
+    public QrCodeResponse generateUniversalQr() {
+        String token = jwtService.generateUniversalQrToken(QR_EXPIRATION_MS);
+        return QrCodeResponse.builder()
+                .salleCode(null)
+                .qrImageBase64(generateQrImage(token))
+                .expiresInSeconds(30)
+                .generatedAt(System.currentTimeMillis())
+                .build();
+    }
+
+    public boolean validateUniversalToken(String token) {
+        return jwtService.isUniversalQrTokenValid(token);
+    }
+
     private String generateQrImage(String content) {
         try {
             Map<EncodeHintType, Object> hints = new EnumMap<>(EncodeHintType.class);
