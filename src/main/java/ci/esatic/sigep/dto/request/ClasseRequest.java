@@ -7,9 +7,6 @@ import lombok.Data;
 public class ClasseRequest {
 
     @NotBlank
-    private String code;
-
-    @NotBlank
     private String libelle;
 
     private String filiere;

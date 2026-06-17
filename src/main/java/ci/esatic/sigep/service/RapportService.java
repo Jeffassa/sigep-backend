@@ -154,8 +154,8 @@ public class RapportService {
             double heures = Duration.between(s.getHeureDebut(), s.getHeureFin()).toMinutes() / 60.0;
 
             addDataCell(table, s.getMatiere().getLibelle(), bodyFont, bg);
-            addDataCell(table, s.getClasse().getCode(), bodyFont, bg);
-            addDataCell(table, s.getSalle().getCode(), bodyFont, bg);
+            addDataCell(table, s.getClasse().getLibelle(), bodyFont, bg);
+            addDataCell(table, s.getSalle().getLibelle(), bodyFont, bg);
             addDataCell(table, s.getDate().format(DATE_FMT), bodyFont, bg);
             addDataCell(table, s.getHeureDebut() + " - " + s.getHeureFin(), bodyFont, bg);
             addDataCell(table, String.format("%.1fh", heures), bodyFont, bg);

@@ -29,11 +29,10 @@ public class MatiereService {
 
     @Transactional
     public MatiereResponse create(MatiereRequest request) {
-        if (matiereRepository.existsByCode(request.getCode())) {
-            throw new IllegalArgumentException("Code matiere deja utilise : " + request.getCode());
+        if (matiereRepository.existsByLibelleIgnoreCase(request.getLibelle())) {
+            throw new IllegalArgumentException("Matiere deja utilisee : " + request.getLibelle());
         }
         Matiere matiere = Matiere.builder()
-                .code(request.getCode())
                 .libelle(request.getLibelle())
                 .description(request.getDescription())
                 .build();
@@ -65,7 +64,6 @@ public class MatiereService {
     private MatiereResponse toResponse(Matiere m) {
         return MatiereResponse.builder()
                 .id(m.getId())
-                .code(m.getCode())
                 .libelle(m.getLibelle())
                 .description(m.getDescription())
                 .build();

@@ -95,9 +95,9 @@ public class EmargementService {
         }
 
         // Regle 5 : Token QR valide pour la bonne salle
-        String salleCode = seance.getSalle().getCode();
-        if (!qrCodeService.validateQrToken(qrToken, salleCode)) {
-            throw new IllegalArgumentException("QR Code invalide ou expire pour la salle " + salleCode);
+        String salleLibelle = seance.getSalle().getLibelle();
+        if (!qrCodeService.validateQrToken(qrToken, salleLibelle)) {
+            throw new IllegalArgumentException("QR Code invalide ou expire pour la salle " + salleLibelle);
         }
     }
 
@@ -121,7 +121,7 @@ public class EmargementService {
                 .seanceId(e.getSeance().getId())
                 .matiereLibelle(e.getSeance().getMatiere().getLibelle())
                 .classeLibelle(e.getSeance().getClasse().getLibelle())
-                .salleCode(e.getSeance().getSalle().getCode())
+                .salleLibelle(e.getSeance().getSalle().getLibelle())
                 .dateHeure(e.getDateHeure())
                 .enseignantNom(e.getEnseignant().getNom())
                 .enseignantPrenom(e.getEnseignant().getPrenom())

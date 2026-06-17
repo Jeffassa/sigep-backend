@@ -33,8 +33,6 @@
             <h2 class="font-serif text-[24px] mb-4 flex items-center gap-2">
                 <span class="material-symbols-rounded">menu_book</span> Matières</h2>
             <form th:action="@{/admin/matieres}" method="post" class="space-y-2 mb-5">
-                <input type="text" name="code" required placeholder="Code (ex : INF301)"
-                       class="w-full h-11 px-4 rounded-xl bg-white/55 border border-line focus:ring-0 focus:border-ink transition uppercase"/>
                 <input type="text" name="libelle" required placeholder="Libellé (ex : Algorithmique)"
                        class="w-full h-11 px-4 rounded-xl bg-white/55 border border-line focus:ring-0 focus:border-ink transition"/>
                 <button type="submit" class="btn btn-ink w-full h-11 rounded-xl font-medium flex items-center justify-center gap-2">
@@ -43,8 +41,7 @@
             <div class="space-y-2">
                 <p th:if="${matieres.isEmpty()}" class="text-[13px] text-muted text-center py-4">Aucune matière.</p>
                 <div th:each="x : ${matieres}" class="flex items-center gap-2 p-2.5 rounded-xl bg-white/40 border border-line">
-                    <span class="font-mono text-[12px] font-bold" th:text="${x.code}">CODE</span>
-                    <span class="text-[13px] text-muted flex-grow truncate" th:text="${x.libelle}">Libellé</span>
+                    <span class="text-[13px] flex-grow truncate" th:text="${x.libelle}">Libellé</span>
                     <form th:action="@{'/admin/matieres/' + ${x.id} + '/supprimer'}" method="post"
                           onsubmit="return confirm('Supprimer cette matière ?');">
                         <button type="submit" class="w-8 h-8 rounded-lg border border-line flex items-center justify-center hover:bg-ink hover:text-white transition">
@@ -59,8 +56,6 @@
             <h2 class="font-serif text-[24px] mb-4 flex items-center gap-2">
                 <span class="material-symbols-rounded">groups</span> Classes</h2>
             <form th:action="@{/admin/classes}" method="post" class="space-y-2 mb-5">
-                <input type="text" name="code" required placeholder="Code (ex : L3GL)"
-                       class="w-full h-11 px-4 rounded-xl bg-white/55 border border-line focus:ring-0 focus:border-ink transition uppercase"/>
                 <input type="text" name="libelle" required placeholder="Libellé (ex : L3 Génie Logiciel)"
                        class="w-full h-11 px-4 rounded-xl bg-white/55 border border-line focus:ring-0 focus:border-ink transition"/>
                 <div class="flex gap-2">
@@ -75,8 +70,7 @@
             <div class="space-y-2">
                 <p th:if="${classes.isEmpty()}" class="text-[13px] text-muted text-center py-4">Aucune classe.</p>
                 <div th:each="x : ${classes}" class="flex items-center gap-2 p-2.5 rounded-xl bg-white/40 border border-line">
-                    <span class="font-mono text-[12px] font-bold" th:text="${x.code}">CODE</span>
-                    <span class="text-[13px] text-muted flex-grow truncate" th:text="${x.libelle}">Libellé</span>
+                    <span class="text-[13px] flex-grow truncate" th:text="${x.libelle}">Libellé</span>
                     <form th:action="@{'/admin/classes/' + ${x.id} + '/supprimer'}" method="post"
                           onsubmit="return confirm('Supprimer cette classe ?');">
                         <button type="submit" class="w-8 h-8 rounded-lg border border-line flex items-center justify-center hover:bg-ink hover:text-white transition">
@@ -91,7 +85,7 @@
             <h2 class="font-serif text-[24px] mb-4 flex items-center gap-2">
                 <span class="material-symbols-rounded">meeting_room</span> Salles</h2>
             <form th:action="@{/admin/salles}" method="post" class="space-y-2 mb-5">
-                <input type="text" name="code" required placeholder="Code (ex : A101)"
+                <input type="text" name="libelle" required placeholder="Nom (ex : A101)" maxlength="20"
                        class="w-full h-11 px-4 rounded-xl bg-white/55 border border-line focus:ring-0 focus:border-ink transition uppercase"/>
                 <div class="flex gap-2">
                     <input type="text" name="batiment" placeholder="Bâtiment"
@@ -105,7 +99,7 @@
             <div class="space-y-2">
                 <p th:if="${salles.isEmpty()}" class="text-[13px] text-muted text-center py-4">Aucune salle.</p>
                 <div th:each="x : ${salles}" class="flex items-center gap-2 p-2.5 rounded-xl bg-white/40 border border-line">
-                    <span class="font-mono text-[12px] font-bold" th:text="${x.code}">CODE</span>
+                    <span class="font-mono text-[12px] font-bold" th:text="${x.libelle}">A101</span>
                     <span class="text-[13px] text-muted flex-grow truncate" th:text="${x.batiment}">Bât.</span>
                     <form th:action="@{'/admin/salles/' + ${x.id} + '/supprimer'}" method="post"
                           onsubmit="return confirm('Supprimer cette salle ?');">
@@ -118,7 +112,7 @@
     </div>
 
     <p class="font-mono text-[12px] text-muted mt-6">
-        Le modèle d'emploi du temps utilise ces codes (colonnes CODE_MATIERE / CODE_CLASSE / CODE_SALLE).
+        Le modèle d'emploi du temps utilise ces libellés (colonnes MATIERE / CLASSE / SALLE).
         Créez d'abord vos matières, classes et salles, puis téléchargez le modèle à remplir.
     </p>
 </main>

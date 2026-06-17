@@ -17,9 +17,6 @@ public class Matiere {
     private Long id;
 
     @Column(unique = true, nullable = false)
-    private String code;
-
-    @Column(nullable = false)
     private String libelle;
 
     private String description;

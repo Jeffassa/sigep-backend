@@ -7,9 +7,6 @@ import lombok.Data;
 public class MatiereRequest {
 
     @NotBlank
-    private String code;
-
-    @NotBlank
     private String libelle;
 
     private String description;

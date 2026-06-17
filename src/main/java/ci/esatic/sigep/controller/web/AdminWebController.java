@@ -142,17 +142,17 @@ public class AdminWebController {
 
     // --- Matières ---
     @PostMapping("/admin/matieres")
-    public String creerMatiere(@RequestParam String code, @RequestParam String libelle,
+    public String creerMatiere(@RequestParam String libelle,
                                @RequestParam(required = false) String description, RedirectAttributes ra) {
-        String c = code == null ? "" : code.trim().toUpperCase();
-        if (c.isEmpty() || libelle == null || libelle.isBlank()) {
-            ra.addFlashAttribute("error", "Le code et le libellé de la matière sont obligatoires.");
-        } else if (matiereRepository.existsByCode(c)) {
-            ra.addFlashAttribute("error", "Ce code matière existe déjà : " + c);
+        String lib = libelle == null ? "" : libelle.trim();
+        if (lib.isEmpty()) {
+            ra.addFlashAttribute("error", "Le libellé de la matière est obligatoire.");
+        } else if (matiereRepository.existsByLibelleIgnoreCase(lib)) {
+            ra.addFlashAttribute("error", "Cette matière existe déjà : " + lib);
         } else {
-            matiereRepository.save(Matiere.builder().code(c).libelle(libelle.trim())
+            matiereRepository.save(Matiere.builder().libelle(lib)
                     .description(description != null ? description.trim() : null).build());
-            ra.addFlashAttribute("success", "Matière « " + c + " » ajoutée.");
+            ra.addFlashAttribute("success", "Matière « " + lib + " » ajoutée.");
         }
         return "redirect:/admin/referentiels";
     }
@@ -170,18 +170,18 @@ public class AdminWebController {
 
     // --- Classes ---
     @PostMapping("/admin/classes")
-    public String creerClasse(@RequestParam String code, @RequestParam String libelle,
+    public String creerClasse(@RequestParam String libelle,
                               @RequestParam(required = false) String filiere,
                               @RequestParam(required = false) Integer niveau, RedirectAttributes ra) {
-        String c = code == null ? "" : code.trim().toUpperCase();
-        if (c.isEmpty() || libelle == null || libelle.isBlank()) {
-            ra.addFlashAttribute("error", "Le code et le libellé de la classe sont obligatoires.");
-        } else if (classeRepository.existsByCode(c)) {
-            ra.addFlashAttribute("error", "Ce code classe existe déjà : " + c);
+        String lib = libelle == null ? "" : libelle.trim();
+        if (lib.isEmpty()) {
+            ra.addFlashAttribute("error", "Le libellé de la classe est obligatoire.");
+        } else if (classeRepository.existsByLibelleIgnoreCase(lib)) {
+            ra.addFlashAttribute("error", "Cette classe existe déjà : " + lib);
         } else {
-            classeRepository.save(Classe.builder().code(c).libelle(libelle.trim())
+            classeRepository.save(Classe.builder().libelle(lib)
                     .filiere(filiere != null ? filiere.trim() : null).niveau(niveau).build());
-            ra.addFlashAttribute("success", "Classe « " + c + " » ajoutée.");
+            ra.addFlashAttribute("success", "Classe « " + lib + " » ajoutée.");
         }
         return "redirect:/admin/referentiels";
     }
@@ -199,17 +199,21 @@ public class AdminWebController {
 
     // --- Salles ---
     @PostMapping("/admin/salles")
-    public String creerSalle(@RequestParam String code, @RequestParam(required = false) String batiment,
+    public String creerSalle(@RequestParam String libelle, @RequestParam(required = false) String batiment,
                              @RequestParam(required = false) Integer capacite, RedirectAttributes ra) {
-        String c = code == null ? "" : code.trim().toUpperCase();
-        if (c.isEmpty()) {
-            ra.addFlashAttribute("error", "Le code de la salle est obligatoire.");
-        } else if (salleRepository.existsByCode(c)) {
-            ra.addFlashAttribute("error", "Ce code salle existe déjà : " + c);
+        String lib = libelle == null ? "" : libelle.trim().toUpperCase();
+        if (lib.isEmpty()) {
+            ra.addFlashAttribute("error", "Le nom de la salle est obligatoire.");
+        } else if (!lib.matches("[A-Z0-9_\\-]{1,20}")) {
+            // Le nom de salle sert de jeton dans le QR d'émargement (cf. QrController) :
+            // il doit rester court et sans espace.
+            ra.addFlashAttribute("error", "Le nom de salle doit être court et sans espace (lettres, chiffres, - ou _). Ex : A101.");
+        } else if (salleRepository.existsByLibelleIgnoreCase(lib)) {
+            ra.addFlashAttribute("error", "Cette salle existe déjà : " + lib);
         } else {
-            salleRepository.save(Salle.builder().code(c)
+            salleRepository.save(Salle.builder().libelle(lib)
                     .batiment(batiment != null ? batiment.trim() : null).capacite(capacite).build());
-            ra.addFlashAttribute("success", "Salle « " + c + " » ajoutée.");
+            ra.addFlashAttribute("success", "Salle « " + lib + " » ajoutée.");
         }
         return "redirect:/admin/referentiels";
     }
@@ -228,13 +232,13 @@ public class AdminWebController {
     // --- Modèle d'emploi du temps (CSV téléchargeable) ---
     @GetMapping("/admin/planning/modele")
     public ResponseEntity<byte[]> modeleEmploiDuTemps() {
-        String m  = matiereRepository.findAll().stream().findFirst().map(Matiere::getCode).orElse("CODE_MATIERE");
-        String cl = classeRepository.findAll().stream().findFirst().map(Classe::getCode).orElse("CODE_CLASSE");
-        String sa = salleRepository.findAll().stream().findFirst().map(Salle::getCode).orElse("CODE_SALLE");
+        String m  = matiereRepository.findAll().stream().findFirst().map(Matiere::getLibelle).orElse("MATIERE");
+        String cl = classeRepository.findAll().stream().findFirst().map(Classe::getLibelle).orElse("CLASSE");
+        String sa = salleRepository.findAll().stream().findFirst().map(Salle::getLibelle).orElse("SALLE");
         String today = LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
 
         StringBuilder sb = new StringBuilder();
-        sb.append("DATE;HEURE_DEBUT;HEURE_FIN;CODE_MATIERE;CODE_CLASSE;CODE_SALLE\r\n");
+        sb.append("DATE;HEURE_DEBUT;HEURE_FIN;MATIERE;CLASSE;SALLE\r\n");
         sb.append(today).append(";08:00;10:00;").append(m).append(';').append(cl).append(';').append(sa).append("\r\n");
         sb.append(today).append(";10:15;12:15;").append(m).append(';').append(cl).append(';').append(sa).append("\r\n");
 

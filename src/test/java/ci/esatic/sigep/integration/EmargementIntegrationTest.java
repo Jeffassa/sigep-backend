@@ -80,9 +80,9 @@ class EmargementIntegrationTest {
                 .statut(StatutEnseignant.VALIDATED).user(user)
                 .build());
 
-        Matiere matiere = matiereRepository.save(Matiere.builder().code("BDD").libelle("Bases de données").build());
-        Classe classe = classeRepository.save(Classe.builder().code("L2RT").libelle("L2 Réseaux").filiere("RT").niveau(2).build());
-        Salle salle = salleRepository.save(Salle.builder().code(SALLE_CODE).batiment("B").capacite(40).build());
+        Matiere matiere = matiereRepository.save(Matiere.builder().libelle("Bases de données").build());
+        Classe classe = classeRepository.save(Classe.builder().libelle("L2 Réseaux").filiere("RT").niveau(2).build());
+        Salle salle = salleRepository.save(Salle.builder().libelle(SALLE_CODE).batiment("B").capacite(40).build());
 
         Seance seance = seanceRepository.save(Seance.builder()
                 .date(LocalDate.now())

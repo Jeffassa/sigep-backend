@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class SalleResponse {
     private Long id;
-    private String code;
+    private String libelle;
     private String batiment;
     private Integer capacite;
 }

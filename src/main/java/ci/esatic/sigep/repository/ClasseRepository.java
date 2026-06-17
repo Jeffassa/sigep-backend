@@ -6,6 +6,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 
 public interface ClasseRepository extends JpaRepository<Classe, Long> {
-    Optional<Classe> findByCode(String code);
-    boolean existsByCode(String code);
+    Optional<Classe> findByLibelleIgnoreCase(String libelle);
+    boolean existsByLibelleIgnoreCase(String libelle);
 }

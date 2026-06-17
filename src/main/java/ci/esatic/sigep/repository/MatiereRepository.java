@@ -6,6 +6,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 
 public interface MatiereRepository extends JpaRepository<Matiere, Long> {
-    Optional<Matiere> findByCode(String code);
-    boolean existsByCode(String code);
+    Optional<Matiere> findByLibelleIgnoreCase(String libelle);
+    boolean existsByLibelleIgnoreCase(String libelle);
 }

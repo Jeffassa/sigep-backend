@@ -29,11 +29,10 @@ public class ClasseService {
 
     @Transactional
     public ClasseResponse create(ClasseRequest request) {
-        if (classeRepository.existsByCode(request.getCode())) {
-            throw new IllegalArgumentException("Code classe deja utilise : " + request.getCode());
+        if (classeRepository.existsByLibelleIgnoreCase(request.getLibelle())) {
+            throw new IllegalArgumentException("Classe deja utilisee : " + request.getLibelle());
         }
         Classe classe = Classe.builder()
-                .code(request.getCode())
                 .libelle(request.getLibelle())
                 .filiere(request.getFiliere())
                 .niveau(request.getNiveau())
@@ -67,7 +66,6 @@ public class ClasseService {
     private ClasseResponse toResponse(Classe c) {
         return ClasseResponse.builder()
                 .id(c.getId())
-                .code(c.getCode())
                 .libelle(c.getLibelle())
                 .filiere(c.getFiliere())
                 .niveau(c.getNiveau())

@@ -49,7 +49,7 @@ public class ImportService {
     }
 
     // Import enseignant : fichier 6 colonnes sans MATRICULE (enseignant = utilisateur connecté)
-    // Colonnes : DATE | HEURE_DEBUT | HEURE_FIN | CODE_MATIERE | CODE_CLASSE | CODE_SALLE
+    // Colonnes : DATE | HEURE_DEBUT | HEURE_FIN | MATIERE | CLASSE | SALLE
     @Transactional
     public Map<String, Object> importerMonPlanning(MultipartFile file, Long userId) throws Exception {
         Enseignant enseignant = enseignantRepository.findByUserId(userId)
@@ -90,25 +90,25 @@ public class ImportService {
     }
 
     private Seance parseRowExcel(Row row) {
-        // Colonnes attendues : DATE | HEURE_DEBUT | HEURE_FIN | MATRICULE_ENSEIGNANT | CODE_MATIERE | CODE_CLASSE | CODE_SALLE
+        // Colonnes attendues : DATE | HEURE_DEBUT | HEURE_FIN | MATRICULE_ENSEIGNANT | MATIERE | CLASSE | SALLE
         String dateStr = getCellValue(row, 0);
         String heureDebutStr = getCellValue(row, 1);
         String heureFinStr = getCellValue(row, 2);
         String matricule = getCellValue(row, 3);
-        String codeMatiere = getCellValue(row, 4);
-        String codeClasse = getCellValue(row, 5);
-        String codeSalle = getCellValue(row, 6);
+        String libelleMatiere = getCellValue(row, 4);
+        String libelleClasse = getCellValue(row, 5);
+        String libelleSalle = getCellValue(row, 6);
 
         if (dateStr.isBlank() || matricule.isBlank()) return null;
 
         Enseignant enseignant = enseignantRepository.findByMatricule(matricule)
                 .orElseThrow(() -> new IllegalArgumentException("Enseignant introuvable : " + matricule));
-        Matiere matiere = matiereRepository.findByCode(codeMatiere)
-                .orElseThrow(() -> new IllegalArgumentException("Matiere introuvable : " + codeMatiere));
-        Classe classe = classeRepository.findByCode(codeClasse)
-                .orElseThrow(() -> new IllegalArgumentException("Classe introuvable : " + codeClasse));
-        Salle salle = salleRepository.findByCode(codeSalle)
-                .orElseThrow(() -> new IllegalArgumentException("Salle introuvable : " + codeSalle));
+        Matiere matiere = matiereRepository.findByLibelleIgnoreCase(libelleMatiere)
+                .orElseThrow(() -> new IllegalArgumentException("Matiere introuvable : " + libelleMatiere));
+        Classe classe = classeRepository.findByLibelleIgnoreCase(libelleClasse)
+                .orElseThrow(() -> new IllegalArgumentException("Classe introuvable : " + libelleClasse));
+        Salle salle = salleRepository.findByLibelleIgnoreCase(libelleSalle)
+                .orElseThrow(() -> new IllegalArgumentException("Salle introuvable : " + libelleSalle));
 
         return Seance.builder()
                 .date(LocalDate.parse(dateStr, DATE_FMT))
@@ -136,11 +136,11 @@ public class ImportService {
                     String matricule = cols[3].trim();
                     Enseignant enseignant = enseignantRepository.findByMatricule(matricule)
                             .orElseThrow(() -> new IllegalArgumentException("Enseignant : " + matricule));
-                    Matiere matiere = matiereRepository.findByCode(cols[4].trim())
+                    Matiere matiere = matiereRepository.findByLibelleIgnoreCase(cols[4].trim())
                             .orElseThrow(() -> new IllegalArgumentException("Matiere : " + cols[4].trim()));
-                    Classe classe = classeRepository.findByCode(cols[5].trim())
+                    Classe classe = classeRepository.findByLibelleIgnoreCase(cols[5].trim())
                             .orElseThrow(() -> new IllegalArgumentException("Classe : " + cols[5].trim()));
-                    Salle salle = salleRepository.findByCode(cols[6].trim())
+                    Salle salle = salleRepository.findByLibelleIgnoreCase(cols[6].trim())
                             .orElseThrow(() -> new IllegalArgumentException("Salle : " + cols[6].trim()));
 
                     seances.add(Seance.builder()
@@ -179,22 +179,22 @@ public class ImportService {
     }
 
     private Seance parseRowExcelEnseignant(Row row, Enseignant enseignant) {
-        // Colonnes : DATE | HEURE_DEBUT | HEURE_FIN | CODE_MATIERE | CODE_CLASSE | CODE_SALLE
+        // Colonnes : DATE | HEURE_DEBUT | HEURE_FIN | MATIERE | CLASSE | SALLE
         String dateStr      = getCellValue(row, 0);
         String heureDebutStr = getCellValue(row, 1);
         String heureFinStr  = getCellValue(row, 2);
-        String codeMatiere  = getCellValue(row, 3);
-        String codeClasse   = getCellValue(row, 4);
-        String codeSalle    = getCellValue(row, 5);
+        String libelleMatiere = getCellValue(row, 3);
+        String libelleClasse  = getCellValue(row, 4);
+        String libelleSalle   = getCellValue(row, 5);
 
         if (dateStr.isBlank()) return null;
 
-        Matiere matiere = matiereRepository.findByCode(codeMatiere)
-                .orElseThrow(() -> new IllegalArgumentException("Matiere introuvable : " + codeMatiere));
-        Classe classe = classeRepository.findByCode(codeClasse)
-                .orElseThrow(() -> new IllegalArgumentException("Classe introuvable : " + codeClasse));
-        Salle salle = salleRepository.findByCode(codeSalle)
-                .orElseThrow(() -> new IllegalArgumentException("Salle introuvable : " + codeSalle));
+        Matiere matiere = matiereRepository.findByLibelleIgnoreCase(libelleMatiere)
+                .orElseThrow(() -> new IllegalArgumentException("Matiere introuvable : " + libelleMatiere));
+        Classe classe = classeRepository.findByLibelleIgnoreCase(libelleClasse)
+                .orElseThrow(() -> new IllegalArgumentException("Classe introuvable : " + libelleClasse));
+        Salle salle = salleRepository.findByLibelleIgnoreCase(libelleSalle)
+                .orElseThrow(() -> new IllegalArgumentException("Salle introuvable : " + libelleSalle));
 
         return Seance.builder()
                 .date(LocalDate.parse(dateStr, DATE_FMT))
@@ -219,11 +219,11 @@ public class ImportService {
                 String[] cols = line.split(";");
                 if (cols.length < 6) continue;
                 try {
-                    Matiere matiere = matiereRepository.findByCode(cols[3].trim())
+                    Matiere matiere = matiereRepository.findByLibelleIgnoreCase(cols[3].trim())
                             .orElseThrow(() -> new IllegalArgumentException("Matiere : " + cols[3].trim()));
-                    Classe classe = classeRepository.findByCode(cols[4].trim())
+                    Classe classe = classeRepository.findByLibelleIgnoreCase(cols[4].trim())
                             .orElseThrow(() -> new IllegalArgumentException("Classe : " + cols[4].trim()));
-                    Salle salle = salleRepository.findByCode(cols[5].trim())
+                    Salle salle = salleRepository.findByLibelleIgnoreCase(cols[5].trim())
                             .orElseThrow(() -> new IllegalArgumentException("Salle : " + cols[5].trim()));
 
                     seances.add(Seance.builder()

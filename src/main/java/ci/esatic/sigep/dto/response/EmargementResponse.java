@@ -16,7 +16,7 @@ public class EmargementResponse {
     private Long seanceId;
     private String matiereLibelle;
     private String classeLibelle;
-    private String salleCode;
+    private String salleLibelle;
     private LocalDateTime dateHeure;
     private String enseignantNom;
     private String enseignantPrenom;
