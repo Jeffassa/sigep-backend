@@ -17,6 +17,7 @@ public class EnseignantService {
 
     private final EnseignantRepository enseignantRepository;
     private final MailService mailService;
+    private final RefreshTokenService refreshTokenService;
 
     public Page<EnseignantResponse> searchEnseignants(String search, String departement,
                                                        StatutEnseignant statut, Pageable pageable) {
@@ -44,6 +45,13 @@ public class EnseignantService {
                 .orElseThrow(() -> new ResourceNotFoundException("Enseignant", "id", id));
         enseignant.setStatut(statut);
         Enseignant saved = enseignantRepository.save(enseignant);
+
+        // SECURITE : si le compte n'est plus validé (refus/suspension), on coupe immédiatement
+        // toutes ses sessions en révoquant ses refresh tokens. L'access token restant
+        // (JWT) expire seul sous 15 min.
+        if (statut != StatutEnseignant.VALIDATED && saved.getUser() != null) {
+            refreshTokenService.revoquerTout(saved.getUser());
+        }
 
         // Notifier l'enseignant par e-mail (validation / refus)
         if (statut == StatutEnseignant.VALIDATED || statut == StatutEnseignant.REJECTED) {

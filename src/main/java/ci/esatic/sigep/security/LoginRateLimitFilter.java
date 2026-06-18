@@ -30,6 +30,10 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
 
     private final ConcurrentHashMap<String, Deque<Long>> attempts = new ConcurrentHashMap<>();
 
+    /** Permet de désactiver le rate-limiting (ex. profil de test). Activé par défaut. */
+    @Value("${app.security.login-rate-limit.enabled:true}")
+    private boolean enabled;
+
     /**
      * Ne faire confiance à X-Forwarded-For QUE derrière un reverse proxy de confiance.
      * Sinon un client peut falsifier ce header et contourner le rate-limiting.
@@ -44,7 +48,8 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
             @NonNull FilterChain chain
     ) throws ServletException, IOException {
 
-        if (LOGIN_PATH.equals(request.getRequestURI())
+        if (enabled
+                && LOGIN_PATH.equals(request.getRequestURI())
                 && "POST".equalsIgnoreCase(request.getMethod())) {
 
             String ip = resolveClientIp(request);

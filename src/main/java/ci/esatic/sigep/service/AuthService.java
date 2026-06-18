@@ -89,6 +89,13 @@ public class AuthService {
     public AuthResponse refresh(String refreshToken) {
         var rt = refreshTokenService.verifier(refreshToken);
         User user = rt.getUser();
+
+        // SECURITE : le compte doit TOUJOURS être autorisé. Un enseignant rejeté/suspendu
+        // ou un utilisateur désactivé après connexion ne doit pas pouvoir prolonger sa
+        // session via le refresh (le gating de validation ne doit pas être contournable).
+        var enseignantOpt = enseignantRepository.findByUserId(user.getId());
+        verifierCompteToujoursAutorise(user, enseignantOpt.orElse(null));
+
         String nouveauRefresh = refreshTokenService.rotation(rt);
         String token = jwtService.generateToken(user);
 
@@ -96,7 +103,6 @@ public class AuthService {
                 .map(role -> role.getName().name())
                 .collect(Collectors.toList());
 
-        var enseignantOpt = enseignantRepository.findByUserId(user.getId());
         String nom = enseignantOpt.map(Enseignant::getNom).orElse("");
         String prenom = enseignantOpt.map(Enseignant::getPrenom).orElse("");
 
@@ -116,6 +122,29 @@ public class AuthService {
     @Transactional
     public void logout(String refreshToken) {
         refreshTokenService.revoquer(refreshToken);
+    }
+
+    /**
+     * Vérifie que le compte est toujours autorisé au moment du refresh.
+     * On se contente de bloquer (throw) : chaque tentative de refresh étant revérifiée,
+     * un compte rejeté/désactivé ne peut plus obtenir d'access token. La révocation
+     * effective des refresh tokens est faite au moment de la décision admin
+     * ({@code EnseignantService.updateStatut}).
+     */
+    private void verifierCompteToujoursAutorise(User user, Enseignant enseignant) {
+        if (!user.isEnabled()) {
+            throw new CompteNonValideException("Compte désactivé. Veuillez contacter l'administration.");
+        }
+        if (enseignant != null) {
+            if (enseignant.getStatut() == StatutEnseignant.PENDING) {
+                throw new CompteNonValideException(
+                        "Votre compte est en attente de validation par l'administration.");
+            }
+            if (enseignant.getStatut() == StatutEnseignant.REJECTED) {
+                throw new CompteNonValideException(
+                        "Votre compte a été refusé. Veuillez contacter l'administration.");
+            }
+        }
     }
 
     @Transactional
