@@ -292,6 +292,40 @@ class EmargementServiceTest {
     }
 
     // =========================================================================
+    // Émargement hors-ligne (sans QR)
+    // =========================================================================
+
+    @Test
+    void emargerHorsLigne_devraitReussirSansQrEtMarquerHorsLigne() {
+        try (MockedStatic<LocalTime> lt = mockStatic(LocalTime.class, CALLS_REAL_METHODS)) {
+            lt.when(LocalTime::now).thenReturn(FIXED_NOW);
+
+            Seance seance = seanceDansLaFenetre();
+            ci.esatic.sigep.entity.Emargement saved = ci.esatic.sigep.entity.Emargement.builder()
+                    .id(1L).seance(seance).enseignant(enseignant)
+                    .dateHeure(java.time.LocalDateTime.now()).horsLigne(true)
+                    .signatureBase64(SIGNATURE_VALIDE).build();
+
+            when(enseignantRepository.findByUserId(USER_ID)).thenReturn(Optional.of(enseignant));
+            when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seance));
+            when(emargementRepository.existsBySeanceId(SEANCE_ID)).thenReturn(false);
+            when(seanceRepository.save(any())).thenReturn(seance);
+            when(emargementRepository.save(any())).thenReturn(saved);
+
+            ci.esatic.sigep.dto.request.EmargementHorsLigneRequest req =
+                    new ci.esatic.sigep.dto.request.EmargementHorsLigneRequest();
+            req.setSeanceId(SEANCE_ID);
+            req.setSignatureBase64(SIGNATURE_VALIDE);
+
+            EmargementResponse r = emargementService.emargerHorsLigne(USER_ID, req);
+
+            assertThat(r).isNotNull();
+            assertThat(r.isHorsLigne()).isTrue();
+            verifyNoInteractions(qrCodeService, qrReplayGuard); // aucun appel au QR
+        }
+    }
+
+    // =========================================================================
     // Validation signature
     // =========================================================================
 

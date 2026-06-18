@@ -34,6 +34,11 @@ public class Emargement {
     @Builder.Default
     private boolean enRetard = false;
 
+    // true si émargé hors-ligne (file d'attente) : présence NON vérifiée par QR
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean horsLigne = false;
+
     @Column(columnDefinition = "TEXT")
     private String signatureBase64;
 

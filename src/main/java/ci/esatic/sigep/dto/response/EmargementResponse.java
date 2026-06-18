@@ -19,6 +19,7 @@ public class EmargementResponse {
     private String salleLibelle;
     private LocalDateTime dateHeure;
     private boolean enRetard;
+    private boolean horsLigne;
     private String enseignantNom;
     private String enseignantPrenom;
 }

@@ -1,6 +1,7 @@
 package ci.esatic.sigep.controller;
 
 import ci.esatic.sigep.dto.request.EmargementRequest;
+import ci.esatic.sigep.dto.request.EmargementHorsLigneRequest;
 import ci.esatic.sigep.dto.response.ApiResponse;
 import ci.esatic.sigep.dto.response.EmargementResponse;
 import ci.esatic.sigep.entity.User;
@@ -26,6 +27,15 @@ public class EmargementController {
             @Valid @RequestBody EmargementRequest request) {
         EmargementResponse response = emargementService.emarger(user.getId(), request);
         return ResponseEntity.ok(ApiResponse.success("Emargement valide avec succes", response));
+    }
+
+    // Émargement enregistré hors-ligne, envoyé au retour du réseau (sans QR, marqué horsLigne)
+    @PostMapping("/hors-ligne")
+    public ResponseEntity<ApiResponse<EmargementResponse>> emargerHorsLigne(
+            @AuthenticationPrincipal User user,
+            @Valid @RequestBody EmargementHorsLigneRequest request) {
+        EmargementResponse response = emargementService.emargerHorsLigne(user.getId(), request);
+        return ResponseEntity.ok(ApiResponse.success("Emargement hors-ligne enregistre", response));
     }
 
     @GetMapping("/historique")
