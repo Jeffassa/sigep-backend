@@ -139,6 +139,6 @@ class EmargementIntegrationTest {
         mockMvc.perform(post("/api/emargements")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 }

@@ -23,6 +23,7 @@ app:
   jwt:
     secret: dGVzdC1zZWNyZXQta2V5LWZvci1zaWdlcC10ZXN0cy1vbmx5LTI2Y2hhcnM=
     expiration: 86400000
+    refresh-expiration: 2592000000
     qr-secret: dGVzdC1xci1zZWNyZXQta2V5LWZvci1zaWdlcC10ZXN0cy1vbmx5LTI2Yg==
   rapports:
     dossier: target/test-rapports

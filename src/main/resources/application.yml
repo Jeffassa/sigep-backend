@@ -72,7 +72,10 @@ app:
   jwt:
     # SECURITE : JWT_SECRET OBLIGATOIRE en variable d'environnement (min 256 bits, base64). Voir .env.example
     secret: ${JWT_SECRET}
-    expiration: ${JWT_EXPIRATION:86400000}
+    # Access token court (15 min) : renouvelé via le refresh token sans re-saisie des identifiants.
+    expiration: ${JWT_EXPIRATION:900000}
+    # Refresh token longue durée (30 jours) — stocké haché et révocable en base.
+    refresh-expiration: ${JWT_REFRESH_EXPIRATION:2592000000}
     # SECURITE : clé distincte pour les tokens QR (ne jamais utiliser la même que jwt.secret) — OBLIGATOIRE
     qr-secret: ${JWT_QR_SECRET}
   rapports:

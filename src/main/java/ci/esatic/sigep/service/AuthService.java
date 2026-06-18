@@ -30,6 +30,7 @@ public class AuthService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final RefreshTokenService refreshTokenService;
     private final AuthenticationManager authenticationManager;
 
     public AuthResponse login(LoginRequest request) {
@@ -54,6 +55,7 @@ public class AuthService {
         });
 
         String token = jwtService.generateToken(user);
+        String refreshToken = refreshTokenService.create(user);
 
         List<String> roles = user.getRoles().stream()
                 .map(role -> role.getName().name())
@@ -69,6 +71,7 @@ public class AuthService {
 
         return AuthResponse.builder()
                 .token(token)
+                .refreshToken(refreshToken)
                 .type("Bearer")
                 .id(user.getId())
                 .email(user.getEmail())
@@ -76,6 +79,43 @@ public class AuthService {
                 .nom(nom)
                 .prenom(prenom)
                 .build();
+    }
+
+    /**
+     * Échange un refresh token valide contre un nouvel access token.
+     * SECURITE : rotation systématique — l'ancien refresh token est invalidé et un nouveau est émis.
+     */
+    @Transactional
+    public AuthResponse refresh(String refreshToken) {
+        var rt = refreshTokenService.verifier(refreshToken);
+        User user = rt.getUser();
+        String nouveauRefresh = refreshTokenService.rotation(rt);
+        String token = jwtService.generateToken(user);
+
+        List<String> roles = user.getRoles().stream()
+                .map(role -> role.getName().name())
+                .collect(Collectors.toList());
+
+        var enseignantOpt = enseignantRepository.findByUserId(user.getId());
+        String nom = enseignantOpt.map(Enseignant::getNom).orElse("");
+        String prenom = enseignantOpt.map(Enseignant::getPrenom).orElse("");
+
+        return AuthResponse.builder()
+                .token(token)
+                .refreshToken(nouveauRefresh)
+                .type("Bearer")
+                .id(user.getId())
+                .email(user.getEmail())
+                .roles(roles)
+                .nom(nom)
+                .prenom(prenom)
+                .build();
+    }
+
+    /** Déconnexion : révoque le refresh token fourni (l'access token expire seul, à court terme). */
+    @Transactional
+    public void logout(String refreshToken) {
+        refreshTokenService.revoquer(refreshToken);
     }
 
     @Transactional

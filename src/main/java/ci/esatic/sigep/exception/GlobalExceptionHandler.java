@@ -40,6 +40,12 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error("Email ou mot de passe incorrect"));
     }
 
+    @ExceptionHandler(RefreshTokenInvalidException.class)
+    public ResponseEntity<ApiResponse<Void>> handleRefreshInvalide(RefreshTokenInvalidException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.error(ex.getMessage()));
+    }
+
     @ExceptionHandler(CompteNonValideException.class)
     public ResponseEntity<ApiResponse<Void>> handleCompteNonValide(CompteNonValideException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)

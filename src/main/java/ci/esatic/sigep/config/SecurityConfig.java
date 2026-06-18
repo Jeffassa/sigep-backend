@@ -77,6 +77,13 @@ public class SecurityConfig {
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
+                // Requête API non authentifiée (token absent/expiré/invalide) → 401 (et non 403),
+                // ce qui permet au client mobile de déclencher le rafraîchissement du token.
+                .exceptionHandling(ex -> ex.authenticationEntryPoint((request, response, authEx) -> {
+                    response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.getWriter().write("{\"success\":false,\"message\":\"Authentification requise\"}");
+                }))
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(loginRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

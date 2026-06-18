@@ -90,9 +90,11 @@ class AuthIntegrationTest {
     }
 
     @Test
-    void endpointProtege_devraitRetourner403SansToken() throws Exception {
+    void endpointProtege_devraitRetourner401SansToken() throws Exception {
+        // Requête API non authentifiée → 401 (entry point dédié), ce qui permet au
+        // client mobile de déclencher le rafraîchissement du token.
         mockMvc.perform(get("/api/enseignants/moi"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     // =========================================================================

@@ -13,6 +13,8 @@ import java.util.List;
 @AllArgsConstructor
 public class AuthResponse {
     private String token;
+    /** Jeton de rafraîchissement (longue durée) ; null à l'inscription en attente de validation. */
+    private String refreshToken;
     @Builder.Default
     private String type = "Bearer";
     private Long id;
