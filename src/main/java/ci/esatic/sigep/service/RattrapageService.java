@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -16,11 +17,15 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class RattrapageService {
 
+    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private static final DateTimeFormatter HEURE_FMT = DateTimeFormatter.ofPattern("HH:mm");
+
     private final DemandeRattrapageRepository demandeRepository;
     private final EnseignantRepository enseignantRepository;
     private final MatiereRepository matiereRepository;
     private final ClasseRepository classeRepository;
     private final SeanceRepository seanceRepository;
+    private final MailService mailService;
 
     @Transactional
     public RattrapageResponse creerDemande(Long userId, RattrapageRequest request) {
@@ -86,7 +91,9 @@ public class RattrapageService {
         demande.setStatut(StatutDemande.ACCEPTE);
         demande.setSeanceRattrapage(seanceRattrapage);
 
-        return toResponse(demandeRepository.save(demande));
+        DemandeRattrapage saved = demandeRepository.save(demande);
+        notifierDecision(saved, true);
+        return toResponse(saved);
     }
 
     @Transactional
@@ -99,7 +106,18 @@ public class RattrapageService {
         }
 
         demande.setStatut(StatutDemande.REFUSE);
-        return toResponse(demandeRepository.save(demande));
+        DemandeRattrapage saved = demandeRepository.save(demande);
+        notifierDecision(saved, false);
+        return toResponse(saved);
+    }
+
+    private void notifierDecision(DemandeRattrapage d, boolean accepte) {
+        Enseignant ens = d.getEnseignant();
+        String email = (ens != null && ens.getUser() != null) ? ens.getUser().getEmail() : null;
+        if (email == null) return;
+        String matiere = d.getMatiere() != null ? d.getMatiere().getLibelle() : "";
+        String quand = d.getDateSouhaitee().format(DATE_FMT) + " à " + d.getHeureSouhaitee().format(HEURE_FMT);
+        mailService.notifierDecisionRattrapage(email, ens.getPrenom(), matiere, quand, accepte);
     }
 
     private RattrapageResponse toResponse(DemandeRattrapage d) {

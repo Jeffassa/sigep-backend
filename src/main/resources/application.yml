@@ -33,6 +33,19 @@ spring:
   output:
     ansi:
       enabled: always
+  # SMTP pour les notifications par e-mail (activé seulement si app.mail.enabled=true).
+  # En prod : définir MAIL_HOST/MAIL_USERNAME/MAIL_PASSWORD + MAIL_ENABLED=true.
+  mail:
+    host: ${MAIL_HOST:}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
 server:
   port: 8080
@@ -46,6 +59,11 @@ app:
     qr-secret: ${JWT_QR_SECRET}
   rapports:
     dossier: ${RAPPORTS_DOSSIER:rapports}
+  mail:
+    # Désactivé par défaut : les notifications sont seulement journalisées tant
+    # que MAIL_ENABLED=true et un SMTP ne sont pas fournis.
+    enabled: ${MAIL_ENABLED:false}
+    from: ${MAIL_FROM:no-reply@esatic.ci}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:8080,http://localhost:3000}
   admin:
