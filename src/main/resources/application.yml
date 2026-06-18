@@ -21,9 +21,13 @@ spring:
       write-dates-as-timestamps: false
     deserialization:
       fail-on-unknown-properties: false
+  # Le schéma est géré par Flyway (db/migration). Hibernate se contente de valider.
+  flyway:
+    enabled: ${FLYWAY_ENABLED:true}
+    baseline-on-migrate: true
   jpa:
     hibernate:
-      # SECURITE : 'validate' par défaut (prod) ; mettre 'update' en dev via JPA_DDL_AUTO
+      # 'validate' : Hibernate vérifie que les entités correspondent au schéma Flyway.
       ddl-auto: ${JPA_DDL_AUTO:validate}
     show-sql: ${JPA_SHOW_SQL:false}
     properties:

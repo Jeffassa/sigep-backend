@@ -4,6 +4,9 @@ spring:
     driver-class-name: org.h2.Driver
     username: sa
     password:
+  # Tests sur H2 : schéma créé par Hibernate, pas de Flyway (migrations PostgreSQL).
+  flyway:
+    enabled: false
   jpa:
     hibernate:
       ddl-auto: create-drop
