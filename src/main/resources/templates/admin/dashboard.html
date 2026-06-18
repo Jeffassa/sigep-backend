@@ -106,6 +106,42 @@
             <span id="apercuTaux" class="hidden" th:text="${tauxEmargement + '%'}"></span>
         </div>
     </section>
+
+    <!-- Tendance multi-semaines + Classement des enseignants -->
+    <section class="grid grid-cols-1 lg:grid-cols-3 gap-5 mt-5">
+        <!-- Tendance 6 dernières semaines -->
+        <div class="lg:col-span-2 glass rounded-3xl p-7" data-reveal>
+            <h2 class="font-serif text-[24px] leading-none mb-1">Tendance · 6 dernières semaines</h2>
+            <p class="text-[13px] text-muted mb-7">Taux d'émargement par semaine</p>
+            <div class="flex items-end gap-3 md:gap-5 h-52">
+                <div th:each="s : ${tendanceSemaines}" class="flex-grow flex flex-col items-center justify-end h-full">
+                    <span class="font-mono text-[10px] text-muted mb-1" th:text="${#numbers.formatDecimal(s.taux,1,0)} + '%'">0%</span>
+                    <div class="w-full rounded-t-xl transition-all duration-700"
+                         th:style="'height:' + ${s.taux > 3 ? s.taux : 3} + '%; background:linear-gradient(180deg,#0a0a0a,#3a3a3a);'"></div>
+                    <span class="mt-2.5 font-mono text-[10px] text-muted" th:text="${s.label}">--</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Classement par assiduité -->
+        <div class="glass rounded-3xl p-7 flex flex-col" data-reveal>
+            <h2 class="font-serif text-[24px] leading-none mb-1">Classement</h2>
+            <p class="text-[13px] text-muted mb-5">Assiduité · 30 derniers jours</p>
+            <div class="space-y-1.5 overflow-y-auto max-h-[340px] -mx-1 px-1">
+                <p th:if="${classement.isEmpty()}" class="text-[14px] text-muted py-10 text-center">Aucune donnée.</p>
+                <div th:each="c,st : ${classement}" class="flex items-center gap-3 p-2.5 rounded-2xl hover:bg-black/5 transition">
+                    <span class="font-mono text-[12px] text-muted w-5 text-right" th:text="${st.count}">1</span>
+                    <div class="min-w-0 flex-grow">
+                        <p class="text-[13px] font-medium truncate" th:text="${c.nom}">Nom</p>
+                        <div class="h-1.5 mt-1 rounded-full bg-black/10 overflow-hidden">
+                            <div class="h-full rounded-full bg-ink" th:style="'width:' + ${c.taux} + '%'"></div>
+                        </div>
+                    </div>
+                    <span class="font-mono text-[12px] whitespace-nowrap" th:text="${#numbers.formatDecimal(c.taux,1,0)} + '%'">0%</span>
+                </div>
+            </div>
+        </div>
+    </section>
 </main>
 
 <div th:replace="~{admin/fragments :: dock('dashboard')}"></div>
