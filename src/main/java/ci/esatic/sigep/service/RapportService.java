@@ -20,6 +20,8 @@ import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 @Service
 @RequiredArgsConstructor
@@ -34,6 +36,7 @@ public class RapportService {
     private final EnseignantRepository enseignantRepository;
     private final EmargementRepository emargementRepository;
     private final RapportPdfRepository rapportPdfRepository;
+    private final SeanceRepository seanceRepository;
 
     // Génération automatique chaque dimanche à 2h du matin
     @Scheduled(cron = "0 0 2 * * SUN")
@@ -241,6 +244,38 @@ public class RapportService {
                 .stream().map(this::toResponse).collect(Collectors.toList());
     }
 
+    /** Rapports filtrés par enseignant (optionnel) et chevauchement de période (optionnel). */
+    public List<RapportResponse> getRapportsFiltres(Long enseignantId, LocalDate debut, LocalDate fin) {
+        return rapportPdfRepository.findFiltres(enseignantId, debut, fin)
+                .stream().map(this::toResponse).collect(Collectors.toList());
+    }
+
+    public List<RapportPdf> getRapportPdfsFiltres(Long enseignantId, LocalDate debut, LocalDate fin) {
+        return rapportPdfRepository.findFiltres(enseignantId, debut, fin);
+    }
+
+    /** Construit une archive ZIP contenant les PDF des rapports fournis. */
+    public byte[] genererZip(List<RapportPdf> rapports) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        java.util.Set<String> nomsUtilises = new java.util.HashSet<>();
+        try (ZipOutputStream zos = new ZipOutputStream(baos)) {
+            for (RapportPdf r : rapports) {
+                Path p = Paths.get(r.getCheminFichier());
+                if (!Files.exists(p)) continue; // fichier supprimé : on ignore
+                String nom = nomFichierTelechargement(r);
+                String unique = nom;
+                int n = 1;
+                while (!nomsUtilises.add(unique)) {
+                    unique = nom.replaceFirst("\\.pdf$", "_" + (n++) + ".pdf");
+                }
+                zos.putNextEntry(new ZipEntry(unique));
+                Files.copy(p, zos);
+                zos.closeEntry();
+            }
+        }
+        return baos.toByteArray();
+    }
+
     public byte[] getRapportBytes(Long id) throws IOException {
         RapportPdf rapport = rapportPdfRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Rapport introuvable"));
@@ -286,6 +321,10 @@ public class RapportService {
     }
 
     private RapportResponse toResponse(RapportPdf r) {
+        Long ensId = r.getEnseignant().getId();
+        long total = seanceRepository.countByEnseignantIdAndPeriode(ensId, r.getPeriodeDebut(), r.getPeriodeFin());
+        long emargees = seanceRepository.countEmargeesParEnseignant(ensId, r.getPeriodeDebut(), r.getPeriodeFin());
+        double taux = total > 0 ? Math.round(emargees * 1000.0 / total) / 10.0 : 0.0;
         return RapportResponse.builder()
                 .id(r.getId())
                 .enseignantNom(r.getEnseignant().getNom())
@@ -296,6 +335,17 @@ public class RapportService {
                 .tailleFichierOctets(r.getTailleFichierOctets())
                 .dateGeneration(r.getDateGeneration())
                 .type(r.getType())
+                .tauxEmargement(taux)
+                .niveau(niveauAssiduite(taux, total))
                 .build();
+    }
+
+    /** Classe l'assiduité de l'enseignant sur la période d'après son taux d'émargement. */
+    private String niveauAssiduite(double taux, long total) {
+        if (total == 0) return "—";
+        if (taux >= 90) return "Excellent";
+        if (taux >= 75) return "Bon";
+        if (taux >= 50) return "Moyen";
+        return "Faible";
     }
 }

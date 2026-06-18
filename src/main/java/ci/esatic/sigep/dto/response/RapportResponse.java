@@ -23,4 +23,7 @@ public class RapportResponse {
     private Long tailleFichierOctets;
     private LocalDateTime dateGeneration;
     private TypeRapport type;
+    // Indicateur intelligent : assiduité de l'enseignant sur la période du rapport
+    private double tauxEmargement;   // % de séances émargées
+    private String niveau;           // Excellent / Bon / Moyen / Faible / —
 }
