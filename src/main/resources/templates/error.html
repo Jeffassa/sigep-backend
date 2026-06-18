@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('SIGEP | Erreur')}"></head>
+<body class="min-h-screen flex items-center justify-center px-5">
+
+<main class="w-full max-w-[460px] text-center reveal">
+    <div class="glass-strong rounded-3xl p-10">
+        <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-ink text-white mb-6">
+            <span class="material-symbols-rounded fill"
+                  th:text="${status == 403 ? 'lock' : (status == 404 ? 'travel_explore' : 'error')}">error</span>
+        </div>
+
+        <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mb-2">Erreur</p>
+        <h1 class="font-serif text-[88px] leading-[0.9] tracking-tight" th:text="${status} ?: 'Oups'">500</h1>
+
+        <p class="text-[16px] text-muted mt-3 mb-8" th:switch="${status}">
+            <span th:case="403">Vous n'avez pas les droits pour accéder à cette page.</span>
+            <span th:case="404">Cette page est introuvable ou a été déplacée.</span>
+            <span th:case="405">Cette action n'est pas autorisée ici.</span>
+            <span th:case="*">Une erreur inattendue s'est produite. Réessayez dans un instant.</span>
+        </p>
+
+        <div class="flex items-center justify-center gap-3">
+            <a href="javascript:history.back()" class="btn glass h-11 px-5 rounded-xl text-[14px] font-medium flex items-center gap-2">
+                <span class="material-symbols-rounded text-[18px]">arrow_back</span> Retour
+            </a>
+            <a th:href="@{/admin/dashboard}" class="btn btn-ink h-11 px-5 rounded-xl text-[14px] font-medium flex items-center gap-2">
+                <span class="material-symbols-rounded text-[18px]">home</span> Accueil
+            </a>
+        </div>
+    </div>
+    <p class="font-mono text-[10px] uppercase tracking-[0.2em] text-muted mt-6">SIGEP · ESATIC</p>
+</main>
+
+</body>
+</html>

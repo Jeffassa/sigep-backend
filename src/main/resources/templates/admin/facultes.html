@@ -1,107 +1,75 @@
 <!DOCTYPE html>
 <html lang="fr" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{admin/fragments :: head('SIGEP | Facultés')}"></head>
-<body class="bg-background text-on-surface min-h-screen pb-24 md:pb-0">
+<body>
 
 <div th:replace="~{admin/fragments :: topbar('facultes')}"></div>
 
-<main class="max-w-container-max mx-auto px-margin-mobile md:px-gutter py-lg">
+<main class="max-w-[1240px] mx-auto px-5 md:px-8 py-10 pb-36">
 
-    <div class="flex flex-col md:flex-row md:items-end justify-between gap-md mb-lg">
+    <div class="mb-8" data-reveal>
+        <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mb-2">Établissement</p>
+        <h1 class="font-serif text-[clamp(34px,5vw,52px)] leading-[1.02] tracking-tight">Facultés</h1>
+    </div>
+
+    <div th:if="${success}" class="glass rounded-2xl p-3.5 mb-5 flex items-center gap-2 text-[13px]" data-reveal>
+        <span class="material-symbols-rounded text-[18px]">check_circle</span><span th:text="${success}">OK</span>
+    </div>
+    <div th:if="${error}" class="glass rounded-2xl p-3.5 mb-5 flex items-center gap-2 text-[13px]" data-reveal
+         style="border-color:rgba(186,26,26,.3)">
+        <span class="material-symbols-rounded text-[18px]">error</span><span th:text="${error}">Erreur</span>
+    </div>
+
+    <!-- Formulaire -->
+    <form th:action="@{/admin/facultes}" method="post" class="glass rounded-3xl p-6 mb-6 grid grid-cols-1 md:grid-cols-4 gap-3 items-end" data-reveal>
         <div>
-            <h1 class="font-headline-xl text-headline-xl text-primary mb-2">Facultés</h1>
-            <p class="font-body-md text-body-md text-on-surface-variant">Gérer les facultés de l'établissement.</p>
+            <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Code</label>
+            <input type="text" name="code" required maxlength="20" placeholder="ESATIC-SI"
+                   class="w-full h-11 px-4 rounded-xl bg-white/55 border border-line focus:ring-0 focus:border-ink transition"/>
         </div>
-        <span class="px-4 py-2 bg-surface-container-high rounded-xl font-label-md text-label-md text-on-surface-variant">
-            <span class="material-symbols-outlined text-[18px] align-middle mr-1">groups_3</span>
-            <span th:text="${facultes.size()} + ' faculté(s)'">0 faculté(s)</span>
-        </span>
-    </div>
-
-    <!-- Flash -->
-    <div th:if="${success}"
-         class="flex items-center gap-2 p-3 mb-6 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
-        <span class="material-symbols-outlined text-[18px]">check_circle</span>
-        <span th:text="${success}">Opération réussie.</span>
-    </div>
-    <div th:if="${error}"
-         class="flex items-center gap-2 p-3 mb-6 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-        <span class="material-symbols-outlined text-[18px]">error</span>
-        <span th:text="${error}">Erreur.</span>
-    </div>
-
-    <!-- Formulaire d'ajout -->
-    <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-md mb-lg shadow-sm">
-        <h2 class="font-headline-md text-headline-md text-primary mb-md flex items-center gap-2">
-            <span class="material-symbols-outlined">add_circle</span>
-            Ajouter une faculté
-        </h2>
-        <form th:action="@{/admin/facultes}" method="post"
-              class="grid grid-cols-1 md:grid-cols-4 gap-base items-end">
-            <div>
-                <label class="block font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-xs">
-                    Code <span class="text-error">*</span>
-                </label>
-                <input type="text" name="code" required maxlength="20" placeholder="Ex : ESATIC-SI"
-                       class="w-full h-11 px-4 border border-outline-variant rounded-lg bg-surface-bright text-on-surface
-                              focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"/>
-            </div>
-            <div>
-                <label class="block font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-xs">
-                    Nom <span class="text-error">*</span>
-                </label>
-                <input type="text" name="nom" required maxlength="120" placeholder="Ex : Sciences Informatiques"
-                       class="w-full h-11 px-4 border border-outline-variant rounded-lg bg-surface-bright text-on-surface
-                              focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"/>
-            </div>
-            <div>
-                <label class="block font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-xs">
-                    Description
-                </label>
-                <input type="text" name="description" maxlength="500" placeholder="Optionnel"
-                       class="w-full h-11 px-4 border border-outline-variant rounded-lg bg-surface-bright text-on-surface
-                              focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"/>
-            </div>
-            <button type="submit"
-                    class="h-11 bg-primary text-on-primary px-6 rounded-xl font-semibold font-label-md
-                           hover:opacity-90 active:scale-95 transition-all shadow-sm flex items-center justify-center gap-2">
-                <span class="material-symbols-outlined text-[18px]">add</span>
-                Ajouter
-            </button>
-        </form>
-    </div>
+        <div>
+            <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Nom</label>
+            <input type="text" name="nom" required maxlength="120" placeholder="Sciences Informatiques"
+                   class="w-full h-11 px-4 rounded-xl bg-white/55 border border-line focus:ring-0 focus:border-ink transition"/>
+        </div>
+        <div>
+            <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Description</label>
+            <input type="text" name="description" maxlength="500" placeholder="Optionnel"
+                   class="w-full h-11 px-4 rounded-xl bg-white/55 border border-line focus:ring-0 focus:border-ink transition"/>
+        </div>
+        <button type="submit" class="btn btn-ink h-11 rounded-xl font-medium flex items-center justify-center gap-2">
+            <span class="material-symbols-rounded text-[20px]">add</span> Ajouter
+        </button>
+    </form>
 
     <!-- Table -->
-    <div class="bg-surface-container-lowest rounded-xl border border-outline-variant overflow-hidden shadow-sm">
-        <div class="overflow-x-auto custom-scrollbar">
-            <table class="w-full text-left border-collapse">
+    <div class="glass rounded-3xl overflow-hidden" data-reveal>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
                 <thead>
-                <tr class="bg-surface-container border-b border-outline-variant">
-                    <th class="px-md py-4 font-label-sm text-label-sm text-outline uppercase tracking-wider">Code</th>
-                    <th class="px-md py-4 font-label-sm text-label-sm text-outline uppercase tracking-wider">Nom</th>
-                    <th class="px-md py-4 font-label-sm text-label-sm text-outline uppercase tracking-wider">Description</th>
-                    <th class="px-md py-4 font-label-sm text-label-sm text-outline uppercase tracking-wider text-right">Action</th>
+                <tr class="border-b border-line">
+                    <th class="px-6 py-4 font-mono text-[10px] uppercase tracking-wider text-muted">Code</th>
+                    <th class="px-6 py-4 font-mono text-[10px] uppercase tracking-wider text-muted">Nom</th>
+                    <th class="px-6 py-4 font-mono text-[10px] uppercase tracking-wider text-muted">Description</th>
+                    <th class="px-6 py-4 font-mono text-[10px] uppercase tracking-wider text-muted text-right">Action</th>
                 </tr>
                 </thead>
-                <tbody class="divide-y divide-outline-variant">
+                <tbody>
                 <tr th:if="${facultes.isEmpty()}">
-                    <td colspan="4" class="px-md py-12 text-center text-on-surface-variant">
-                        <span class="material-symbols-outlined text-[48px] block mb-2">groups_3</span>
-                        Aucune faculté. Utilisez le formulaire ci-dessus pour en ajouter.
+                    <td colspan="4" class="px-6 py-16 text-center text-muted">
+                        <span class="material-symbols-rounded text-[40px] block mb-2 opacity-40">account_balance</span>
+                        Aucune faculté. Ajoutez-en une ci-dessus.
                     </td>
                 </tr>
-                <tr th:each="faculte : ${facultes}" class="zebra-stripe hover:bg-surface-container-high transition-colors">
-                    <td class="px-md py-4 font-body-sm text-body-sm font-mono font-semibold text-primary" th:text="${faculte.code}">CODE</td>
-                    <td class="px-md py-4 font-label-md text-label-md text-on-surface" th:text="${faculte.nom}">Nom</td>
-                    <td class="px-md py-4 font-body-md text-body-md text-on-surface-variant" th:text="${faculte.description}">—</td>
-                    <td class="px-md py-4 text-right">
+                <tr th:each="faculte : ${facultes}" class="zebra border-b border-line/60">
+                    <td class="px-6 py-4 font-mono text-[13px] font-medium" th:text="${faculte.code}">CODE</td>
+                    <td class="px-6 py-4 text-[14px] font-medium" th:text="${faculte.nom}">Nom</td>
+                    <td class="px-6 py-4 text-[14px] text-muted" th:text="${faculte.description}">—</td>
+                    <td class="px-6 py-4 text-right">
                         <form th:action="@{'/admin/facultes/' + ${faculte.id} + '/supprimer'}" method="post"
                               onsubmit="return confirm('Supprimer cette faculté ?');" class="inline">
-                            <button type="submit"
-                                    class="inline-flex items-center gap-1 px-3 py-1.5 bg-error text-on-error rounded-lg font-label-sm text-label-sm
-                                           hover:opacity-90 active:scale-95 transition-all">
-                                <span class="material-symbols-outlined text-[16px]">delete</span>
-                                Supprimer
+                            <button type="submit" class="btn w-9 h-9 rounded-lg border border-line inline-flex items-center justify-center hover:bg-ink hover:text-white" title="Supprimer">
+                                <span class="material-symbols-rounded text-[16px]">delete</span>
                             </button>
                         </form>
                     </td>
@@ -112,7 +80,9 @@
     </div>
 </main>
 
-<div th:replace="~{admin/fragments :: bottomnav('facultes')}"></div>
+<div th:replace="~{admin/fragments :: dock('facultes')}"></div>
+<div th:replace="~{admin/fragments :: palette}"></div>
+<div th:replace="~{admin/fragments :: scripts}"></div>
 
 </body>
 </html>

@@ -2,10 +2,8 @@ package ci.esatic.sigep.controller.web;
 
 import ci.esatic.sigep.entity.*;
 import ci.esatic.sigep.repository.*;
-import ci.esatic.sigep.service.ImportService;
 import ci.esatic.sigep.service.RapportService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.multipart.MultipartFile;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpHeaders;
@@ -37,7 +35,9 @@ public class AdminWebController {
     private final PasswordEncoder passwordEncoder;
     private final RapportService rapportService;
     private final FaculteRepository faculteRepository;
-    private final ImportService importService;
+    private final MatiereRepository matiereRepository;
+    private final ClasseRepository classeRepository;
+    private final SalleRepository salleRepository;
 
     // ─── COMMUN ───────────────────────────────────────────────────────────────
 
@@ -128,6 +128,126 @@ public class AdminWebController {
         model.addAttribute("enseignantsEnAttente",
                 enseignantRepository.findByStatutOrderByNomAsc(StatutEnseignant.PENDING));
         return "admin/alertes";
+    }
+
+    // ─── REFERENTIELS (matieres / classes / salles) ────────────────────────────
+
+    @GetMapping("/admin/referentiels")
+    public String referentiels(Model model) {
+        model.addAttribute("matieres", matiereRepository.findAll());
+        model.addAttribute("classes", classeRepository.findAll());
+        model.addAttribute("salles", salleRepository.findAll());
+        return "admin/referentiels";
+    }
+
+    // --- Matières ---
+    @PostMapping("/admin/matieres")
+    public String creerMatiere(@RequestParam String libelle,
+                               @RequestParam(required = false) String description, RedirectAttributes ra) {
+        String lib = libelle == null ? "" : libelle.trim();
+        if (lib.isEmpty()) {
+            ra.addFlashAttribute("error", "Le libellé de la matière est obligatoire.");
+        } else if (matiereRepository.existsByLibelleIgnoreCase(lib)) {
+            ra.addFlashAttribute("error", "Cette matière existe déjà : " + lib);
+        } else {
+            matiereRepository.save(Matiere.builder().libelle(lib)
+                    .description(description != null ? description.trim() : null).build());
+            ra.addFlashAttribute("success", "Matière « " + lib + " » ajoutée.");
+        }
+        return "redirect:/admin/referentiels";
+    }
+
+    @PostMapping("/admin/matieres/{id}/supprimer")
+    public String supprimerMatiere(@PathVariable Long id, RedirectAttributes ra) {
+        try {
+            matiereRepository.deleteById(id);
+            ra.addFlashAttribute("success", "Matière supprimée.");
+        } catch (Exception e) {
+            ra.addFlashAttribute("error", "Suppression impossible : cette matière est utilisée par des séances.");
+        }
+        return "redirect:/admin/referentiels";
+    }
+
+    // --- Classes ---
+    @PostMapping("/admin/classes")
+    public String creerClasse(@RequestParam String libelle,
+                              @RequestParam(required = false) String filiere,
+                              @RequestParam(required = false) Integer niveau, RedirectAttributes ra) {
+        String lib = libelle == null ? "" : libelle.trim();
+        if (lib.isEmpty()) {
+            ra.addFlashAttribute("error", "Le libellé de la classe est obligatoire.");
+        } else if (classeRepository.existsByLibelleIgnoreCase(lib)) {
+            ra.addFlashAttribute("error", "Cette classe existe déjà : " + lib);
+        } else {
+            classeRepository.save(Classe.builder().libelle(lib)
+                    .filiere(filiere != null ? filiere.trim() : null).niveau(niveau).build());
+            ra.addFlashAttribute("success", "Classe « " + lib + " » ajoutée.");
+        }
+        return "redirect:/admin/referentiels";
+    }
+
+    @PostMapping("/admin/classes/{id}/supprimer")
+    public String supprimerClasse(@PathVariable Long id, RedirectAttributes ra) {
+        try {
+            classeRepository.deleteById(id);
+            ra.addFlashAttribute("success", "Classe supprimée.");
+        } catch (Exception e) {
+            ra.addFlashAttribute("error", "Suppression impossible : cette classe est utilisée par des séances.");
+        }
+        return "redirect:/admin/referentiels";
+    }
+
+    // --- Salles ---
+    @PostMapping("/admin/salles")
+    public String creerSalle(@RequestParam String libelle, @RequestParam(required = false) String batiment,
+                             @RequestParam(required = false) Integer capacite, RedirectAttributes ra) {
+        String lib = libelle == null ? "" : libelle.trim().toUpperCase();
+        if (lib.isEmpty()) {
+            ra.addFlashAttribute("error", "Le nom de la salle est obligatoire.");
+        } else if (!lib.matches("[A-Z0-9_\\-]{1,20}")) {
+            // Le nom de salle sert de jeton dans le QR d'émargement (cf. QrController) :
+            // il doit rester court et sans espace.
+            ra.addFlashAttribute("error", "Le nom de salle doit être court et sans espace (lettres, chiffres, - ou _). Ex : A101.");
+        } else if (salleRepository.existsByLibelleIgnoreCase(lib)) {
+            ra.addFlashAttribute("error", "Cette salle existe déjà : " + lib);
+        } else {
+            salleRepository.save(Salle.builder().libelle(lib)
+                    .batiment(batiment != null ? batiment.trim() : null).capacite(capacite).build());
+            ra.addFlashAttribute("success", "Salle « " + lib + " » ajoutée.");
+        }
+        return "redirect:/admin/referentiels";
+    }
+
+    @PostMapping("/admin/salles/{id}/supprimer")
+    public String supprimerSalle(@PathVariable Long id, RedirectAttributes ra) {
+        try {
+            salleRepository.deleteById(id);
+            ra.addFlashAttribute("success", "Salle supprimée.");
+        } catch (Exception e) {
+            ra.addFlashAttribute("error", "Suppression impossible : cette salle est utilisée par des séances.");
+        }
+        return "redirect:/admin/referentiels";
+    }
+
+    // --- Modèle d'emploi du temps (CSV téléchargeable) ---
+    @GetMapping("/admin/planning/modele")
+    public ResponseEntity<byte[]> modeleEmploiDuTemps() {
+        String m  = matiereRepository.findAll().stream().findFirst().map(Matiere::getLibelle).orElse("MATIERE");
+        String cl = classeRepository.findAll().stream().findFirst().map(Classe::getLibelle).orElse("CLASSE");
+        String sa = salleRepository.findAll().stream().findFirst().map(Salle::getLibelle).orElse("SALLE");
+        String today = LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("DATE;HEURE_DEBUT;HEURE_FIN;MATIERE;CLASSE;SALLE\r\n");
+        sb.append(today).append(";08:00;10:00;").append(m).append(';').append(cl).append(';').append(sa).append("\r\n");
+        sb.append(today).append(";10:15;12:15;").append(m).append(';').append(cl).append(';').append(sa).append("\r\n");
+
+        // BOM UTF-8 pour qu'Excel ouvre correctement les accents
+        byte[] bytes = ("﻿" + sb).getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"modele_emploi_du_temps.csv\"")
+                .body(bytes);
     }
 
     // ─── FACULTES ─────────────────────────────────────────────────────────────
@@ -301,32 +421,6 @@ public class AdminWebController {
             ra.addFlashAttribute("success", result.size() + " rapport(s) genere(s) avec succes.");
         } catch (Exception e) {
             ra.addFlashAttribute("error", "Erreur lors de la generation : " + e.getMessage());
-        }
-        return "redirect:/admin/rapports";
-    }
-
-    @PostMapping("/admin/import/planning")
-    public String importPlanningWeb(@RequestParam("file") MultipartFile file, RedirectAttributes ra) {
-        if (file == null || file.isEmpty()) {
-            ra.addFlashAttribute("error", "Veuillez sélectionner un fichier.");
-            return "redirect:/admin/rapports";
-        }
-        String filename = file.getOriginalFilename();
-        String lower = filename == null ? "" : filename.toLowerCase();
-        if (!lower.endsWith(".csv") && !lower.endsWith(".xlsx")) {
-            ra.addFlashAttribute("error", "Format non supporté. Utilisez .csv ou .xlsx.");
-            return "redirect:/admin/rapports";
-        }
-        if (file.getSize() > 5 * 1024 * 1024L) {
-            ra.addFlashAttribute("error", "Fichier trop volumineux (max 5 Mo).");
-            return "redirect:/admin/rapports";
-        }
-        try {
-            var result = importService.importerPlanning(file);
-            ra.addFlashAttribute("success",
-                    result.getOrDefault("totalImporte", 0) + " séance(s) importée(s) depuis " + filename + ".");
-        } catch (Exception e) {
-            ra.addFlashAttribute("error", "Le fichier contient des données invalides ou non reconnues.");
         }
         return "redirect:/admin/rapports";
     }

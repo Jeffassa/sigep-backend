@@ -1,4 +1,8 @@
 spring:
+  # En local, le profil 'dev' s'active automatiquement (valeurs de dev, secrets fournis).
+  # En production : définir SPRING_PROFILES_ACTIVE=prod + les variables d'env (voir .env.example).
+  profiles:
+    default: dev
   application:
     name: sigep-backend
   datasource:

@@ -7,7 +7,7 @@ import lombok.Data;
 public class SalleRequest {
 
     @NotBlank
-    private String code;
+    private String libelle;
 
     private String batiment;
 

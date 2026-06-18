@@ -32,18 +32,13 @@ public class SalleService {
         return findEntityById(id);
     }
 
-    public Salle findByCode(String code) {
-        return salleRepository.findByCode(code)
-                .orElseThrow(() -> new ResourceNotFoundException("Salle", "code", code));
-    }
-
     @Transactional
     public SalleResponse create(SalleRequest request) {
-        if (salleRepository.existsByCode(request.getCode())) {
-            throw new IllegalArgumentException("Code salle deja utilise : " + request.getCode());
+        if (salleRepository.existsByLibelleIgnoreCase(request.getLibelle())) {
+            throw new IllegalArgumentException("Salle deja utilisee : " + request.getLibelle());
         }
         Salle salle = Salle.builder()
-                .code(request.getCode())
+                .libelle(request.getLibelle())
                 .batiment(request.getBatiment())
                 .capacite(request.getCapacite())
                 .build();
@@ -74,7 +69,7 @@ public class SalleService {
     private SalleResponse toResponse(Salle s) {
         return SalleResponse.builder()
                 .id(s.getId())
-                .code(s.getCode())
+                .libelle(s.getLibelle())
                 .batiment(s.getBatiment())
                 .capacite(s.getCapacite())
                 .build();

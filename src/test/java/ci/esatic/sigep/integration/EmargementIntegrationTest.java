@@ -80,9 +80,9 @@ class EmargementIntegrationTest {
                 .statut(StatutEnseignant.VALIDATED).user(user)
                 .build());
 
-        Matiere matiere = matiereRepository.save(Matiere.builder().code("BDD").libelle("Bases de données").build());
-        Classe classe = classeRepository.save(Classe.builder().code("L2RT").libelle("L2 Réseaux").filiere("RT").niveau(2).build());
-        Salle salle = salleRepository.save(Salle.builder().code(SALLE_CODE).batiment("B").capacite(40).build());
+        Matiere matiere = matiereRepository.save(Matiere.builder().libelle("Bases de données").build());
+        Classe classe = classeRepository.save(Classe.builder().libelle("L2 Réseaux").filiere("RT").niveau(2).build());
+        Salle salle = salleRepository.save(Salle.builder().libelle(SALLE_CODE).batiment("B").capacite(40).build());
 
         Seance seance = seanceRepository.save(Seance.builder()
                 .date(LocalDate.now())
@@ -98,7 +98,7 @@ class EmargementIntegrationTest {
 
     @Test
     void emargement_completDevraitReussirEtPersister() throws Exception {
-        String qrToken = jwtService.generateQrToken(SALLE_CODE, 30_000L);
+        String qrToken = jwtService.generateUniversalQrToken(30_000L);
         String body = objectMapper.writeValueAsString(Map.of(
                 "seanceId", seanceId, "qrToken", qrToken, "signatureBase64", SIGNATURE));
 
@@ -132,7 +132,7 @@ class EmargementIntegrationTest {
 
     @Test
     void emargement_devraitEchouerSansToken() throws Exception {
-        String qrToken = jwtService.generateQrToken(SALLE_CODE, 30_000L);
+        String qrToken = jwtService.generateUniversalQrToken(30_000L);
         String body = objectMapper.writeValueAsString(Map.of(
                 "seanceId", seanceId, "qrToken", qrToken, "signatureBase64", SIGNATURE));
 

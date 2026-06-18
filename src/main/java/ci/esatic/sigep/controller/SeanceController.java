@@ -35,6 +35,15 @@ public class SeanceController {
         return ResponseEntity.ok(ApiResponse.success("Seances du jour", seances));
     }
 
+    // Séances du jour encore à émarger (en cours + passées non émargées)
+    @GetMapping("/a-emarger")
+    public ResponseEntity<ApiResponse<List<SeanceResponse>>> getAEmarger(
+            @AuthenticationPrincipal User user) {
+        Enseignant enseignant = getEnseignantByUser(user);
+        List<SeanceResponse> seances = seanceService.getSeancesAEmarger(enseignant.getId(), LocalDate.now());
+        return ResponseEntity.ok(ApiResponse.success("Seances a emarger", seances));
+    }
+
     // Séances de la semaine pour l'enseignant connecté
     @GetMapping("/semaine")
     public ResponseEntity<ApiResponse<List<SeanceResponse>>> getSemaine(

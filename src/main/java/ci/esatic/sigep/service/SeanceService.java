@@ -30,6 +30,15 @@ public class SeanceService {
                 .stream().map(this::toResponse).collect(Collectors.toList());
     }
 
+    /** Séances du jour encore à émarger (en cours + passées non émargées). */
+    public List<SeanceResponse> getSeancesAEmarger(Long enseignantId, LocalDate date) {
+        return seanceRepository
+                .findByEnseignantIdAndDateOrderByHeureDebutAsc(enseignantId, date)
+                .stream()
+                .filter(s -> s.getStatut() != StatutSeance.EMARGE)
+                .map(this::toResponse).collect(Collectors.toList());
+    }
+
     public List<SeanceResponse> getSeancesSemaine(Long enseignantId, LocalDate date) {
         LocalDate lundi = date.with(DayOfWeek.MONDAY);
         LocalDate samedi = lundi.plusDays(5);
@@ -97,10 +106,8 @@ public class SeanceService {
                 .heureDebut(s.getHeureDebut())
                 .heureFin(s.getHeureFin())
                 .matiereLibelle(s.getMatiere().getLibelle())
-                .matiereCode(s.getMatiere().getCode())
                 .classeLibelle(s.getClasse().getLibelle())
-                .classeCode(s.getClasse().getCode())
-                .salleCode(s.getSalle().getCode())
+                .salleLibelle(s.getSalle().getLibelle())
                 .salleBatiment(s.getSalle().getBatiment())
                 .enseignantNom(s.getEnseignant().getNom())
                 .enseignantPrenom(s.getEnseignant().getPrenom())

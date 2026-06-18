@@ -16,8 +16,10 @@ public class Salle {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // Identifiant court de la salle (ex : A101). Sert aussi de jeton dans le QR
+    // d'émargement : doit rester alphanumérique sans espace (cf. QrController.sanitize).
     @Column(unique = true, nullable = false)
-    private String code;
+    private String libelle;
 
     private String batiment;
 

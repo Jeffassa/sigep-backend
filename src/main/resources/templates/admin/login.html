@@ -1,67 +1,70 @@
 <!DOCTYPE html>
 <html lang="fr" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{admin/fragments :: head('SIGEP | Connexion Admin')}"></head>
-<body class="bg-surface min-h-screen flex items-center justify-center">
-<div class="w-full max-w-md mx-auto px-4">
+<head th:replace="~{admin/fragments :: head('SIGEP | Connexion')}"></head>
+<body class="min-h-screen flex items-center justify-center px-5">
 
-    <!-- Logo -->
+<main class="w-full max-w-[420px]" data-reveal>
+
+    <!-- Marque -->
     <div class="text-center mb-8">
-        <div class="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-2xl mb-4">
-            <span class="material-symbols-outlined text-white text-[32px]">admin_panel_settings</span>
+        <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-ink text-white mb-5 glass-card">
+            <span class="material-symbols-rounded fill">shield_person</span>
         </div>
-        <h1 class="text-[36px] font-black leading-tight text-primary tracking-tight">SIGEP</h1>
-        <p class="text-on-surface-variant text-sm mt-1">Interface Administration</p>
+        <h1 class="font-serif text-[52px] leading-none tracking-tight">SIGEP</h1>
+        <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mt-2">Administration · ESATIC</p>
     </div>
 
-    <!-- Card -->
-    <div class="bg-white border border-outline-variant rounded-2xl p-8 shadow-sm">
-        <h2 class="text-[20px] font-semibold text-on-surface mb-6">Connexion</h2>
+    <!-- Carte -->
+    <div class="glass-strong rounded-3xl p-8">
+        <h2 class="font-serif text-[26px] mb-1">Bon retour.</h2>
+        <p class="text-[14px] text-muted mb-6">Connectez-vous à votre espace.</p>
 
-        <!-- Alertes -->
         <div th:if="${error}"
-             class="flex items-center gap-2 p-3 mb-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-            <span class="material-symbols-outlined text-[18px]">error</span>
-            <span th:text="${error}">Erreur de connexion.</span>
+             class="flex items-center gap-2 p-3 mb-4 rounded-xl text-[13px]"
+             style="background:rgba(186,26,26,.08);color:#7a0010;border:1px solid rgba(186,26,26,.2)">
+            <span class="material-symbols-rounded text-[18px]">error</span>
+            <span th:text="${error}">Erreur.</span>
         </div>
         <div th:if="${logout}"
-             class="flex items-center gap-2 p-3 mb-4 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
-            <span class="material-symbols-outlined text-[18px]">check_circle</span>
+             class="flex items-center gap-2 p-3 mb-4 rounded-xl text-[13px]"
+             style="background:rgba(10,10,10,.05);border:1px solid var(--line)">
+            <span class="material-symbols-rounded text-[18px]">check_circle</span>
             <span th:text="${logout}">Déconnecté.</span>
         </div>
 
-        <!-- Formulaire -->
         <form th:action="@{/admin-login}" method="post" class="space-y-4">
-
             <div>
-                <label for="username" class="block text-[14px] font-semibold text-on-surface mb-1">Email</label>
+                <label for="username" class="block font-mono text-[11px] uppercase tracking-wider text-muted mb-2">Email</label>
                 <div class="relative">
-                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">email</span>
+                    <span class="material-symbols-rounded absolute left-3.5 top-1/2 -translate-y-1/2 text-muted text-[20px]">mail</span>
                     <input id="username" name="username" type="email" required
-                           class="w-full pl-10 pr-4 h-12 border border-outline-variant rounded-lg bg-surface-container-low text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+                           class="w-full h-12 pl-11 pr-4 rounded-xl bg-white/60 border border-line text-ink
+                                  focus:outline-none focus:border-ink focus:ring-1 focus:ring-ink transition"
                            placeholder="admin@esatic.ci"/>
                 </div>
             </div>
-
             <div>
-                <label for="password" class="block text-[14px] font-semibold text-on-surface mb-1">Mot de passe</label>
+                <label for="password" class="block font-mono text-[11px] uppercase tracking-wider text-muted mb-2">Mot de passe</label>
                 <div class="relative">
-                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">lock</span>
+                    <span class="material-symbols-rounded absolute left-3.5 top-1/2 -translate-y-1/2 text-muted text-[20px]">lock</span>
                     <input id="password" name="password" type="password" required
-                           class="w-full pl-10 pr-4 h-12 border border-outline-variant rounded-lg bg-surface-container-low text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+                           class="w-full h-12 pl-11 pr-4 rounded-xl bg-white/60 border border-line text-ink
+                                  focus:outline-none focus:border-ink focus:ring-1 focus:ring-ink transition"
                            placeholder="••••••••"/>
                 </div>
             </div>
-
             <button type="submit"
-                    class="w-full h-12 bg-primary text-white font-semibold rounded-lg hover:opacity-90 active:scale-95 transition-all shadow-sm mt-2">
+                    class="btn btn-ink w-full h-12 rounded-xl font-medium flex items-center justify-center gap-2 mt-2">
                 Se connecter
+                <span class="material-symbols-rounded text-[20px]">arrow_forward</span>
             </button>
         </form>
     </div>
 
-    <p class="text-center text-xs text-on-surface-variant mt-6">
-        SIGEP — Système Intelligent de Gestion des Enseignements et du Pointage
+    <p class="text-center font-mono text-[10px] uppercase tracking-[0.2em] text-muted mt-6">
+        Système Intelligent de Gestion des Enseignements
     </p>
-</div>
+</main>
+
 </body>
 </html>

@@ -8,12 +8,18 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.HashMap;
 import java.util.Map;
 
-@RestControllerAdvice
+/**
+ * Gestion des exceptions des API REST uniquement (réponses JSON).
+ * Les contrôleurs web (@Controller Thymeleaf) ne sont PAS concernés : leurs
+ * erreurs sont rendues par la page d'erreur stylisée (templates/error.html).
+ */
+@RestControllerAdvice(annotations = RestController.class)
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(ResourceNotFoundException.class)
@@ -32,6 +38,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleBadCredentials(BadCredentialsException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(ApiResponse.error("Email ou mot de passe incorrect"));
+    }
+
+    @ExceptionHandler(CompteNonValideException.class)
+    public ResponseEntity<ApiResponse<Void>> handleCompteNonValide(CompteNonValideException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.error(ex.getMessage()));
     }
 
     @ExceptionHandler(AccessDeniedException.class)

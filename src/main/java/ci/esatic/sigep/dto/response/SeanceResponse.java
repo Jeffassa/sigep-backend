@@ -20,10 +20,8 @@ public class SeanceResponse {
     private LocalTime heureDebut;
     private LocalTime heureFin;
     private String matiereLibelle;
-    private String matiereCode;
     private String classeLibelle;
-    private String classeCode;
-    private String salleCode;
+    private String salleLibelle;
     private String salleBatiment;
     private String enseignantNom;
     private String enseignantPrenom;

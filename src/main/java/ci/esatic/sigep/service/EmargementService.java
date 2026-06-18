@@ -37,7 +37,7 @@ public class EmargementService {
         Seance seance = seanceRepository.findById(request.getSeanceId())
                 .orElseThrow(() -> new ResourceNotFoundException("Seance", "id", request.getSeanceId()));
 
-        validerRegles(enseignant, seance, request.getQrToken());
+        boolean enRetard = validerRegles(enseignant, seance, request.getQrToken());
         validerSignature(request.getSignatureBase64());
 
         seance.setStatut(StatutSeance.EMARGE);
@@ -47,6 +47,7 @@ public class EmargementService {
                 .seance(seance)
                 .enseignant(enseignant)
                 .dateHeure(LocalDateTime.now())
+                .enRetard(enRetard)
                 .signatureBase64(request.getSignatureBase64())
                 .qrTokenUtilise(request.getQrToken())
                 .build();
@@ -64,7 +65,8 @@ public class EmargementService {
                 .stream().map(this::toResponse).collect(Collectors.toList());
     }
 
-    private void validerRegles(Enseignant enseignant, Seance seance, String qrToken) {
+    /** Valide les règles d'émargement et renvoie true si l'émargement est tardif. */
+    private boolean validerRegles(Enseignant enseignant, Seance seance, String qrToken) {
         // Regle 1 : La seance appartient bien a cet enseignant
         if (!seance.getEnseignant().getId().equals(enseignant.getId())) {
             throw new IllegalArgumentException("Cette seance ne vous appartient pas");
@@ -80,25 +82,23 @@ public class EmargementService {
             throw new IllegalArgumentException("Cette seance a deja ete emargee");
         }
 
-        // Regle 4 : Fenetre de temps valide
+        // Regle 4 : la seance doit avoir commence. On autorise l'emargement APRES
+        // la fin (rattrapage d'oubli, le jour meme) ; il sera simplement marque "en retard".
         LocalTime maintenant = LocalTime.now();
         LocalTime debutAutorise = seance.getHeureDebut().minusMinutes(TOLERANCE_AVANT_MINUTES);
         LocalTime finAutorisee = seance.getHeureFin().plusMinutes(TOLERANCE_APRES_MINUTES);
 
         if (maintenant.isBefore(debutAutorise)) {
-            throw new IllegalArgumentException("Emargement impossible : la seance ne commence pas encore (ouverture dans "
+            throw new IllegalArgumentException("Emargement impossible : la seance ne commence pas encore (ouverture "
                     + TOLERANCE_AVANT_MINUTES + " min avant le debut)");
         }
-        if (maintenant.isAfter(finAutorisee)) {
-            throw new IllegalArgumentException("Emargement impossible : delai depasse ("
-                    + TOLERANCE_APRES_MINUTES + " min apres la fin de la seance)");
+
+        // Regle 5 : Token QR universel valide et frais (preuve de presence)
+        if (!qrCodeService.validateUniversalToken(qrToken)) {
+            throw new IllegalArgumentException("QR Code invalide ou expire. Rescannez le code affiche.");
         }
 
-        // Regle 5 : Token QR valide pour la bonne salle
-        String salleCode = seance.getSalle().getCode();
-        if (!qrCodeService.validateQrToken(qrToken, salleCode)) {
-            throw new IllegalArgumentException("QR Code invalide ou expire pour la salle " + salleCode);
-        }
+        return maintenant.isAfter(finAutorisee);
     }
 
     private void validerSignature(String signatureBase64) {
@@ -121,8 +121,9 @@ public class EmargementService {
                 .seanceId(e.getSeance().getId())
                 .matiereLibelle(e.getSeance().getMatiere().getLibelle())
                 .classeLibelle(e.getSeance().getClasse().getLibelle())
-                .salleCode(e.getSeance().getSalle().getCode())
+                .salleLibelle(e.getSeance().getSalle().getLibelle())
                 .dateHeure(e.getDateHeure())
+                .enRetard(e.isEnRetard())
                 .enseignantNom(e.getEnseignant().getNom())
                 .enseignantPrenom(e.getEnseignant().getPrenom())
                 .build();

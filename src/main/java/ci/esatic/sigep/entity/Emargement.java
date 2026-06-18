@@ -29,6 +29,11 @@ public class Emargement {
     @Column(nullable = false)
     private LocalDateTime dateHeure;
 
+    // true si l'émargement a été fait après la fin de la séance (rattrapage d'oubli)
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean enRetard = false;
+
     @Column(columnDefinition = "TEXT")
     private String signatureBase64;
 

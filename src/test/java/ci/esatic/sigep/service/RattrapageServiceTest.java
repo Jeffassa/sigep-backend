@@ -51,9 +51,9 @@ class RattrapageServiceTest {
                 .id(USER_ID).email("prof@esatic.ci").password("encoded").roles(Set.of(role))
                 .build();
 
-        matiere = Matiere.builder().id(1L).code("INF301").libelle("Algo avancée").build();
-        classe  = Classe.builder().id(1L).code("L3GL").libelle("L3 Génie Logiciel").filiere("GL").build();
-        salle   = Salle.builder().id(1L).code("A101").batiment("A").capacite(30).build();
+        matiere = Matiere.builder().id(1L).libelle("Algo avancée").build();
+        classe  = Classe.builder().id(1L).libelle("L3 Génie Logiciel").filiere("GL").build();
+        salle   = Salle.builder().id(1L).libelle("A101").batiment("A").capacite(30).build();
 
         enseignant = Enseignant.builder()
                 .id(5L).matricule("ENS001").nom("Assale").prenom("Jean")

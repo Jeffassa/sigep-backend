@@ -4,6 +4,7 @@ import ci.esatic.sigep.dto.request.LoginRequest;
 import ci.esatic.sigep.dto.request.RegisterEnseignantRequest;
 import ci.esatic.sigep.dto.response.AuthResponse;
 import ci.esatic.sigep.entity.*;
+import ci.esatic.sigep.exception.CompteNonValideException;
 import ci.esatic.sigep.repository.EnseignantRepository;
 import ci.esatic.sigep.repository.RoleRepository;
 import ci.esatic.sigep.repository.UserRepository;
@@ -37,6 +38,21 @@ public class AuthService {
         );
 
         User user = (User) authentication.getPrincipal();
+
+        // Un enseignant ne peut se connecter que si l'administration a validé son compte.
+        // (Les comptes administrateurs n'ont pas de profil enseignant : ils ne sont pas concernés.)
+        var enseignantOpt = enseignantRepository.findByUserId(user.getId());
+        enseignantOpt.ifPresent(ens -> {
+            if (ens.getStatut() == StatutEnseignant.PENDING) {
+                throw new CompteNonValideException(
+                        "Votre compte est en attente de validation par l'administration.");
+            }
+            if (ens.getStatut() == StatutEnseignant.REJECTED) {
+                throw new CompteNonValideException(
+                        "Votre compte a été refusé. Veuillez contacter l'administration.");
+            }
+        });
+
         String token = jwtService.generateToken(user);
 
         List<String> roles = user.getRoles().stream()
@@ -46,7 +62,6 @@ public class AuthService {
         // Récupérer nom/prenom si enseignant
         String nom = "";
         String prenom = "";
-        var enseignantOpt = enseignantRepository.findByUserId(user.getId());
         if (enseignantOpt.isPresent()) {
             nom = enseignantOpt.get().getNom();
             prenom = enseignantOpt.get().getPrenom();
@@ -93,10 +108,10 @@ public class AuthService {
                 .build();
         enseignantRepository.save(enseignant);
 
-        String token = jwtService.generateToken(user);
-
+        // Aucun token n'est délivré : le compte est créé en attente (PENDING) et ne
+        // pourra se connecter qu'après validation explicite par l'administration.
         return AuthResponse.builder()
-                .token(token)
+                .token(null)
                 .type("Bearer")
                 .id(user.getId())
                 .email(user.getEmail())

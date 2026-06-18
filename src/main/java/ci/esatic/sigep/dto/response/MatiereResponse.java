@@ -11,7 +11,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class MatiereResponse {
     private Long id;
-    private String code;
     private String libelle;
     private String description;
 }

@@ -1,162 +1,106 @@
 <!DOCTYPE html>
 <html lang="fr" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{admin/fragments :: head('SIGEP | Nouvel Enseignant')}"></head>
-<body class="bg-[#f8f9fb] text-on-surface min-h-screen">
+<head th:replace="~{admin/fragments :: head('SIGEP | Nouvel enseignant')}"></head>
+<body>
 
-<!-- TopBar -->
 <div th:replace="~{admin/fragments :: topbar('enseignants')}"></div>
 
-<main class="max-w-[800px] mx-auto px-4 md:px-6 py-8">
+<main class="max-w-[760px] mx-auto px-5 md:px-8 py-10 pb-36">
 
-    <!-- En-tête -->
-    <div class="flex items-center gap-4 mb-8">
-        <a th:href="@{/admin/enseignants}"
-           class="p-2 text-on-surface-variant hover:bg-surface-container rounded-full transition-colors">
-            <span class="material-symbols-outlined">arrow_back</span>
+    <div class="flex items-center gap-3 mb-8" data-reveal>
+        <a th:href="@{/admin/enseignants}" class="btn glass w-10 h-10 rounded-full flex items-center justify-center">
+            <span class="material-symbols-rounded">arrow_back</span>
         </a>
         <div>
-            <h1 class="text-[28px] font-bold text-primary">Nouvel Enseignant</h1>
-            <p class="text-on-surface-variant text-[14px]">Remplissez les informations pour créer un compte enseignant.</p>
+            <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted">Nouveau</p>
+            <h1 class="font-serif text-[34px] leading-none tracking-tight">Nouvel enseignant</h1>
         </div>
     </div>
 
-    <!-- Alertes flash -->
-    <div th:if="${error}"
-         class="flex items-center gap-2 p-3 mb-6 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-        <span class="material-symbols-outlined text-[18px]">error</span>
-        <span th:text="${error}">Erreur.</span>
+    <div th:if="${error}" class="glass rounded-2xl p-3.5 mb-5 flex items-center gap-2 text-[13px]" data-reveal
+         style="border-color:rgba(186,26,26,.3)">
+        <span class="material-symbols-rounded text-[18px]">error</span><span th:text="${error}">Erreur</span>
     </div>
 
-    <!-- Formulaire -->
-    <div class="bg-white border border-outline-variant rounded-2xl p-8 shadow-sm">
-        <form th:action="@{/admin/enseignants}" method="post" class="space-y-6">
-
-            <!-- Ligne 1 : Matricule -->
+    <form th:action="@{/admin/enseignants}" method="post" class="glass rounded-3xl p-7 md:p-9 space-y-6" data-reveal>
+        <div>
+            <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Matricule *</label>
+            <input type="text" name="matricule" required placeholder="ENS-2026-001"
+                   class="w-full h-11 px-4 rounded-xl bg-white/55 border border-line focus:ring-0 focus:border-ink transition"/>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-                <label class="block text-[13px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">
-                    Matricule <span class="text-error">*</span>
-                </label>
-                <input type="text" name="matricule" required
-                       class="w-full h-11 px-4 border border-outline-variant rounded-lg bg-surface-container-low text-on-surface
-                              focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
-                       placeholder="Ex: ENS-2026-001"/>
+                <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Nom *</label>
+                <input type="text" name="nom" required placeholder="Nom"
+                       class="w-full h-11 px-4 rounded-xl bg-white/55 border border-line focus:ring-0 focus:border-ink transition"/>
             </div>
-
-            <!-- Ligne 2 : Nom + Prénom -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-[13px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">
-                        Nom <span class="text-error">*</span>
-                    </label>
-                    <input type="text" name="nom" required
-                           class="w-full h-11 px-4 border border-outline-variant rounded-lg bg-surface-container-low text-on-surface
-                                  focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
-                           placeholder="Nom de famille"/>
-                </div>
-                <div>
-                    <label class="block text-[13px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">
-                        Prénom <span class="text-error">*</span>
-                    </label>
-                    <input type="text" name="prenom" required
-                           class="w-full h-11 px-4 border border-outline-variant rounded-lg bg-surface-container-low text-on-surface
-                                  focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
-                           placeholder="Prénom"/>
-                </div>
+            <div>
+                <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Prénom *</label>
+                <input type="text" name="prenom" required placeholder="Prénom"
+                       class="w-full h-11 px-4 rounded-xl bg-white/55 border border-line focus:ring-0 focus:border-ink transition"/>
             </div>
-
-            <!-- Ligne 3 : Email + Mot de passe -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-[13px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">
-                        Email <span class="text-error">*</span>
-                    </label>
-                    <input type="email" name="email" required
-                           class="w-full h-11 px-4 border border-outline-variant rounded-lg bg-surface-container-low text-on-surface
-                                  focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
-                           placeholder="enseignant@esatic.ci"/>
-                </div>
-                <div>
-                    <label class="block text-[13px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">
-                        Mot de passe <span class="text-error">*</span>
-                    </label>
-                    <div class="relative">
-                        <input type="password" name="password" id="passwordField" required minlength="8"
-                               pattern="^(?=.*[A-Za-z])(?=.*\d).+$"
-                               title="Au moins 8 caractères, avec une lettre et un chiffre"
-                               class="w-full h-11 px-4 pr-10 border border-outline-variant rounded-lg bg-surface-container-low text-on-surface
-                                      focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
-                               placeholder="Min. 8 caractères, 1 lettre + 1 chiffre"/>
-                        <button type="button" onclick="togglePassword()"
-                                class="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary transition-colors">
-                            <span class="material-symbols-outlined text-[20px]" id="eyeIcon">visibility</span>
-                        </button>
-                    </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Email *</label>
+                <input type="email" name="email" required placeholder="enseignant@esatic.ci"
+                       class="w-full h-11 px-4 rounded-xl bg-white/55 border border-line focus:ring-0 focus:border-ink transition"/>
+            </div>
+            <div>
+                <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Mot de passe *</label>
+                <div class="relative">
+                    <input type="password" name="password" id="passwordField" required minlength="8"
+                           pattern="^(?=.*[A-Za-z])(?=.*\d).+$"
+                           title="Au moins 8 caractères, avec une lettre et un chiffre"
+                           class="w-full h-11 px-4 pr-11 rounded-xl bg-white/55 border border-line focus:ring-0 focus:border-ink transition"
+                           placeholder="Min. 8 · 1 lettre + 1 chiffre"/>
+                    <button type="button" onclick="togglePassword()"
+                            class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink transition">
+                        <span class="material-symbols-rounded text-[20px]" id="eyeIcon">visibility</span>
+                    </button>
                 </div>
             </div>
-
-            <!-- Ligne 4 : Département + Grade -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-[13px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">
-                        Département
-                    </label>
-                    <input type="text" name="departement"
-                           list="dept-list"
-                           class="w-full h-11 px-4 border border-outline-variant rounded-lg bg-surface-container-low text-on-surface
-                                  focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
-                           placeholder="Ex: Informatique"/>
-                    <datalist id="dept-list">
-                        <option th:each="dept : ${departements}" th:value="${dept}"></option>
-                    </datalist>
-                </div>
-                <div>
-                    <label class="block text-[13px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">
-                        Grade
-                    </label>
-                    <select name="grade"
-                            class="w-full h-11 px-4 border border-outline-variant rounded-lg bg-surface-container-low text-on-surface
-                                   focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all">
-                        <option value="">-- Sélectionner --</option>
-                        <option value="Professeur Titulaire">Professeur Titulaire</option>
-                        <option value="Maître de Conférences">Maître de Conférences</option>
-                        <option value="Maître Assistant">Maître Assistant</option>
-                        <option value="Assistant">Assistant</option>
-                        <option value="Chargé de Cours">Chargé de Cours</option>
-                        <option value="Vacataire">Vacataire</option>
-                    </select>
-                </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Département</label>
+                <input type="text" name="departement" list="dept-list" placeholder="Informatique"
+                       class="w-full h-11 px-4 rounded-xl bg-white/55 border border-line focus:ring-0 focus:border-ink transition"/>
+                <datalist id="dept-list"><option th:each="dept : ${departements}" th:value="${dept}"></option></datalist>
             </div>
-
-            <!-- Boutons -->
-            <div class="flex items-center justify-end gap-4 pt-4 border-t border-outline-variant">
-                <a th:href="@{/admin/enseignants}"
-                   class="px-6 py-2.5 border border-outline-variant rounded-xl text-[14px] font-semibold text-on-surface-variant
-                          hover:bg-surface-container transition-colors">
-                    Annuler
-                </a>
-                <button type="submit"
-                        class="px-6 py-2.5 bg-primary text-white rounded-xl text-[14px] font-semibold
-                               hover:opacity-90 active:scale-95 transition-all shadow-sm">
-                    <span class="material-symbols-outlined text-[18px] align-middle mr-1">person_add</span>
-                    Créer l'enseignant
-                </button>
+            <div>
+                <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Grade</label>
+                <select name="grade" class="w-full h-11 px-4 rounded-xl bg-white/55 border border-line focus:ring-0 focus:border-ink transition">
+                    <option value="">— Sélectionner —</option>
+                    <option value="Professeur Titulaire">Professeur Titulaire</option>
+                    <option value="Maître de Conférences">Maître de Conférences</option>
+                    <option value="Maître Assistant">Maître Assistant</option>
+                    <option value="Assistant">Assistant</option>
+                    <option value="Chargé de Cours">Chargé de Cours</option>
+                    <option value="Vacataire">Vacataire</option>
+                </select>
             </div>
-        </form>
-    </div>
+        </div>
+        <div class="flex items-center justify-end gap-3 pt-5 border-t border-line">
+            <a th:href="@{/admin/enseignants}" class="btn glass h-11 px-5 rounded-xl text-[14px] font-medium">Annuler</a>
+            <button type="submit" class="btn btn-ink h-11 px-6 rounded-xl text-[14px] font-medium flex items-center gap-2">
+                <span class="material-symbols-rounded text-[18px]">person_add</span> Créer
+            </button>
+        </div>
+    </form>
 </main>
+
+<div th:replace="~{admin/fragments :: dock('enseignants')}"></div>
+<div th:replace="~{admin/fragments :: palette}"></div>
+<div th:replace="~{admin/fragments :: scripts}"></div>
 
 <script>
     function togglePassword() {
-        const field = document.getElementById('passwordField');
-        const icon = document.getElementById('eyeIcon');
-        if (field.type === 'password') {
-            field.type = 'text';
-            icon.textContent = 'visibility_off';
-        } else {
-            field.type = 'password';
-            icon.textContent = 'visibility';
-        }
+        const f = document.getElementById('passwordField'), i = document.getElementById('eyeIcon');
+        if (f.type === 'password') { f.type = 'text'; i.textContent = 'visibility_off'; }
+        else { f.type = 'password'; i.textContent = 'visibility'; }
     }
 </script>
+
 </body>
 </html>
