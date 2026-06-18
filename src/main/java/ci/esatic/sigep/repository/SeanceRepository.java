@@ -24,6 +24,12 @@ public interface SeanceRepository extends JpaRepository<Seance, Long> {
     long countByEnseignantId(Long enseignantId);
 
     @Query("SELECT COUNT(s) FROM Seance s WHERE s.enseignant.id = :enseignantId " +
+           "AND s.date BETWEEN :debut AND :fin")
+    long countByEnseignantIdAndPeriode(@Param("enseignantId") Long enseignantId,
+                                       @Param("debut") LocalDate debut,
+                                       @Param("fin") LocalDate fin);
+
+    @Query("SELECT COUNT(s) FROM Seance s WHERE s.enseignant.id = :enseignantId " +
            "AND s.date BETWEEN :debut AND :fin AND s.statut = 'EMARGE'")
     long countEmargeesParEnseignant(@Param("enseignantId") Long enseignantId,
                                      @Param("debut") LocalDate debut,

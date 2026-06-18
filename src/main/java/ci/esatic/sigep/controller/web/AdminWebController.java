@@ -14,6 +14,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.format.annotation.DateTimeFormat;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -399,10 +400,38 @@ public class AdminWebController {
     // ─── RAPPORTS ────────────────────────────────────────────────────────────
 
     @GetMapping("/admin/rapports")
-    public String rapports(Model model) {
-        model.addAttribute("rapports", rapportService.getAllRapports());
+    public String rapports(@RequestParam(required = false) Long enseignantId,
+                           @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate debut,
+                           @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fin,
+                           Model model) {
+        model.addAttribute("rapports", rapportService.getRapportsFiltres(enseignantId, debut, fin));
         model.addAttribute("enseignants", enseignantRepository.findAll());
+        // Valeurs des filtres (pour réafficher le formulaire et construire le lien ZIP)
+        model.addAttribute("fEnseignantId", enseignantId);
+        model.addAttribute("fDebut", debut);
+        model.addAttribute("fFin", fin);
         return "admin/rapports";
+    }
+
+    /** Télécharge tous les rapports (filtrés) dans une archive ZIP. */
+    @GetMapping("/admin/rapports/telecharger-zip")
+    public ResponseEntity<byte[]> telechargerZip(
+            @RequestParam(required = false) Long enseignantId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate debut,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fin) {
+        try {
+            List<RapportPdf> rapports = rapportService.getRapportPdfsFiltres(enseignantId, debut, fin);
+            if (rapports.isEmpty()) return ResponseEntity.noContent().build();
+            byte[] zip = rapportService.genererZip(rapports);
+            String nom = "rapports_" + LocalDate.now().format(
+                    java.time.format.DateTimeFormatter.ofPattern("ddMMyyyy")) + ".zip";
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + nom + "\"")
+                    .contentType(MediaType.parseMediaType("application/zip"))
+                    .body(zip);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     @PostMapping("/admin/rapports/generer")

@@ -18,5 +18,15 @@ public interface RapportPdfRepository extends JpaRepository<RapportPdf, Long> {
     @Query("SELECT r FROM RapportPdf r WHERE r.periodeDebut >= :debut AND r.periodeFin <= :fin ORDER BY r.dateGeneration DESC")
     List<RapportPdf> findByPeriode(@Param("debut") LocalDate debut, @Param("fin") LocalDate fin);
 
+    // Recherche filtrée : par enseignant (optionnel) et chevauchement de période (optionnel)
+    @Query("SELECT r FROM RapportPdf r WHERE " +
+           "(:enseignantId IS NULL OR r.enseignant.id = :enseignantId) AND " +
+           "(:debut IS NULL OR r.periodeFin >= :debut) AND " +
+           "(:fin IS NULL OR r.periodeDebut <= :fin) " +
+           "ORDER BY r.dateGeneration DESC")
+    List<RapportPdf> findFiltres(@Param("enseignantId") Long enseignantId,
+                                 @Param("debut") LocalDate debut,
+                                 @Param("fin") LocalDate fin);
+
     boolean existsByEnseignantIdAndPeriodeDebutAndType(Long enseignantId, LocalDate periodeDebut, TypeRapport type);
 }
