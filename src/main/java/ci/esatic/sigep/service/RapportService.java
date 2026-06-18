@@ -135,10 +135,10 @@ public class RapportService {
         document.add(Chunk.NEWLINE);
 
         // Tableau des séances
-        PdfPTable table = new PdfPTable(new float[]{2f, 1.5f, 1.5f, 2f, 2f, 1.5f});
+        PdfPTable table = new PdfPTable(new float[]{1.8f, 1.2f, 1.2f, 1.6f, 1.6f, 1f, 2f});
         table.setWidthPercentage(100);
 
-        String[] headers = {"Matiere", "Classe", "Salle", "Date", "Horaire", "Heures"};
+        String[] headers = {"Matiere", "Classe", "Salle", "Date", "Horaire", "Heures", "Signature"};
         for (String h : headers) {
             PdfPCell cell = new PdfPCell(new Phrase(h, headerFont));
             cell.setBackgroundColor(primary);
@@ -159,6 +159,7 @@ public class RapportService {
             addDataCell(table, s.getDate().format(DATE_FMT), bodyFont, bg);
             addDataCell(table, s.getHeureDebut() + " - " + s.getHeureFin(), bodyFont, bg);
             addDataCell(table, String.format("%.1fh", heures), bodyFont, bg);
+            addSignatureCell(table, e.getSignatureBase64(), bodyFont, bg);
         }
         document.add(table);
         document.add(Chunk.NEWLINE);
@@ -193,6 +194,31 @@ public class RapportService {
         cell.setBackgroundColor(bg);
         cell.setPadding(5);
         table.addCell(cell);
+    }
+
+    /** Cellule affichant la signature manuscrite (image PNG Base64) de l'émargement. */
+    private void addSignatureCell(PdfPTable table, String signatureBase64, Font font, Color bg) {
+        try {
+            if (signatureBase64 != null && !signatureBase64.isBlank()) {
+                // La signature peut contenir le préfixe "data:image/png;base64,"
+                String payload = signatureBase64.contains(",")
+                        ? signatureBase64.substring(signatureBase64.indexOf(',') + 1)
+                        : signatureBase64;
+                byte[] bytes = java.util.Base64.getDecoder().decode(payload.trim());
+                Image img = Image.getInstance(bytes);
+                img.scaleToFit(80, 34);
+                PdfPCell cell = new PdfPCell(img, true);
+                cell.setBackgroundColor(bg);
+                cell.setPadding(4);
+                cell.setHorizontalAlignment(Element.ALIGN_CENTER);
+                cell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+                table.addCell(cell);
+                return;
+            }
+        } catch (Exception ex) {
+            log.warn("Signature illisible pour un emargement : {}", ex.getMessage());
+        }
+        addDataCell(table, "-", font, bg);
     }
 
     // Génération manuelle pour tous les enseignants sur une période donnée

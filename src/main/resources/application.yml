@@ -11,6 +11,11 @@ spring:
     # SECURITE : DB_PASSWORD est OBLIGATOIRE (aucune valeur par défaut). Voir .env.example
     password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      # Taille du pool de connexions (rafales de requetes simultanees).
+      # Garder <= max_connections de PostgreSQL. Surchargeable par variable d'env.
+      maximum-pool-size: ${DB_POOL_MAX:25}
+      minimum-idle: ${DB_POOL_MIN:5}
   jackson:
     serialization:
       write-dates-as-timestamps: false
