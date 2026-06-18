@@ -82,6 +82,7 @@ public class JwtService {
         claims.put("type", QR_UNIVERSAL_TYPE);
         return Jwts.builder()
                 .claims(claims)
+                .id(java.util.UUID.randomUUID().toString())   // jti : identifiant unique pour l'anti-rejeu
                 .subject("SIGEP-EMARGEMENT")
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + expirationMs))
@@ -100,6 +101,20 @@ public class JwtService {
             return QR_UNIVERSAL_TYPE.equals(claims.get("type")) && !expired;
         } catch (JwtException e) {
             return false;
+        }
+    }
+
+    /** Identifiant unique (jti) du token QR universel, ou null si invalide. */
+    public String extractQrJti(String token) {
+        try {
+            return Jwts.parser()
+                    .verifyWith(getQrSigningKey())
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload()
+                    .getId();
+        } catch (JwtException e) {
+            return null;
         }
     }
 

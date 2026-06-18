@@ -60,6 +60,11 @@ public class QrCodeService {
         return jwtService.isUniversalQrTokenValid(token);
     }
 
+    /** Identifiant unique (jti) du token QR, pour l'anti-rejeu. */
+    public String extractTokenId(String token) {
+        return jwtService.extractQrJti(token);
+    }
+
     private String generateQrImage(String content) {
         try {
             Map<EncodeHintType, Object> hints = new EnumMap<>(EncodeHintType.class);
