@@ -10,7 +10,8 @@ spring:
     password: ${DB_PASSWORD:sigep_secret_password}
   jpa:
     hibernate:
-      ddl-auto: ${JPA_DDL_AUTO:update}
+      # Schéma géré par Flyway → Hibernate valide seulement.
+      ddl-auto: ${JPA_DDL_AUTO:validate}
     show-sql: ${JPA_SHOW_SQL:true}
 
 app:
