@@ -438,6 +438,28 @@ public class AdminWebController {
         }
     }
 
+    /** Export Excel de synthèse (une ligne par enseignant sur la période). */
+    @GetMapping("/admin/rapports/synthese")
+    public ResponseEntity<byte[]> syntheseExcel(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate debut,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fin) {
+        try {
+            LocalDate today = LocalDate.now();
+            LocalDate d = debut != null ? debut : today.with(DayOfWeek.MONDAY);
+            LocalDate f = fin != null ? fin : d.plusDays(6);
+            byte[] xlsx = rapportService.genererSyntheseExcel(d, f);
+            var fmt = java.time.format.DateTimeFormatter.ofPattern("ddMMyyyy");
+            String nom = "synthese_" + d.format(fmt) + "-" + f.format(fmt) + ".xlsx";
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + nom + "\"")
+                    .contentType(MediaType.parseMediaType(
+                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .body(xlsx);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
     @PostMapping("/admin/rapports/generer")
     public String genererRapports(@RequestParam String debut,
                                    @RequestParam String fin,
