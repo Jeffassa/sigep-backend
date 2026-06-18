@@ -254,6 +254,59 @@ public class RapportService {
         return rapportPdfRepository.findFiltres(enseignantId, debut, fin);
     }
 
+    /**
+     * Synthèse Excel (.xlsx) : une ligne par enseignant sur la période —
+     * séances prévues, émargées, taux, heures effectuées, niveau d'assiduité.
+     * (Noms POI qualifiés pour éviter le conflit Font/Color avec OpenPDF.)
+     */
+    public byte[] genererSyntheseExcel(LocalDate debut, LocalDate fin) throws IOException {
+        List<Enseignant> enseignants = enseignantRepository.findAll();
+        try (org.apache.poi.ss.usermodel.Workbook wb = new org.apache.poi.xssf.usermodel.XSSFWorkbook();
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+
+            org.apache.poi.ss.usermodel.Sheet sheet = wb.createSheet("Synthese");
+            org.apache.poi.ss.usermodel.CellStyle headerStyle = wb.createCellStyle();
+            org.apache.poi.ss.usermodel.Font headerFont = wb.createFont();
+            headerFont.setBold(true);
+            headerStyle.setFont(headerFont);
+
+            String[] cols = {"Enseignant", "Matricule", "Departement", "Seances prevues",
+                    "Emargees", "Taux (%)", "Heures", "Niveau"};
+            org.apache.poi.ss.usermodel.Row header = sheet.createRow(0);
+            for (int i = 0; i < cols.length; i++) {
+                org.apache.poi.ss.usermodel.Cell c = header.createCell(i);
+                c.setCellValue(cols[i]);
+                c.setCellStyle(headerStyle);
+            }
+
+            int r = 1;
+            for (Enseignant e : enseignants) {
+                List<Seance> seances = seanceRepository.findByEnseignantIdAndDateBetween(e.getId(), debut, fin);
+                long total = seances.size();
+                List<Seance> emargees = seances.stream()
+                        .filter(s -> s.getStatut() == StatutSeance.EMARGE).collect(Collectors.toList());
+                long nbEmargees = emargees.size();
+                double heures = emargees.stream()
+                        .mapToDouble(s -> Duration.between(s.getHeureDebut(), s.getHeureFin()).toMinutes() / 60.0).sum();
+                double taux = total > 0 ? Math.round(nbEmargees * 1000.0 / total) / 10.0 : 0.0;
+
+                org.apache.poi.ss.usermodel.Row row = sheet.createRow(r++);
+                row.createCell(0).setCellValue(e.getPrenom() + " " + e.getNom());
+                row.createCell(1).setCellValue(e.getMatricule());
+                row.createCell(2).setCellValue(e.getDepartement() != null ? e.getDepartement() : "-");
+                row.createCell(3).setCellValue(total);
+                row.createCell(4).setCellValue(nbEmargees);
+                row.createCell(5).setCellValue(taux);
+                row.createCell(6).setCellValue(Math.round(heures * 10) / 10.0);
+                row.createCell(7).setCellValue(niveauAssiduite(taux, total));
+            }
+            for (int i = 0; i < cols.length; i++) sheet.autoSizeColumn(i);
+
+            wb.write(out);
+            return out.toByteArray();
+        }
+    }
+
     /** Construit une archive ZIP contenant les PDF des rapports fournis. */
     public byte[] genererZip(List<RapportPdf> rapports) throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
