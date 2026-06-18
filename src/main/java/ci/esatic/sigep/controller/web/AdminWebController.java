@@ -83,7 +83,45 @@ public class AdminWebController {
         model.addAttribute("activitesRecentes",
                 rattrapageRepository.findAllByOrderByDateCreationDesc()
                         .stream().limit(6).toList());
+        // Tendance multi-semaines + classement (calculés au chargement, pas dans le refresh 1s)
+        model.addAttribute("tendanceSemaines", computeTendanceSemaines(6));
+        model.addAttribute("classement", computeClassement(30));
         return "admin/dashboard";
+    }
+
+    /** Taux d'émargement par semaine sur les {@code nbSemaines} dernières semaines. */
+    private List<Map<String, Object>> computeTendanceSemaines(int nbSemaines) {
+        LocalDate lundiCourant = LocalDate.now().with(DayOfWeek.MONDAY);
+        List<Map<String, Object>> out = new java.util.ArrayList<>();
+        for (int i = nbSemaines - 1; i >= 0; i--) {
+            LocalDate lundi = lundiCourant.minusWeeks(i);
+            LocalDate dimanche = lundi.plusDays(6);
+            long s = seanceRepository.countAllByDateBetween(lundi, dimanche);
+            long e = seanceRepository.countAllEmargesByDateBetween(lundi, dimanche);
+            Map<String, Object> m = new HashMap<>();
+            m.put("label", lundi.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM")));
+            m.put("taux", s > 0 ? Math.round(e * 1000.0 / s) / 10.0 : 0.0);
+            out.add(m);
+        }
+        return out;
+    }
+
+    /** Classement des enseignants par taux d'émargement sur les {@code jours} derniers jours. */
+    private List<Map<String, Object>> computeClassement(int jours) {
+        LocalDate fin = LocalDate.now();
+        LocalDate debut = fin.minusDays(jours);
+        List<Map<String, Object>> out = new java.util.ArrayList<>();
+        for (Enseignant e : enseignantRepository.findAll()) {
+            long total = seanceRepository.countByEnseignantIdAndPeriode(e.getId(), debut, fin);
+            if (total == 0) continue; // on ne classe que les profs ayant eu des séances
+            long em = seanceRepository.countEmargeesParEnseignant(e.getId(), debut, fin);
+            Map<String, Object> m = new HashMap<>();
+            m.put("nom", e.getPrenom() + " " + e.getNom());
+            m.put("taux", Math.round(em * 1000.0 / total) / 10.0);
+            out.add(m);
+        }
+        out.sort((a, b) -> Double.compare((double) b.get("taux"), (double) a.get("taux")));
+        return out;
     }
 
     /** Données du dashboard en JSON, consommées par l'auto-actualisation côté client. */
