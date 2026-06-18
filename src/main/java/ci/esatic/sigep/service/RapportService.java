@@ -72,12 +72,11 @@ public class RapportService {
                 ).toMinutes() / 60.0)
                 .sum();
 
-        String nomFichier = String.format("Rapport_%s_%s_%s_%s_%s.pdf",
+        String nomFichier = String.format("Rapport_%s_%s_%s_%s.pdf",
                 sanitizeFilenamePart(enseignant.getMatricule()),
                 sanitizeFilenamePart(enseignant.getNom()),
                 sanitizeFilenamePart(enseignant.getPrenom()),
-                debut.format(DateTimeFormatter.ofPattern("ddMMyyyy")),
-                fin.format(DateTimeFormatter.ofPattern("ddMMyyyy")));
+                libelleSemaine(debut, fin));
 
         Path dossier = Paths.get(dossierRapports);
         Files.createDirectories(dossier);
@@ -233,10 +232,17 @@ public class RapportService {
      */
     public String nomFichierTelechargement(RapportPdf rapport) {
         Enseignant e = rapport.getEnseignant();
+        // Nom du prof + semaine du rapport (ex. Rapport_DIALLO_Fatou_semaine_09-15062026.pdf)
         return String.format("Rapport_%s_%s_%s.pdf",
-                sanitizeFilenamePart(e.getMatricule()),
                 sanitizeFilenamePart(e.getNom()),
-                sanitizeFilenamePart(e.getPrenom()));
+                sanitizeFilenamePart(e.getPrenom()),
+                libelleSemaine(rapport.getPeriodeDebut(), rapport.getPeriodeFin()));
+    }
+
+    /** Libellé de semaine pour les noms de fichier : semaine_jjMMaaaa-jjMMaaaa. */
+    private static String libelleSemaine(LocalDate debut, LocalDate fin) {
+        DateTimeFormatter f = DateTimeFormatter.ofPattern("ddMMyyyy");
+        return "semaine_" + debut.format(f) + "-" + fin.format(f);
     }
 
     private static String sanitizeFilenamePart(String value) {
