@@ -54,6 +54,20 @@ spring:
 server:
   port: 8080
 
+# Observabilité (Spring Boot Actuator)
+management:
+  endpoints:
+    web:
+      exposure:
+        # health/info publics (sondes) ; metrics réservé (auth) — voir SecurityConfig
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: never
+  info:
+    env:
+      enabled: true
+
 app:
   jwt:
     # SECURITE : JWT_SECRET OBLIGATOIRE en variable d'environnement (min 256 bits, base64). Voir .env.example
