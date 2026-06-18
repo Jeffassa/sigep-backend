@@ -1,6 +1,7 @@
 package ci.esatic.sigep.service;
 
 import ci.esatic.sigep.dto.request.EmargementRequest;
+import ci.esatic.sigep.dto.request.EmargementHorsLigneRequest;
 import ci.esatic.sigep.dto.response.EmargementResponse;
 import ci.esatic.sigep.entity.*;
 import ci.esatic.sigep.exception.ResourceNotFoundException;
@@ -60,6 +61,35 @@ public class EmargementService {
         return toResponse(emargement);
     }
 
+    /** Émargement hors-ligne (file d'attente, envoyé au retour du réseau) : sans QR, marqué horsLigne. */
+    @Transactional
+    public EmargementResponse emargerHorsLigne(Long userId, EmargementHorsLigneRequest request) {
+        Enseignant enseignant = enseignantRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Enseignant", "userId", userId));
+        Seance seance = seanceRepository.findById(request.getSeanceId())
+                .orElseThrow(() -> new ResourceNotFoundException("Seance", "id", request.getSeanceId()));
+
+        // Pas de vérification QR (présence non confirmée) → on garde les règles 1 à 4.
+        boolean enRetard = validerReglesCommunes(enseignant, seance);
+        validerSignature(request.getSignatureBase64());
+
+        seance.setStatut(StatutSeance.EMARGE);
+        seanceRepository.save(seance);
+
+        Emargement emargement = Emargement.builder()
+                .seance(seance)
+                .enseignant(enseignant)
+                .dateHeure(LocalDateTime.now())
+                .enRetard(enRetard)
+                .horsLigne(true)
+                .signatureBase64(request.getSignatureBase64())
+                .build();
+
+        emargement = emargementRepository.save(emargement);
+        log.info("Emargement HORS-LIGNE - Seance {} par Enseignant {}", seance.getId(), enseignant.getId());
+        return toResponse(emargement);
+    }
+
     public List<EmargementResponse> getHistorique(Long userId) {
         Enseignant enseignant = enseignantRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Enseignant", "userId", userId));
@@ -67,8 +97,8 @@ public class EmargementService {
                 .stream().map(this::toResponse).collect(Collectors.toList());
     }
 
-    /** Valide les règles d'émargement et renvoie true si l'émargement est tardif. */
-    private boolean validerRegles(Enseignant enseignant, Seance seance, String qrToken) {
+    /** Règles communes (appartenance, jour, unicité, fenêtre horaire). Renvoie true si tardif. */
+    private boolean validerReglesCommunes(Enseignant enseignant, Seance seance) {
         // Regle 1 : La seance appartient bien a cet enseignant
         if (!seance.getEnseignant().getId().equals(enseignant.getId())) {
             throw new IllegalArgumentException("Cette seance ne vous appartient pas");
@@ -95,6 +125,13 @@ public class EmargementService {
                     + TOLERANCE_AVANT_MINUTES + " min avant le debut)");
         }
 
+        return maintenant.isAfter(finAutorisee);
+    }
+
+    /** Règles d'émargement EN LIGNE : communes + QR frais + anti-rejeu. Renvoie true si tardif. */
+    private boolean validerRegles(Enseignant enseignant, Seance seance, String qrToken) {
+        boolean enRetard = validerReglesCommunes(enseignant, seance);
+
         // Regle 5 : Token QR universel valide et frais (preuve de presence)
         if (!qrCodeService.validateUniversalToken(qrToken)) {
             throw new IllegalArgumentException("QR Code invalide ou expire. Rescannez le code affiche.");
@@ -105,7 +142,7 @@ public class EmargementService {
             throw new IllegalArgumentException("Ce QR a deja ete utilise. Rescannez le code affiche.");
         }
 
-        return maintenant.isAfter(finAutorisee);
+        return enRetard;
     }
 
     private void validerSignature(String signatureBase64) {
@@ -131,6 +168,7 @@ public class EmargementService {
                 .salleLibelle(e.getSeance().getSalle().getLibelle())
                 .dateHeure(e.getDateHeure())
                 .enRetard(e.isEnRetard())
+                .horsLigne(e.isHorsLigne())
                 .enseignantNom(e.getEnseignant().getNom())
                 .enseignantPrenom(e.getEnseignant().getPrenom())
                 .build();
