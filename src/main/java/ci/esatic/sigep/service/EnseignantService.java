@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class EnseignantService {
 
     private final EnseignantRepository enseignantRepository;
+    private final MailService mailService;
 
     public Page<EnseignantResponse> searchEnseignants(String search, String departement,
                                                        StatutEnseignant statut, Pageable pageable) {
@@ -42,7 +43,16 @@ public class EnseignantService {
         Enseignant enseignant = enseignantRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Enseignant", "id", id));
         enseignant.setStatut(statut);
-        return toResponse(enseignantRepository.save(enseignant));
+        Enseignant saved = enseignantRepository.save(enseignant);
+
+        // Notifier l'enseignant par e-mail (validation / refus)
+        if (statut == StatutEnseignant.VALIDATED || statut == StatutEnseignant.REJECTED) {
+            String email = saved.getUser() != null ? saved.getUser().getEmail() : null;
+            if (email != null) {
+                mailService.notifierStatutCompte(email, saved.getPrenom(), statut == StatutEnseignant.VALIDATED);
+            }
+        }
+        return toResponse(saved);
     }
 
     @Transactional

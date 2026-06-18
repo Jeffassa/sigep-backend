@@ -3,6 +3,7 @@ package ci.esatic.sigep.controller.web;
 import ci.esatic.sigep.entity.*;
 import ci.esatic.sigep.repository.*;
 import ci.esatic.sigep.service.RapportService;
+import ci.esatic.sigep.service.EnseignantService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -35,6 +36,7 @@ public class AdminWebController {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final RapportService rapportService;
+    private final EnseignantService enseignantService;
     private final FaculteRepository faculteRepository;
     private final MatiereRepository matiereRepository;
     private final ClasseRepository classeRepository;
@@ -382,11 +384,13 @@ public class AdminWebController {
     public String updateStatut(@PathVariable Long id,
                                @RequestParam StatutEnseignant statut,
                                RedirectAttributes ra) {
-        enseignantRepository.findById(id).ifPresent(ens -> {
-            ens.setStatut(statut);
-            enseignantRepository.save(ens);
-        });
-        ra.addFlashAttribute("success", "Statut mis a jour.");
+        try {
+            // Passe par le service → met à jour le statut ET notifie l'enseignant par e-mail
+            enseignantService.updateStatut(id, statut);
+            ra.addFlashAttribute("success", "Statut mis a jour.");
+        } catch (Exception e) {
+            ra.addFlashAttribute("error", "Mise à jour impossible.");
+        }
         return "redirect:/admin/enseignants";
     }
 
