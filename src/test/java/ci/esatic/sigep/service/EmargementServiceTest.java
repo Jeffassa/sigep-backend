@@ -34,6 +34,7 @@ class EmargementServiceTest {
     @Mock private SeanceRepository seanceRepository;
     @Mock private EnseignantRepository enseignantRepository;
     @Mock private QrCodeService qrCodeService;
+    @Mock private ci.esatic.sigep.security.QrReplayGuard qrReplayGuard;
 
     @InjectMocks private EmargementService emargementService;
 
@@ -106,6 +107,7 @@ class EmargementServiceTest {
             when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seance));
             when(emargementRepository.existsBySeanceId(SEANCE_ID)).thenReturn(false);
             when(qrCodeService.validateUniversalToken("valid-token")).thenReturn(true);
+            when(qrReplayGuard.tryConsume(any(), any())).thenReturn(true);
             when(seanceRepository.save(any())).thenReturn(seance);
             when(emargementRepository.save(any())).thenReturn(saved);
 
@@ -218,6 +220,7 @@ class EmargementServiceTest {
             when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seance));
             when(emargementRepository.existsBySeanceId(SEANCE_ID)).thenReturn(false);
             when(qrCodeService.validateUniversalToken("valid-token")).thenReturn(true);
+            when(qrReplayGuard.tryConsume(any(), any())).thenReturn(true);
             when(seanceRepository.save(any())).thenReturn(seance);
             when(emargementRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -267,6 +270,28 @@ class EmargementServiceTest {
     }
 
     // =========================================================================
+    // Règle 6 : anti-rejeu du token QR
+    // =========================================================================
+
+    @Test
+    void emarger_devraitEchouerSiQrDejaUtilise() {
+        try (MockedStatic<LocalTime> lt = mockStatic(LocalTime.class, CALLS_REAL_METHODS)) {
+            lt.when(LocalTime::now).thenReturn(FIXED_NOW);
+
+            Seance seance = seanceDansLaFenetre();
+            when(enseignantRepository.findByUserId(USER_ID)).thenReturn(Optional.of(enseignant));
+            when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seance));
+            when(emargementRepository.existsBySeanceId(SEANCE_ID)).thenReturn(false);
+            when(qrCodeService.validateUniversalToken("valid-token")).thenReturn(true);
+            when(qrReplayGuard.tryConsume(any(), any())).thenReturn(false); // déjà utilisé
+
+            assertThatThrownBy(() -> emargementService.emarger(USER_ID, buildRequest("valid-token", SIGNATURE_VALIDE)))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("deja ete utilise");
+        }
+    }
+
+    // =========================================================================
     // Validation signature
     // =========================================================================
 
@@ -280,6 +305,7 @@ class EmargementServiceTest {
             when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seance));
             when(emargementRepository.existsBySeanceId(SEANCE_ID)).thenReturn(false);
             when(qrCodeService.validateUniversalToken(any())).thenReturn(true);
+            when(qrReplayGuard.tryConsume(any(), any())).thenReturn(true);
 
             assertThatThrownBy(() -> emargementService.emarger(USER_ID, buildRequest("valid-token", "")))
                     .isInstanceOf(IllegalArgumentException.class)
@@ -297,6 +323,7 @@ class EmargementServiceTest {
             when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seance));
             when(emargementRepository.existsBySeanceId(SEANCE_ID)).thenReturn(false);
             when(qrCodeService.validateUniversalToken(any())).thenReturn(true);
+            when(qrReplayGuard.tryConsume(any(), any())).thenReturn(true);
 
             assertThatThrownBy(() -> emargementService.emarger(USER_ID, buildRequest("valid-token", "pas@du@base64!!")))
                     .isInstanceOf(IllegalArgumentException.class)

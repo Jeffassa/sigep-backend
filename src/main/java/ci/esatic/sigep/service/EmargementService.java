@@ -5,6 +5,7 @@ import ci.esatic.sigep.dto.response.EmargementResponse;
 import ci.esatic.sigep.entity.*;
 import ci.esatic.sigep.exception.ResourceNotFoundException;
 import ci.esatic.sigep.repository.*;
+import ci.esatic.sigep.security.QrReplayGuard;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -28,6 +29,7 @@ public class EmargementService {
     private final SeanceRepository seanceRepository;
     private final EnseignantRepository enseignantRepository;
     private final QrCodeService qrCodeService;
+    private final QrReplayGuard qrReplayGuard;
 
     @Transactional
     public EmargementResponse emarger(Long userId, EmargementRequest request) {
@@ -96,6 +98,11 @@ public class EmargementService {
         // Regle 5 : Token QR universel valide et frais (preuve de presence)
         if (!qrCodeService.validateUniversalToken(qrToken)) {
             throw new IllegalArgumentException("QR Code invalide ou expire. Rescannez le code affiche.");
+        }
+
+        // Regle 6 : anti-rejeu — un meme token ne peut servir qu'une fois par enseignant
+        if (!qrReplayGuard.tryConsume(enseignant.getId(), qrCodeService.extractTokenId(qrToken))) {
+            throw new IllegalArgumentException("Ce QR a deja ete utilise. Rescannez le code affiche.");
         }
 
         return maintenant.isAfter(finAutorisee);
