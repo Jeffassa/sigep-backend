@@ -1,0 +1,74 @@
+# Stack de PRODUCTION : application + PostgreSQL + nginx (reverse proxy TLS).
+# Usage :  docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
+# (Le docker-compose.yml par défaut ne sert qu'au dev local — PostgreSQL seul.)
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_DB: ${DB_NAME:-sigep_db}
+      POSTGRES_USER: ${DB_USERNAME:-sigep}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD requis}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-sigep} -d ${DB_NAME:-sigep_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # Pas de port publié : accessible uniquement depuis le réseau interne du compose.
+
+  app:
+    build: .
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: jdbc:postgresql://db:5432/${DB_NAME:-sigep_db}
+      DB_USERNAME: ${DB_USERNAME:-sigep}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD requis}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET requis}
+      JWT_QR_SECRET: ${JWT_QR_SECRET:?JWT_QR_SECRET requis}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@esatic.ci}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      APP_SECURITY_REQUIRE_HTTPS: ${APP_SECURITY_REQUIRE_HTTPS:-true}
+      TRUST_FORWARDED_FOR: ${TRUST_FORWARDED_FOR:-true}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-}
+      RAPPORTS_DOSSIER: /data/rapports
+      MAIL_ENABLED: ${MAIL_ENABLED:-false}
+      MAIL_HOST: ${MAIL_HOST:-}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-no-reply@esatic.ci}
+    volumes:
+      - rapports:/data/rapports
+    expose:
+      - "8080"
+    # Pas de port publié : nginx fait le reverse proxy.
+
+  # Reverse proxy + HTTPS automatique (Let's Encrypt géré par Caddy : obtention + renouvellement).
+  caddy:
+    image: caddy:2-alpine
+    restart: always
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:?DOMAIN requis}
+      LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL:?LETSENCRYPT_EMAIL requis}
+    volumes:
+      - ./deploy/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data       # certificats TLS (persistant)
+      - caddy_config:/config
+
+volumes:
+  pgdata:
+  rapports:
+  caddy_data:
+  caddy_config:

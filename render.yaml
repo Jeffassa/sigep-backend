@@ -1,0 +1,35 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+# Héberge l'application (build depuis le Dockerfile). La base PostgreSQL est externe
+# (Neon, gratuit) : renseigner DB_URL / DB_USERNAME / DB_PASSWORD dans le dashboard.
+# Voir DEPLOIEMENT.md → « Option B — Hébergement gratuit (Render + Neon) ».
+services:
+  - type: web
+    name: sigep-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: APP_SECURITY_REQUIRE_HTTPS
+        value: "true"
+      - key: TRUST_FORWARDED_FOR
+        value: "true"
+      - key: ADMIN_EMAIL
+        value: admin@esatic.ci
+      - key: DB_POOL_MAX
+        value: "5"
+      # --- Secrets à renseigner dans le dashboard Render (non versionnés) ---
+      - key: DB_URL          # jdbc:postgresql://<host-neon>/<db>?sslmode=require
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: JWT_SECRET      # openssl rand -base64 48
+        sync: false
+      - key: JWT_QR_SECRET   # openssl rand -base64 48 (différent)
+        sync: false
+      - key: ADMIN_PASSWORD  # vide = généré et affiché 1 fois dans les logs
+        sync: false

@@ -1,0 +1,12 @@
+# Caddy obtient et renouvelle automatiquement le certificat TLS Let's Encrypt
+# pour {$DOMAIN} (prérequis : DNS du domaine pointant vers ce serveur, ports 80/443 ouverts).
+# Il redirige HTTP→HTTPS et transmet X-Forwarded-Proto / X-Forwarded-For au backend.
+
+{
+    email {$LETSENCRYPT_EMAIL}
+}
+
+{$DOMAIN} {
+    encode gzip
+    reverse_proxy app:8080
+}

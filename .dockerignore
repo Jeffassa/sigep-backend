@@ -1,0 +1,13 @@
+# Contexte de build minimal (l'image se construit depuis les sources Maven)
+target/
+.git/
+.github/
+.idea/
+*.iml
+.env
+*.env
+!.env.example
+deploy/
+DEPLOIEMENT.md
+docker-compose*.yml
+src/main/resources/static/fonts/
