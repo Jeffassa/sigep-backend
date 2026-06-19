@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('SIGEP | Messages')}"></head>
+<body>
+
+<div th:replace="~{admin/fragments :: topbar('messages')}"></div>
+
+<main class="max-w-[900px] mx-auto px-5 md:px-8 py-10 pb-36">
+
+    <div class="mb-8" data-reveal>
+        <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mb-2">Communication</p>
+        <h1 class="font-serif text-[clamp(34px,5vw,52px)] leading-[1.02] tracking-tight">Messages</h1>
+        <p class="text-muted text-[14px] mt-2">Envoyez un e-mail à un enseignant précis ou à tous.</p>
+    </div>
+
+    <div th:if="${success}" class="glass rounded-2xl p-3.5 mb-5 flex items-center gap-2 text-[13px]" data-reveal>
+        <span class="material-symbols-rounded text-[18px]">check_circle</span><span th:text="${success}">OK</span>
+    </div>
+
+    <form th:action="@{/admin/messages}" method="post" class="glass rounded-2xl p-5 flex flex-col gap-4" data-reveal>
+        <label class="flex flex-col gap-1.5 text-[13px]">
+            <span class="text-muted">Destinataire</span>
+            <select name="destinataire" required
+                    class="bg-white/50 border border-line rounded-xl px-3 h-11 text-[14px] focus:ring-0 focus:border-ink cursor-pointer">
+                <option value="ALL">Tous les enseignants</option>
+                <option th:each="e : ${enseignants}" th:value="${e.id}"
+                        th:text="${e.prenom + ' ' + e.nom + ' (' + e.user.email + ')'}">Prof</option>
+            </select>
+        </label>
+        <label class="flex flex-col gap-1.5 text-[13px]">
+            <span class="text-muted">Sujet</span>
+            <input type="text" name="sujet" required maxlength="150"
+                   class="bg-white/50 border border-line rounded-xl px-3 h-11 text-[14px] focus:ring-0 focus:border-ink"/>
+        </label>
+        <label class="flex flex-col gap-1.5 text-[13px]">
+            <span class="text-muted">Message</span>
+            <textarea name="corps" required rows="7"
+                      class="bg-white/50 border border-line rounded-xl px-3 py-2.5 text-[14px] focus:ring-0 focus:border-ink resize-y"></textarea>
+        </label>
+        <button type="submit" class="btn btn-ink h-12 px-6 rounded-2xl flex items-center justify-center gap-2 w-fit text-[14px] font-medium">
+            <span class="material-symbols-rounded text-[20px]">send</span> Envoyer
+        </button>
+    </form>
+
+    <p class="text-[12px] text-muted mt-3">
+        ⚠️ Les e-mails ne partent réellement que si le SMTP est configuré (<code>MAIL_ENABLED=true</code> + <code>MAIL_HOST</code>…). Sinon ils sont seulement journalisés.
+    </p>
+
+</main>
+
+<div th:replace="~{admin/fragments :: dock('messages')}"></div>
+<div th:replace="~{admin/fragments :: palette}"></div>
+<div th:replace="~{admin/fragments :: scripts}"></div>
+
+</body>
+</html>

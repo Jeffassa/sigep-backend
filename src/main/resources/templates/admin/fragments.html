@@ -73,6 +73,9 @@
     <a th:href="@{/admin/enseignants}" class="dock-item" th:classappend="${active=='enseignants'}?'active':''" data-label="Enseignants">
         <span class="material-symbols-rounded">groups</span><span class="dock-tip">Enseignants</span>
     </a>
+    <a th:href="@{/admin/messages}" class="dock-item" th:classappend="${active=='messages'}?'active':''" data-label="Messages">
+        <span class="material-symbols-rounded">mail</span><span class="dock-tip">Messages</span>
+    </a>
     <a th:href="@{/admin/rapports}" class="dock-item" th:classappend="${active=='rapports'}?'active':''" data-label="Rapports">
         <span class="material-symbols-rounded">description</span><span class="dock-tip">Rapports</span>
     </a>

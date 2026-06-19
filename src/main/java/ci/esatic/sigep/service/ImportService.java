@@ -48,6 +48,42 @@ public class ImportService {
         return result;
     }
 
+    // Import admin d'enseignants (annuaire) : crée les profils SANS compte (user=null, statut PENDING).
+    // Les enseignants s'inscrivent ensuite eux-mêmes via leur matricule, puis l'admin valide.
+    // Colonnes : MATRICULE | NOM | PRENOM | DEPARTEMENT | GRADE
+    @Transactional
+    public Map<String, Object> importerEnseignants(MultipartFile file) throws Exception {
+        int importes = 0, ignores = 0;
+        try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
+            Sheet sheet = workbook.getSheetAt(0);
+            for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+                Row row = sheet.getRow(i);
+                if (row == null) continue;
+                String matricule = getCellValue(row, 0);
+                if (matricule.isBlank()) continue;
+                if (enseignantRepository.existsByMatricule(matricule)) { ignores++; continue; }
+                Enseignant e = Enseignant.builder()
+                        .matricule(matricule)
+                        .nom(getCellValue(row, 1))
+                        .prenom(getCellValue(row, 2))
+                        .departement(emptyToNull(getCellValue(row, 3)))
+                        .grade(emptyToNull(getCellValue(row, 4)))
+                        .build();
+                enseignantRepository.save(e);
+                importes++;
+            }
+        }
+        log.info("Import enseignants : {} crees, {} ignores (matricule deja existant)", importes, ignores);
+        Map<String, Object> result = new HashMap<>();
+        result.put("importes", importes);
+        result.put("ignores", ignores);
+        return result;
+    }
+
+    private String emptyToNull(String s) {
+        return (s == null || s.isBlank()) ? null : s;
+    }
+
     // Import enseignant : fichier 6 colonnes sans MATRICULE (enseignant = utilisateur connecté)
     // Colonnes : DATE | HEURE_DEBUT | HEURE_FIN | MATIERE | CLASSE | SALLE
     @Transactional

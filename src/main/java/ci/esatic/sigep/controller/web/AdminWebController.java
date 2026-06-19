@@ -4,7 +4,10 @@ import ci.esatic.sigep.entity.*;
 import ci.esatic.sigep.repository.*;
 import ci.esatic.sigep.service.RapportService;
 import ci.esatic.sigep.service.EnseignantService;
+import ci.esatic.sigep.service.ImportService;
+import ci.esatic.sigep.service.MailService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpHeaders;
@@ -37,6 +40,8 @@ public class AdminWebController {
     private final PasswordEncoder passwordEncoder;
     private final RapportService rapportService;
     private final EnseignantService enseignantService;
+    private final ImportService importService;
+    private final MailService mailService;
     private final FaculteRepository faculteRepository;
     private final MatiereRepository matiereRepository;
     private final ClasseRepository classeRepository;
@@ -416,6 +421,52 @@ public class AdminWebController {
         ra.addFlashAttribute("success",
                 "Enseignant " + prenom + " " + nom + " cree avec succes.");
         return "redirect:/admin/enseignants";
+    }
+
+    // Import en masse d'enseignants (Excel) : crée l'annuaire ; les profs s'inscrivent ensuite par matricule.
+    @PostMapping("/admin/enseignants/import")
+    public String importerEnseignants(@RequestParam("fichier") MultipartFile fichier, RedirectAttributes ra) {
+        try {
+            Map<String, Object> r = importService.importerEnseignants(fichier);
+            ra.addFlashAttribute("success",
+                    r.get("importes") + " enseignant(s) importé(s), " + r.get("ignores") + " ignoré(s) (déjà présents).");
+        } catch (Exception e) {
+            ra.addFlashAttribute("error", "Import impossible : " + e.getMessage());
+        }
+        return "redirect:/admin/enseignants";
+    }
+
+    // --- Messagerie : e-mail à un enseignant précis ou à tous ---
+    @GetMapping("/admin/messages")
+    public String messagesForm(Model model) {
+        model.addAttribute("enseignants", enseignantRepository.findAll().stream()
+                .filter(e -> e.getUser() != null)
+                .toList());
+        return "admin/messages";
+    }
+
+    @PostMapping("/admin/messages")
+    public String envoyerMessage(@RequestParam String destinataire,
+                                 @RequestParam String sujet,
+                                 @RequestParam String corps,
+                                 RedirectAttributes ra) {
+        int envoyes = 0;
+        if ("ALL".equals(destinataire)) {
+            for (Enseignant e : enseignantRepository.findAll()) {
+                if (e.getUser() != null && e.getUser().getEmail() != null) {
+                    mailService.envoyerMessage(e.getUser().getEmail(), sujet, corps);
+                    envoyes++;
+                }
+            }
+        } else {
+            Enseignant e = enseignantRepository.findById(Long.valueOf(destinataire)).orElse(null);
+            if (e != null && e.getUser() != null) {
+                mailService.envoyerMessage(e.getUser().getEmail(), sujet, corps);
+                envoyes = 1;
+            }
+        }
+        ra.addFlashAttribute("success", envoyes + " message(s) envoyé(s).");
+        return "redirect:/admin/messages";
     }
 
     @PostMapping("/admin/enseignants/{id}/statut")

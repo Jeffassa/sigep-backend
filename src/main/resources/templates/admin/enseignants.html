@@ -12,14 +12,29 @@
             <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mb-2">Corps enseignant</p>
             <h1 class="font-serif text-[clamp(34px,5vw,52px)] leading-[1.02] tracking-tight">Enseignants</h1>
         </div>
-        <a th:href="@{/admin/enseignants/nouveau}"
-           class="btn btn-ink h-12 px-6 rounded-2xl flex items-center gap-2 text-[14px] font-medium w-fit">
-            <span class="material-symbols-rounded text-[20px]">person_add</span> Ajouter
-        </a>
+        <div class="flex flex-wrap items-center gap-2">
+            <!-- Import en masse (Excel) : colonnes MATRICULE | NOM | PRENOM | DEPARTEMENT | GRADE -->
+            <form th:action="@{/admin/enseignants/import}" method="post" enctype="multipart/form-data"
+                  class="glass rounded-2xl h-12 px-3 flex items-center gap-2"
+                  title="Colonnes : MATRICULE | NOM | PRENOM | DEPARTEMENT | GRADE">
+                <input type="file" name="fichier" accept=".xlsx,.xls" required
+                       class="text-[12px] max-w-[180px] file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:bg-ink file:text-white file:cursor-pointer"/>
+                <button type="submit" class="btn h-9 px-3 rounded-xl bg-ink text-white flex items-center gap-1 text-[13px]">
+                    <span class="material-symbols-rounded text-[18px]">upload_file</span> Importer
+                </button>
+            </form>
+            <a th:href="@{/admin/enseignants/nouveau}"
+               class="btn btn-ink h-12 px-6 rounded-2xl flex items-center gap-2 text-[14px] font-medium w-fit">
+                <span class="material-symbols-rounded text-[20px]">person_add</span> Ajouter
+            </a>
+        </div>
     </div>
 
     <div th:if="${success}" class="glass rounded-2xl p-3.5 mb-5 flex items-center gap-2 text-[13px]" data-reveal>
         <span class="material-symbols-rounded text-[18px]">check_circle</span><span th:text="${success}">OK</span>
+    </div>
+    <div th:if="${error}" class="glass rounded-2xl p-3.5 mb-5 flex items-center gap-2 text-[13px]" data-reveal>
+        <span class="material-symbols-rounded text-[18px]">error</span><span th:text="${error}">Erreur</span>
     </div>
 
     <!-- Filtres -->
