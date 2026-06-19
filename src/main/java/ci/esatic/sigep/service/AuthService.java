@@ -30,6 +30,7 @@ public class AuthService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final RefreshTokenService refreshTokenService;
     private final AuthenticationManager authenticationManager;
 
     public AuthResponse login(LoginRequest request) {
@@ -54,6 +55,7 @@ public class AuthService {
         });
 
         String token = jwtService.generateToken(user);
+        String refreshToken = refreshTokenService.create(user);
 
         List<String> roles = user.getRoles().stream()
                 .map(role -> role.getName().name())
@@ -69,6 +71,7 @@ public class AuthService {
 
         return AuthResponse.builder()
                 .token(token)
+                .refreshToken(refreshToken)
                 .type("Bearer")
                 .id(user.getId())
                 .email(user.getEmail())
@@ -76,6 +79,72 @@ public class AuthService {
                 .nom(nom)
                 .prenom(prenom)
                 .build();
+    }
+
+    /**
+     * Échange un refresh token valide contre un nouvel access token.
+     * SECURITE : rotation systématique — l'ancien refresh token est invalidé et un nouveau est émis.
+     */
+    @Transactional
+    public AuthResponse refresh(String refreshToken) {
+        var rt = refreshTokenService.verifier(refreshToken);
+        User user = rt.getUser();
+
+        // SECURITE : le compte doit TOUJOURS être autorisé. Un enseignant rejeté/suspendu
+        // ou un utilisateur désactivé après connexion ne doit pas pouvoir prolonger sa
+        // session via le refresh (le gating de validation ne doit pas être contournable).
+        var enseignantOpt = enseignantRepository.findByUserId(user.getId());
+        verifierCompteToujoursAutorise(user, enseignantOpt.orElse(null));
+
+        String nouveauRefresh = refreshTokenService.rotation(rt);
+        String token = jwtService.generateToken(user);
+
+        List<String> roles = user.getRoles().stream()
+                .map(role -> role.getName().name())
+                .collect(Collectors.toList());
+
+        String nom = enseignantOpt.map(Enseignant::getNom).orElse("");
+        String prenom = enseignantOpt.map(Enseignant::getPrenom).orElse("");
+
+        return AuthResponse.builder()
+                .token(token)
+                .refreshToken(nouveauRefresh)
+                .type("Bearer")
+                .id(user.getId())
+                .email(user.getEmail())
+                .roles(roles)
+                .nom(nom)
+                .prenom(prenom)
+                .build();
+    }
+
+    /** Déconnexion : révoque le refresh token fourni (l'access token expire seul, à court terme). */
+    @Transactional
+    public void logout(String refreshToken) {
+        refreshTokenService.revoquer(refreshToken);
+    }
+
+    /**
+     * Vérifie que le compte est toujours autorisé au moment du refresh.
+     * On se contente de bloquer (throw) : chaque tentative de refresh étant revérifiée,
+     * un compte rejeté/désactivé ne peut plus obtenir d'access token. La révocation
+     * effective des refresh tokens est faite au moment de la décision admin
+     * ({@code EnseignantService.updateStatut}).
+     */
+    private void verifierCompteToujoursAutorise(User user, Enseignant enseignant) {
+        if (!user.isEnabled()) {
+            throw new CompteNonValideException("Compte désactivé. Veuillez contacter l'administration.");
+        }
+        if (enseignant != null) {
+            if (enseignant.getStatut() == StatutEnseignant.PENDING) {
+                throw new CompteNonValideException(
+                        "Votre compte est en attente de validation par l'administration.");
+            }
+            if (enseignant.getStatut() == StatutEnseignant.REJECTED) {
+                throw new CompteNonValideException(
+                        "Votre compte a été refusé. Veuillez contacter l'administration.");
+            }
+        }
     }
 
     @Transactional

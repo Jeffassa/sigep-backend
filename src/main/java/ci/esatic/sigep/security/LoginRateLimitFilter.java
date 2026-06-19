@@ -16,7 +16,8 @@ import java.util.Deque;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Limite les tentatives de connexion à MAX_ATTEMPTS par IP sur une fenêtre glissante de WINDOW_MS.
+ * Limite par IP les POST sensibles d'authentification (login et refresh) sur une fenêtre
+ * glissante de WINDOW_MS, avec des budgets séparés (un flood de login n'épuise pas le refresh).
  * Répond HTTP 429 si la limite est dépassée.
  * Aucune dépendance externe requise — état en mémoire (suffisant pour un déploiement mono-instance).
  */
@@ -24,11 +25,24 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 public class LoginRateLimitFilter extends OncePerRequestFilter {
 
-    private static final int MAX_ATTEMPTS = 5;
     private static final long WINDOW_MS = 60_000L; // 1 minute
     private static final String LOGIN_PATH = "/api/auth/login";
+    private static final String REFRESH_PATH = "/api/auth/refresh";
 
     private final ConcurrentHashMap<String, Deque<Long>> attempts = new ConcurrentHashMap<>();
+
+    /** Permet de désactiver le rate-limiting (ex. profil de test). Activé par défaut. */
+    @Value("${app.security.login-rate-limit.enabled:true}")
+    private boolean enabled;
+
+    /** Budget login par IP/min (anti-bruteforce d'identifiants). */
+    @Value("${app.security.login-rate-limit.max-login:5}")
+    private int maxLogin;
+
+    /** Budget refresh par IP/min. Plus large : le refresh légitime est fréquent et le
+     *  token est à haute entropie. Évite de pénaliser plusieurs utilisateurs derrière un même NAT. */
+    @Value("${app.security.login-rate-limit.max-refresh:30}")
+    private int maxRefresh;
 
     /**
      * Ne faire confiance à X-Forwarded-For QUE derrière un reverse proxy de confiance.
@@ -44,13 +58,13 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
             @NonNull FilterChain chain
     ) throws ServletException, IOException {
 
-        if (LOGIN_PATH.equals(request.getRequestURI())
-                && "POST".equalsIgnoreCase(request.getMethod())) {
-
+        int limite = limitePour(request);
+        if (enabled && limite > 0) {
             String ip = resolveClientIp(request);
-
-            if (isRateLimited(ip)) {
-                log.warn("Rate limit atteint pour IP={}", ip);
+            // Clé par (IP, chemin) : budgets login et refresh indépendants.
+            String cle = ip + "|" + request.getRequestURI();
+            if (isRateLimited(cle, limite)) {
+                log.warn("Rate limit atteint pour IP={} chemin={}", ip, request.getRequestURI());
                 response.setStatus(429);
                 response.setContentType("application/json;charset=UTF-8");
                 response.getWriter().write(
@@ -63,9 +77,18 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
         chain.doFilter(request, response);
     }
 
-    private boolean isRateLimited(String ip) {
+    /** Limite applicable à la requête (0 = non concernée). */
+    private int limitePour(HttpServletRequest request) {
+        if (!"POST".equalsIgnoreCase(request.getMethod())) return 0;
+        String uri = request.getRequestURI();
+        if (LOGIN_PATH.equals(uri)) return maxLogin;
+        if (REFRESH_PATH.equals(uri)) return maxRefresh;
+        return 0;
+    }
+
+    private boolean isRateLimited(String cle, int max) {
         long now = System.currentTimeMillis();
-        attempts.compute(ip, (k, deque) -> {
+        attempts.compute(cle, (k, deque) -> {
             if (deque == null) deque = new ArrayDeque<>();
             // Purge les entrées hors fenêtre glissante
             while (!deque.isEmpty() && now - deque.peekFirst() > WINDOW_MS) {
@@ -74,7 +97,7 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
             deque.addLast(now);
             return deque;
         });
-        return attempts.get(ip).size() > MAX_ATTEMPTS;
+        return attempts.get(cle).size() > max;
     }
 
     /**

@@ -23,6 +23,12 @@ app:
   jwt:
     secret: dGVzdC1zZWNyZXQta2V5LWZvci1zaWdlcC10ZXN0cy1vbmx5LTI2Y2hhcnM=
     expiration: 86400000
+    refresh-expiration: 2592000000
     qr-secret: dGVzdC1xci1zZWNyZXQta2V5LWZvci1zaWdlcC10ZXN0cy1vbmx5LTI2Yg==
   rapports:
     dossier: target/test-rapports
+  security:
+    # Désactivé en test : le compteur en mémoire est partagé entre classes de test
+    # (même contexte Spring) et déclencherait des 429 parasites sur les logins MockMvc.
+    login-rate-limit:
+      enabled: false
