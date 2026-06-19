@@ -1,0 +1,37 @@
+# =====================================================================
+# Profil PROD — activé avec SPRING_PROFILES_ACTIVE=prod
+# Les SECRETS et valeurs sensibles viennent UNIQUEMENT des variables
+# d'environnement (aucune valeur par défaut de dev ici). Voir .env.prod.example
+# =====================================================================
+spring:
+  jpa:
+    hibernate:
+      # Schéma géré par Flyway → Hibernate valide seulement (jamais 'update' en prod).
+      ddl-auto: validate
+    show-sql: false
+    open-in-view: false
+  flyway:
+    enabled: true
+
+# Journalisation plus sobre en production
+logging:
+  level:
+    root: INFO
+    ci.esatic.sigep: INFO
+    org.springframework.security: WARN
+    org.hibernate.SQL: WARN
+
+app:
+  security:
+    # En prod : exiger HTTPS et faire confiance au proxy TLS (X-Forwarded-*).
+    require-https: ${APP_SECURITY_REQUIRE_HTTPS:true}
+    trust-forwarded-for: ${TRUST_FORWARDED_FOR:true}
+  # Dossier des rapports PDF : volume persistant (sinon perdus au redémarrage du conteneur).
+  rapports:
+    dossier: ${RAPPORTS_DOSSIER:/data/rapports}
+
+# Actuator : ne pas exposer les détails de santé publiquement
+management:
+  endpoint:
+    health:
+      show-details: never
