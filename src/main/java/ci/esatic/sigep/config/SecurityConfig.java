@@ -30,6 +30,11 @@ public class SecurityConfig {
     private final UserDetailsServiceImpl userDetailsService;
     private final ci.esatic.sigep.security.LoginRateLimitFilter loginRateLimitFilter;
 
+    /** SECURITE : en production, exiger HTTPS (rejette/redirige le trafic non sécurisé).
+     *  Désactivé par défaut pour ne pas casser le dev en HTTP local. */
+    @org.springframework.beans.factory.annotation.Value("${app.security.require-https:false}")
+    private boolean requireHttps;
+
     /** Chaîne 1 : Interface web admin — form login + sessions HTTP */
     @Bean
     @Order(1)
@@ -54,6 +59,9 @@ public class SecurityConfig {
                         .clearAuthentication(true)
                 )
                 .authenticationProvider(authenticationProvider());
+        if (requireHttps) {
+            http.requiresChannel(c -> c.anyRequest().requiresSecure());
+        }
         return http.build();
     }
 
@@ -88,6 +96,9 @@ public class SecurityConfig {
                 .addFilterBefore(loginRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
+        if (requireHttps) {
+            http.requiresChannel(c -> c.anyRequest().requiresSecure());
+        }
         return http.build();
     }
 

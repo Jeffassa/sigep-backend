@@ -53,6 +53,9 @@ spring:
 
 server:
   port: 8080
+  # Derrière un reverse proxy qui termine le TLS, respecter X-Forwarded-Proto/Host
+  # (sinon l'app croit être en HTTP). Sans effet en accès direct (dev).
+  forward-headers-strategy: framework
 
 # Observabilité (Spring Boot Actuator)
 management:
@@ -95,3 +98,11 @@ app:
   security:
     # Ne faire confiance au header X-Forwarded-For QUE derrière un reverse proxy de confiance.
     trust-forwarded-for: ${TRUST_FORWARDED_FOR:false}
+    # SECURITE : en production, exiger HTTPS (requêtes non sécurisées rejetées/redirigées).
+    # Nécessite un reverse proxy TLS + forward-headers-strategy. Laisser false en dev (HTTP local).
+    require-https: ${APP_SECURITY_REQUIRE_HTTPS:false}
+    login-rate-limit:
+      # Limite anti-bruteforce par IP (fenêtre 1 min). Budgets séparés login / refresh.
+      enabled: ${LOGIN_RATE_LIMIT_ENABLED:true}
+      max-login: ${LOGIN_RATE_LIMIT_MAX:5}
+      max-refresh: ${REFRESH_RATE_LIMIT_MAX:30}
