@@ -32,6 +32,12 @@ public class MailService {
         this.mailSenderProvider = mailSenderProvider;
     }
 
+    /** Message libre envoyé par l'administration à un enseignant. */
+    @Async
+    public void envoyerMessage(String email, String sujet, String corps) {
+        envoyer(email, sujet, corps);
+    }
+
     @Async
     public void notifierStatutCompte(String email, String prenom, boolean valide) {
         if (valide) {

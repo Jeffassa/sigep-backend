@@ -1,5 +1,6 @@
 package ci.esatic.sigep.service;
 
+import ci.esatic.sigep.dto.request.InscriptionRequest;
 import ci.esatic.sigep.dto.request.LoginRequest;
 import ci.esatic.sigep.dto.request.RegisterEnseignantRequest;
 import ci.esatic.sigep.dto.response.AuthResponse;
@@ -145,6 +146,47 @@ public class AuthService {
                         "Votre compte a été refusé. Veuillez contacter l'administration.");
             }
         }
+    }
+
+    /**
+     * Auto-inscription d'un enseignant via son matricule. Le matricule doit déjà exister
+     * dans l'annuaire (importé par l'admin) et ne pas avoir de compte. Le compte est créé
+     * en attente (PENDING) : aucun token n'est délivré tant que l'admin n'a pas validé.
+     */
+    @Transactional
+    public AuthResponse inscription(InscriptionRequest request) {
+        Enseignant enseignant = enseignantRepository.findByMatricule(request.getMatricule())
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Matricule introuvable. Vérifiez-le ou contactez l'administration."));
+        if (enseignant.getUser() != null) {
+            throw new IllegalArgumentException("Ce matricule a déjà un compte. Connectez-vous.");
+        }
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new IllegalArgumentException("Email déjà utilisé : " + request.getEmail());
+        }
+
+        Role role = roleRepository.findByName(ERole.ROLE_ENSEIGNANT)
+                .orElseThrow(() -> new RuntimeException("Rôle ENSEIGNANT non trouvé en base"));
+        User user = User.builder()
+                .email(request.getEmail())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .roles(Set.of(role))
+                .build();
+        user = userRepository.save(user);
+
+        enseignant.setUser(user);
+        enseignant.setStatut(StatutEnseignant.PENDING);
+        enseignantRepository.save(enseignant);
+
+        return AuthResponse.builder()
+                .token(null)
+                .type("Bearer")
+                .id(user.getId())
+                .email(user.getEmail())
+                .roles(List.of(ERole.ROLE_ENSEIGNANT.name()))
+                .nom(enseignant.getNom())
+                .prenom(enseignant.getPrenom())
+                .build();
     }
 
     @Transactional
