@@ -1,7 +1,65 @@
 # Déploiement en production — SIGEP
 
+Deux options d'hébergement :
+
+- **Option B — Hébergement gratuit, sans VPS (Render + Neon)** → recommandée si tu ne veux pas gérer de serveur. Voir ci-dessous.
+- **Option A — Auto-hébergement Docker** (VPS, on-premise) → stack `docker-compose.prod.yml` (app + PostgreSQL + Caddy/HTTPS). Sections numérotées plus bas.
+
+---
+
+# Option B — Hébergement gratuit (Render + Neon)
+
+Aucun VPS à administrer. **Render** héberge l'application (build depuis le `Dockerfile`, HTTPS automatique y compris sur ton domaine), **Neon** fournit un PostgreSQL managé gratuit (sans expiration). Tu n'utilises **ni** `docker-compose.prod.yml` **ni** Caddy ici (Render gère le TLS et le routage) ; seuls le `Dockerfile` et le profil `prod` servent.
+
+> ⚠️ **À savoir (plan gratuit)** : l'app se met **en veille après ~15 min d'inactivité** → le tout premier accès ensuite est **lent (~30–60 s)** le temps du redémarrage, et peut faire échouer la 1ʳᵉ requête du mobile. Solution : un **« keep-warm »** gratuit (UptimeRobot / cron-job.org) qui appelle `https://ton-domaine/actuator/health` toutes les 5 min. C'est le compromis du gratuit ; pour zéro veille il faut un plan payant (ou un petit VPS).
+
+### B.1 — Base de données (Neon)
+1. Crée un compte sur **neon.tech** → nouveau projet → base `sigep_db`.
+2. Récupère la chaîne de connexion. Tu en déduis :
+   - `DB_URL` = `jdbc:postgresql://<HOST>/<DB>?sslmode=require`
+   - `DB_USERNAME` et `DB_PASSWORD` (fournis par Neon).
+
+### B.2 — Application (Render)
+1. Crée un compte sur **render.com** → **New → Web Service** → connecte le dépôt GitHub `sigep-backend`.
+2. **Runtime : Docker** (Render détecte le `Dockerfile`). Plan : **Free**.
+3. **Health Check Path** : `/actuator/health`.
+4. **Environment** → ajoute les variables :
+
+   | Variable | Valeur |
+   |---|---|
+   | `SPRING_PROFILES_ACTIVE` | `prod` |
+   | `DB_URL` | la chaîne Neon (`...sslmode=require`) |
+   | `DB_USERNAME` / `DB_PASSWORD` | identifiants Neon |
+   | `JWT_SECRET` / `JWT_QR_SECRET` | `openssl rand -base64 48` (2 valeurs **différentes**) |
+   | `APP_SECURITY_REQUIRE_HTTPS` | `true` |
+   | `TRUST_FORWARDED_FOR` | `true` |
+   | `ADMIN_EMAIL` | `admin@esatic.ci` |
+   | `ADMIN_PASSWORD` | (vide = généré et affiché 1 fois dans les logs) |
+   | `DB_POOL_MAX` | `5` *(adapté au tier gratuit)* |
+
+5. **Deploy**. Au démarrage, **Flyway** crée le schéma (`refresh_tokens` incluse). Suis les logs pour récupérer le mot de passe admin si tu l'as laissé vide.
+
+### B.3 — Ton nom de domaine (HTTPS automatique)
+1. Dans Render → ton service → **Settings → Custom Domains** → ajoute `sigep.ton-domaine`.
+2. Chez ton registrar, crée l'enregistrement **CNAME** indiqué par Render. Render émet le certificat TLS automatiquement (quelques minutes).
+
+### B.4 — Garder l'app éveillée (optionnel mais conseillé)
+- Compte gratuit **UptimeRobot** → monitor HTTP(s) sur `https://ton-domaine/actuator/health`, intervalle 5 min.
+
+### B.5 — Vérifs
+```bash
+curl https://ton-domaine/actuator/health
+curl -X POST https://ton-domaine/api/auth/login -H "Content-Type: application/json" \
+  -d '{"email":"admin@esatic.ci","password":"MDP_ADMIN"}'
+```
+
+> Astuce : un fichier `render.yaml` (Blueprint) est fourni à la racine pour pré-remplir le service ; tu peux aussi tout faire depuis le tableau de bord comme ci-dessus.
+
+---
+
+# Option A — Auto-hébergement Docker (VPS / on-premise)
+
 Stack : **Docker Compose** = application Spring Boot + **PostgreSQL** + **Caddy** (reverse proxy + HTTPS automatique).
-Portable : fonctionne sur un VPS Linux, une machine on-premise, ou tout hôte Docker.
 
 ---
 
