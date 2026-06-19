@@ -375,6 +375,7 @@ public class AdminWebController {
     }
 
     @PostMapping("/admin/enseignants")
+    @org.springframework.transaction.annotation.Transactional
     public String creerEnseignant(@RequestParam String matricule,
                                    @RequestParam String nom,
                                    @RequestParam String prenom,

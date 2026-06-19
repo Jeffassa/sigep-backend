@@ -9,7 +9,10 @@ spring:
       # Schéma géré par Flyway → Hibernate valide seulement (jamais 'update' en prod).
       ddl-auto: validate
     show-sql: false
-    open-in-view: false
+    # Laisser true (défaut Spring) : l'app charge des associations LAZY pendant le rendu
+    # des vues Thymeleaf et hors transaction. Le passer à false provoque des erreurs
+    # (LazyInitialization / entités détachées) côté admin. Cohérent avec le dev.
+    open-in-view: true
   flyway:
     enabled: true
 
