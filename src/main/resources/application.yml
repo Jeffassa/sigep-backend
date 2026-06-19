@@ -67,6 +67,11 @@ management:
   endpoint:
     health:
       show-details: never
+  health:
+    # Le mail est optionnel (journalisé tant que MAIL_ENABLED=false) : son indicateur
+    # ne doit pas faire passer toute la sonde en DOWN quand aucun SMTP n'est configuré.
+    mail:
+      enabled: false
   info:
     env:
       enabled: true
