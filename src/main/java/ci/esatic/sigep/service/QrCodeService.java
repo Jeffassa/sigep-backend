@@ -24,7 +24,10 @@ import java.util.Map;
 @Slf4j
 public class QrCodeService {
 
-    private static final long QR_EXPIRATION_MS = 30_000L; // 30 secondes
+    // Validité du token QR : assez longue pour « scanner → signer → valider »,
+    // tout en restant une preuve de présence (l'anti-rejeu par jti empêche la réutilisation).
+    private static final long QR_EXPIRATION_MS = 120_000L; // 2 minutes
+    private static final int QR_REFRESH_SECONDS = 60;      // cadence de rafraîchissement de l'affichage
     private static final int QR_SIZE = 400; // Plus grand = lisible de plus loin
 
     private final JwtService jwtService;
@@ -36,7 +39,7 @@ public class QrCodeService {
         return QrCodeResponse.builder()
                 .salleCode(salleCode)
                 .qrImageBase64(qrImageBase64)
-                .expiresInSeconds(30)
+                .expiresInSeconds(QR_REFRESH_SECONDS)
                 .generatedAt(System.currentTimeMillis())
                 .build();
     }
@@ -51,7 +54,7 @@ public class QrCodeService {
         return QrCodeResponse.builder()
                 .salleCode(null)
                 .qrImageBase64(generateQrImage(token))
-                .expiresInSeconds(30)
+                .expiresInSeconds(QR_REFRESH_SECONDS)
                 .generatedAt(System.currentTimeMillis())
                 .build();
     }
