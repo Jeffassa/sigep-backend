@@ -42,6 +42,7 @@ public class Emargement {
     @Column(columnDefinition = "TEXT")
     private String signatureBase64;
 
-    // Token QR scanné (pour audit)
+    // Token QR scanné (pour audit). TEXT : le JWT du QR universel dépasse 255 caractères.
+    @Column(columnDefinition = "TEXT")
     private String qrTokenUtilise;
 }
