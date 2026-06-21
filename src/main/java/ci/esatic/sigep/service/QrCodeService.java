@@ -26,8 +26,9 @@ public class QrCodeService {
 
     // Validité du token QR : assez longue pour « scanner → signer → valider »,
     // tout en restant une preuve de présence (l'anti-rejeu par jti empêche la réutilisation).
-    private static final long QR_EXPIRATION_MS = 120_000L; // 2 minutes
-    private static final int QR_REFRESH_SECONDS = 60;      // cadence de rafraîchissement de l'affichage
+    private static final long QR_EXPIRATION_MS = 120_000L; // 2 minutes (temps de signer puis valider)
+    private static final int QR_REFRESH_SECONDS = 15;      // rotation rapide : un nouveau code toutes les 15 s
+                                                           // (réduit l'attente entre deux émargements consécutifs)
     private static final int QR_SIZE = 400; // Plus grand = lisible de plus loin
 
     private final JwtService jwtService;
