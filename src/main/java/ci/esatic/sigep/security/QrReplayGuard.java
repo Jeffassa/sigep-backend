@@ -15,7 +15,9 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class QrReplayGuard {
 
-    private static final long TTL_MS = 60_000L; // > durée de vie d'un token (30 s)
+    // Doit couvrir TOUTE la durée de vie d'un token (120 s) : sinon un token consommé
+    // serait « oublié » avant son expiration et pourrait être rejoué dans l'intervalle.
+    private static final long TTL_MS = 150_000L;
 
     private final ConcurrentHashMap<String, Long> consommes = new ConcurrentHashMap<>();
 
