@@ -51,7 +51,7 @@
                 <span class="font-mono text-[11px] text-muted" th:text="${rapports.size()} + ' fichier(s)'">0</span>
             </div>
             <!-- Recherche : par enseignant et/ou période -->
-            <form method="get" th:action="@{/admin/rapports}" class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+            <form method="get" th:action="@{/admin/rapports}" id="formFiltre" class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
                 <div class="md:col-span-4">
                     <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Enseignant</label>
                     <select name="enseignantId" class="w-full h-11 px-4 rounded-xl bg-white/55 border border-line focus:ring-0 focus:border-ink transition">
@@ -82,15 +82,17 @@
                 </div>
             </form>
             <div class="mt-3 flex justify-end gap-2">
-                <a th:href="@{/admin/rapports/synthese(debut=${fDebut}, fin=${fFin})}"
+                <!-- Soumet le formulaire de filtre ci-dessus vers /synthese : utilise les dates
+                     ACTUELLEMENT saisies (plus besoin de cliquer « Filtrer » d'abord). -->
+                <button type="submit" form="formFiltre" th:formaction="@{/admin/rapports/synthese}" formmethod="get"
                    class="inline-flex items-center gap-1.5 px-4 h-10 rounded-xl border border-line text-[13px] font-medium hover:bg-ink hover:text-white transition">
                     <span class="material-symbols-rounded text-[18px]">table_view</span> Synthèse (Excel)
-                </a>
-                <a th:if="${!rapports.isEmpty()}"
-                   th:href="@{/admin/rapports/telecharger-zip(enseignantId=${fEnseignantId}, debut=${fDebut}, fin=${fFin})}"
+                </button>
+                <button type="submit" form="formFiltre" th:formaction="@{/admin/rapports/telecharger-zip}" formmethod="get"
+                   th:if="${!rapports.isEmpty()}"
                    class="btn btn-ink inline-flex items-center gap-1.5 px-4 h-10 rounded-xl text-[13px] font-medium">
                     <span class="material-symbols-rounded text-[18px]">folder_zip</span> Tout télécharger (ZIP)
-                </a>
+                </button>
             </div>
         </div>
         <div class="overflow-x-auto">
