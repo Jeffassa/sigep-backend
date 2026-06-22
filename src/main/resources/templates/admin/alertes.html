@@ -57,7 +57,7 @@
                     <td class="px-6 py-3.5 font-mono text-[12px] text-muted">
                         <span th:text="${#temporals.format(s.heureDebut,'HH:mm')}">--</span>–<span th:text="${#temporals.format(s.heureFin,'HH:mm')}">--</span></td>
                     <td class="px-6 py-3.5 text-[14px] font-medium" th:text="${s.matiere.libelle}">Matière</td>
-                    <td class="px-6 py-3.5 text-[14px] text-muted" th:text="${s.classe.code}">Classe</td>
+                    <td class="px-6 py-3.5 text-[14px] text-muted" th:text="${s.classe.libelle}">Classe</td>
                     <td class="px-6 py-3.5 text-[14px] text-muted" th:text="${s.salle.code}">Salle</td>
                     <td class="px-6 py-3.5 text-[14px] text-muted" th:text="${s.enseignant.prenom + ' ' + s.enseignant.nom}">Ens.</td>
                 </tr>
@@ -89,7 +89,7 @@
                 <tr th:each="d : ${rattrapagesEnAttente}" class="zebra border-b border-line/60">
                     <td class="px-6 py-3.5 text-[14px] font-medium" th:text="${d.enseignant.prenom + ' ' + d.enseignant.nom}">Ens.</td>
                     <td class="px-6 py-3.5 text-[14px] text-muted" th:text="${d.matiere.libelle}">Matière</td>
-                    <td class="px-6 py-3.5 text-[14px] text-muted" th:text="${d.classe.code}">Classe</td>
+                    <td class="px-6 py-3.5 text-[14px] text-muted" th:text="${d.classe.libelle}">Classe</td>
                     <td class="px-6 py-3.5 font-mono text-[12px] text-muted">
                         <span th:text="${#temporals.format(d.dateSouhaitee,'dd/MM/yy')}">--</span> <span th:text="${#temporals.format(d.heureSouhaitee,'HH:mm')}">--</span></td>
                     <td class="px-6 py-3.5 text-[13px] text-muted max-w-[240px] truncate" th:text="${d.motif}">Motif</td>
