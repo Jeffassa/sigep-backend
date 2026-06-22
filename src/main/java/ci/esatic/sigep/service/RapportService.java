@@ -87,7 +87,10 @@ public class RapportService {
 
         genererPDF(enseignant, emargements, totalHeures, debut, fin, cheminFichier);
 
-        long taille = Files.size(cheminFichier);
+        // Octets relus immédiatement (le fichier existe à coup sûr ici) pour les persister
+        // en base : c'est la copie fiable côté téléchargement (disque éphémère sur l'hôte).
+        byte[] contenu = Files.readAllBytes(cheminFichier);
+        long taille = contenu.length;
 
         RapportPdf rapport = RapportPdf.builder()
                 .enseignant(enseignant)
@@ -95,6 +98,7 @@ public class RapportService {
                 .periodeFin(fin)
                 .nomFichier(nomFichier)
                 .cheminFichier(cheminFichier.toString())
+                .contenuPdf(contenu)
                 .tailleFichierOctets(taille)
                 .type(type)
                 .build();
@@ -313,8 +317,12 @@ public class RapportService {
         java.util.Set<String> nomsUtilises = new java.util.HashSet<>();
         try (ZipOutputStream zos = new ZipOutputStream(baos)) {
             for (RapportPdf r : rapports) {
-                Path p = Paths.get(r.getCheminFichier());
-                if (!Files.exists(p)) continue; // fichier supprimé : on ignore
+                byte[] contenu = r.getContenuPdf();
+                if (contenu == null) {
+                    Path p = Paths.get(r.getCheminFichier());
+                    if (!Files.exists(p)) continue; // ni en base ni sur disque : on ignore
+                    contenu = Files.readAllBytes(p);
+                }
                 String nom = nomFichierTelechargement(r);
                 String unique = nom;
                 int n = 1;
@@ -322,7 +330,7 @@ public class RapportService {
                     unique = nom.replaceFirst("\\.pdf$", "_" + (n++) + ".pdf");
                 }
                 zos.putNextEntry(new ZipEntry(unique));
-                Files.copy(p, zos);
+                zos.write(contenu);
                 zos.closeEntry();
             }
         }
@@ -332,6 +340,8 @@ public class RapportService {
     public byte[] getRapportBytes(Long id) throws IOException {
         RapportPdf rapport = rapportPdfRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Rapport introuvable"));
+        // Source fiable : la base. Repli sur le disque pour d'éventuels anciens rapports.
+        if (rapport.getContenuPdf() != null) return rapport.getContenuPdf();
         return Files.readAllBytes(Paths.get(rapport.getCheminFichier()));
     }
 

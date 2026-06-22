@@ -35,6 +35,11 @@ public class RapportPdf {
     @Column(nullable = false)
     private String cheminFichier;
 
+    // Octets du PDF stockés en base (bytea) : le disque de l'hébergeur est éphémère
+    // (fichier perdu au redéploiement/veille) -> la base est la source fiable du téléchargement.
+    @Column(name = "contenu_pdf")
+    private byte[] contenuPdf;
+
     private Long tailleFichierOctets;
 
     @Column(nullable = false)
