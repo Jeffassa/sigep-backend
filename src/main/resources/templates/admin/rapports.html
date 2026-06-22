@@ -54,7 +54,7 @@
             <form method="get" th:action="@{/admin/rapports}" id="formFiltre" class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
                 <div class="md:col-span-4">
                     <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Enseignant</label>
-                    <select name="enseignantId" class="w-full h-11 px-4 rounded-xl bg-white/55 border border-line focus:ring-0 focus:border-ink transition">
+                    <select name="enseignantId" id="filtreEnseignant" class="w-full h-11 px-4 rounded-xl bg-white/55 border border-line focus:ring-0 focus:border-ink transition">
                         <option value="">Tous les enseignants</option>
                         <option th:each="e : ${enseignants}" th:value="${e.id}"
                                 th:text="${e.prenom + ' ' + e.nom}"
@@ -63,12 +63,12 @@
                 </div>
                 <div class="md:col-span-3">
                     <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Du</label>
-                    <input type="date" name="debut" th:value="${fDebut}"
+                    <input type="date" name="debut" id="filtreDebut" th:value="${fDebut}"
                            class="w-full h-11 px-4 rounded-xl bg-white/55 border border-line focus:ring-0 focus:border-ink transition"/>
                 </div>
                 <div class="md:col-span-3">
                     <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Au</label>
-                    <input type="date" name="fin" th:value="${fFin}"
+                    <input type="date" name="fin" id="filtreFin" th:value="${fFin}"
                            class="w-full h-11 px-4 rounded-xl bg-white/55 border border-line focus:ring-0 focus:border-ink transition"/>
                 </div>
                 <div class="md:col-span-2 flex gap-2">
@@ -82,13 +82,14 @@
                 </div>
             </form>
             <div class="mt-3 flex justify-end gap-2">
-                <!-- Soumet le formulaire de filtre ci-dessus vers /synthese : utilise les dates
-                     ACTUELLEMENT saisies (plus besoin de cliquer « Filtrer » d'abord). -->
-                <button type="submit" form="formFiltre" th:formaction="@{/admin/rapports/synthese}" formmethod="get"
+                <!-- Navigation GET pilotée par JS : utilise les dates ACTUELLEMENT saisies
+                     dans Du/Au (plus besoin de cliquer « Filtrer » d'abord). type=button =>
+                     ne soumet aucun formulaire (évite tout POST accidentel). -->
+                <button type="button" id="btnSynthese" th:data-url="@{/admin/rapports/synthese}"
                    class="inline-flex items-center gap-1.5 px-4 h-10 rounded-xl border border-line text-[13px] font-medium hover:bg-ink hover:text-white transition">
                     <span class="material-symbols-rounded text-[18px]">table_view</span> Synthèse (Excel)
                 </button>
-                <button type="submit" form="formFiltre" th:formaction="@{/admin/rapports/telecharger-zip}" formmethod="get"
+                <button type="button" id="btnZip" th:data-url="@{/admin/rapports/telecharger-zip}"
                    th:if="${!rapports.isEmpty()}"
                    class="btn btn-ink inline-flex items-center gap-1.5 px-4 h-10 rounded-xl text-[13px] font-medium">
                     <span class="material-symbols-rounded text-[18px]">folder_zip</span> Tout télécharger (ZIP)
@@ -152,6 +153,24 @@
             d.addEventListener('change', sync); f.addEventListener('change', sync);
             fg.addEventListener('submit', e => { sync(); if (!fg.reportValidity()) e.preventDefault(); });
         }
+
+        // Synthèse / ZIP : navigation GET avec les dates ACTUELLEMENT saisies dans le filtre.
+        const enc = encodeURIComponent;
+        const fd = document.getElementById('filtreDebut');
+        const ff = document.getElementById('filtreFin');
+        const fe = document.getElementById('filtreEnseignant');
+        const aller = (btn, avecEnseignant) => {
+            if (!btn) return;
+            btn.addEventListener('click', () => {
+                const p = [];
+                if (avecEnseignant && fe && fe.value) p.push('enseignantId=' + enc(fe.value));
+                if (fd && fd.value) p.push('debut=' + enc(fd.value));
+                if (ff && ff.value) p.push('fin=' + enc(ff.value));
+                window.location.href = btn.getAttribute('data-url') + (p.length ? '?' + p.join('&') : '');
+            });
+        };
+        aller(document.getElementById('btnSynthese'), false);
+        aller(document.getElementById('btnZip'), true);
     })();
 </script>
 
