@@ -28,16 +28,16 @@ public class QrController {
     public ResponseEntity<String> displayQrPage(@PathVariable String code) {
         String safeCode = sanitize(code);
         QrCodeResponse qr = qrCodeService.generateQrForSalle(safeCode);
-        String html = buildQrPage(safeCode, qr.getQrImageBase64());
+        String html = buildQrPage(safeCode, qr.getQrImageBase64(), qr.getExpiresInSeconds());
         return ResponseEntity.ok(html);
     }
 
     // Page HTML du QR UNIVERSEL d'émargement (public — écran unique).
-    // Se renouvelle automatiquement toutes les 30 s.
+    // Se renouvelle automatiquement à la cadence QR_REFRESH_SECONDS (cf. QrCodeService).
     @GetMapping(value = "/display", produces = MediaType.TEXT_HTML_VALUE)
     public ResponseEntity<String> displayUniversalQrPage() {
         QrCodeResponse qr = qrCodeService.generateUniversalQr();
-        return ResponseEntity.ok(buildUniversalQrPage(qr.getQrImageBase64()));
+        return ResponseEntity.ok(buildUniversalQrPage(qr.getQrImageBase64(), qr.getExpiresInSeconds()));
     }
 
     // Seuls alphanumériques, tirets et underscores autorisés — prévient XSS et path traversal
@@ -48,7 +48,7 @@ public class QrController {
         return code;
     }
 
-    private String buildQrPage(String salleCode, String imageBase64) {
+    private String buildQrPage(String salleCode, String imageBase64, long refreshSeconds) {
         return """
                 <!DOCTYPE html>
                 <html lang="fr">
@@ -102,10 +102,10 @@ public class QrController {
                     <div class="qr-container">
                         <img src="data:image/png;base64,%s" alt="QR Code" fetchpriority="high"/>
                     </div>
-                    <div class="timer" id="timer">Expiration : <span id="countdown">30</span>s</div>
+                    <div class="timer" id="timer">Nouveau code dans : <span id="countdown">%d</span>s</div>
                     <p class="footer">Ce QR code se renouvelle automatiquement</p>
                     <script>
-                        let seconds = 30;
+                        let seconds = %d;
                         const el = document.getElementById('countdown');
                         const timer = document.getElementById('timer');
                         const interval = setInterval(() => {
@@ -120,10 +120,10 @@ public class QrController {
                     </script>
                 </body>
                 </html>
-                """.formatted(salleCode, salleCode, imageBase64);
+                """.formatted(salleCode, salleCode, imageBase64, refreshSeconds, refreshSeconds);
     }
 
-    private String buildUniversalQrPage(String imageBase64) {
+    private String buildUniversalQrPage(String imageBase64, long refreshSeconds) {
         return """
                 <!DOCTYPE html>
                 <html lang="fr">
@@ -172,10 +172,10 @@ public class QrController {
                     <div class="qr-container">
                         <img src="data:image/png;base64,%s" alt="QR Code" fetchpriority="high"/>
                     </div>
-                    <div class="timer" id="timer">Expiration : <span id="countdown">30</span>s</div>
+                    <div class="timer" id="timer">Nouveau code dans : <span id="countdown">%d</span>s</div>
                     <p class="footer">Ce QR code se renouvelle automatiquement</p>
                     <script>
-                        let seconds = 30;
+                        let seconds = %d;
                         const el = document.getElementById('countdown');
                         const timer = document.getElementById('timer');
                         const interval = setInterval(() => {
@@ -190,6 +190,6 @@ public class QrController {
                     </script>
                 </body>
                 </html>
-                """.formatted(imageBase64);
+                """.formatted(imageBase64, refreshSeconds, refreshSeconds);
     }
 }
