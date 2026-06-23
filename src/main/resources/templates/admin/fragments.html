@@ -85,6 +85,9 @@
     <a th:href="@{/admin/facultes}" class="dock-item" th:classappend="${active=='facultes'}?'active':''" data-label="Facultés">
         <span class="material-symbols-rounded">account_balance</span><span class="dock-tip">Facultés</span>
     </a>
+    <a th:href="@{/admin/statistiques}" class="dock-item" th:classappend="${active=='statistiques'}?'active':''" data-label="Statistiques">
+        <span class="material-symbols-rounded">monitoring</span><span class="dock-tip">Statistiques</span>
+    </a>
     <a th:href="@{/admin/alertes}" class="dock-item" th:classappend="${active=='alertes'}?'active':''" data-label="Alertes" style="position:relative;">
         <span class="material-symbols-rounded">notifications</span><span class="dock-tip">Alertes</span>
         <span th:if="${alertesCount != null and alertesCount > 0}"
@@ -119,6 +122,8 @@
                 <span class="material-symbols-rounded">library_books</span><span>Référentiels (matières · classes · salles)</span></a>
             <a class="palette-item" th:href="@{/admin/facultes}" data-key="facultes departements">
                 <span class="material-symbols-rounded">account_balance</span><span>Facultés</span></a>
+            <a class="palette-item" th:href="@{/admin/statistiques}" data-key="statistiques stats analyse tendances kpi recommandations heatmap">
+                <span class="material-symbols-rounded">monitoring</span><span>Statistiques</span></a>
             <a class="palette-item" th:href="@{/admin/alertes}" data-key="alertes emargements manquants rattrapages">
                 <span class="material-symbols-rounded">notifications</span><span>Alertes</span></a>
             <button type="button" class="palette-item" onclick="window.__logout&amp;&amp;window.__logout()"
@@ -240,7 +245,8 @@
     // Exclues : dashboard (a son propre live AJAX), rapports & messages (boutons JS / saisie),
     // formulaires enseignant (saisie longue) — un remplacement du contenu y casserait l'UX.
     var __noLive = __p.indexOf('/admin/dashboard') !== -1 || __p.indexOf('/admin/rapports') !== -1
-        || __p.indexOf('/admin/messages') !== -1 || /\/admin\/enseignants\/.+/.test(__p);
+        || __p.indexOf('/admin/messages') !== -1 || __p.indexOf('/admin/statistiques') !== -1
+        || /\/admin\/enseignants\/.+/.test(__p);
     if (__p.indexOf('/admin/') === 0 && !__noLive) {
         var __busy = function () {                  // ne pas rafraîchir pendant une interaction
             var el = document.activeElement;

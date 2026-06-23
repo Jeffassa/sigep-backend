@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('SIGEP | Statistiques')}"></head>
+<body>
+
+<div th:replace="~{admin/fragments :: topbar('statistiques')}"></div>
+
+<main class="max-w-[1240px] mx-auto px-5 md:px-8 py-10 pb-36">
+
+    <!-- En-tête + période -->
+    <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8" data-reveal>
+        <div>
+            <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mb-2">Analyse</p>
+            <h1 class="font-serif text-[clamp(34px,5vw,52px)] leading-[1.02] tracking-tight">Statistiques</h1>
+            <p class="text-[13px] text-muted mt-1">
+                <span th:text="${#temporals.format(debut,'dd/MM/yyyy')}">--</span> →
+                <span th:text="${#temporals.format(fin,'dd/MM/yyyy')}">--</span>
+            </p>
+        </div>
+        <div class="flex flex-wrap items-end gap-2">
+            <a th:href="@{/admin/statistiques(periode='semaine')}"
+               class="btn glass h-10 px-4 rounded-xl text-[13px] font-medium flex items-center"
+               th:classappend="${periode=='semaine'}?'btn-ink text-white':''">Cette semaine</a>
+            <a th:href="@{/admin/statistiques(periode='mois')}"
+               class="btn glass h-10 px-4 rounded-xl text-[13px] font-medium flex items-center"
+               th:classappend="${periode=='mois'}?'btn-ink text-white':''">Ce mois</a>
+            <form method="get" th:action="@{/admin/statistiques}" class="flex items-end gap-2">
+                <input type="date" name="debut" th:value="${debut}"
+                       class="h-10 px-3 rounded-xl bg-white/55 border border-line text-[13px]"/>
+                <input type="date" name="fin" th:value="${fin}"
+                       class="h-10 px-3 rounded-xl bg-white/55 border border-line text-[13px]"/>
+                <button type="submit" class="btn btn-ink h-10 px-4 rounded-xl text-[13px] font-medium">OK</button>
+            </form>
+            <a th:href="@{/admin/rapports/synthese(debut=${debut}, fin=${fin})}"
+               class="btn glass h-10 px-4 rounded-xl text-[13px] font-medium flex items-center gap-1.5">
+                <span class="material-symbols-rounded text-[18px]">table_view</span> Export
+            </a>
+        </div>
+    </div>
+
+    <!-- Recommandations (analyse par règles) -->
+    <section class="glass rounded-3xl p-7 mb-6" data-reveal>
+        <div class="flex items-center gap-2.5 mb-4">
+            <span class="material-symbols-rounded">lightbulb</span>
+            <h2 class="font-serif text-[22px]">Analyse &amp; recommandations</h2>
+        </div>
+        <div class="space-y-2.5">
+            <div th:each="r : ${recommandations}" class="flex items-start gap-3 p-3 rounded-2xl"
+                 th:with="c=${r.type=='alerte' ? '#dc2626' : (r.type=='succes' ? '#16a34a' : '#0284c7')}"
+                 th:style="'background:' + ${c} + '11;'">
+                <span class="material-symbols-rounded text-[20px] mt-0.5" th:style="'color:' + ${c}"
+                      th:text="${r.type=='alerte' ? 'warning' : (r.type=='succes' ? 'check_circle' : 'info')}">info</span>
+                <p class="text-[14px] leading-snug" th:text="${r.texte}">Recommandation</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- KPIs -->
+    <section class="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5 mb-6">
+        <div class="glass glass-card rounded-3xl p-6" data-reveal>
+            <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Taux d'émargement</p>
+            <p class="font-serif text-[40px] leading-none" th:text="${#numbers.formatDecimal(taux,1,1)} + '%'">0%</p>
+            <p class="font-mono text-[11px] mt-2" th:if="${tauxDelta != 0}"
+               th:style="'color:' + (${tauxDelta} > 0 ? '#16a34a' : '#dc2626')"
+               th:text="(${tauxDelta} > 0 ? '↑ +' : '↓ ') + ${#numbers.formatDecimal(tauxDelta,1,1)} + ' pts'">↑</p>
+            <p class="font-mono text-[11px] mt-2 text-muted" th:if="${tauxDelta == 0}">= stable</p>
+        </div>
+        <div class="glass glass-card rounded-3xl p-6" data-reveal>
+            <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Séances</p>
+            <p class="font-serif text-[40px] leading-none" th:text="${emargees} + '/' + ${seances}">0</p>
+            <p class="font-mono text-[11px] mt-2 text-muted">émargées / prévues</p>
+        </div>
+        <div class="glass glass-card rounded-3xl p-6" data-reveal>
+            <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Heures effectuées</p>
+            <p class="font-serif text-[40px] leading-none" th:text="${#numbers.formatDecimal(heures,1,1)} + ' h'">0</p>
+            <p class="font-mono text-[11px] mt-2 text-muted">2 h / séance émargée</p>
+        </div>
+        <div class="glass glass-card rounded-3xl p-6" data-reveal>
+            <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Rattrapages en attente</p>
+            <p class="font-serif text-[40px] leading-none" th:text="${rattrapages}">0</p>
+            <p class="font-mono text-[11px] mt-2 text-muted" th:text="${profsActifs} + ' enseignant(s)'">0</p>
+        </div>
+    </section>
+
+    <section class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">
+        <!-- Tendance 8 semaines -->
+        <div class="lg:col-span-2 glass rounded-3xl p-7" data-reveal>
+            <h2 class="font-serif text-[24px] leading-none mb-1">Tendance · 8 dernières semaines</h2>
+            <p class="text-[13px] text-muted mb-7">Taux d'émargement par semaine</p>
+            <div class="flex items-end gap-2 md:gap-3 h-52">
+                <div th:each="s : ${tendance}" class="flex-grow flex flex-col items-center justify-end h-full">
+                    <span class="font-mono text-[10px] text-muted mb-1" th:text="${#numbers.formatDecimal(s.taux,1,0)} + '%'">0%</span>
+                    <div class="w-full rounded-t-xl transition-all duration-700"
+                         th:style="'height:' + ${s.taux > 3 ? s.taux : 3} + '%; background:linear-gradient(180deg,#0a0a0a,#3a3a3a);'"></div>
+                    <span class="mt-2.5 font-mono text-[9px] text-muted" th:text="${s.label}">--</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Qualité de l'émargement -->
+        <div class="glass rounded-3xl p-7 flex flex-col" data-reveal>
+            <h2 class="font-serif text-[24px] leading-none mb-5">Qualité</h2>
+            <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                    <span class="flex items-center gap-2 text-[14px]"><span class="w-2.5 h-2.5 rounded-full" style="background:#16a34a"></span>À l'heure</span>
+                    <span class="font-mono text-[15px] font-medium" th:text="${emargesALheure}">0</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="flex items-center gap-2 text-[14px]"><span class="w-2.5 h-2.5 rounded-full" style="background:#d97706"></span>En retard</span>
+                    <span class="font-mono text-[15px] font-medium" th:text="${emargesEnRetard}">0</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="flex items-center gap-2 text-[14px]"><span class="w-2.5 h-2.5 rounded-full" style="background:#dc2626"></span>Oubliées</span>
+                    <span class="font-mono text-[15px] font-medium" th:text="${oublis}">0</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Heatmap jour × créneau -->
+    <section class="glass rounded-3xl p-7 mb-6 overflow-x-auto" data-reveal>
+        <h2 class="font-serif text-[24px] leading-none mb-1">Assiduité par jour &amp; créneau</h2>
+        <p class="text-[13px] text-muted mb-6">Taux d'émargement — plus c'est foncé, mieux c'est</p>
+        <table class="w-full text-center border-separate" style="border-spacing:4px">
+            <thead>
+                <tr>
+                    <th class="w-12"></th>
+                    <th th:each="cr : ${creneaux}" class="font-mono text-[10px] uppercase tracking-wider text-muted py-1" th:text="${cr}">08h</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="row : ${heatmap}">
+                    <td class="font-mono text-[11px] uppercase tracking-wider text-muted text-right pr-2" th:text="${row.jour}">Lun</td>
+                    <td th:each="cell : ${row.cells}" class="rounded-lg h-12 align-middle"
+                        th:classappend="${cell.dark}?'text-white':'text-ink'"
+                        th:style="${cell.vide} ? 'background:#eeeef0' : ('background:rgba(10,10,10,' + ${cell.opacity} + ')')">
+                        <span class="font-mono text-[11px]" th:if="${!cell.vide}" th:text="${#numbers.formatDecimal(cell.taux,1,0)} + '%'">0%</span>
+                        <span class="font-mono text-[11px] text-muted" th:if="${cell.vide}">—</span>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <!-- Par enseignant -->
+    <section class="glass rounded-3xl overflow-hidden mb-6" data-reveal>
+        <div class="px-7 py-5 border-b border-line"><h2 class="font-serif text-[22px]">Par enseignant</h2></div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead><tr class="border-b border-line">
+                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Enseignant</th>
+                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Séances</th>
+                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Émargées</th>
+                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Heures</th>
+                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Taux</th>
+                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Niveau</th>
+                </tr></thead>
+                <tbody>
+                <tr th:if="${parEnseignant.isEmpty()}">
+                    <td colspan="6" class="px-6 py-12 text-center text-muted">Aucune séance sur la période.</td>
+                </tr>
+                <tr th:each="e : ${parEnseignant}" class="zebra border-b border-line/60">
+                    <td class="px-6 py-3.5 text-[14px] font-medium" th:text="${e.nom}">Nom</td>
+                    <td class="px-6 py-3.5 text-[14px] text-muted" th:text="${e.total}">0</td>
+                    <td class="px-6 py-3.5 text-[14px] text-muted" th:text="${e.emargees}">0</td>
+                    <td class="px-6 py-3.5 text-[14px] text-muted" th:text="${#numbers.formatDecimal(e.heures,1,1)} + ' h'">0</td>
+                    <td class="px-6 py-3.5">
+                        <div class="flex items-center gap-2">
+                            <div class="w-20 h-1.5 rounded-full bg-black/10 overflow-hidden">
+                                <div class="h-full rounded-full bg-ink" th:style="'width:' + ${e.taux} + '%'"></div>
+                            </div>
+                            <span class="font-mono text-[12px]" th:text="${#numbers.formatDecimal(e.taux,1,0)} + '%'">0%</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-3.5">
+                        <span th:with="c=${e.niveau == 'Excellent' ? '#16a34a' : (e.niveau == 'Bon' ? '#0284c7' : (e.niveau == 'Moyen' ? '#d97706' : '#dc2626'))}"
+                              class="font-mono text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-full border"
+                              th:style="'border-color:' + ${c} + '55;color:' + ${c}" th:text="${e.niveau}">Niveau</span>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- Par classe + par matière -->
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div class="glass rounded-3xl overflow-hidden" data-reveal>
+            <div class="px-7 py-5 border-b border-line"><h2 class="font-serif text-[22px]">Par classe</h2></div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead><tr class="border-b border-line">
+                        <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Classe</th>
+                        <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Séances</th>
+                        <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Taux</th>
+                    </tr></thead>
+                    <tbody>
+                    <tr th:if="${parClasse.isEmpty()}"><td colspan="3" class="px-6 py-10 text-center text-muted">Aucune donnée.</td></tr>
+                    <tr th:each="c : ${parClasse}" class="zebra border-b border-line/60">
+                        <td class="px-6 py-3.5 text-[14px] font-medium" th:text="${c.libelle}">Classe</td>
+                        <td class="px-6 py-3.5 text-[14px] text-muted" th:text="${c.emargees} + '/' + ${c.total}">0</td>
+                        <td class="px-6 py-3.5 font-mono text-[13px]" th:text="${#numbers.formatDecimal(c.taux,1,0)} + '%'">0%</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="glass rounded-3xl overflow-hidden" data-reveal>
+            <div class="px-7 py-5 border-b border-line"><h2 class="font-serif text-[22px]">Par matière</h2></div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead><tr class="border-b border-line">
+                        <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Matière</th>
+                        <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Séances</th>
+                        <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Taux</th>
+                    </tr></thead>
+                    <tbody>
+                    <tr th:if="${parMatiere.isEmpty()}"><td colspan="3" class="px-6 py-10 text-center text-muted">Aucune donnée.</td></tr>
+                    <tr th:each="ma : ${parMatiere}" class="zebra border-b border-line/60">
+                        <td class="px-6 py-3.5 text-[14px] font-medium" th:text="${ma.libelle}">Matière</td>
+                        <td class="px-6 py-3.5 text-[14px] text-muted" th:text="${ma.emargees} + '/' + ${ma.total}">0</td>
+                        <td class="px-6 py-3.5 font-mono text-[13px]" th:text="${#numbers.formatDecimal(ma.taux,1,0)} + '%'">0%</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+</main>
+
+<div th:replace="~{admin/fragments :: dock('statistiques')}"></div>
+<div th:replace="~{admin/fragments :: palette}"></div>
+<div th:replace="~{admin/fragments :: scripts}"></div>
+
+</body>
+</html>
