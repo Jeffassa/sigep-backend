@@ -190,20 +190,15 @@
         });
     }
 
-    /* ----- Auto-actualisation : détecte si on revient d'un rechargement automatique ----- */
-    var __autoReloaded = false;
-    try { __autoReloaded = sessionStorage.getItem('__admReload') === '1'; sessionStorage.removeItem('__admReload'); } catch (e) {}
-
-    /* ----- Révélation progressive (sautée sur auto-actualisation, sinon clignotement) ----- */
-    if (!__autoReloaded) {
-        document.querySelectorAll('[data-reveal]').forEach((el, i) => {
-            el.classList.add('reveal');
-            el.style.animationDelay = (i * 60) + 'ms';
-        });
-    }
+    /* ----- Révélation progressive au chargement ----- */
+    document.querySelectorAll('[data-reveal]').forEach((el, i) => {
+        el.classList.add('reveal');
+        el.style.animationDelay = (i * 60) + 'ms';
+    });
 
     /* ----- Tableaux : lignes dépliables sur mobile (le CSS desktop reste intact) -----
-       On prépare le DOM une fois ; l'affichage responsive est piloté par les media queries. */
+       Fonction réutilisable : rejouée après chaque actualisation du contenu. ----- */
+    function setupMobileTables() {
     document.querySelectorAll('main table').forEach(function (table) {
         var heads = Array.prototype.slice.call(table.querySelectorAll('thead th'))
             .map(function (th) { return th.textContent.trim(); });
@@ -235,24 +230,42 @@
             tr.dataset.mready = '1';
         });
     });
+    }
+    setupMobileTables();
 
-    /* ----- Auto-actualisation des pages admin (sauf dashboard : il a son live AJAX) ----- */
+    /* ----- Auto-actualisation "live" du contenu admin (sauf dashboard, qui a son propre
+       AJAX) : on récupère la page en arrière-plan et on remplace SEULEMENT le <main>, sans
+       recharger — aucun clignotement, défilement conservé, en-tête/dock intacts. ----- */
     var __p = location.pathname;
-    if (__p.indexOf('/admin/') === 0 && __p.indexOf('/admin/dashboard') === -1) {
-        if (__autoReloaded) {                       // restaurer la position après un rechargement
-            try { var __y = sessionStorage.getItem('__admScrollY'); if (__y) window.scrollTo(0, parseInt(__y, 10)); } catch (e) {}
-        }
-        var __busy = function () {                  // ne pas actualiser pendant une interaction
+    // Exclues : dashboard (a son propre live AJAX), rapports & messages (boutons JS / saisie),
+    // formulaires enseignant (saisie longue) — un remplacement du contenu y casserait l'UX.
+    var __noLive = __p.indexOf('/admin/dashboard') !== -1 || __p.indexOf('/admin/rapports') !== -1
+        || __p.indexOf('/admin/messages') !== -1 || /\/admin\/enseignants\/.+/.test(__p);
+    if (__p.indexOf('/admin/') === 0 && !__noLive) {
+        var __busy = function () {                  // ne pas rafraîchir pendant une interaction
             var el = document.activeElement;
             if (el && (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) || el.isContentEditable)) return true;
             if (document.querySelector('.palette-overlay.open')) return true;  // palette ouverte
             if (document.querySelector('tr.is-open')) return true;             // détails dépliés (mobile)
             return document.hidden;                                            // onglet en arrière-plan
         };
+        var __live = false;
         setInterval(function () {
-            if (__busy()) return;
-            try { sessionStorage.setItem('__admScrollY', String(window.scrollY)); sessionStorage.setItem('__admReload', '1'); } catch (e) {}
-            location.reload();
+            if (__busy() || __live) return;
+            __live = true;
+            fetch(location.href, { credentials: 'same-origin', headers: { 'X-Requested-With': 'fetch' } })
+                .then(function (r) { return r.ok ? r.text() : null; })
+                .then(function (html) {
+                    if (!html) return;
+                    var fresh = new DOMParser().parseFromString(html, 'text/html').querySelector('main');
+                    var cur = document.querySelector('main');
+                    if (fresh && cur && fresh.innerHTML !== cur.innerHTML) {
+                        cur.innerHTML = fresh.innerHTML;   // remplace le contenu en place
+                        setupMobileTables();               // ré-attache le dépliage mobile
+                    }
+                })
+                .catch(function () {})
+                .finally(function () { __live = false; });
         }, 1000);                                   // intervalle (augmenter si trop fréquent)
     }
 })();
