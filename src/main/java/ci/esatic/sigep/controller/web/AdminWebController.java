@@ -47,6 +47,7 @@ public class AdminWebController {
     private final SalleRepository salleRepository;
     private final ci.esatic.sigep.service.RattrapageService rattrapageService;
     private final ci.esatic.sigep.service.StatsService statsService;
+    private final ci.esatic.sigep.service.AiAnalyseService aiAnalyseService;
 
     // ─── COMMUN ───────────────────────────────────────────────────────────────
 
@@ -119,7 +120,34 @@ public class AdminWebController {
         }
         model.addAllAttributes(statsService.computeStatistiques(d, f));
         model.addAttribute("periode", periode);
+        model.addAttribute("aiEnabled", aiAnalyseService.isEnabled());
         return "admin/statistiques";
+    }
+
+    /** Analyse IA (synthèse + décisions) des statistiques de la période. JSON pour le bouton. */
+    @GetMapping("/admin/api/stats/analyse")
+    @ResponseBody
+    public Map<String, Object> analyseIa(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate debut,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fin,
+            @RequestParam(required = false) String periode) {
+        LocalDate today = LocalDate.now();
+        LocalDate d;
+        LocalDate f;
+        if (debut != null && fin != null && !debut.isAfter(fin)) {
+            d = debut;
+            f = fin;
+        } else if ("semaine".equals(periode)) {
+            d = today.with(DayOfWeek.MONDAY);
+            f = d.plusDays(6);
+        } else {
+            d = today.withDayOfMonth(1);
+            f = today.withDayOfMonth(today.lengthOfMonth());
+        }
+        Map<String, Object> stats = statsService.computeStatistiques(d, f);
+        Map<String, Object> out = new HashMap<>();
+        out.put("texte", aiAnalyseService.analyser(d, f, stats));
+        return out;
     }
 
     /** Taux d'émargement par semaine sur les {@code nbSemaines} dernières semaines. */

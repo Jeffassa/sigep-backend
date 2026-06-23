@@ -40,9 +40,16 @@
 
     <!-- Recommandations (analyse par règles) -->
     <section class="glass rounded-3xl p-7 mb-6" data-reveal>
-        <div class="flex items-center gap-2.5 mb-4">
-            <span class="material-symbols-rounded">lightbulb</span>
-            <h2 class="font-serif text-[22px]">Analyse &amp; recommandations</h2>
+        <div class="flex items-center justify-between gap-3 mb-4">
+            <div class="flex items-center gap-2.5">
+                <span class="material-symbols-rounded">lightbulb</span>
+                <h2 class="font-serif text-[22px]">Analyse &amp; recommandations</h2>
+            </div>
+            <button th:if="${aiEnabled}" id="btnAnalyseIa"
+                    th:data-debut="${debut}" th:data-fin="${fin}"
+                    class="btn btn-ink h-10 px-4 rounded-xl text-[13px] font-medium inline-flex items-center gap-1.5">
+                <span class="material-symbols-rounded text-[18px]">auto_awesome</span> Analyser avec l'IA
+            </button>
         </div>
         <div class="space-y-2.5">
             <div th:each="r : ${recommandations}" class="flex items-start gap-3 p-3 rounded-2xl"
@@ -52,6 +59,13 @@
                       th:text="${r.type=='alerte' ? 'warning' : (r.type=='succes' ? 'check_circle' : 'info')}">info</span>
                 <p class="text-[14px] leading-snug" th:text="${r.texte}">Recommandation</p>
             </div>
+        </div>
+        <!-- Résultat de l'analyse IA (Claude) -->
+        <div id="iaResultat" class="hidden mt-5 p-4 rounded-2xl border border-line bg-white/50">
+            <div class="flex items-center gap-2 mb-2 font-mono text-[10px] uppercase tracking-wider text-muted">
+                <span class="material-symbols-rounded text-[16px]">auto_awesome</span> Analyse IA
+            </div>
+            <p id="iaTexte" class="text-[14px] leading-relaxed" style="white-space:pre-wrap">…</p>
         </div>
     </section>
 
@@ -231,6 +245,27 @@
 <div th:replace="~{admin/fragments :: dock('statistiques')}"></div>
 <div th:replace="~{admin/fragments :: palette}"></div>
 <div th:replace="~{admin/fragments :: scripts}"></div>
+
+<script th:inline="none">
+(function () {
+    var btn = document.getElementById('btnAnalyseIa');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+        var box = document.getElementById('iaResultat');
+        var txt = document.getElementById('iaTexte');
+        box.classList.remove('hidden');
+        txt.textContent = 'Analyse en cours… (quelques secondes)';
+        btn.disabled = true;
+        var u = '/admin/api/stats/analyse?debut=' + encodeURIComponent(btn.dataset.debut)
+              + '&fin=' + encodeURIComponent(btn.dataset.fin);
+        fetch(u, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (j) { txt.textContent = (j && j.texte) ? j.texte : 'Analyse indisponible pour le moment.'; })
+            .catch(function () { txt.textContent = 'Analyse indisponible pour le moment.'; })
+            .finally(function () { btn.disabled = false; });
+    });
+})();
+</script>
 
 </body>
 </html>

@@ -23,6 +23,12 @@
     </properties>
 
     <dependencies>
+        <!-- SDK officiel Anthropic (analyse IA des statistiques, optionnelle) -->
+        <dependency>
+            <groupId>com.anthropic</groupId>
+            <artifactId>anthropic-java</artifactId>
+            <version>2.34.0</version>
+        </dependency>
         <!-- Spring Boot Starters -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
