@@ -195,6 +195,40 @@
         el.classList.add('reveal');
         el.style.animationDelay = (i * 60) + 'ms';
     });
+
+    /* ----- Tableaux : lignes dépliables sur mobile (le CSS desktop reste intact) -----
+       On prépare le DOM une fois ; l'affichage responsive est piloté par les media queries. */
+    document.querySelectorAll('main table').forEach(function (table) {
+        var heads = Array.prototype.slice.call(table.querySelectorAll('thead th'))
+            .map(function (th) { return th.textContent.trim(); });
+        if (!heads.length) return;
+        var keep = parseInt(table.getAttribute('data-mobile-keep') || '2', 10);
+        table.classList.add('mtable');
+        table.querySelectorAll('tbody tr').forEach(function (tr) {
+            if (tr.dataset.mready) return;
+            var tds = Array.prototype.slice.call(tr.children).filter(function (c) { return c.tagName === 'TD'; });
+            if (tds.length !== heads.length) return; // ligne d'état vide (colspan) : on ignore
+            var collapsible = false;
+            tds.forEach(function (td, i) {
+                td.setAttribute('data-label', heads[i] || '');
+                if (i >= keep) { td.classList.add('col-collapsible'); collapsible = true; }
+            });
+            if (collapsible) {
+                var cell = document.createElement('td');
+                cell.className = 'row-toggle-cell';
+                var btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'row-toggle';
+                btn.textContent = 'Détails';
+                btn.addEventListener('click', function () {
+                    btn.textContent = tr.classList.toggle('is-open') ? 'Masquer' : 'Détails';
+                });
+                cell.appendChild(btn);
+                tr.appendChild(cell);
+            }
+            tr.dataset.mready = '1';
+        });
+    });
 })();
 </script>
 </th:block>
