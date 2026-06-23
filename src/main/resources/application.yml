@@ -33,7 +33,8 @@ spring:
     properties:
       hibernate:
         format_sql: false
-        dialect: org.hibernate.dialect.PostgreSQLDialect
+        # Dialecte volontairement non spécifié : Hibernate le détecte tout seul
+        # (sinon avertissement HHH90000025 "does not need to be specified explicitly").
   output:
     ansi:
       enabled: always

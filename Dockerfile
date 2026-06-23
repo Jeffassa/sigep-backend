@@ -18,6 +18,7 @@ RUN mkdir -p /data/rapports && chown -R app:app /data
 COPY --from=build /app/target/sigep-backend-*.jar app.jar
 USER app
 EXPOSE 8080
-ENV JAVA_OPTS="-XX:MaxRAMPercentage=75"
+# egd=urandom : évite l'attente d'entropie au démarrage (warning SecureRandom SHA1PRNG)
+ENV JAVA_OPTS="-XX:MaxRAMPercentage=75 -Djava.security.egd=file:/dev/./urandom"
 # Démarrage. Le profil et les secrets sont fournis par variables d'environnement.
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

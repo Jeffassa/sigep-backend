@@ -102,8 +102,12 @@ public class SecurityConfig {
         return http.build();
     }
 
-    @Bean
-    public AuthenticationProvider authenticationProvider() {
+    /** Provider username/password (DAO). Volontairement NON exposé en @Bean : sinon Spring
+     *  signale "Global AuthenticationManager configured with an AuthenticationProvider bean.
+     *  UserDetailsService beans will not be used...". Sans bean global, le manager global se
+     *  base sur UserDetailsService + PasswordEncoder (cf. authenticationManager), et chaque
+     *  chaîne HTTP reçoit explicitement ce provider ci-dessous. */
+    private AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
         provider.setUserDetailsService(userDetailsService);
         provider.setPasswordEncoder(passwordEncoder());
