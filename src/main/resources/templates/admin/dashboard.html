@@ -63,19 +63,8 @@
                     <span class="w-1.5 h-1.5 rounded-full bg-ink inline-block" style="animation:rise 1s infinite alternate"></span>Live
                 </span>
             </div>
-            <div id="chartBars" class="flex-grow flex items-end gap-2.5 md:gap-4 h-60">
-                <th:block th:each="taux,stat : ${tauxParJour}">
-                    <div class="flex-grow flex flex-col items-center justify-end h-full group">
-                        <div class="w-full rounded-t-xl relative transition-all duration-700"
-                             th:style="'height:' + ${taux > 4 ? taux : 4} + '%; background:linear-gradient(180deg,#0a0a0a,#3a3a3a);'">
-                            <span class="absolute -top-6 left-1/2 -translate-x-1/2 font-mono text-[10px] opacity-0 group-hover:opacity-100 transition"
-                                  th:text="${#numbers.formatDecimal(taux,1,0)} + '%'">0%</span>
-                        </div>
-                        <span class="mt-2.5 font-mono text-[10px] uppercase tracking-wider text-muted"
-                              th:text="${ {'Lun','Mar','Mer','Jeu','Ven','Sam'}[stat.index] }">Lun</span>
-                    </div>
-                </th:block>
-            </div>
+            <!-- Courbe (SVG) tracée par JS : 1er rendu via le poll immédiat de /admin/api/stats -->
+            <div id="chartTrend" class="flex-grow w-full h-60"></div>
         </div>
 
         <!-- Activités récentes -->
@@ -152,15 +141,31 @@
 (function () {
     const JOURS = ['Lun','Mar','Mer','Jeu','Ven','Sam'];
     const setText = (id, v) => { const e = document.getElementById(id); if (e && e.textContent !== String(v)) e.textContent = v; };
-    function renderChart(t) {
-        const c = document.getElementById('chartBars'); if (!c || !Array.isArray(t)) return;
-        c.innerHTML = t.map((x,i) => {
-            const v = Number(x)||0, h = v>4?v:4, lbl = (Math.round(v*10)/10)+'%';
-            return '<div class="flex-grow flex flex-col items-center justify-end h-full group">'
-              + '<div class="w-full rounded-t-xl relative transition-all duration-700" style="height:'+h+'%;background:linear-gradient(180deg,#0a0a0a,#3a3a3a);">'
-              + '<span class="absolute -top-6 left-1/2 -translate-x-1/2 font-mono text-[10px] opacity-0 group-hover:opacity-100 transition">'+lbl+'</span></div>'
-              + '<span class="mt-2.5 font-mono text-[10px] uppercase tracking-wider text-muted">'+(JOURS[i]||'')+'</span></div>';
-        }).join('');
+    function renderCurve(t) {
+        const c = document.getElementById('chartTrend');
+        if (!c || !Array.isArray(t) || !t.length) return;
+        window.__lastTaux = t;
+        const W = c.clientWidth || 600, H = c.clientHeight || 240, pad = 26, n = t.length;
+        const X = i => pad + (W - 2 * pad) * (n === 1 ? 0.5 : i / (n - 1));
+        const Y = v => (H - pad) - (H - 2 * pad) * (Math.max(0, Math.min(100, Number(v) || 0)) / 100);
+        const pts = t.map((v, i) => [X(i), Y(v)]);
+        // Courbe lissée (Catmull-Rom -> Bézier cubique)
+        let line = 'M' + pts[0][0].toFixed(1) + ',' + pts[0][1].toFixed(1);
+        for (let i = 0; i < pts.length - 1; i++) {
+            const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
+            const c1x = p1[0] + (p2[0] - p0[0]) / 6, c1y = p1[1] + (p2[1] - p0[1]) / 6;
+            const c2x = p2[0] - (p3[0] - p1[0]) / 6, c2y = p2[1] - (p3[1] - p1[1]) / 6;
+            line += ' C' + c1x.toFixed(1) + ',' + c1y.toFixed(1) + ' ' + c2x.toFixed(1) + ',' + c2y.toFixed(1) + ' ' + p2[0].toFixed(1) + ',' + p2[1].toFixed(1);
+        }
+        const area = line + ' L' + X(n - 1).toFixed(1) + ',' + (H - pad) + ' L' + X(0).toFixed(1) + ',' + (H - pad) + ' Z';
+        const dots = pts.map(p => '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="3.5" fill="#0a0a0a"/>').join('');
+        const vlab = pts.map((p, i) => '<text x="' + p[0].toFixed(1) + '" y="' + (p[1] - 10).toFixed(1) + '" text-anchor="middle" font-size="10" fill="#0a0a0a" font-family="JetBrains Mono,monospace">' + (Math.round((Number(t[i]) || 0) * 10) / 10) + '%</text>').join('');
+        const dlab = pts.map((p, i) => '<text x="' + p[0].toFixed(1) + '" y="' + (H - 6) + '" text-anchor="middle" font-size="11" fill="#6b6b70" font-family="JetBrains Mono,monospace">' + (JOURS[i] || '') + '</text>').join('');
+        c.innerHTML = '<svg width="100%" height="100%" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" style="display:block;overflow:visible">'
+            + '<defs><linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="rgba(10,10,10,0.16)"/><stop offset="100%" stop-color="rgba(10,10,10,0)"/></linearGradient></defs>'
+            + '<path d="' + area + '" fill="url(#trendFill)"/>'
+            + '<path d="' + line + '" fill="none" stroke="#0a0a0a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>'
+            + dots + vlab + dlab + '</svg>';
     }
     async function refresh() {
         try {
@@ -174,9 +179,11 @@
             setText('apercuRattrapages', s.rattrapagesEnAttente);
             const w = document.getElementById('apercuRattrapagesWrap');
             if (w) w.style.display = (Number(s.rattrapagesEnAttente)||0) > 0 ? '' : 'none';
-            renderChart(s.tauxParJour);
+            renderCurve(s.tauxParJour);
         } catch (e) {}
     }
+    renderCurve(window.__tauxInit || []);   // 1er rendu immédiat avec les données serveur
+    window.addEventListener('resize', () => renderCurve(window.__lastTaux || window.__tauxInit || []));
     setInterval(refresh, 1000); refresh();
 })();
 </script>
