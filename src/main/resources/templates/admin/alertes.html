@@ -58,7 +58,7 @@
                         <span th:text="${#temporals.format(s.heureDebut,'HH:mm')}">--</span>–<span th:text="${#temporals.format(s.heureFin,'HH:mm')}">--</span></td>
                     <td class="px-6 py-3.5 text-[14px] font-medium" th:text="${s.matiere.libelle}">Matière</td>
                     <td class="px-6 py-3.5 text-[14px] text-muted" th:text="${s.classe.libelle}">Classe</td>
-                    <td class="px-6 py-3.5 text-[14px] text-muted" th:text="${s.salle.code}">Salle</td>
+                    <td class="px-6 py-3.5 text-[14px] text-muted" th:text="${s.salle.libelle}">Salle</td>
                     <td class="px-6 py-3.5 text-[14px] text-muted" th:text="${s.enseignant.prenom + ' ' + s.enseignant.nom}">Ens.</td>
                 </tr>
                 </tbody>
@@ -102,7 +102,7 @@
                                 <select name="salleId" required
                                         class="h-9 px-2 rounded-lg bg-white/55 border border-line text-[12px]">
                                     <option value="" disabled selected>Salle…</option>
-                                    <option th:each="s : ${salles}" th:value="${s.id}" th:text="${s.code}">A1</option>
+                                    <option th:each="s : ${salles}" th:value="${s.id}" th:text="${s.libelle}">A1</option>
                                 </select>
                                 <button type="submit"
                                         class="btn btn-ink h-9 px-3 rounded-lg text-[12px] font-medium inline-flex items-center gap-1">
