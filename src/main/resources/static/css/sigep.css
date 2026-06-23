@@ -75,6 +75,21 @@ body::before {
 }
 .dock-item:hover .dock-tip { opacity:1; transform:translateX(-50%) scale(1); }
 
+/* Mobile : le pill flottant garde son design mais se rétrécit pour tenir à l'écran
+   (sinon les ~9 icônes de 46px débordent). Le reste de l'admin est déjà responsive
+   via Tailwind (grilles md:, max-w-, tableaux en overflow-x-auto, titres clamp). */
+@media (max-width: 640px) {
+    .dock {
+        gap: 4px; padding: 8px 9px; bottom: 12px;
+        max-width: calc(100vw - 16px); overflow-x: auto;
+        scrollbar-width: none;
+    }
+    .dock::-webkit-scrollbar { display: none; }
+    .dock-item { --s: 36px; border-radius: 12px; }
+    .dock-item .material-symbols-rounded { font-size: 20px; }
+    .dock-tip { display: none; } /* pas de survol au doigt */
+}
+
 .palette-overlay {
     position: fixed; inset: 0; z-index: 100; display:none;
     align-items: flex-start; justify-content: center; padding-top: 14vh;
