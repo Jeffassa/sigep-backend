@@ -65,7 +65,7 @@
             </div>
             <div id="chartBars" class="flex-grow flex items-end gap-2.5 md:gap-4 h-60">
                 <th:block th:each="taux,stat : ${tauxParJour}">
-                    <div class="flex-grow flex flex-col items-center group">
+                    <div class="flex-grow flex flex-col items-center justify-end h-full group">
                         <div class="w-full rounded-t-xl relative transition-all duration-700"
                              th:style="'height:' + ${taux > 4 ? taux : 4} + '%; background:linear-gradient(180deg,#0a0a0a,#3a3a3a);'">
                             <span class="absolute -top-6 left-1/2 -translate-x-1/2 font-mono text-[10px] opacity-0 group-hover:opacity-100 transition"
@@ -156,7 +156,7 @@
         const c = document.getElementById('chartBars'); if (!c || !Array.isArray(t)) return;
         c.innerHTML = t.map((x,i) => {
             const v = Number(x)||0, h = v>4?v:4, lbl = (Math.round(v*10)/10)+'%';
-            return '<div class="flex-grow flex flex-col items-center group">'
+            return '<div class="flex-grow flex flex-col items-center justify-end h-full group">'
               + '<div class="w-full rounded-t-xl relative transition-all duration-700" style="height:'+h+'%;background:linear-gradient(180deg,#0a0a0a,#3a3a3a);">'
               + '<span class="absolute -top-6 left-1/2 -translate-x-1/2 font-mono text-[10px] opacity-0 group-hover:opacity-100 transition">'+lbl+'</span></div>'
               + '<span class="mt-2.5 font-mono text-[10px] uppercase tracking-wider text-muted">'+(JOURS[i]||'')+'</span></div>';
