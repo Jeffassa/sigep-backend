@@ -46,6 +46,7 @@ public class AdminWebController {
     private final MatiereRepository matiereRepository;
     private final ClasseRepository classeRepository;
     private final SalleRepository salleRepository;
+    private final ci.esatic.sigep.service.RattrapageService rattrapageService;
 
     // ─── COMMUN ───────────────────────────────────────────────────────────────
 
@@ -173,7 +174,36 @@ public class AdminWebController {
                 rattrapageRepository.findByStatutOrderByDateCreationDesc(StatutDemande.EN_ATTENTE));
         model.addAttribute("enseignantsEnAttente",
                 enseignantRepository.findByStatutOrderByNomAsc(StatutEnseignant.PENDING));
+        model.addAttribute("salles", salleRepository.findAll());
         return "admin/alertes";
+    }
+
+    /** Accepte une demande de rattrapage : crée la séance dans la salle choisie + email à l'enseignant. */
+    @PostMapping("/admin/rattrapages/{id}/accepter")
+    public String accepterRattrapage(@PathVariable Long id, @RequestParam Long salleId,
+                                     RedirectAttributes ra) {
+        try {
+            ci.esatic.sigep.entity.Salle salle = salleRepository.findById(salleId)
+                    .orElseThrow(() -> new IllegalArgumentException("Salle introuvable"));
+            rattrapageService.accepterAvecSalle(id, salle);
+            ra.addFlashAttribute("success",
+                    "Demande acceptee : seance de rattrapage creee, enseignant notifie par email.");
+        } catch (Exception e) {
+            ra.addFlashAttribute("error", "Erreur : " + e.getMessage());
+        }
+        return "redirect:/admin/alertes";
+    }
+
+    /** Refuse une demande de rattrapage + email à l'enseignant. */
+    @PostMapping("/admin/rattrapages/{id}/refuser")
+    public String refuserRattrapage(@PathVariable Long id, RedirectAttributes ra) {
+        try {
+            rattrapageService.refuser(id);
+            ra.addFlashAttribute("success", "Demande refusee : enseignant notifie par email.");
+        } catch (Exception e) {
+            ra.addFlashAttribute("error", "Erreur : " + e.getMessage());
+        }
+        return "redirect:/admin/alertes";
     }
 
     // ─── REFERENTIELS (matieres / classes / salles) ────────────────────────────
