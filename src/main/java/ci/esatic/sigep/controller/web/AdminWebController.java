@@ -42,7 +42,6 @@ public class AdminWebController {
     private final EnseignantService enseignantService;
     private final ImportService importService;
     private final MailService mailService;
-    private final FaculteRepository faculteRepository;
     private final MatiereRepository matiereRepository;
     private final ClasseRepository classeRepository;
     private final SalleRepository salleRepository;
@@ -352,53 +351,6 @@ public class AdminWebController {
                 .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"modele_emploi_du_temps.csv\"")
                 .body(bytes);
-    }
-
-    // ─── FACULTES ─────────────────────────────────────────────────────────────
-
-    @GetMapping("/admin/facultes")
-    public String facultes(Model model) {
-        model.addAttribute("facultes", faculteRepository.findAllByOrderByNomAsc());
-        return "admin/facultes";
-    }
-
-    @PostMapping("/admin/facultes")
-    public String creerFaculte(@RequestParam String code,
-                               @RequestParam String nom,
-                               @RequestParam(required = false) String description,
-                               RedirectAttributes ra) {
-        String codeClean = code == null ? "" : code.trim();
-        String nomClean = nom == null ? "" : nom.trim();
-
-        if (codeClean.isEmpty() || nomClean.isEmpty()) {
-            ra.addFlashAttribute("error", "Le code et le nom de la faculté sont obligatoires.");
-            return "redirect:/admin/facultes";
-        }
-        if (faculteRepository.existsByCodeIgnoreCase(codeClean)) {
-            ra.addFlashAttribute("error", "Ce code de faculté existe déjà : " + codeClean);
-            return "redirect:/admin/facultes";
-        }
-        if (faculteRepository.existsByNomIgnoreCase(nomClean)) {
-            ra.addFlashAttribute("error", "Cette faculté existe déjà : " + nomClean);
-            return "redirect:/admin/facultes";
-        }
-
-        Faculte faculte = Faculte.builder()
-                .code(codeClean)
-                .nom(nomClean)
-                .description(description != null ? description.trim() : null)
-                .build();
-        faculteRepository.save(faculte);
-
-        ra.addFlashAttribute("success", "Faculté « " + nomClean + " » ajoutée avec succès.");
-        return "redirect:/admin/facultes";
-    }
-
-    @PostMapping("/admin/facultes/{id}/supprimer")
-    public String supprimerFaculte(@PathVariable Long id, RedirectAttributes ra) {
-        faculteRepository.findById(id).ifPresent(faculteRepository::delete);
-        ra.addFlashAttribute("success", "Faculté supprimée.");
-        return "redirect:/admin/facultes";
     }
 
     // ─── ENSEIGNANTS ──────────────────────────────────────────────────────────

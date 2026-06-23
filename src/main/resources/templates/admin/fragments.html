@@ -82,9 +82,6 @@
     <a th:href="@{/admin/referentiels}" class="dock-item" th:classappend="${active=='referentiels'}?'active':''" data-label="Référentiels">
         <span class="material-symbols-rounded">library_books</span><span class="dock-tip">Référentiels</span>
     </a>
-    <a th:href="@{/admin/facultes}" class="dock-item" th:classappend="${active=='facultes'}?'active':''" data-label="Facultés">
-        <span class="material-symbols-rounded">account_balance</span><span class="dock-tip">Facultés</span>
-    </a>
     <a th:href="@{/admin/statistiques}" class="dock-item" th:classappend="${active=='statistiques'}?'active':''" data-label="Statistiques">
         <span class="material-symbols-rounded">monitoring</span><span class="dock-tip">Statistiques</span>
     </a>
@@ -120,8 +117,6 @@
                 <span class="material-symbols-rounded">description</span><span>Rapports &amp; import</span></a>
             <a class="palette-item" th:href="@{/admin/referentiels}" data-key="referentiels matieres classes salles modele emploi du temps">
                 <span class="material-symbols-rounded">library_books</span><span>Référentiels (matières · classes · salles)</span></a>
-            <a class="palette-item" th:href="@{/admin/facultes}" data-key="facultes departements">
-                <span class="material-symbols-rounded">account_balance</span><span>Facultés</span></a>
             <a class="palette-item" th:href="@{/admin/statistiques}" data-key="statistiques stats analyse tendances kpi recommandations heatmap">
                 <span class="material-symbols-rounded">monitoring</span><span>Statistiques</span></a>
             <a class="palette-item" th:href="@{/admin/alertes}" data-key="alertes emargements manquants rattrapages">
