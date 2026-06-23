@@ -62,4 +62,21 @@ public interface SeanceRepository extends JpaRepository<Seance, Long> {
            "ORDER BY s.date ASC, s.heureDebut ASC")
     List<Seance> findAllByDateBetweenOrdered(@Param("debut") LocalDate debut,
                                               @Param("fin") LocalDate fin);
+
+    // ── Agrégats pour la page Statistiques admin ──
+    @Query("SELECT s.classe.libelle, COUNT(s), " +
+           "SUM(CASE WHEN s.statut = 'EMARGE' THEN 1 ELSE 0 END) " +
+           "FROM Seance s WHERE s.date BETWEEN :debut AND :fin " +
+           "GROUP BY s.classe.libelle ORDER BY s.classe.libelle")
+    List<Object[]> tauxParClasse(@Param("debut") LocalDate debut, @Param("fin") LocalDate fin);
+
+    @Query("SELECT s.matiere.libelle, COUNT(s), " +
+           "SUM(CASE WHEN s.statut = 'EMARGE' THEN 1 ELSE 0 END) " +
+           "FROM Seance s WHERE s.date BETWEEN :debut AND :fin " +
+           "GROUP BY s.matiere.libelle ORDER BY s.matiere.libelle")
+    List<Object[]> tauxParMatiere(@Param("debut") LocalDate debut, @Param("fin") LocalDate fin);
+
+    // Projection légère (date, heure de début, statut) pour la heatmap et les oublis
+    @Query("SELECT s.date, s.heureDebut, s.statut FROM Seance s WHERE s.date BETWEEN :debut AND :fin")
+    List<Object[]> projectionPeriode(@Param("debut") LocalDate debut, @Param("fin") LocalDate fin);
 }

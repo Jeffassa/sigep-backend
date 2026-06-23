@@ -47,6 +47,7 @@ public class AdminWebController {
     private final ClasseRepository classeRepository;
     private final SalleRepository salleRepository;
     private final ci.esatic.sigep.service.RattrapageService rattrapageService;
+    private final ci.esatic.sigep.service.StatsService statsService;
 
     // ─── COMMUN ───────────────────────────────────────────────────────────────
 
@@ -93,6 +94,33 @@ public class AdminWebController {
         model.addAttribute("tendanceSemaines", computeTendanceSemaines(6));
         model.addAttribute("classement", computeClassement(30));
         return "admin/dashboard";
+    }
+
+    /** Page de statistiques complètes (KPIs, tendances, répartitions, heatmap, recommandations). */
+    @GetMapping("/admin/statistiques")
+    public String statistiques(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate debut,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fin,
+            @RequestParam(required = false) String periode,
+            Model model) {
+        LocalDate today = LocalDate.now();
+        LocalDate d;
+        LocalDate f;
+        if (debut != null && fin != null && !debut.isAfter(fin)) {
+            d = debut;
+            f = fin;
+            periode = "perso";
+        } else if ("semaine".equals(periode)) {
+            d = today.with(DayOfWeek.MONDAY);
+            f = d.plusDays(6);
+        } else { // mois en cours (par défaut)
+            d = today.withDayOfMonth(1);
+            f = today.withDayOfMonth(today.lengthOfMonth());
+            periode = "mois";
+        }
+        model.addAllAttributes(statsService.computeStatistiques(d, f));
+        model.addAttribute("periode", periode);
+        return "admin/statistiques";
     }
 
     /** Taux d'émargement par semaine sur les {@code nbSemaines} dernières semaines. */
