@@ -121,8 +121,9 @@ public class EmargementService {
         LocalTime finAutorisee = seance.getHeureFin().plusMinutes(TOLERANCE_APRES_MINUTES);
 
         if (maintenant.isBefore(debutAutorise)) {
-            throw new IllegalArgumentException("Emargement impossible : la seance ne commence pas encore (ouverture "
-                    + TOLERANCE_AVANT_MINUTES + " min avant le debut)");
+            java.time.format.DateTimeFormatter hf = java.time.format.DateTimeFormatter.ofPattern("HH'h'mm");
+            throw new IllegalArgumentException("Trop tot : l'emargement ouvre a " + debutAutorise.format(hf)
+                    + " (la seance commence a " + seance.getHeureDebut().format(hf) + ").");
         }
 
         return maintenant.isAfter(finAutorisee);
