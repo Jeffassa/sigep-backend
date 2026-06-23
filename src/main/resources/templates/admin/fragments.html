@@ -190,11 +190,17 @@
         });
     }
 
-    /* ----- Révélation progressive au chargement ----- */
-    document.querySelectorAll('[data-reveal]').forEach((el, i) => {
-        el.classList.add('reveal');
-        el.style.animationDelay = (i * 60) + 'ms';
-    });
+    /* ----- Auto-actualisation : détecte si on revient d'un rechargement automatique ----- */
+    var __autoReloaded = false;
+    try { __autoReloaded = sessionStorage.getItem('__admReload') === '1'; sessionStorage.removeItem('__admReload'); } catch (e) {}
+
+    /* ----- Révélation progressive (sautée sur auto-actualisation, sinon clignotement) ----- */
+    if (!__autoReloaded) {
+        document.querySelectorAll('[data-reveal]').forEach((el, i) => {
+            el.classList.add('reveal');
+            el.style.animationDelay = (i * 60) + 'ms';
+        });
+    }
 
     /* ----- Tableaux : lignes dépliables sur mobile (le CSS desktop reste intact) -----
        On prépare le DOM une fois ; l'affichage responsive est piloté par les media queries. */
@@ -229,6 +235,26 @@
             tr.dataset.mready = '1';
         });
     });
+
+    /* ----- Auto-actualisation des pages admin (sauf dashboard : il a son live AJAX) ----- */
+    var __p = location.pathname;
+    if (__p.indexOf('/admin/') === 0 && __p.indexOf('/admin/dashboard') === -1) {
+        if (__autoReloaded) {                       // restaurer la position après un rechargement
+            try { var __y = sessionStorage.getItem('__admScrollY'); if (__y) window.scrollTo(0, parseInt(__y, 10)); } catch (e) {}
+        }
+        var __busy = function () {                  // ne pas actualiser pendant une interaction
+            var el = document.activeElement;
+            if (el && (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) || el.isContentEditable)) return true;
+            if (document.querySelector('.palette-overlay.open')) return true;  // palette ouverte
+            if (document.querySelector('tr.is-open')) return true;             // détails dépliés (mobile)
+            return document.hidden;                                            // onglet en arrière-plan
+        };
+        setInterval(function () {
+            if (__busy()) return;
+            try { sessionStorage.setItem('__admScrollY', String(window.scrollY)); sessionStorage.setItem('__admReload', '1'); } catch (e) {}
+            location.reload();
+        }, 1000);                                   // intervalle (augmenter si trop fréquent)
+    }
 })();
 </script>
 </th:block>
