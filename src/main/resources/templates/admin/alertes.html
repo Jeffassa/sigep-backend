@@ -80,10 +80,11 @@
                     <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Classe</th>
                     <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Souhaitée</th>
                     <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Motif</th>
+                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted text-right">Action</th>
                 </tr></thead>
                 <tbody>
                 <tr th:if="${rattrapagesEnAttente.isEmpty()}">
-                    <td colspan="5" class="px-6 py-12 text-center text-muted">
+                    <td colspan="6" class="px-6 py-12 text-center text-muted">
                         <span class="material-symbols-rounded text-[36px] block mb-2 opacity-40">check_circle</span>Aucune demande.</td>
                 </tr>
                 <tr th:each="d : ${rattrapagesEnAttente}" class="zebra border-b border-line/60">
@@ -93,6 +94,31 @@
                     <td class="px-6 py-3.5 font-mono text-[12px] text-muted">
                         <span th:text="${#temporals.format(d.dateSouhaitee,'dd/MM/yy')}">--</span> <span th:text="${#temporals.format(d.heureSouhaitee,'HH:mm')}">--</span></td>
                     <td class="px-6 py-3.5 text-[13px] text-muted max-w-[240px] truncate" th:text="${d.motif}">Motif</td>
+                    <td class="px-6 py-3.5">
+                        <div class="flex items-center gap-2 justify-end">
+                            <!-- Accepter : choisir une salle => crée la séance + email auto à l'enseignant -->
+                            <form th:action="@{'/admin/rattrapages/' + ${d.id} + '/accepter'}" method="post"
+                                  class="flex items-center gap-1.5">
+                                <select name="salleId" required
+                                        class="h-9 px-2 rounded-lg bg-white/55 border border-line text-[12px]">
+                                    <option value="" disabled selected>Salle…</option>
+                                    <option th:each="s : ${salles}" th:value="${s.id}" th:text="${s.code}">A1</option>
+                                </select>
+                                <button type="submit"
+                                        class="btn btn-ink h-9 px-3 rounded-lg text-[12px] font-medium inline-flex items-center gap-1">
+                                    <span class="material-symbols-rounded text-[16px]">check</span> Accepter
+                                </button>
+                            </form>
+                            <!-- Refuser : statut REFUSE + email auto à l'enseignant -->
+                            <form th:action="@{'/admin/rattrapages/' + ${d.id} + '/refuser'}" method="post"
+                                  onsubmit="return confirm('Refuser cette demande de rattrapage ?');">
+                                <button type="submit"
+                                        class="h-9 px-3 rounded-lg border border-line text-[12px] font-medium inline-flex items-center gap-1 hover:bg-ink hover:text-white transition">
+                                    <span class="material-symbols-rounded text-[16px]">close</span> Refuser
+                                </button>
+                            </form>
+                        </div>
+                    </td>
                 </tr>
                 </tbody>
             </table>
