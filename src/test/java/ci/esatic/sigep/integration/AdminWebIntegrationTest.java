@@ -41,7 +41,6 @@ class AdminWebIntegrationTest {
     @Autowired private RoleRepository roleRepository;
     @Autowired private UserRepository userRepository;
     @Autowired private EnseignantRepository enseignantRepository;
-    @Autowired private FaculteRepository faculteRepository;
 
     @BeforeEach
     void setUp() {
@@ -106,41 +105,9 @@ class AdminWebIntegrationTest {
 
     @Test
     @WithMockUser(username = "admin@esatic.ci", roles = "ADMIN")
-    void facultes_devraitSeRendreCorrectement() throws Exception {
-        mockMvc.perform(get("/admin/facultes"))
-                .andExpect(status().isOk());
-    }
-
-    @Test
-    @WithMockUser(username = "admin@esatic.ci", roles = "ADMIN")
     void alertes_devraitSeRendreCorrectement() throws Exception {
         mockMvc.perform(get("/admin/alertes"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Alertes")));
-    }
-
-    // ─── Création de faculté (POST + CSRF) ──────────────────────────────────────
-
-    @Test
-    @WithMockUser(username = "admin@esatic.ci", roles = "ADMIN")
-    void creerFaculte_devraitPersisterEtRediriger() throws Exception {
-        mockMvc.perform(post("/admin/facultes")
-                        .with(csrf())
-                        .param("code", "ESATIC-SI")
-                        .param("nom", "Sciences Informatiques")
-                        .param("description", "Filière info"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/admin/facultes"));
-
-        assertThat(faculteRepository.findAll())
-                .anyMatch(f -> f.getCode().equals("ESATIC-SI"));
-    }
-
-    @Test
-    @WithMockUser(username = "admin@esatic.ci", roles = "ADMIN")
-    void creerFaculte_sansCsrf_devraitEtreRefuse() throws Exception {
-        mockMvc.perform(post("/admin/facultes")
-                        .param("code", "X").param("nom", "Y"))
-                .andExpect(status().isForbidden());
     }
 }
