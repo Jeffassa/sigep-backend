@@ -4,7 +4,6 @@ import com.anthropic.client.AnthropicClient;
 import com.anthropic.client.okhttp.AnthropicOkHttpClient;
 import com.anthropic.models.messages.Message;
 import com.anthropic.models.messages.MessageCreateParams;
-import com.anthropic.models.messages.ThinkingConfigAdaptive;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -55,7 +54,12 @@ public class AiAnalyseService {
             cache.put(cle, new Cache(texte, System.currentTimeMillis()));
             return texte;
         } catch (Exception e) {
-            return "Analyse IA indisponible pour le moment (" + e.getClass().getSimpleName() + ").";
+            // On remonte le motif réel de l'API (utile pour diagnostiquer un 400).
+            String m = e.getMessage();
+            String detail = (m == null || m.isBlank())
+                    ? e.getClass().getSimpleName()
+                    : m.substring(0, Math.min(400, m.length()));
+            return "Analyse IA indisponible : " + detail;
         }
     }
 
@@ -69,8 +73,7 @@ public class AiAnalyseService {
         }
         MessageCreateParams params = MessageCreateParams.builder()
                 .model(model)
-                .maxTokens(5000L)
-                .thinking(ThinkingConfigAdaptive.builder().build())
+                .maxTokens(4000L)
                 .system(SYSTEME)
                 .addUserMessage(donnees(debut, fin, stats))
                 .build();
