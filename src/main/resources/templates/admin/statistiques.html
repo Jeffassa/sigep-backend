@@ -51,7 +51,7 @@
                 <span class="material-symbols-rounded text-[18px]">auto_awesome</span> Analyser avec l'IA
             </button>
         </div>
-        <div class="space-y-2.5">
+        <div id="recosRules" class="space-y-2.5">
             <div th:each="r : ${recommandations}" class="flex items-start gap-3 p-3 rounded-2xl"
                  th:with="c=${r.type=='alerte' ? '#dc2626' : (r.type=='succes' ? '#16a34a' : '#0284c7')}"
                  th:style="'background:' + ${c} + '11;'">
@@ -249,21 +249,34 @@
 <script th:inline="none">
 (function () {
     var btn = document.getElementById('btnAnalyseIa');
-    if (!btn) return;
-    btn.addEventListener('click', function () {
-        var box = document.getElementById('iaResultat');
-        var txt = document.getElementById('iaTexte');
-        box.classList.remove('hidden');
+    if (!btn) return;                                  // IA désactivée → bloc « règles » conservé
+    var box = document.getElementById('iaResultat');
+    var txt = document.getElementById('iaTexte');
+    var rules = document.getElementById('recosRules');
+
+    function showRules() { box.classList.add('hidden'); if (rules) rules.classList.remove('hidden'); }
+    function showAi()    { box.classList.remove('hidden'); if (rules) rules.classList.add('hidden'); }
+
+    function run(silent) {                             // silent=true : repli silencieux sur les règles
+        showAi();
         txt.textContent = 'Analyse en cours… (quelques secondes)';
         btn.disabled = true;
         var u = '/admin/api/stats/analyse?debut=' + encodeURIComponent(btn.dataset.debut)
               + '&fin=' + encodeURIComponent(btn.dataset.fin);
         fetch(u, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
             .then(function (r) { return r.ok ? r.json() : null; })
-            .then(function (j) { txt.textContent = (j && j.texte) ? j.texte : 'Analyse indisponible pour le moment.'; })
-            .catch(function () { txt.textContent = 'Analyse indisponible pour le moment.'; })
+            .then(function (j) {
+                var t = (j && j.texte) ? j.texte : 'Analyse indisponible pour le moment.';
+                if (t.indexOf('indisponible') === -1) { txt.textContent = t; }   // succès → on garde l'IA
+                else if (silent) { showRules(); }                                 // échec auto → repli règles
+                else { txt.textContent = t; }                                     // clic manuel → on montre le motif
+            })
+            .catch(function () { if (silent) showRules(); else txt.textContent = 'Analyse indisponible pour le moment.'; })
             .finally(function () { btn.disabled = false; });
-    });
+    }
+
+    btn.addEventListener('click', function () { run(false); });
+    run(true);                                         // génération automatique « à la volée » à l'ouverture
 })();
 </script>
 
