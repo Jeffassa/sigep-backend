@@ -58,7 +58,7 @@ public class AdminWebController {
     }
 
     private long compterAlertes() {
-        return seanceRepository.countSeancesNonEmargees(LocalDate.now())
+        return seanceRepository.countSeancesNonEmargees(LocalDate.now(), java.time.LocalTime.now())
                 + rattrapageRepository.countByStatut(StatutDemande.EN_ATTENTE)
                 + enseignantRepository.countByStatut(StatutEnseignant.PENDING);
     }
@@ -224,7 +224,7 @@ public class AdminWebController {
 
     @GetMapping("/admin/alertes")
     public String alertes(Model model) {
-        model.addAttribute("seancesNonEmargees", seanceRepository.findSeancesNonEmargees(LocalDate.now()));
+        model.addAttribute("seancesNonEmargees", seanceRepository.findSeancesNonEmargees(LocalDate.now(), java.time.LocalTime.now()));
         model.addAttribute("rattrapagesEnAttente",
                 rattrapageRepository.findByStatutOrderByDateCreationDesc(StatutDemande.EN_ATTENTE));
         model.addAttribute("enseignantsEnAttente",

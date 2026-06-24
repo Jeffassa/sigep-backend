@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 public interface SeanceRepository extends JpaRepository<Seance, Long> {
@@ -50,13 +51,17 @@ public interface SeanceRepository extends JpaRepository<Seance, Long> {
 
     List<Seance> findAllByDateOrderByHeureDebutAsc(LocalDate date);
 
-    // Alertes admin : séances passées dont l'émargement est manquant (statut != EMARGE)
-    @Query("SELECT s FROM Seance s WHERE s.date < :date AND s.statut <> 'EMARGE' " +
+    // Alertes admin : séances dont l'émargement est manquant (statut != EMARGE) ET déjà
+    // terminées — jours précédents + créneaux d'aujourd'hui dont l'heure de fin est dépassée.
+    // (aligné sur la relance e-mail qui couvre les oublis du jour même.)
+    @Query("SELECT s FROM Seance s WHERE s.statut <> 'EMARGE' " +
+           "AND (s.date < :date OR (s.date = :date AND s.heureFin < :heure)) " +
            "ORDER BY s.date DESC, s.heureDebut DESC")
-    List<Seance> findSeancesNonEmargees(@Param("date") LocalDate date);
+    List<Seance> findSeancesNonEmargees(@Param("date") LocalDate date, @Param("heure") LocalTime heure);
 
-    @Query("SELECT COUNT(s) FROM Seance s WHERE s.date < :date AND s.statut <> 'EMARGE'")
-    long countSeancesNonEmargees(@Param("date") LocalDate date);
+    @Query("SELECT COUNT(s) FROM Seance s WHERE s.statut <> 'EMARGE' " +
+           "AND (s.date < :date OR (s.date = :date AND s.heureFin < :heure))")
+    long countSeancesNonEmargees(@Param("date") LocalDate date, @Param("heure") LocalTime heure);
 
     @Query("SELECT s FROM Seance s WHERE s.date BETWEEN :debut AND :fin " +
            "ORDER BY s.date ASC, s.heureDebut ASC")
