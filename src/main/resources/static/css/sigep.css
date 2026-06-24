@@ -1,21 +1,58 @@
 :root {
-    --ink: #0a0a0a; --muted: #6b6b70;
-    --ease: cubic-bezier(.16,1,.3,1);
+    /* ===== Thème CLAIR (par défaut) ===== */
+    --c-bg: #f4f4f5;                       /* fond de page */
+    --c-ink: #0a0a0a;                      /* texte/élément fort */
+    --c-ink2: #1c1c1e;
+    --c-muted: #6b6b70;                    /* texte secondaire */
+    --c-line: rgba(10,10,10,0.10);         /* bordures */
+    --c-surface: #ffffff;                  /* surfaces pleines (bg-white) */
+    --c-field: rgba(255,255,255,0.55);     /* champs translucides (bg-white/x) */
+    --c-track: rgba(10,10,10,0.08);        /* pistes (bg-black/x) */
+    --c-bar1: #0a0a0a; --c-bar2: #3a3a3a;  /* barres / courbes de graphe */
+    --c-heat: 10,10,10;                    /* teinte heatmap (rgb) */
+    --c-heat-empty: #eeeef0;               /* cellule heatmap vide */
     --glass-bg: rgba(255,255,255,0.55);
     --glass-brd: rgba(255,255,255,0.75);
+    --glass-strong-bg: rgba(255,255,255,0.72);
+    --grad-1: rgba(0,0,0,.06); --grad-2: rgba(0,0,0,.05); --grad-3: rgba(0,0,0,.07);
+    --grad-base: linear-gradient(180deg,#f7f7f8,#eeeef0);
+    /* alias rétro-compat */
+    --ink: var(--c-ink); --muted: var(--c-muted);
+    --ease: cubic-bezier(.16,1,.3,1);
+}
+html.dark {
+    /* ===== Thème SOMBRE ===== */
+    --c-bg: #0d0d11;
+    --c-ink: #e9e9ec;
+    --c-ink2: #c9c9cf;
+    --c-muted: #9a9aa2;
+    --c-line: rgba(255,255,255,0.12);
+    --c-surface: #17171c;
+    --c-field: rgba(255,255,255,0.05);
+    --c-track: rgba(255,255,255,0.08);
+    --c-bar1: #e9e9ec; --c-bar2: #8b8b93;
+    --c-heat: 233,233,236;
+    --c-heat-empty: #1c1c22;
+    --glass-bg: rgba(255,255,255,0.045);
+    --glass-brd: rgba(255,255,255,0.10);
+    --glass-strong-bg: rgba(28,28,34,0.82);
+    --grad-1: rgba(255,255,255,.05); --grad-2: rgba(255,255,255,.04); --grad-3: rgba(255,255,255,.05);
+    --grad-base: linear-gradient(180deg,#101015,#0b0b0e);
+    color-scheme: dark;
 }
 * { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
 body {
     font-family: 'Geist','Geist Sans',system-ui,-apple-system,sans-serif;
-    color: var(--ink); background: #f4f4f5; min-height: 100vh;
+    color: var(--c-ink); background: var(--c-bg); min-height: 100vh;
+    transition: background .3s, color .3s;
 }
 body::before {
     content:''; position:fixed; inset:0; z-index:-1; pointer-events:none;
     background:
-      radial-gradient(38% 48% at 12% 8%, rgba(0,0,0,.06), transparent 70%),
-      radial-gradient(36% 46% at 88% 16%, rgba(0,0,0,.05), transparent 70%),
-      radial-gradient(60% 60% at 50% 108%, rgba(0,0,0,.07), transparent 70%),
-      linear-gradient(180deg,#f7f7f8,#eeeef0);
+      radial-gradient(38% 48% at 12% 8%, var(--grad-1), transparent 70%),
+      radial-gradient(36% 46% at 88% 16%, var(--grad-2), transparent 70%),
+      radial-gradient(60% 60% at 50% 108%, var(--grad-3), transparent 70%),
+      var(--grad-base);
 }
 .font-serif { font-family:'Instrument Serif',serif; }
 .font-mono  { font-family:'JetBrains Mono',monospace; }
@@ -30,7 +67,7 @@ body::before {
     box-shadow: 0 10px 40px rgba(0,0,0,.07), inset 0 1px 0 rgba(255,255,255,.6);
 }
 .glass-strong {
-    background: rgba(255,255,255,0.72);
+    background: var(--glass-strong-bg);
     backdrop-filter: blur(30px) saturate(160%);
     -webkit-backdrop-filter: blur(30px) saturate(160%);
     border: 1px solid var(--glass-brd);
@@ -45,7 +82,7 @@ body::before {
 
 .btn { transition: transform .4s var(--ease), opacity .3s, background .3s; }
 .btn:active { transform: scale(.96); }
-.btn-ink { background: var(--ink); color:#fff; }
+.btn-ink { background: var(--c-ink); color: var(--c-bg); }
 .btn-ink:hover { opacity:.88; }
 
 .dock {
@@ -157,3 +194,41 @@ table tbody tr:hover { background: rgba(10,10,10,.04); }
         border-radius: 10px; padding: 6px 12px;
     }
 }
+
+/* ===========================================================================
+   MODE SOMBRE — remappage des couleurs « en dur » (utilitaires Tailwind +
+   composants). Le thème clair n'est pas affecté (règles préfixées html.dark).
+   =========================================================================== */
+html.dark .bg-white { background-color: var(--c-surface) !important; }
+html.dark .bg-white\/40,
+html.dark .bg-white\/50,
+html.dark .bg-white\/55,
+html.dark .bg-white\/60 { background-color: var(--c-field) !important; }
+html.dark .bg-black\/5  { background-color: var(--c-track) !important; }
+html.dark .bg-black\/10 { background-color: var(--c-track) !important; }
+/* Chips / avatars / boutons « bg-ink text-white » : la surface devient claire → texte foncé */
+html.dark .bg-ink { color: var(--c-bg) !important; }
+/* Boutons foncés (btn-ink), y compris ceux portant aussi .text-white */
+html.dark .btn-ink { color: var(--c-bg) !important; }
+/* Tableaux */
+html.dark .zebra:nth-child(even) { background: rgba(255,255,255,.045); }
+html.dark table tbody tr:hover { background: rgba(255,255,255,.05); }
+/* Scrollbar */
+html.dark ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.16); }
+html.dark ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.28); }
+/* Dock + palette */
+html.dark .dock-item { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.10); }
+html.dark .dock-item:hover { background: #e9e9ec; color: #0d0d11; }
+html.dark .palette-item[aria-selected="true"], html.dark .palette-item:hover { background: rgba(255,255,255,.07); }
+html.dark .kbd { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.12); }
+/* Cartes « mtable » mobile */
+html.dark .mtable tr { border-color: var(--c-line); background: rgba(255,255,255,.04); }
+html.dark .mtable td[data-label] { border-bottom-color: rgba(255,255,255,.06); }
+html.dark .row-toggle { background: rgba(255,255,255,.06); border-color: var(--c-line); }
+/* Heatmap : en sombre les cellules « fortes » sont claires -> texte foncé */
+html.dark .heat-strong { color: #0d0d11 !important; }
+
+/* Bascule de thème : icône lune (clair) / soleil (sombre) */
+.theme-toggle .icon-sun { display: none; }
+html.dark .theme-toggle .icon-moon { display: none; }
+html.dark .theme-toggle .icon-sun { display: inline-flex; }

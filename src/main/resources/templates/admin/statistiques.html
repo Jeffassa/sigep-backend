@@ -105,7 +105,7 @@
                 <div th:each="s : ${tendance}" class="flex-grow flex flex-col items-center justify-end h-full">
                     <span class="font-mono text-[10px] text-muted mb-1" th:text="${#numbers.formatDecimal(s.taux,1,0)} + '%'">0%</span>
                     <div class="w-full rounded-t-xl transition-all duration-700"
-                         th:style="'height:' + ${s.taux > 3 ? s.taux : 3} + '%; background:linear-gradient(180deg,#0a0a0a,#3a3a3a);'"></div>
+                         th:style="'height:' + ${s.taux > 3 ? s.taux : 3} + '%; background:linear-gradient(180deg,var(--c-bar1),var(--c-bar2));'"></div>
                     <span class="mt-2.5 font-mono text-[9px] text-muted" th:text="${s.label}">--</span>
                 </div>
             </div>
@@ -146,8 +146,8 @@
                 <tr th:each="row : ${heatmap}">
                     <td class="font-mono text-[11px] uppercase tracking-wider text-muted text-right pr-2" th:text="${row.jour}">Lun</td>
                     <td th:each="cell : ${row.cells}" class="rounded-lg h-12 align-middle"
-                        th:classappend="${cell.dark}?'text-white':'text-ink'"
-                        th:style="${cell.vide} ? 'background:#eeeef0' : ('background:rgba(10,10,10,' + ${cell.opacity} + ')')">
+                        th:classappend="${cell.dark}?'heat-strong text-white':'text-ink'"
+                        th:style="${cell.vide} ? 'background:var(--c-heat-empty)' : ('background:rgba(var(--c-heat),' + ${cell.opacity} + ')')">
                         <span class="font-mono text-[11px]" th:if="${!cell.vide}" th:text="${#numbers.formatDecimal(cell.taux,1,0)} + '%'">0%</span>
                         <span class="font-mono text-[11px] text-muted" th:if="${cell.vide}">—</span>
                     </td>
