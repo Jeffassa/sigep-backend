@@ -6,6 +6,16 @@
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
     <title th:text="${pageTitle}">SIGEP</title>
+    <!-- Thème : applique le mode (clair/sombre) AVANT le rendu pour éviter le flash -->
+    <script>
+        (function () {
+            try {
+                var t = localStorage.getItem('sigep-theme');
+                if (!t) t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                if (t === 'dark') document.documentElement.classList.add('dark');
+            } catch (e) {}
+        })();
+    </script>
     <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
 
     <!-- Polices : Instrument Serif (display) · Geist (UI) · JetBrains Mono (data) -->
@@ -21,8 +31,8 @@
             theme: {
                 extend: {
                     colors: {
-                        ink: "#0a0a0a", "ink-2": "#1c1c1e", muted: "#6b6b70",
-                        line: "rgba(10,10,10,0.10)", paper: "#f4f4f5"
+                        ink: "var(--c-ink)", "ink-2": "var(--c-ink2)", muted: "var(--c-muted)",
+                        line: "var(--c-line)", paper: "var(--c-bg)"
                     },
                     fontFamily: {
                         serif: ['"Instrument Serif"', 'ui-serif', 'Georgia', 'serif'],
@@ -48,6 +58,11 @@
         </a>
 
         <div class="flex items-center gap-3">
+            <button type="button" onclick="window.__toggleTheme&&window.__toggleTheme()" title="Mode clair / sombre"
+                    class="theme-toggle btn glass flex items-center justify-center w-10 h-10 rounded-full text-muted hover:text-ink">
+                <span class="material-symbols-rounded text-[20px] icon-moon">dark_mode</span>
+                <span class="material-symbols-rounded text-[20px] icon-sun">light_mode</span>
+            </button>
             <button type="button" onclick="window.__openPalette&&window.__openPalette()"
                     class="btn glass flex items-center gap-2 px-3.5 h-10 rounded-full text-[13px] text-muted hover:text-ink">
                 <span class="material-symbols-rounded text-[18px]">search</span>
@@ -135,6 +150,12 @@
 (function () {
     /* ----- Déconnexion via POST (CSRF) ----- */
     window.__logout = function () { var f = document.getElementById('logoutForm'); if (f) f.submit(); };
+
+    /* ----- Bascule thème clair / sombre (mémorisée) ----- */
+    window.__toggleTheme = function () {
+        var dark = document.documentElement.classList.toggle('dark');
+        try { localStorage.setItem('sigep-theme', dark ? 'dark' : 'light'); } catch (e) {}
+    };
 
     /* ----- Dock : magnification façon macOS ----- */
     const dock = document.getElementById('dock');
