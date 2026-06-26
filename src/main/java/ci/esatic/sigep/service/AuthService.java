@@ -7,9 +7,12 @@ import ci.esatic.sigep.dto.response.AuthResponse;
 import ci.esatic.sigep.entity.*;
 import ci.esatic.sigep.exception.CompteNonValideException;
 import ci.esatic.sigep.repository.EnseignantRepository;
+import ci.esatic.sigep.repository.EtablissementRepository;
 import ci.esatic.sigep.repository.RoleRepository;
 import ci.esatic.sigep.repository.UserRepository;
 import ci.esatic.sigep.security.JwtService;
+import ci.esatic.sigep.tenant.TenantContext;
+import ci.esatic.sigep.tenant.plan.PlanService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -28,11 +31,13 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final EnseignantRepository enseignantRepository;
+    private final EtablissementRepository etablissementRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
     private final AuthenticationManager authenticationManager;
+    private final PlanService planService;
 
     public AuthResponse login(LoginRequest request) {
         Authentication authentication = authenticationManager.authenticate(
@@ -198,6 +203,15 @@ public class AuthService {
             throw new IllegalArgumentException("Matricule déjà utilisé : " + request.getMatricule());
         }
 
+        // Multi-tenant : on rattache le nouvel enseignant à l'établissement de l'admin
+        // courant et on applique le quota du plan. (En l'absence de tenant — contexte hors
+        // requête / tests — on ne bloque pas et on laisse l'estampillage automatique opérer.)
+        Etablissement tenant = etablissementCourant();
+        if (tenant != null) {
+            planService.verifierQuotaEnseignant(tenant,
+                    enseignantRepository.countByEtablissementId(tenant.getId()));
+        }
+
         Role role = roleRepository.findByName(ERole.ROLE_ENSEIGNANT)
                 .orElseThrow(() -> new RuntimeException("Rôle ENSEIGNANT non trouvé en base"));
 
@@ -205,6 +219,7 @@ public class AuthService {
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .roles(Set.of(role))
+                .etablissement(tenant)   // SECURITE : le nouvel utilisateur appartient au tenant courant
                 .build();
         user = userRepository.save(user);
 
@@ -216,6 +231,7 @@ public class AuthService {
                 .grade(request.getGrade())
                 .statut(StatutEnseignant.PENDING)
                 .user(user)
+                .etablissementId(tenant != null ? tenant.getId() : null)
                 .build();
         enseignantRepository.save(enseignant);
 
@@ -230,5 +246,11 @@ public class AuthService {
                 .nom(enseignant.getNom())
                 .prenom(enseignant.getPrenom())
                 .build();
+    }
+
+    /** Établissement (tenant) de la requête courante, ou null hors contexte tenant. */
+    private Etablissement etablissementCourant() {
+        Long tenantId = TenantContext.get();
+        return tenantId == null ? null : etablissementRepository.findById(tenantId).orElse(null);
     }
 }

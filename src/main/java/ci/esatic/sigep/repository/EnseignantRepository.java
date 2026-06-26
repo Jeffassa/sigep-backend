@@ -24,6 +24,9 @@ public interface EnseignantRepository extends JpaRepository<Enseignant, Long> {
 
     long countByStatut(StatutEnseignant statut);
 
+    /** Nombre d'enseignants d'un établissement (pour le quota de plan). */
+    long countByEtablissementId(Long etablissementId);
+
     List<Enseignant> findByStatutOrderByNomAsc(StatutEnseignant statut);
 
     @Query(value = "SELECT * FROM enseignants e WHERE " +
