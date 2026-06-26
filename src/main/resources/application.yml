@@ -89,6 +89,15 @@ app:
     refresh-expiration: ${JWT_REFRESH_EXPIRATION:2592000000}
     # SECURITE : clé distincte pour les tokens QR (ne jamais utiliser la même que jwt.secret) — OBLIGATOIRE
     qr-secret: ${JWT_QR_SECRET}
+  qr:
+    display:
+      # SECURITE : l'affichage du QR d'émargement est une preuve de présence physique.
+      # Il NE doit PAS être public sur internet. Définir au moins l'un des deux ci-dessous,
+      # sinon les pages /api/qr/display renvoient 403 (fail-closed) :
+      #  - QR_DISPLAY_KEY : clé secrète que l'écran/kiosque ajoute en paramètre (?key=...)
+      #  - QR_DISPLAY_ALLOWED_IPS : IP(s) publiques autorisées (réseau de l'établissement), séparées par des virgules
+      key: ${QR_DISPLAY_KEY:}
+      allowed-ips: ${QR_DISPLAY_ALLOWED_IPS:}
   rapports:
     dossier: ${RAPPORTS_DOSSIER:rapports}
   mail:

@@ -3,10 +3,18 @@ package ci.esatic.sigep.controller;
 import ci.esatic.sigep.dto.response.ApiResponse;
 import ci.esatic.sigep.dto.response.QrCodeResponse;
 import ci.esatic.sigep.service.QrCodeService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.Arrays;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/qr")
@@ -14,6 +22,20 @@ import org.springframework.web.bind.annotation.*;
 public class QrController {
 
     private final QrCodeService qrCodeService;
+
+    // SECURITE : l'affichage du QR est une PREUVE DE PRESENCE → ne doit jamais être public
+    // sur internet. Au moins l'un des deux doit être défini, sinon l'affichage renvoie 403.
+    //  - QR_DISPLAY_KEY : clé kiosque que l'écran ajoute en paramètre (?key=...)
+    //  - QR_DISPLAY_ALLOWED_IPS : IP(s) publiques autorisées (réseau établissement), séparées par des virgules
+    @Value("${app.qr.display.key:}")
+    private String displayKey;
+
+    @Value("${app.qr.display.allowed-ips:}")
+    private String displayAllowedIps;
+
+    // X-Forwarded-For n'est lu que derrière un proxy de confiance (true en prod).
+    @Value("${app.security.trust-forwarded-for:false}")
+    private boolean trustForwardedFor;
 
     // Endpoint JSON pour le mobile (image Base64 + token) — AUTHENTIFICATION REQUISE
     @GetMapping("/salle/{code}")
@@ -23,19 +45,26 @@ public class QrController {
         return ResponseEntity.ok(ApiResponse.success("QR Code genere", response));
     }
 
-    // Page HTML pour affichage en salle (public — tablette fixée en salle)
+    // Page HTML pour affichage en salle (kiosque autorisé — clé ou IP, cf. controleAcces)
     @GetMapping(value = "/display/{code}", produces = MediaType.TEXT_HTML_VALUE)
-    public ResponseEntity<String> displayQrPage(@PathVariable String code) {
+    public ResponseEntity<String> displayQrPage(@PathVariable String code,
+                                                @RequestParam(required = false) String key,
+                                                HttpServletRequest request) {
+        String refus = motifRefusAffichage(request, key);
+        if (refus != null) return reponseRefus(refus);
         String safeCode = sanitize(code);
         QrCodeResponse qr = qrCodeService.generateQrForSalle(safeCode);
         String html = buildQrPage(safeCode, qr.getQrImageBase64(), qr.getExpiresInSeconds());
         return ResponseEntity.ok(html);
     }
 
-    // Page HTML du QR UNIVERSEL d'émargement (public — écran unique).
+    // Page HTML du QR UNIVERSEL d'émargement (kiosque autorisé — clé ou IP, cf. controleAcces).
     // Se renouvelle automatiquement à la cadence QR_REFRESH_SECONDS (cf. QrCodeService).
     @GetMapping(value = "/display", produces = MediaType.TEXT_HTML_VALUE)
-    public ResponseEntity<String> displayUniversalQrPage() {
+    public ResponseEntity<String> displayUniversalQrPage(@RequestParam(required = false) String key,
+                                                         HttpServletRequest request) {
+        String refus = motifRefusAffichage(request, key);
+        if (refus != null) return reponseRefus(refus);
         QrCodeResponse qr = qrCodeService.generateUniversalQr();
         return ResponseEntity.ok(buildUniversalQrPage(qr.getQrImageBase64(), qr.getExpiresInSeconds()));
     }
@@ -46,6 +75,47 @@ public class QrController {
             throw new IllegalArgumentException("Code salle invalide");
         }
         return code;
+    }
+
+    /**
+     * Contrôle d'accès à l'affichage du QR (preuve de présence). Renvoie le motif de refus,
+     * ou null si l'accès est autorisé. Fail-closed : si aucun contrôle n'est configuré,
+     * l'affichage est refusé (le QR ne doit jamais être public sur internet).
+     */
+    private String motifRefusAffichage(HttpServletRequest request, String key) {
+        boolean cleConfiguree = displayKey != null && !displayKey.isBlank();
+        List<String> ipsAutorisees = Arrays.stream((displayAllowedIps == null ? "" : displayAllowedIps).split(","))
+                .map(String::trim).filter(s -> !s.isEmpty()).toList();
+
+        if (!cleConfiguree && ipsAutorisees.isEmpty()) {
+            return "Affichage du QR non configuré : définir QR_DISPLAY_KEY ou QR_DISPLAY_ALLOWED_IPS.";
+        }
+        if (cleConfiguree && key != null && constantTimeEquals(displayKey, key)) return null;
+        if (!ipsAutorisees.isEmpty() && ipsAutorisees.contains(resolveClientIp(request))) return null;
+        return "Accès à l'affichage du QR refusé.";
+    }
+
+    private ResponseEntity<String> reponseRefus(String motif) {
+        String html = "<!DOCTYPE html><html lang=\"fr\"><head><meta charset=\"UTF-8\"/>"
+                + "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"/>"
+                + "<title>SIGEP</title></head><body style=\"font-family:sans-serif;background:#000666;"
+                + "color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;"
+                + "margin:0;text-align:center;padding:24px\"><div><h1 style=\"margin:0 0 8px\">Accès refusé</h1>"
+                + "<p style=\"color:#bdc2ff\">" + motif + "</p></div></body></html>";
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).contentType(MediaType.TEXT_HTML).body(html);
+    }
+
+    private String resolveClientIp(HttpServletRequest request) {
+        if (trustForwardedFor) {
+            String xff = request.getHeader("X-Forwarded-For");
+            if (xff != null && !xff.isBlank()) return xff.split(",")[0].trim();
+        }
+        return request.getRemoteAddr();
+    }
+
+    /** Comparaison à temps constant (évite une attaque temporelle sur la clé kiosque). */
+    private boolean constantTimeEquals(String a, String b) {
+        return MessageDigest.isEqual(a.getBytes(StandardCharsets.UTF_8), b.getBytes(StandardCharsets.UTF_8));
     }
 
     private String buildQrPage(String salleCode, String imageBase64, long refreshSeconds) {
