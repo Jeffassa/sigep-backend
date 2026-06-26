@@ -1,8 +1,10 @@
 spring:
-  # En local, le profil 'dev' s'active automatiquement (valeurs de dev, secrets fournis).
-  # En production : définir SPRING_PROFILES_ACTIVE=prod + les variables d'env (voir .env.example).
-  profiles:
-    default: dev
+  # SECURITE (fail-closed) : AUCUN profil par défaut. Un déploiement DOIT définir
+  # explicitement SPRING_PROFILES_ACTIVE (=prod en production) + les variables d'env
+  # (voir .env.example). Sans profil et sans JWT_SECRET, l'application refuse de démarrer
+  # (placeholder ${JWT_SECRET} non résolu) plutôt que de tourner avec une clé de dev connue.
+  # En local : le profil 'dev' est activé automatiquement par le spring-boot-maven-plugin
+  # (mvnw spring-boot:run) — voir pom.xml. Les tests utilisent @ActiveProfiles("test").
   application:
     name: sigep-backend
   datasource:
