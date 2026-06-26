@@ -1,8 +1,10 @@
 package ci.esatic.sigep.tenant;
 
+import ci.esatic.sigep.entity.Classe;
 import ci.esatic.sigep.entity.Enseignant;
 import ci.esatic.sigep.entity.Etablissement;
 import ci.esatic.sigep.entity.Plan;
+import ci.esatic.sigep.repository.ClasseRepository;
 import ci.esatic.sigep.repository.EnseignantRepository;
 import ci.esatic.sigep.repository.EtablissementRepository;
 import jakarta.persistence.EntityManager;
@@ -33,6 +35,8 @@ class TenantIsolationTest {
     private EnseignantRepository enseignantRepository;
     @Autowired
     private EtablissementRepository etablissementRepository;
+    @Autowired
+    private ClasseRepository classeRepository;
 
     @AfterEach
     void cleanup() {
@@ -77,6 +81,33 @@ class TenantIsolationTest {
         em.flush();
 
         assertThat(saved.getEtablissementId()).isEqualTo(c);
+    }
+
+    @Test
+    void isolation_appliquee_aussi_aux_referentiels_classe() {
+        Long a = etablissementRepository.save(
+                Etablissement.builder().nom("Univ A").slug("ua").plan(Plan.PRO).build()).getId();
+        Long b = etablissementRepository.save(
+                Etablissement.builder().nom("Univ B").slug("ub").plan(Plan.PRO).build()).getId();
+        classeRepository.save(classe("L3-A", a));
+        classeRepository.save(classe("L3-B", b));
+        em.flush();
+        em.clear();
+
+        activerFiltre(a);
+        assertThat(classeRepository.findAll())
+                .extracting(Classe::getLibelle).containsExactly("L3-A");
+
+        em.clear();
+        activerFiltre(b);
+        assertThat(classeRepository.findAll())
+                .extracting(Classe::getLibelle).containsExactly("L3-B");
+    }
+
+    private Classe classe(String libelle, Long etablissementId) {
+        Classe c = Classe.builder().libelle(libelle).build();
+        c.setEtablissementId(etablissementId);
+        return c;
     }
 
     private void activerFiltre(Long tenant) {
