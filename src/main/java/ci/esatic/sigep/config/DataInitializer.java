@@ -1,8 +1,11 @@
 package ci.esatic.sigep.config;
 
 import ci.esatic.sigep.entity.ERole;
+import ci.esatic.sigep.entity.Etablissement;
+import ci.esatic.sigep.entity.Plan;
 import ci.esatic.sigep.entity.Role;
 import ci.esatic.sigep.entity.User;
+import ci.esatic.sigep.repository.EtablissementRepository;
 import ci.esatic.sigep.repository.RoleRepository;
 import ci.esatic.sigep.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +26,11 @@ public class DataInitializer implements CommandLineRunner {
 
     private final RoleRepository roleRepository;
     private final UserRepository userRepository;
+    private final EtablissementRepository etablissementRepository;
     private final PasswordEncoder passwordEncoder;
+
+    /** Slug du tenant par défaut (rattache les données du mode mono-établissement actuel). */
+    private static final String SLUG_DEFAUT = "default";
 
     @Value("${app.admin.email:admin@esatic.ci}")
     private String adminEmail;
@@ -34,7 +41,27 @@ public class DataInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
         initRoles();
-        initAdminUser();
+        Etablissement tenantParDefaut = initEtablissementParDefaut();
+        initAdminUser(tenantParDefaut);
+    }
+
+    /**
+     * Tenant par défaut : rattache les données existantes (mode mono-établissement actuel).
+     * En prod il est aussi créé par la migration Flyway V7 ; ici on le retrouve (ou on le
+     * crée pour les tests sur H2 où Flyway est désactivé).
+     */
+    private Etablissement initEtablissementParDefaut() {
+        return etablissementRepository.findBySlug(SLUG_DEFAUT).orElseGet(() -> {
+            Etablissement e = Etablissement.builder()
+                    .nom("Établissement par défaut")
+                    .slug(SLUG_DEFAUT)
+                    .plan(Plan.ENTERPRISE)   // établissement « propriétaire » : accès complet
+                    .maxEnseignants(0)        // 0 = illimité
+                    .build();
+            e = etablissementRepository.save(e);
+            log.info("Établissement par défaut créé (slug={})", SLUG_DEFAUT);
+            return e;
+        });
     }
 
     private void initRoles() {
@@ -46,8 +73,17 @@ public class DataInitializer implements CommandLineRunner {
         }
     }
 
-    private void initAdminUser() {
-        if (userRepository.existsByEmail(adminEmail)) return;
+    private void initAdminUser(Etablissement tenant) {
+        // Admin déjà présent : on s'assure seulement qu'il est rattaché à un établissement.
+        var existant = userRepository.findByEmail(adminEmail).orElse(null);
+        if (existant != null) {
+            if (existant.getEtablissement() == null) {
+                existant.setEtablissement(tenant);
+                userRepository.save(existant);
+                log.info("Admin existant rattaché à l'établissement par défaut.");
+            }
+            return;
+        }
 
         Role adminRole = roleRepository.findByName(ERole.ROLE_ADMIN)
                 .orElseThrow();
@@ -61,6 +97,7 @@ public class DataInitializer implements CommandLineRunner {
                 .email(adminEmail)
                 .password(passwordEncoder.encode(motDePasse))
                 .roles(Set.of(adminRole))
+                .etablissement(tenant)
                 .build();
 
         userRepository.save(admin);

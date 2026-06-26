@@ -40,6 +40,13 @@ public class User implements UserDetails {
     @Builder.Default
     private Set<Role> roles = new HashSet<>();
 
+    // Multi-tenant : établissement (tenant) de l'utilisateur. EAGER pour que le tenant
+    // soit disponible sur le principal authentifié (résolution du contexte au Module 2).
+    // Nullable durant la migration ; deviendra obligatoire une fois tout rattaché.
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "etablissement_id")
+    private Etablissement etablissement;
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return roles.stream()
