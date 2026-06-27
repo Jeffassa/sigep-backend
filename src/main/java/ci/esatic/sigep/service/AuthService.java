@@ -172,10 +172,14 @@ public class AuthService {
 
         Role role = roleRepository.findByName(ERole.ROLE_ENSEIGNANT)
                 .orElseThrow(() -> new RuntimeException("Rôle ENSEIGNANT non trouvé en base"));
+        // Multi-tenant : le compte hérite de l'établissement de l'enseignant (annuaire importé).
+        Etablissement tenant = enseignant.getEtablissementId() == null ? null
+                : etablissementRepository.findById(enseignant.getEtablissementId()).orElse(null);
         User user = User.builder()
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .roles(Set.of(role))
+                .etablissement(tenant)
                 .build();
         user = userRepository.save(user);
 
