@@ -18,6 +18,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.Map;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -82,6 +83,66 @@ class MultiTenantE2ETest {
         mockMvc.perform(get("/api/classes/" + classeA).header("Authorization", "Bearer " + tokenA))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.libelle").value("L3 Info A"));
+    }
+
+    @Test
+    void seances_sont_cloisonnees_entre_etablissements() throws Exception {
+        String tokenA = onboard("Univ A", "admin@a-sr.ci");
+        String tokenB = onboard("Univ B", "admin@b-sr.ci");
+
+        // A se constitue une séance complète (matière + classe + salle + enseignant).
+        long matiereId = postId(tokenA, "/api/matieres", Map.of("libelle", "Algorithmique"));
+        long classeId = postId(tokenA, "/api/classes", Map.of("libelle", "L1 A"));
+        long salleId = postId(tokenA, "/api/salles", Map.of("libelle", "A101"));
+        long enseignantId = creerEnseignantEtRecupererId(tokenA, "ENS-SR-A", "prof@a-sr.ci");
+        long seanceId = postId(tokenA, "/api/seances", Map.of(
+                "enseignantId", enseignantId, "matiereId", matiereId, "classeId", classeId,
+                "salleId", salleId, "date", LocalDate.now().toString(),
+                "heureDebut", "08:00:00", "heureFin", "10:00:00", "type", "NORMALE"));
+
+        // Planning admin du jour : A voit sa séance, B n'en voit aucune.
+        mockMvc.perform(get("/api/seances/admin/aujourd-hui").header("Authorization", "Bearer " + tokenA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(1));
+        mockMvc.perform(get("/api/seances/admin/aujourd-hui").header("Authorization", "Bearer " + tokenB))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(0));
+
+        // Accès par id : A lit la sienne.
+        mockMvc.perform(get("/api/seances/" + seanceId).header("Authorization", "Bearer " + tokenA))
+                .andExpect(status().isOk());
+
+        // ... mais B ne peut PAS (probe en dernier : un éventuel rejet n'impacte rien après).
+        em.flush();
+        em.clear();
+        mockMvc.perform(get("/api/seances/" + seanceId).header("Authorization", "Bearer " + tokenB))
+                .andExpect(status().isNotFound());
+    }
+
+    private long postId(String token, String url, Map<String, Object> body) throws Exception {
+        MvcResult res = mockMvc.perform(post(url)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isOk())
+                .andReturn();
+        return objectMapper.readTree(res.getResponse().getContentAsString())
+                .get("data").get("id").asLong();
+    }
+
+    private long creerEnseignantEtRecupererId(String token, String matricule, String email) throws Exception {
+        String body = objectMapper.writeValueAsString(Map.of(
+                "matricule", matricule, "nom", "Prof", "prenom", "Test",
+                "email", email, "password", "Secret2026"));
+        mockMvc.perform(post("/api/auth/register/enseignant")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isOk());
+        MvcResult res = mockMvc.perform(get("/api/enseignants").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andReturn();
+        return objectMapper.readTree(res.getResponse().getContentAsString())
+                .get("data").get("content").get(0).get("id").asLong();
     }
 
     private String onboard(String nom, String email) throws Exception {

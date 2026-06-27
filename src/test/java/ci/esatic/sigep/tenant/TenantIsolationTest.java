@@ -50,6 +50,8 @@ class TenantIsolationTest {
     private ClasseRepository classeRepository;
     @Autowired
     private TenantTaskRunner tenantTaskRunner;
+    @Autowired
+    private ci.esatic.sigep.repository.RapportPdfRepository rapportPdfRepository;
 
     @AfterEach
     void cleanup() {
@@ -186,6 +188,32 @@ class TenantIsolationTest {
         em.clear();
         TenantContext.set(a);
         assertThat(classeRepository.findById(classeA.getId())).isPresent();
+    }
+
+    @Test
+    void chargement_par_id_d_un_rapport_d_un_autre_tenant_est_refuse() {
+        Long a = etablissementRepository.save(
+                Etablissement.builder().nom("A").slug("rap-a").plan(Plan.PRO).build()).getId();
+        Long b = etablissementRepository.save(
+                Etablissement.builder().nom("B").slug("rap-b").plan(Plan.PRO).build()).getId();
+        Enseignant ens = enseignantRepository.save(enseignant("RAP-ENS", a));
+        var rapport = rapportPdfRepository.save(ci.esatic.sigep.entity.RapportPdf.builder()
+                .enseignant(ens)
+                .periodeDebut(java.time.LocalDate.now())
+                .periodeFin(java.time.LocalDate.now())
+                .nomFichier("r.pdf").cheminFichier("/tmp/r.pdf")
+                .type(ci.esatic.sigep.entity.TypeRapport.HEBDOMADAIRE)
+                .etablissementId(a).build());
+        em.flush();
+        em.clear();
+
+        TenantContext.set(b);
+        assertThatThrownBy(() -> rapportPdfRepository.findById(rapport.getId()))
+                .isInstanceOf(AccesTenantRefuseException.class);
+
+        em.clear();
+        TenantContext.set(a);
+        assertThat(rapportPdfRepository.findById(rapport.getId())).isPresent();
     }
 
     private void activerFiltre(Long tenant) {
