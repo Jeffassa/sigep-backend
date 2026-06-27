@@ -28,6 +28,7 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
     private static final long WINDOW_MS = 60_000L; // 1 minute
     private static final String LOGIN_PATH = "/api/auth/login";
     private static final String REFRESH_PATH = "/api/auth/refresh";
+    private static final String SIGNUP_PATH = "/api/saas/etablissements";
 
     private final ConcurrentHashMap<String, Deque<Long>> attempts = new ConcurrentHashMap<>();
 
@@ -43,6 +44,10 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
      *  token est à haute entropie. Évite de pénaliser plusieurs utilisateurs derrière un même NAT. */
     @Value("${app.security.login-rate-limit.max-refresh:30}")
     private int maxRefresh;
+
+    /** Budget d'inscriptions d'établissement par IP/min (endpoint public anti-spam). */
+    @Value("${app.security.login-rate-limit.max-signup:5}")
+    private int maxSignup;
 
     /**
      * Ne faire confiance à X-Forwarded-For QUE derrière un reverse proxy de confiance.
@@ -83,6 +88,7 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
         String uri = request.getRequestURI();
         if (LOGIN_PATH.equals(uri)) return maxLogin;
         if (REFRESH_PATH.equals(uri)) return maxRefresh;
+        if (SIGNUP_PATH.equals(uri)) return maxSignup;
         return 0;
     }
 

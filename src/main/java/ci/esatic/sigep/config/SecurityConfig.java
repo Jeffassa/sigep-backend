@@ -76,6 +76,8 @@ public class SecurityConfig {
                         .requestMatchers("/", "/error", "/favicon.ico").permitAll()
                         .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
+                        // Onboarding SaaS : inscription publique d'un établissement (rate-limité)
+                        .requestMatchers("/api/saas/**").permitAll()
                         .requestMatchers("/api/qr/display/**").permitAll()
                         // Sondes de supervision publiques ; metrics reste authentifié
                         .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()

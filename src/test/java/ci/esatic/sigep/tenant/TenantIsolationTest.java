@@ -1,5 +1,6 @@
 package ci.esatic.sigep.tenant;
 
+import ci.esatic.sigep.config.DataInitializer;
 import ci.esatic.sigep.entity.Classe;
 import ci.esatic.sigep.entity.Enseignant;
 import ci.esatic.sigep.entity.Etablissement;
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +30,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ActiveProfiles("test")
 @Transactional
 class TenantIsolationTest {
+
+    // Mocké : évite de commiter l'admin/établissement par défaut dans la base H2
+    // partagée entre contextes de test.
+    @MockBean
+    private DataInitializer dataInitializer;
 
     @Autowired
     private EntityManager em;
