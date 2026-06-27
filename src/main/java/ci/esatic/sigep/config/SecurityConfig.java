@@ -72,8 +72,8 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        // Racine + ressources statiques : la racine redirige vers l'admin
-                        .requestMatchers("/", "/error", "/favicon.ico").permitAll()
+                        // Pages publiques SaaS (accueil + inscription) + ressources statiques
+                        .requestMatchers("/", "/inscription", "/error", "/favicon.ico").permitAll()
                         .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
                         // Onboarding SaaS : inscription publique d'un établissement (rate-limité)

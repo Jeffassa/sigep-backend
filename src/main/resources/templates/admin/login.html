@@ -31,6 +31,12 @@
             <span class="material-symbols-rounded text-[18px]">check_circle</span>
             <span th:text="${logout}">Déconnecté.</span>
         </div>
+        <div th:if="${param.registered}"
+             class="flex items-center gap-2 p-3 mb-4 rounded-xl text-[13px]"
+             style="background:rgba(10,10,10,.05);border:1px solid var(--line)">
+            <span class="material-symbols-rounded text-[18px]">check_circle</span>
+            <span>Établissement créé. Connectez-vous avec vos identifiants.</span>
+        </div>
 
         <form th:action="@{/admin-login}" method="post" class="space-y-4">
             <div>

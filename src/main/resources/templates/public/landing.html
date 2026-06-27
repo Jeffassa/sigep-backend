@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('SIGEP · Suivi des présences enseignants')}"></head>
+<body>
+
+<!-- ===================== TOP BAR ===================== -->
+<header class="glass sticky top-0 z-50 border-x-0 border-t-0" style="border-radius:0;">
+    <div class="max-w-[1180px] mx-auto h-16 px-5 md:px-8 flex items-center justify-between">
+        <a th:href="@{/}" class="flex items-baseline gap-2">
+            <span class="font-serif text-[28px] leading-none tracking-tight">SIGEP</span>
+            <span class="hidden sm:inline font-mono text-[10px] uppercase tracking-[0.25em] text-muted mb-[2px]">SaaS</span>
+        </a>
+        <nav class="flex items-center gap-2 md:gap-3">
+            <a href="#tarifs" class="hidden sm:inline px-3 h-10 leading-10 text-[13px] text-muted hover:text-ink">Tarifs</a>
+            <a th:href="@{/admin-login}" class="btn glass flex items-center px-4 h-10 rounded-full text-[13px] text-muted hover:text-ink">Connexion</a>
+            <a th:href="@{/inscription}" class="btn btn-ink flex items-center gap-2 px-4 h-10 rounded-full text-[13px] font-medium">
+                Inscrire mon établissement
+            </a>
+        </nav>
+    </div>
+</header>
+
+<main>
+
+    <!-- ===================== HERO ===================== -->
+    <section class="max-w-[1180px] mx-auto px-5 md:px-8 pt-16 md:pt-24 pb-12 text-center" data-reveal>
+        <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mb-5">Émargement · Présence · Conformité</p>
+        <h1 class="font-serif text-[44px] sm:text-[64px] leading-[1.02] tracking-tight max-w-[860px] mx-auto">
+            La preuve des heures réellement faites, sans paperasse.
+        </h1>
+        <p class="text-[16px] md:text-[18px] text-muted max-w-[620px] mx-auto mt-6 leading-relaxed">
+            SIGEP digitalise l'émargement des enseignants par QR code et génère automatiquement
+            les justificatifs de présence — idéal pour piloter et payer les vacataires sur des heures prouvées.
+        </p>
+        <div class="flex flex-wrap items-center justify-center gap-3 mt-9">
+            <a th:href="@{/inscription}" class="btn btn-ink flex items-center gap-2 px-6 h-12 rounded-full font-medium">
+                Démarrer gratuitement
+                <span class="material-symbols-rounded text-[20px]">arrow_forward</span>
+            </a>
+            <a href="#tarifs" class="btn glass flex items-center px-6 h-12 rounded-full text-muted hover:text-ink">Voir les tarifs</a>
+        </div>
+        <p class="font-mono text-[11px] text-muted mt-5">Sans carte bancaire · Mise en route en quelques minutes</p>
+    </section>
+
+    <!-- ===================== FEATURES ===================== -->
+    <section class="max-w-[1180px] mx-auto px-5 md:px-8 py-12">
+        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="glass-card rounded-2xl p-6" data-reveal>
+                <span class="material-symbols-rounded text-[28px]">qr_code_2</span>
+                <h3 class="font-serif text-[22px] mt-3">Émargement QR</h3>
+                <p class="text-[14px] text-muted mt-2 leading-relaxed">L'enseignant scanne un QR affiché en salle. Anti‑fraude, anti‑rejeu, renouvelé en continu.</p>
+            </div>
+            <div class="glass-card rounded-2xl p-6" data-reveal>
+                <span class="material-symbols-rounded text-[28px]">monitoring</span>
+                <h3 class="font-serif text-[22px] mt-3">Suivi en temps réel</h3>
+                <p class="text-[14px] text-muted mt-2 leading-relaxed">Tableau de bord, taux d'émargement, tendances et alertes sur les séances non émargées.</p>
+            </div>
+            <div class="glass-card rounded-2xl p-6" data-reveal>
+                <span class="material-symbols-rounded text-[28px]">description</span>
+                <h3 class="font-serif text-[22px] mt-3">Rapports & paie</h3>
+                <p class="text-[14px] text-muted mt-2 leading-relaxed">Rapports PDF par enseignant et par période : un justificatif fiable pour la paie des vacataires.</p>
+            </div>
+            <div class="glass-card rounded-2xl p-6" data-reveal>
+                <span class="material-symbols-rounded text-[28px]">auto_awesome</span>
+                <h3 class="font-serif text-[22px] mt-3">Analyse par IA</h3>
+                <p class="text-[14px] text-muted mt-2 leading-relaxed">Synthèse et décisions générées par l'IA à partir de vos statistiques d'assiduité.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===================== TARIFS ===================== -->
+    <section id="tarifs" class="max-w-[1180px] mx-auto px-5 md:px-8 py-16">
+        <div class="text-center mb-10">
+            <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mb-3">Tarifs</p>
+            <h2 class="font-serif text-[36px] sm:text-[44px] tracking-tight">Un plan pour chaque établissement</h2>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-5 items-stretch">
+
+            <!-- FREE -->
+            <div class="glass-strong rounded-3xl p-7 flex flex-col" data-reveal>
+                <h3 class="font-serif text-[26px]">Free</h3>
+                <p class="text-[13px] text-muted mt-1">Pour démarrer</p>
+                <p class="font-serif text-[40px] mt-5 leading-none">0€</p>
+                <ul class="space-y-2.5 mt-6 text-[14px] flex-1">
+                    <li class="flex gap-2"><span class="material-symbols-rounded text-[18px]">check</span> Émargement QR + planning</li>
+                    <li class="flex gap-2"><span class="material-symbols-rounded text-[18px]">check</span> Jusqu'à 10 enseignants</li>
+                    <li class="flex gap-2"><span class="material-symbols-rounded text-[18px]">check</span> 1 campus</li>
+                    <li class="flex gap-2"><span class="material-symbols-rounded text-[18px]">check</span> Rapports de base</li>
+                </ul>
+                <a th:href="@{/inscription}" class="btn glass flex items-center justify-center h-11 rounded-xl mt-7 text-muted hover:text-ink">Commencer</a>
+            </div>
+
+            <!-- PRO -->
+            <div class="glass-strong rounded-3xl p-7 flex flex-col" data-reveal
+                 style="outline:2px solid var(--c-ink); outline-offset:-2px;">
+                <div class="flex items-center justify-between">
+                    <h3 class="font-serif text-[26px]">Pro</h3>
+                    <span class="font-mono text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-full bg-ink text-white">Populaire</span>
+                </div>
+                <p class="text-[13px] text-muted mt-1">Pour un établissement</p>
+                <p class="font-serif text-[40px] mt-5 leading-none">Sur devis</p>
+                <ul class="space-y-2.5 mt-6 text-[14px] flex-1">
+                    <li class="flex gap-2"><span class="material-symbols-rounded text-[18px]">check</span> Enseignants illimités</li>
+                    <li class="flex gap-2"><span class="material-symbols-rounded text-[18px]">check</span> Multi‑campus</li>
+                    <li class="flex gap-2"><span class="material-symbols-rounded text-[18px]">check</span> Analyse par IA</li>
+                    <li class="flex gap-2"><span class="material-symbols-rounded text-[18px]">check</span> Rapports avancés + export</li>
+                    <li class="flex gap-2"><span class="material-symbols-rounded text-[18px]">check</span> Logo de l'établissement</li>
+                </ul>
+                <a th:href="@{/inscription}" class="btn btn-ink flex items-center justify-center h-11 rounded-xl mt-7 font-medium">Essayer Pro</a>
+            </div>
+
+            <!-- ENTERPRISE -->
+            <div class="glass-strong rounded-3xl p-7 flex flex-col" data-reveal>
+                <h3 class="font-serif text-[26px]">Enterprise</h3>
+                <p class="text-[13px] text-muted mt-1">Groupes & universités</p>
+                <p class="font-serif text-[40px] mt-5 leading-none">Sur mesure</p>
+                <ul class="space-y-2.5 mt-6 text-[14px] flex-1">
+                    <li class="flex gap-2"><span class="material-symbols-rounded text-[18px]">check</span> Tout le plan Pro</li>
+                    <li class="flex gap-2"><span class="material-symbols-rounded text-[18px]">check</span> Multi‑établissements</li>
+                    <li class="flex gap-2"><span class="material-symbols-rounded text-[18px]">check</span> SSO & API</li>
+                    <li class="flex gap-2"><span class="material-symbols-rounded text-[18px]">check</span> Intégrations paie / ENT</li>
+                    <li class="flex gap-2"><span class="material-symbols-rounded text-[18px]">check</span> Support dédié & SLA</li>
+                </ul>
+                <a href="mailto:contact@sigep.store" class="btn glass flex items-center justify-center h-11 rounded-xl mt-7 text-muted hover:text-ink">Nous contacter</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===================== CTA FINAL ===================== -->
+    <section class="max-w-[1180px] mx-auto px-5 md:px-8 pb-20">
+        <div class="glass-strong rounded-3xl p-10 md:p-14 text-center">
+            <h2 class="font-serif text-[32px] sm:text-[40px] tracking-tight">Prêt à fiabiliser vos heures ?</h2>
+            <p class="text-[15px] text-muted mt-3 max-w-[520px] mx-auto">Créez l'espace de votre établissement en quelques minutes.</p>
+            <a th:href="@{/inscription}" class="btn btn-ink inline-flex items-center gap-2 px-6 h-12 rounded-full font-medium mt-7">
+                Inscrire mon établissement
+                <span class="material-symbols-rounded text-[20px]">arrow_forward</span>
+            </a>
+        </div>
+    </section>
+</main>
+
+<!-- ===================== FOOTER ===================== -->
+<footer class="border-t border-line">
+    <div class="max-w-[1180px] mx-auto px-5 md:px-8 py-8 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <span class="font-mono text-[10px] uppercase tracking-[0.2em] text-muted">SIGEP · Système Intelligent de Gestion des Enseignements</span>
+        <a th:href="@{/admin-login}" class="font-mono text-[10px] uppercase tracking-[0.2em] text-muted hover:text-ink">Espace administration →</a>
+    </div>
+</footer>
+
+<script>
+    /* Bascule thème clair / sombre (mémorisée) — version autonome page publique */
+    window.__toggleTheme = function () {
+        var dark = document.documentElement.classList.toggle('dark');
+        try { localStorage.setItem('sigep-theme', dark ? 'dark' : 'light'); } catch (e) {}
+    };
+    document.querySelectorAll('[data-reveal]').forEach(function (el, i) {
+        el.classList.add('reveal'); el.style.animationDelay = (i * 60) + 'ms';
+    });
+</script>
+
+</body>
+</html>

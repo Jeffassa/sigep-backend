@@ -58,10 +58,17 @@ class AdminWebIntegrationTest {
     // ─── Routage / sécurité ───────────────────────────────────────────────────
 
     @Test
-    void racine_devraitRedirigerVersDashboard() throws Exception {
+    void racine_afficheLaPagePubliqueSaaS() throws Exception {
         mockMvc.perform(get("/"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/admin/dashboard"));
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Inscrire mon établissement")));
+    }
+
+    @Test
+    void inscription_afficheLeFormulairePublic() throws Exception {
+        mockMvc.perform(get("/inscription"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Créer mon espace")));
     }
 
     @Test
