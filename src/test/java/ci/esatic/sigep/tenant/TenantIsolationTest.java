@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Prouve l'isolation tenant : avec le filtre activé pour un établissement, on ne lit
@@ -49,6 +50,8 @@ class TenantIsolationTest {
     private ClasseRepository classeRepository;
     @Autowired
     private TenantTaskRunner tenantTaskRunner;
+    @Autowired
+    private ci.esatic.sigep.repository.RapportPdfRepository rapportPdfRepository;
 
     @AfterEach
     void cleanup() {
@@ -163,6 +166,54 @@ class TenantIsolationTest {
         assertThat(vusParTenant.keySet()).containsExactlyInAnyOrder(a, b); // l'inactif est ignoré
         assertThat(vusParTenant.get(a)).containsExactly("JOB-A");          // isolation en tâche de fond
         assertThat(vusParTenant.get(b)).containsExactly("JOB-B");
+    }
+
+    @Test
+    void chargement_par_id_d_un_autre_tenant_est_refuse() {
+        Long a = etablissementRepository.save(
+                Etablissement.builder().nom("A").slug("byid-a").plan(Plan.PRO).build()).getId();
+        Long b = etablissementRepository.save(
+                Etablissement.builder().nom("B").slug("byid-b").plan(Plan.PRO).build()).getId();
+        Classe classeA = classeRepository.save(classe("BYID-A", a));
+        em.flush();
+        em.clear();
+
+        // Tenant B courant : il ne doit PAS pouvoir charger la classe de A via findById
+        // (le filtre Hibernate ne couvre pas le chargement par identifiant).
+        TenantContext.set(b);
+        assertThatThrownBy(() -> classeRepository.findById(classeA.getId()))
+                .isInstanceOf(AccesTenantRefuseException.class);
+
+        // Sanity : son propre tenant charge bien la ressource.
+        em.clear();
+        TenantContext.set(a);
+        assertThat(classeRepository.findById(classeA.getId())).isPresent();
+    }
+
+    @Test
+    void chargement_par_id_d_un_rapport_d_un_autre_tenant_est_refuse() {
+        Long a = etablissementRepository.save(
+                Etablissement.builder().nom("A").slug("rap-a").plan(Plan.PRO).build()).getId();
+        Long b = etablissementRepository.save(
+                Etablissement.builder().nom("B").slug("rap-b").plan(Plan.PRO).build()).getId();
+        Enseignant ens = enseignantRepository.save(enseignant("RAP-ENS", a));
+        var rapport = rapportPdfRepository.save(ci.esatic.sigep.entity.RapportPdf.builder()
+                .enseignant(ens)
+                .periodeDebut(java.time.LocalDate.now())
+                .periodeFin(java.time.LocalDate.now())
+                .nomFichier("r.pdf").cheminFichier("/tmp/r.pdf")
+                .type(ci.esatic.sigep.entity.TypeRapport.HEBDOMADAIRE)
+                .etablissementId(a).build());
+        em.flush();
+        em.clear();
+
+        TenantContext.set(b);
+        assertThatThrownBy(() -> rapportPdfRepository.findById(rapport.getId()))
+                .isInstanceOf(AccesTenantRefuseException.class);
+
+        em.clear();
+        TenantContext.set(a);
+        assertThat(rapportPdfRepository.findById(rapport.getId())).isPresent();
     }
 
     private void activerFiltre(Long tenant) {
