@@ -172,6 +172,11 @@
                             <artifactId>lombok</artifactId>
                         </exclude>
                     </excludes>
+                    <!-- Confort local : 'mvnw spring-boot:run' active le profil dev.
+                         (En prod, le profil vient de SPRING_PROFILES_ACTIVE ; aucun défaut.) -->
+                    <profiles>
+                        <profile>dev</profile>
+                    </profiles>
                 </configuration>
             </plugin>
             <!-- Configuration explicite du compilateur pour Lombok + Java 21 -->
