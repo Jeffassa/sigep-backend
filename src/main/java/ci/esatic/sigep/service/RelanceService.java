@@ -4,11 +4,11 @@ import ci.esatic.sigep.entity.Enseignant;
 import ci.esatic.sigep.entity.Seance;
 import ci.esatic.sigep.entity.StatutSeance;
 import ci.esatic.sigep.repository.SeanceRepository;
+import ci.esatic.sigep.tenant.TenantTaskRunner;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -28,12 +28,18 @@ public class RelanceService {
 
     private final SeanceRepository seanceRepository;
     private final MailService mailService;
+    private final TenantTaskRunner tenantTaskRunner;
 
-    /** Tous les jours à 19h : relance les enseignants ayant des séances non émargées le jour même. */
+    /** Tous les jours à 19h : relance les enseignants ayant des séances non émargées le jour même.
+     *  Exécuté PAR ÉTABLISSEMENT (contexte tenant) pour rester cloisonné. */
     @Scheduled(cron = "0 0 19 * * *")
-    @Transactional(readOnly = true)
     public void relancerSeancesNonEmargees() {
         LocalDate today = LocalDate.now();
+        tenantTaskRunner.pourChaqueTenantActif(etab -> relancerPourTenantCourant(today));
+    }
+
+    /** Logique exécutée dans le contexte (transaction + filtre) d'un établissement. */
+    private void relancerPourTenantCourant(LocalDate today) {
         List<Seance> nonEmargees = seanceRepository.findAllByDateOrderByHeureDebutAsc(today).stream()
                 .filter(s -> s.getStatut() != StatutSeance.EMARGE)
                 .collect(Collectors.toList());

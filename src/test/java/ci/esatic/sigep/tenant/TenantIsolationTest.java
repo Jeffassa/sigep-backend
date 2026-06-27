@@ -19,7 +19,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -45,6 +47,8 @@ class TenantIsolationTest {
     private EtablissementRepository etablissementRepository;
     @Autowired
     private ClasseRepository classeRepository;
+    @Autowired
+    private TenantTaskRunner tenantTaskRunner;
 
     @AfterEach
     void cleanup() {
@@ -135,6 +139,30 @@ class TenantIsolationTest {
                 .extracting(Enseignant::getMatricule).containsExactly("SRCH-A");
         assertThat(enseignantRepository.searchEnseignants(null, null, b, PageRequest.of(0, 50)).getContent())
                 .extracting(Enseignant::getMatricule).containsExactly("SRCH-B");
+    }
+
+    @Test
+    void tache_planifiee_s_execute_par_tenant_actif_et_reste_isolee() {
+        Long a = etablissementRepository.save(
+                Etablissement.builder().nom("A").slug("job-a").plan(Plan.PRO).build()).getId();
+        Long b = etablissementRepository.save(
+                Etablissement.builder().nom("B").slug("job-b").plan(Plan.PRO).build()).getId();
+        etablissementRepository.save(
+                Etablissement.builder().nom("C").slug("job-c").plan(Plan.PRO).actif(false).build());
+        enseignantRepository.save(enseignant("JOB-A", a));
+        enseignantRepository.save(enseignant("JOB-B", b));
+        em.flush();
+
+        Map<Long, List<String>> vusParTenant = new HashMap<>();
+        tenantTaskRunner.pourChaqueTenantActif(etab -> {
+            assertThat(TenantContext.get()).isEqualTo(etab.getId()); // contexte bien posé
+            vusParTenant.put(etab.getId(),
+                    enseignantRepository.findAll().stream().map(Enseignant::getMatricule).toList());
+        });
+
+        assertThat(vusParTenant.keySet()).containsExactlyInAnyOrder(a, b); // l'inactif est ignoré
+        assertThat(vusParTenant.get(a)).containsExactly("JOB-A");          // isolation en tâche de fond
+        assertThat(vusParTenant.get(b)).containsExactly("JOB-B");
     }
 
     private void activerFiltre(Long tenant) {

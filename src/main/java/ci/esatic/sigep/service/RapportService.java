@@ -37,26 +37,30 @@ public class RapportService {
     private final EmargementRepository emargementRepository;
     private final RapportPdfRepository rapportPdfRepository;
     private final SeanceRepository seanceRepository;
+    private final ci.esatic.sigep.tenant.TenantTaskRunner tenantTaskRunner;
 
     // Génération automatique chaque dimanche à 2h du matin
     @Scheduled(cron = "0 0 2 * * SUN")
-    @Transactional
     public void genererRapportsHebdomadaires() {
         LocalDate fin = LocalDate.now().with(DayOfWeek.SATURDAY);
         LocalDate debut = fin.with(DayOfWeek.MONDAY);
         log.info("Debut generation rapports hebdomadaires : {} -> {}", debut, fin);
 
-        List<Enseignant> enseignants = enseignantRepository.findAll();
-        int nb = 0;
-        for (Enseignant enseignant : enseignants) {
-            try {
-                genererRapportEnseignant(enseignant, debut, fin, TypeRapport.HEBDOMADAIRE);
-                nb++;
-            } catch (Exception e) {
-                log.error("Erreur rapport pour {} : {}", enseignant.getMatricule(), e.getMessage());
+        // Exécuté PAR ÉTABLISSEMENT : la liste d'enseignants est filtrée au tenant et les
+        // rapports créés sont estampillés sur le bon établissement.
+        tenantTaskRunner.pourChaqueTenantActif(etab -> {
+            List<Enseignant> enseignants = enseignantRepository.findAll();
+            int nb = 0;
+            for (Enseignant enseignant : enseignants) {
+                try {
+                    genererRapportEnseignant(enseignant, debut, fin, TypeRapport.HEBDOMADAIRE);
+                    nb++;
+                } catch (Exception e) {
+                    log.error("Erreur rapport pour {} : {}", enseignant.getMatricule(), e.getMessage());
+                }
             }
-        }
-        log.info("Rapports hebdomadaires generes : {}/{}", nb, enseignants.size());
+            log.info("Rapports hebdo etablissement {} : {}/{}", etab.getId(), nb, enseignants.size());
+        });
     }
 
     @Transactional
