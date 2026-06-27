@@ -66,6 +66,14 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(ex.getMessage()));
     }
 
+    // Accès à une ressource d'un autre établissement → 404 (on ne révèle pas son existence).
+    @ExceptionHandler(ci.esatic.sigep.tenant.AccesTenantRefuseException.class)
+    public ResponseEntity<ApiResponse<Void>> handleAccesTenant(
+            ci.esatic.sigep.tenant.AccesTenantRefuseException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error(ex.getMessage()));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Map<String, String>>> handleValidation(
             MethodArgumentNotValidException ex) {

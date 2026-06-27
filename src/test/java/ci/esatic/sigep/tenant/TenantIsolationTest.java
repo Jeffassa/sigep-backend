@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Prouve l'isolation tenant : avec le filtre activé pour un établissement, on ne lit
@@ -163,6 +164,28 @@ class TenantIsolationTest {
         assertThat(vusParTenant.keySet()).containsExactlyInAnyOrder(a, b); // l'inactif est ignoré
         assertThat(vusParTenant.get(a)).containsExactly("JOB-A");          // isolation en tâche de fond
         assertThat(vusParTenant.get(b)).containsExactly("JOB-B");
+    }
+
+    @Test
+    void chargement_par_id_d_un_autre_tenant_est_refuse() {
+        Long a = etablissementRepository.save(
+                Etablissement.builder().nom("A").slug("byid-a").plan(Plan.PRO).build()).getId();
+        Long b = etablissementRepository.save(
+                Etablissement.builder().nom("B").slug("byid-b").plan(Plan.PRO).build()).getId();
+        Classe classeA = classeRepository.save(classe("BYID-A", a));
+        em.flush();
+        em.clear();
+
+        // Tenant B courant : il ne doit PAS pouvoir charger la classe de A via findById
+        // (le filtre Hibernate ne couvre pas le chargement par identifiant).
+        TenantContext.set(b);
+        assertThatThrownBy(() -> classeRepository.findById(classeA.getId()))
+                .isInstanceOf(AccesTenantRefuseException.class);
+
+        // Sanity : son propre tenant charge bien la ressource.
+        em.clear();
+        TenantContext.set(a);
+        assertThat(classeRepository.findById(classeA.getId())).isPresent();
     }
 
     private void activerFiltre(Long tenant) {
