@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{admin/fragments :: head('SIGEP · Suivi des présences enseignants')}"></head>
+<head th:replace="~{admin/fragments :: head('SIGEP · Émargement & présence des enseignants')}"></head>
 <body>
 
 <!-- ===================== TOP BAR ===================== -->
@@ -11,11 +11,11 @@
             <span class="hidden sm:inline font-mono text-[10px] uppercase tracking-[0.25em] text-muted mb-[2px]">SaaS</span>
         </a>
         <nav class="flex items-center gap-2 md:gap-3">
+            <a href="#fonctionnement" class="hidden md:inline px-3 h-10 leading-10 text-[13px] text-muted hover:text-ink">Fonctionnement</a>
             <a href="#tarifs" class="hidden sm:inline px-3 h-10 leading-10 text-[13px] text-muted hover:text-ink">Tarifs</a>
+            <a href="#faq" class="hidden md:inline px-3 h-10 leading-10 text-[13px] text-muted hover:text-ink">FAQ</a>
             <a th:href="@{/admin-login}" class="btn glass flex items-center px-4 h-10 rounded-full text-[13px] text-muted hover:text-ink">Connexion</a>
-            <a th:href="@{/inscription}" class="btn btn-ink flex items-center gap-2 px-4 h-10 rounded-full text-[13px] font-medium">
-                Inscrire mon établissement
-            </a>
+            <a th:href="@{/inscription}" class="btn btn-ink flex items-center gap-2 px-4 h-10 rounded-full text-[13px] font-medium">Démarrer</a>
         </nav>
     </div>
 </header>
@@ -23,23 +23,90 @@
 <main>
 
     <!-- ===================== HERO ===================== -->
-    <section class="max-w-[1180px] mx-auto px-5 md:px-8 pt-16 md:pt-24 pb-12 text-center" data-reveal>
-        <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mb-5">Émargement · Présence · Conformité</p>
-        <h1 class="font-serif text-[44px] sm:text-[64px] leading-[1.02] tracking-tight max-w-[860px] mx-auto">
+    <section class="max-w-[1180px] mx-auto px-5 md:px-8 pt-16 md:pt-24 pb-10 text-center" data-reveal>
+        <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mb-5">Pour universités privées & grandes écoles</p>
+        <h1 class="font-serif text-[44px] sm:text-[66px] leading-[1.02] tracking-tight max-w-[880px] mx-auto">
             La preuve des heures réellement faites, sans paperasse.
         </h1>
-        <p class="text-[16px] md:text-[18px] text-muted max-w-[620px] mx-auto mt-6 leading-relaxed">
-            SIGEP digitalise l'émargement des enseignants par QR code et génère automatiquement
-            les justificatifs de présence — idéal pour piloter et payer les vacataires sur des heures prouvées.
+        <p class="text-[16px] md:text-[18px] text-muted max-w-[640px] mx-auto mt-6 leading-relaxed">
+            SIGEP digitalise l'émargement des enseignants par QR code et génère les justificatifs de présence.
+            Pilotez l'assiduité et payez vos vacataires sur des heures prouvées.
         </p>
         <div class="flex flex-wrap items-center justify-center gap-3 mt-9">
             <a th:href="@{/inscription}" class="btn btn-ink flex items-center gap-2 px-6 h-12 rounded-full font-medium">
                 Démarrer gratuitement
                 <span class="material-symbols-rounded text-[20px]">arrow_forward</span>
             </a>
-            <a href="#tarifs" class="btn glass flex items-center px-6 h-12 rounded-full text-muted hover:text-ink">Voir les tarifs</a>
+            <a href="#fonctionnement" class="btn glass flex items-center px-6 h-12 rounded-full text-muted hover:text-ink">Voir comment ça marche</a>
         </div>
         <p class="font-mono text-[11px] text-muted mt-5">Sans carte bancaire · Mise en route en quelques minutes</p>
+    </section>
+
+    <!-- ===================== APERÇU PRODUIT (stylisé) ===================== -->
+    <section class="max-w-[980px] mx-auto px-5 md:px-8 pb-14" data-reveal>
+        <div class="glass-strong rounded-3xl p-5 md:p-7">
+            <div class="flex items-center gap-1.5 mb-5">
+                <span class="w-2.5 h-2.5 rounded-full" style="background:var(--c-line)"></span>
+                <span class="w-2.5 h-2.5 rounded-full" style="background:var(--c-line)"></span>
+                <span class="w-2.5 h-2.5 rounded-full" style="background:var(--c-line)"></span>
+                <span class="ml-3 font-mono text-[10px] uppercase tracking-wider text-muted">Tableau de bord · cette semaine</span>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+                <div class="glass-card rounded-2xl p-4">
+                    <p class="font-mono text-[10px] uppercase tracking-wider text-muted">Taux d'émargement</p>
+                    <p class="font-serif text-[34px] leading-none mt-2">92%</p>
+                </div>
+                <div class="glass-card rounded-2xl p-4">
+                    <p class="font-mono text-[10px] uppercase tracking-wider text-muted">Heures effectuées</p>
+                    <p class="font-serif text-[34px] leading-none mt-2">148<span class="text-[16px] text-muted">h</span></p>
+                </div>
+                <div class="glass-card rounded-2xl p-4">
+                    <p class="font-mono text-[10px] uppercase tracking-wider text-muted">Enseignants</p>
+                    <p class="font-serif text-[34px] leading-none mt-2">37</p>
+                </div>
+                <div class="glass-card rounded-2xl p-4">
+                    <p class="font-mono text-[10px] uppercase tracking-wider text-muted">Alertes</p>
+                    <p class="font-serif text-[34px] leading-none mt-2">3</p>
+                </div>
+            </div>
+            <div class="glass-card rounded-2xl p-4">
+                <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-3">Émargement par jour</p>
+                <div class="flex items-end gap-2 h-24">
+                    <div class="flex-1 rounded-t" style="height:62%;background:var(--c-ink)"></div>
+                    <div class="flex-1 rounded-t" style="height:80%;background:var(--c-ink)"></div>
+                    <div class="flex-1 rounded-t" style="height:48%;background:var(--c-ink)"></div>
+                    <div class="flex-1 rounded-t" style="height:92%;background:var(--c-ink)"></div>
+                    <div class="flex-1 rounded-t" style="height:70%;background:var(--c-ink)"></div>
+                    <div class="flex-1 rounded-t" style="height:35%;background:var(--c-track)"></div>
+                </div>
+            </div>
+        </div>
+        <p class="text-center font-mono text-[10px] uppercase tracking-[0.2em] text-muted mt-4">Aperçu illustratif de l'interface</p>
+    </section>
+
+    <!-- ===================== COMMENT ÇA MARCHE ===================== -->
+    <section id="fonctionnement" class="max-w-[1180px] mx-auto px-5 md:px-8 py-12">
+        <div class="text-center mb-10">
+            <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mb-3">Fonctionnement</p>
+            <h2 class="font-serif text-[36px] sm:text-[44px] tracking-tight">Opérationnel en 3 étapes</h2>
+        </div>
+        <div class="grid md:grid-cols-3 gap-4">
+            <div class="glass-card rounded-2xl p-6" data-reveal>
+                <span class="font-mono text-[12px] text-muted">01</span>
+                <h3 class="font-serif text-[22px] mt-2">Importez l'emploi du temps</h3>
+                <p class="text-[14px] text-muted mt-2 leading-relaxed">Chargez vos séances (Excel) ou laissez chaque enseignant importer le sien. Matières, classes, salles, enseignants.</p>
+            </div>
+            <div class="glass-card rounded-2xl p-6" data-reveal>
+                <span class="font-mono text-[12px] text-muted">02</span>
+                <h3 class="font-serif text-[22px] mt-2">Affichez le QR en salle</h3>
+                <p class="text-[14px] text-muted mt-2 leading-relaxed">Un écran affiche un QR sécurisé qui se renouvelle en continu. L'enseignant le scanne et signe depuis son mobile.</p>
+            </div>
+            <div class="glass-card rounded-2xl p-6" data-reveal>
+                <span class="font-mono text-[12px] text-muted">03</span>
+                <h3 class="font-serif text-[22px] mt-2">Suivez & exportez</h3>
+                <p class="text-[14px] text-muted mt-2 leading-relaxed">Tableau de bord en temps réel, alertes sur les oublis, et rapports PDF prêts pour la paie des vacataires.</p>
+            </div>
+        </div>
     </section>
 
     <!-- ===================== FEATURES ===================== -->
@@ -48,17 +115,17 @@
             <div class="glass-card rounded-2xl p-6" data-reveal>
                 <span class="material-symbols-rounded text-[28px]">qr_code_2</span>
                 <h3 class="font-serif text-[22px] mt-3">Émargement QR</h3>
-                <p class="text-[14px] text-muted mt-2 leading-relaxed">L'enseignant scanne un QR affiché en salle. Anti‑fraude, anti‑rejeu, renouvelé en continu.</p>
+                <p class="text-[14px] text-muted mt-2 leading-relaxed">Anti‑fraude et anti‑rejeu : un code à usage unique, renouvelé en continu, scanné en salle.</p>
             </div>
             <div class="glass-card rounded-2xl p-6" data-reveal>
                 <span class="material-symbols-rounded text-[28px]">monitoring</span>
                 <h3 class="font-serif text-[22px] mt-3">Suivi en temps réel</h3>
-                <p class="text-[14px] text-muted mt-2 leading-relaxed">Tableau de bord, taux d'émargement, tendances et alertes sur les séances non émargées.</p>
+                <p class="text-[14px] text-muted mt-2 leading-relaxed">Taux d'émargement, tendances et alertes immédiates sur les séances non émargées.</p>
             </div>
             <div class="glass-card rounded-2xl p-6" data-reveal>
                 <span class="material-symbols-rounded text-[28px]">description</span>
                 <h3 class="font-serif text-[22px] mt-3">Rapports & paie</h3>
-                <p class="text-[14px] text-muted mt-2 leading-relaxed">Rapports PDF par enseignant et par période : un justificatif fiable pour la paie des vacataires.</p>
+                <p class="text-[14px] text-muted mt-2 leading-relaxed">Justificatifs PDF par enseignant et par période, fiables pour la paie des vacataires.</p>
             </div>
             <div class="glass-card rounded-2xl p-6" data-reveal>
                 <span class="material-symbols-rounded text-[28px]">auto_awesome</span>
@@ -70,17 +137,18 @@
 
     <!-- ===================== TARIFS ===================== -->
     <section id="tarifs" class="max-w-[1180px] mx-auto px-5 md:px-8 py-16">
-        <div class="text-center mb-10">
+        <div class="text-center mb-3">
             <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mb-3">Tarifs</p>
             <h2 class="font-serif text-[36px] sm:text-[44px] tracking-tight">Un plan pour chaque établissement</h2>
         </div>
+        <p class="text-center text-[13px] text-muted mb-10">Facturation annuelle · sans engagement la première année</p>
 
         <div class="grid md:grid-cols-3 gap-5 items-stretch">
 
             <!-- FREE -->
             <div class="glass-strong rounded-3xl p-7 flex flex-col" data-reveal>
                 <h3 class="font-serif text-[26px]">Free</h3>
-                <p class="text-[13px] text-muted mt-1">Pour démarrer</p>
+                <p class="text-[13px] text-muted mt-1">Pour démarrer et tester</p>
                 <p class="font-serif text-[40px] mt-5 leading-none">0€</p>
                 <ul class="space-y-2.5 mt-6 text-[14px] flex-1">
                     <li class="flex gap-2"><span class="material-symbols-rounded text-[18px]">check</span> Émargement QR + planning</li>
@@ -127,6 +195,32 @@
         </div>
     </section>
 
+    <!-- ===================== FAQ ===================== -->
+    <section id="faq" class="max-w-[820px] mx-auto px-5 md:px-8 py-12">
+        <div class="text-center mb-10">
+            <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mb-3">FAQ</p>
+            <h2 class="font-serif text-[36px] sm:text-[44px] tracking-tight">Questions fréquentes</h2>
+        </div>
+        <div class="space-y-3">
+            <details class="glass-card rounded-2xl p-5" data-reveal>
+                <summary class="font-medium cursor-pointer flex items-center justify-between">L'enseignant doit‑il installer une application ?<span class="material-symbols-rounded text-muted">expand_more</span></summary>
+                <p class="text-[14px] text-muted mt-3 leading-relaxed">Oui, une application mobile dédiée (Android) permet de scanner le QR et de signer. L'administration, elle, travaille depuis le navigateur.</p>
+            </details>
+            <details class="glass-card rounded-2xl p-5" data-reveal>
+                <summary class="font-medium cursor-pointer flex items-center justify-between">Mes données sont‑elles isolées des autres établissements ?<span class="material-symbols-rounded text-muted">expand_more</span></summary>
+                <p class="text-[14px] text-muted mt-3 leading-relaxed">Strictement. Chaque établissement dispose de son propre espace ; les données ne sont jamais partagées ni visibles entre établissements.</p>
+            </details>
+            <details class="glass-card rounded-2xl p-5" data-reveal>
+                <summary class="font-medium cursor-pointer flex items-center justify-between">Peut‑on commencer sans engagement ?<span class="material-symbols-rounded text-muted">expand_more</span></summary>
+                <p class="text-[14px] text-muted mt-3 leading-relaxed">Oui. Le plan Free est gratuit et sans carte bancaire. Vous passez à un plan supérieur uniquement quand vous en avez besoin.</p>
+            </details>
+            <details class="glass-card rounded-2xl p-5" data-reveal>
+                <summary class="font-medium cursor-pointer flex items-center justify-between">Comment se fait l'émargement hors connexion ?<span class="material-symbols-rounded text-muted">expand_more</span></summary>
+                <p class="text-[14px] text-muted mt-3 leading-relaxed">L'application gère le mode hors‑ligne : l'émargement est mis en file d'attente et envoyé automatiquement au retour du réseau.</p>
+            </details>
+        </div>
+    </section>
+
     <!-- ===================== CTA FINAL ===================== -->
     <section class="max-w-[1180px] mx-auto px-5 md:px-8 pb-20">
         <div class="glass-strong rounded-3xl p-10 md:p-14 text-center">
@@ -142,20 +236,27 @@
 
 <!-- ===================== FOOTER ===================== -->
 <footer class="border-t border-line">
-    <div class="max-w-[1180px] mx-auto px-5 md:px-8 py-8 flex flex-col sm:flex-row items-center justify-between gap-3">
-        <span class="font-mono text-[10px] uppercase tracking-[0.2em] text-muted">SIGEP · Système Intelligent de Gestion des Enseignements</span>
-        <a th:href="@{/admin-login}" class="font-mono text-[10px] uppercase tracking-[0.2em] text-muted hover:text-ink">Espace administration →</a>
+    <div class="max-w-[1180px] mx-auto px-5 md:px-8 py-9 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div class="text-center sm:text-left">
+            <p class="font-serif text-[20px] leading-none">SIGEP</p>
+            <p class="font-mono text-[10px] uppercase tracking-[0.2em] text-muted mt-1.5">Système Intelligent de Gestion des Enseignements</p>
+        </div>
+        <div class="flex items-center gap-5 font-mono text-[10px] uppercase tracking-[0.2em] text-muted">
+            <a href="#tarifs" class="hover:text-ink">Tarifs</a>
+            <a href="#faq" class="hover:text-ink">FAQ</a>
+            <a href="mailto:contact@sigep.store" class="hover:text-ink">Contact</a>
+            <a th:href="@{/admin-login}" class="hover:text-ink">Connexion</a>
+        </div>
     </div>
 </footer>
 
 <script>
-    /* Bascule thème clair / sombre (mémorisée) — version autonome page publique */
     window.__toggleTheme = function () {
         var dark = document.documentElement.classList.toggle('dark');
         try { localStorage.setItem('sigep-theme', dark ? 'dark' : 'light'); } catch (e) {}
     };
     document.querySelectorAll('[data-reveal]').forEach(function (el, i) {
-        el.classList.add('reveal'); el.style.animationDelay = (i * 60) + 'ms';
+        el.classList.add('reveal'); el.style.animationDelay = (Math.min(i, 8) * 50) + 'ms';
     });
 </script>
 
