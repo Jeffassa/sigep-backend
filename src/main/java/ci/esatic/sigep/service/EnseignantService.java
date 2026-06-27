@@ -5,6 +5,7 @@ import ci.esatic.sigep.entity.Enseignant;
 import ci.esatic.sigep.entity.StatutEnseignant;
 import ci.esatic.sigep.exception.ResourceNotFoundException;
 import ci.esatic.sigep.repository.EnseignantRepository;
+import ci.esatic.sigep.tenant.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -21,9 +22,10 @@ public class EnseignantService {
 
     public Page<EnseignantResponse> searchEnseignants(String search, String departement,
                                                        StatutEnseignant statut, Pageable pageable) {
+        Long tenantId = TenantContext.get();
         Page<Enseignant> page = statut == null
-                ? enseignantRepository.searchEnseignants(search, departement, pageable)
-                : enseignantRepository.searchEnseignantsByStatut(search, departement, statut.name(), pageable);
+                ? enseignantRepository.searchEnseignants(search, departement, tenantId, pageable)
+                : enseignantRepository.searchEnseignantsByStatut(search, departement, statut.name(), tenantId, pageable);
         return page.map(this::toResponse);
     }
 

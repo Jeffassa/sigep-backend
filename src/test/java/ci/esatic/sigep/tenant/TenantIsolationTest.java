@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -115,6 +116,25 @@ class TenantIsolationTest {
         Classe c = Classe.builder().libelle(libelle).build();
         c.setEtablissementId(etablissementId);
         return c;
+    }
+
+    @Test
+    void recherche_native_des_enseignants_est_isolee_par_tenant() {
+        Long a = etablissementRepository.save(
+                Etablissement.builder().nom("UA").slug("ua-rech").plan(Plan.PRO).build()).getId();
+        Long b = etablissementRepository.save(
+                Etablissement.builder().nom("UB").slug("ub-rech").plan(Plan.PRO).build()).getId();
+        enseignantRepository.save(enseignant("SRCH-A", a));
+        enseignantRepository.save(enseignant("SRCH-B", b));
+        em.flush();
+        em.clear();
+
+        // La requête est native (le filtre Hibernate ne s'applique pas) : la condition
+        // tenant doit être portée par la requête elle-même.
+        assertThat(enseignantRepository.searchEnseignants(null, null, a, PageRequest.of(0, 50)).getContent())
+                .extracting(Enseignant::getMatricule).containsExactly("SRCH-A");
+        assertThat(enseignantRepository.searchEnseignants(null, null, b, PageRequest.of(0, 50)).getContent())
+                .extracting(Enseignant::getMatricule).containsExactly("SRCH-B");
     }
 
     private void activerFiltre(Long tenant) {

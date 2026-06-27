@@ -393,7 +393,7 @@ public class AdminWebController {
         String deptParam = departement.isBlank() ? null : departement;
 
         Page<Enseignant> pageResult = enseignantRepository.searchEnseignants(
-                searchParam, deptParam, PageRequest.of(page, size));
+                searchParam, deptParam, ci.esatic.sigep.tenant.TenantContext.get(), PageRequest.of(page, size));
 
         model.addAttribute("enseignants", pageResult);
         model.addAttribute("currentPage", page);
