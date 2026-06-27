@@ -58,6 +58,14 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error("Accès refusé"));
     }
 
+    // Limite d'abonnement (fonctionnalité premium non incluse / quota dépassé) → 403.
+    @ExceptionHandler(ci.esatic.sigep.tenant.plan.PlanLimiteException.class)
+    public ResponseEntity<ApiResponse<Void>> handlePlanLimite(
+            ci.esatic.sigep.tenant.plan.PlanLimiteException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.error(ex.getMessage()));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Map<String, String>>> handleValidation(
             MethodArgumentNotValidException ex) {

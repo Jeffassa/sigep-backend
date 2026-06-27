@@ -48,6 +48,7 @@ public class AdminWebController {
     private final ci.esatic.sigep.service.RattrapageService rattrapageService;
     private final ci.esatic.sigep.service.StatsService statsService;
     private final ci.esatic.sigep.service.AiAnalyseService aiAnalyseService;
+    private final ci.esatic.sigep.tenant.plan.PlanService planService;
 
     // ─── COMMUN ───────────────────────────────────────────────────────────────
 
@@ -130,7 +131,16 @@ public class AdminWebController {
     public Map<String, Object> analyseIa(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate debut,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fin,
-            @RequestParam(required = false) String periode) {
+            @RequestParam(required = false) String periode,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal User admin) {
+        Map<String, Object> out = new HashMap<>();
+        // Gating premium : l'analyse IA n'est disponible que pour les plans qui l'incluent (PRO+).
+        if (admin == null || !planService.estDisponible(admin.getEtablissement(),
+                ci.esatic.sigep.tenant.plan.Feature.ANALYSE_IA)) {
+            out.put("texte", "L'analyse IA est réservée à un plan supérieur (PRO ou Enterprise). "
+                    + "Passez à un plan supérieur pour l'activer.");
+            return out;
+        }
         LocalDate today = LocalDate.now();
         LocalDate d;
         LocalDate f;
@@ -145,7 +155,6 @@ public class AdminWebController {
             f = today.withDayOfMonth(today.lengthOfMonth());
         }
         Map<String, Object> stats = statsService.computeStatistiques(d, f);
-        Map<String, Object> out = new HashMap<>();
         out.put("texte", aiAnalyseService.analyser(d, f, stats));
         return out;
     }
@@ -393,7 +402,7 @@ public class AdminWebController {
         String deptParam = departement.isBlank() ? null : departement;
 
         Page<Enseignant> pageResult = enseignantRepository.searchEnseignants(
-                searchParam, deptParam, PageRequest.of(page, size));
+                searchParam, deptParam, ci.esatic.sigep.tenant.TenantContext.get(), PageRequest.of(page, size));
 
         model.addAttribute("enseignants", pageResult);
         model.addAttribute("currentPage", page);

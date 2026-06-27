@@ -1,7 +1,10 @@
 package ci.esatic.sigep.entity;
 
+import ci.esatic.sigep.tenant.TenantListener;
+import ci.esatic.sigep.tenant.TenantScoped;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Filter;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -9,12 +12,14 @@ import java.time.LocalTime;
 
 @Entity
 @Table(name = "demandes_rattrapage")
+@Filter(name = "tenantFilter", condition = "etablissement_id = :tenantId")
+@EntityListeners(TenantListener.class)
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class DemandeRattrapage {
+public class DemandeRattrapage implements TenantScoped {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -52,6 +57,10 @@ public class DemandeRattrapage {
     @OneToOne
     @JoinColumn(name = "seance_rattrapage_id")
     private Seance seanceRattrapage;
+
+    // Multi-tenant : établissement propriétaire (isolation + estampillage automatique).
+    @Column(name = "etablissement_id")
+    private Long etablissementId;
 
     @PrePersist
     protected void onCreate() {

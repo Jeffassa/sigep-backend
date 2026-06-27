@@ -1,18 +1,23 @@
 package ci.esatic.sigep.entity;
 
+import ci.esatic.sigep.tenant.TenantListener;
+import ci.esatic.sigep.tenant.TenantScoped;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Filter;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "emargements")
+@Filter(name = "tenantFilter", condition = "etablissement_id = :tenantId")
+@EntityListeners(TenantListener.class)
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Emargement {
+public class Emargement implements TenantScoped {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -45,4 +50,8 @@ public class Emargement {
     // Token QR scanné (pour audit). TEXT : le JWT du QR universel dépasse 255 caractères.
     @Column(columnDefinition = "TEXT")
     private String qrTokenUtilise;
+
+    // Multi-tenant : établissement propriétaire (isolation + estampillage automatique).
+    @Column(name = "etablissement_id")
+    private Long etablissementId;
 }

@@ -200,7 +200,7 @@ class EmargementServiceTest {
 
             assertThatThrownBy(() -> emargementService.emarger(USER_ID, buildRequest("t", SIGNATURE_VALIDE)))
                     .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("ne commence pas encore");
+                    .hasMessageContaining("Trop tot");
         }
     }
 
