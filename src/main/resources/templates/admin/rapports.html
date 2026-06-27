@@ -82,18 +82,27 @@
                 </div>
             </form>
             <div class="mt-3 flex justify-end gap-2">
-                <!-- Navigation GET pilotée par JS : utilise les dates ACTUELLEMENT saisies
-                     dans Du/Au (plus besoin de cliquer « Filtrer » d'abord). type=button =>
-                     ne soumet aucun formulaire (évite tout POST accidentel). -->
-                <button type="button" id="btnSynthese" th:data-url="@{/admin/rapports/synthese}"
-                   class="inline-flex items-center gap-1.5 px-4 h-10 rounded-xl border border-line text-[13px] font-medium hover:bg-ink hover:text-white transition">
-                    <span class="material-symbols-rounded text-[18px]">table_view</span> Synthèse (Excel)
-                </button>
-                <button type="button" id="btnZip" th:data-url="@{/admin/rapports/telecharger-zip}"
-                   th:if="${!rapports.isEmpty()}"
-                   class="btn btn-ink inline-flex items-center gap-1.5 px-4 h-10 rounded-xl text-[13px] font-medium">
-                    <span class="material-symbols-rounded text-[18px]">folder_zip</span> Tout télécharger (ZIP)
-                </button>
+                <!-- Exports avancés (Synthèse Excel + ZIP) : inclus dans les plans Pro/Enterprise.
+                     Navigation GET pilotée par JS (type=button => aucun POST accidentel). -->
+                <th:block th:if="${etablissementPlan != 'FREE'}">
+                    <button type="button" id="btnSynthese" th:data-url="@{/admin/rapports/synthese}"
+                       class="inline-flex items-center gap-1.5 px-4 h-10 rounded-xl border border-line text-[13px] font-medium hover:bg-ink hover:text-white transition">
+                        <span class="material-symbols-rounded text-[18px]">table_view</span> Synthèse (Excel)
+                    </button>
+                    <button type="button" id="btnZip" th:data-url="@{/admin/rapports/telecharger-zip}"
+                       th:if="${!rapports.isEmpty()}"
+                       class="btn btn-ink inline-flex items-center gap-1.5 px-4 h-10 rounded-xl text-[13px] font-medium">
+                        <span class="material-symbols-rounded text-[18px]">folder_zip</span> Tout télécharger (ZIP)
+                    </button>
+                </th:block>
+                <!-- Plan Free : verrou premium -->
+                <a th:if="${etablissementPlan == 'FREE'}"
+                   href="mailto:contact@sigep.store?subject=Passer%20au%20plan%20Pro"
+                   title="Exports avancés disponibles avec le plan Pro"
+                   class="inline-flex items-center gap-1.5 px-4 h-10 rounded-xl border border-line text-[13px] text-muted opacity-70">
+                    <span class="material-symbols-rounded text-[18px]">lock</span> Exports avancés
+                    <span class="font-mono text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-ink text-white">Pro</span>
+                </a>
             </div>
         </div>
         <div class="overflow-x-auto">

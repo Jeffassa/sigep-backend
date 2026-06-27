@@ -45,11 +45,19 @@
                 <span class="material-symbols-rounded">lightbulb</span>
                 <h2 class="font-serif text-[22px]">Analyse &amp; recommandations</h2>
             </div>
-            <button th:if="${aiEnabled}" id="btnAnalyseIa"
+            <!-- IA : actif pour les plans qui l'incluent (Pro/Enterprise) ; verrou premium sinon -->
+            <button th:if="${aiEnabled and etablissementPlan != 'FREE'}" id="btnAnalyseIa"
                     th:data-debut="${debut}" th:data-fin="${fin}"
                     class="btn btn-ink h-10 px-4 rounded-xl text-[13px] font-medium inline-flex items-center gap-1.5">
                 <span class="material-symbols-rounded text-[18px]">auto_awesome</span> Analyser avec l'IA
             </button>
+            <a th:if="${etablissementPlan == 'FREE'}"
+               href="mailto:contact@sigep.store?subject=Passer%20au%20plan%20Pro"
+               title="Disponible avec le plan Pro"
+               class="btn glass h-10 px-4 rounded-xl text-[13px] inline-flex items-center gap-1.5 text-muted opacity-70">
+                <span class="material-symbols-rounded text-[18px]">lock</span> Analyser avec l'IA
+                <span class="font-mono text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-ink text-white">Pro</span>
+            </a>
         </div>
         <div id="recosRules" class="space-y-2.5">
             <div th:each="r : ${recommandations}" class="flex items-start gap-3 p-3 rounded-2xl"
