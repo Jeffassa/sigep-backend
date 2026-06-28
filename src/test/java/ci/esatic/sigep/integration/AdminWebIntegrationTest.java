@@ -97,6 +97,14 @@ class AdminWebIntegrationTest {
 
     @Test
     @WithMockUser(username = "admin@esatic.ci", roles = "ADMIN")
+    void abonnement_devraitSeRendreCorrectement() throws Exception {
+        mockMvc.perform(get("/admin/abonnement"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Renouveler")));
+    }
+
+    @Test
+    @WithMockUser(username = "admin@esatic.ci", roles = "ADMIN")
     void enseignants_devraitSeRendreCorrectement() throws Exception {
         mockMvc.perform(get("/admin/enseignants"))
                 .andExpect(status().isOk())

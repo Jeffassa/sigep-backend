@@ -73,8 +73,7 @@
             <span th:if="${etablissementPlan != null}" th:text="${etablissementPlan}"
                   th:classappend="${etablissementPlan == 'FREE'} ? ' bg-ink text-white' : ' glass text-muted'"
                   class="hidden md:inline font-mono text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-full">PLAN</span>
-            <a th:if="${etablissementPlan == 'FREE'}"
-               href="mailto:assalendahjeanfrancois@gmail.com?subject=Passer%20au%20plan%20Pro"
+            <a th:if="${etablissementPlan == 'FREE'}" th:href="@{/admin/abonnement}"
                class="hidden md:inline-flex items-center gap-1 px-3 h-9 rounded-full text-[12px] btn glass text-muted hover:text-ink">
                 <span class="material-symbols-rounded text-[16px]">workspace_premium</span>Passer à Pro
             </a>
@@ -87,6 +86,14 @@
                      th:text="${etablissementNom != null and !#strings.isEmpty(etablissementNom)} ? ${#strings.toUpperCase(#strings.substring(etablissementNom,0,1))} : 'S'">A</div>
             </div>
         </div>
+    </div>
+    <!-- Rappel d'expiration d'abonnement (≤ 7 jours, ou expiré) -->
+    <div th:if="${abonnementRappel}"
+         class="border-t border-line px-5 md:px-8 py-2 text-[13px] flex items-center justify-center gap-2"
+         th:classappend="${abonnementExpire} ? ' bg-ink text-white' : ''">
+        <span class="material-symbols-rounded text-[18px]">schedule</span>
+        <span th:if="${abonnementExpire}">Votre abonnement a expiré.&nbsp;<a th:href="@{/admin/abonnement}" class="underline">Renouveler</a></span>
+        <span th:unless="${abonnementExpire}">Votre abonnement expire dans <strong th:text="${joursAvantExpiration}">0</strong>&nbsp;jour(s).&nbsp;<a th:href="@{/admin/abonnement}" class="underline">Renouveler</a></span>
     </div>
 </header>
 
@@ -146,6 +153,8 @@
                 <span class="material-symbols-rounded">monitoring</span><span>Statistiques</span></a>
             <a class="palette-item" th:href="@{/admin/alertes}" data-key="alertes emargements manquants rattrapages">
                 <span class="material-symbols-rounded">notifications</span><span>Alertes</span></a>
+            <a class="palette-item" th:href="@{/admin/abonnement}" data-key="abonnement plan facturation renouveler paiement expiration">
+                <span class="material-symbols-rounded">card_membership</span><span>Abonnement</span></a>
             <button type="button" class="palette-item" onclick="window.__logout&amp;&amp;window.__logout()"
                     data-key="deconnexion logout sortir quitter"
                     style="width:calc(100% - 16px);border:0;background:transparent;font:inherit;cursor:pointer;text-align:left;">

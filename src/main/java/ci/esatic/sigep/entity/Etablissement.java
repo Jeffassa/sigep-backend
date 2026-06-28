@@ -3,6 +3,7 @@ package ci.esatic.sigep.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
@@ -44,4 +45,11 @@ public class Etablissement {
 
     @Builder.Default
     private LocalDateTime dateCreation = LocalDateTime.now();
+
+    /**
+     * Fin de la période d'abonnement payée (plans Pro/Enterprise). {@code null} = pas
+     * d'expiration (plan Free gratuit, ou tenant illimité). Au-delà de cette date,
+     * l'accès au SaaS est bloqué jusqu'au renouvellement (cf. AbonnementService).
+     */
+    private LocalDate dateExpiration;
 }

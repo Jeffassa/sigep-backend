@@ -1,36 +1,80 @@
 package ci.esatic.sigep.controller.web;
 
+import ci.esatic.sigep.entity.Etablissement;
 import ci.esatic.sigep.entity.User;
+import ci.esatic.sigep.service.AbonnementService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
 
+import java.time.LocalDate;
+
 /**
- * Expose l'établissement (tenant) et le plan de l'admin connecté à TOUTES les pages
- * admin (Thymeleaf), pour personnaliser l'en-tête : nom de l'établissement, plan,
- * identité. Valeurs nulles hors session admin (pages publiques) → l'UI a un repli.
+ * Expose à TOUTES les pages admin (Thymeleaf) le contexte du tenant connecté :
+ * établissement, plan, identité, et état d'abonnement (expiré, jours restants).
+ * Valeurs nulles hors session admin (pages publiques) → l'UI a un repli.
  */
 @ControllerAdvice(basePackages = "ci.esatic.sigep.controller.web")
+@RequiredArgsConstructor
 public class TenantWebModelAdvice {
+
+    private final AbonnementService abonnementService;
+
+    /** Email du propriétaire de la plateforme (peut valider les renouvellements manuels). */
+    @Value("${app.platform.owner-email:assalendahjeanfrancois@gmail.com}")
+    private String ownerEmail;
 
     @ModelAttribute("etablissementNom")
     public String etablissementNom() {
-        User u = utilisateurCourant();
-        return (u != null && u.getEtablissement() != null) ? u.getEtablissement().getNom() : null;
+        Etablissement e = etablissementCourant();
+        return e != null ? e.getNom() : null;
     }
 
     @ModelAttribute("etablissementPlan")
     public String etablissementPlan() {
-        User u = utilisateurCourant();
-        return (u != null && u.getEtablissement() != null && u.getEtablissement().getPlan() != null)
-                ? u.getEtablissement().getPlan().name() : null;
+        Etablissement e = etablissementCourant();
+        return (e != null && e.getPlan() != null) ? e.getPlan().name() : null;
     }
 
     @ModelAttribute("adminEmail")
     public String adminEmail() {
         User u = utilisateurCourant();
         return u != null ? u.getEmail() : null;
+    }
+
+    @ModelAttribute("abonnementExpire")
+    public boolean abonnementExpire() {
+        return abonnementService.estExpire(etablissementCourant());
+    }
+
+    @ModelAttribute("abonnementRappel")
+    public boolean abonnementRappel() {
+        return abonnementService.doitRappeler(etablissementCourant());
+    }
+
+    @ModelAttribute("joursAvantExpiration")
+    public Long joursAvantExpiration() {
+        return abonnementService.joursAvantExpiration(etablissementCourant());
+    }
+
+    @ModelAttribute("dateExpiration")
+    public LocalDate dateExpiration() {
+        Etablissement e = etablissementCourant();
+        return e != null ? e.getDateExpiration() : null;
+    }
+
+    @ModelAttribute("estProprietairePlateforme")
+    public boolean estProprietairePlateforme() {
+        User u = utilisateurCourant();
+        return u != null && ownerEmail != null && ownerEmail.equalsIgnoreCase(u.getEmail());
+    }
+
+    private Etablissement etablissementCourant() {
+        User u = utilisateurCourant();
+        return u != null ? u.getEtablissement() : null;
     }
 
     private User utilisateurCourant() {
