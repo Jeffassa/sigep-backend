@@ -54,7 +54,7 @@
     <div class="max-w-[1240px] mx-auto h-16 px-5 md:px-8 flex items-center justify-between">
         <a th:href="@{/admin/dashboard}" class="flex items-baseline gap-2 group">
             <span class="font-serif text-[30px] leading-none tracking-tight">SIGEP</span>
-            <span class="hidden sm:inline font-mono text-[10px] uppercase tracking-[0.25em] text-muted mb-[2px]">ESATIC</span>
+            <span class="hidden sm:inline font-mono text-[10px] uppercase tracking-[0.2em] text-muted mb-[2px]">Solutions de Gestion</span>
         </a>
 
         <div class="flex items-center gap-3">
@@ -74,7 +74,7 @@
                   th:classappend="${etablissementPlan == 'FREE'} ? ' bg-ink text-white' : ' glass text-muted'"
                   class="hidden md:inline font-mono text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-full">PLAN</span>
             <a th:if="${etablissementPlan == 'FREE'}"
-               href="mailto:contact@sigep.store?subject=Passer%20au%20plan%20Pro"
+               href="mailto:assalendahjeanfrancois@gmail.com?subject=Passer%20au%20plan%20Pro"
                class="hidden md:inline-flex items-center gap-1 px-3 h-9 rounded-full text-[12px] btn glass text-muted hover:text-ink">
                 <span class="material-symbols-rounded text-[16px]">workspace_premium</span>Passer à Pro
             </a>
