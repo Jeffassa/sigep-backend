@@ -43,11 +43,11 @@ public class MailService {
         if (valide) {
             envoyer(email, "SIGEP — Votre compte est validé",
                     "Bonjour " + prenom + ",\n\nVotre compte enseignant SIGEP a été validé par l'administration. "
-                    + "Vous pouvez désormais vous connecter à l'application.\n\n— SIGEP / ESATIC");
+                    + "Vous pouvez désormais vous connecter à l'application.\n\n— SIGEP");
         } else {
             envoyer(email, "SIGEP — Votre compte a été refusé",
                     "Bonjour " + prenom + ",\n\nVotre demande de compte enseignant SIGEP a été refusée. "
-                    + "Veuillez contacter l'administration.\n\n— SIGEP / ESATIC");
+                    + "Veuillez contacter l'administration.\n\n— SIGEP");
         }
     }
 
@@ -57,10 +57,10 @@ public class MailService {
         if (accepte) {
             envoyer(email, "SIGEP — Rattrapage accepté",
                     "Bonjour " + prenom + ",\n\nVotre demande de rattrapage (" + matiere + ") a été ACCEPTÉE "
-                    + "pour le " + quand + ".\n\n— SIGEP / ESATIC");
+                    + "pour le " + quand + ".\n\n— SIGEP");
         } else {
             envoyer(email, "SIGEP — Rattrapage refusé",
-                    "Bonjour " + prenom + ",\n\nVotre demande de rattrapage (" + matiere + ") a été refusée.\n\n— SIGEP / ESATIC");
+                    "Bonjour " + prenom + ",\n\nVotre demande de rattrapage (" + matiere + ") a été refusée.\n\n— SIGEP");
         }
     }
 
@@ -70,7 +70,7 @@ public class MailService {
         String corps = "Bonjour " + prenom + ",\n\nVous avez " + lignes.size()
                 + " séance(s) non émargée(s) aujourd'hui :\n"
                 + String.join("\n", lignes)
-                + "\n\nPensez à régulariser votre émargement.\n\n— SIGEP / ESATIC";
+                + "\n\nPensez à régulariser votre émargement.\n\n— SIGEP";
         envoyer(email, "SIGEP — Séances non émargées", corps);
     }
 

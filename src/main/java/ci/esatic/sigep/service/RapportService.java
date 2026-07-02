@@ -131,7 +131,7 @@ public class RapportService {
         Paragraph titre = new Paragraph("SIGEP - Rapport d'Emargement", titleFont);
         titre.setAlignment(Element.ALIGN_CENTER);
         document.add(titre);
-        document.add(new Paragraph("ESATIC - Ecole Superieure Africaine des TIC", bodyFont));
+        document.add(new Paragraph("Solutions de Gestion des Enseignements", bodyFont));
         document.add(Chunk.NEWLINE);
 
         // Infos enseignant
