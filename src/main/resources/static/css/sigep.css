@@ -80,6 +80,14 @@ body::before {
 .reveal { animation: rise .7s var(--ease) both; }
 @media (prefers-reduced-motion: reduce) { .reveal { animation: none; } }
 
+/* ----- Fondu au défilement (pages publiques) : appliqué par JS via IntersectionObserver ----- */
+.reveal-scroll { opacity: 0; transform: translateY(26px);
+    transition: opacity .8s var(--ease), transform .8s var(--ease); }
+.reveal-scroll.is-visible { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+    .reveal-scroll { opacity: 1 !important; transform: none !important; transition: none; }
+}
+
 .btn { transition: transform .4s var(--ease), opacity .3s, background .3s; }
 .btn:active { transform: scale(.96); }
 .btn-ink { background: var(--c-ink); color: var(--c-bg); }
