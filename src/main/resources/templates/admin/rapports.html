@@ -97,9 +97,9 @@
                 </th:block>
                 <!-- Plan Free : verrou premium -->
                 <a th:if="${etablissementPlan == 'FREE'}"
-                   href="mailto:assalendahjeanfrancois@gmail.com?subject=Passer%20au%20plan%20Pro"
-                   title="Exports avancés disponibles avec le plan Pro"
-                   class="inline-flex items-center gap-1.5 px-4 h-10 rounded-xl border border-line text-[13px] text-muted opacity-70">
+                   th:href="@{/admin/abonnement}"
+                   title="Exports avancés disponibles avec le plan Pro — voir l'abonnement"
+                   class="btn btn-gold inline-flex items-center gap-1.5 px-4 h-10 rounded-xl text-[13px] font-medium">
                     <span class="material-symbols-rounded text-[18px]">lock</span> Exports avancés
                     <span class="font-mono text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-ink text-white">Pro</span>
                 </a>

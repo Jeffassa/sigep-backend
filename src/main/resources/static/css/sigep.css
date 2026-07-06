@@ -85,6 +85,14 @@ body::before {
 .btn-ink { background: var(--c-ink); color: var(--c-bg); }
 .btn-ink:hover { opacity:.88; }
 
+/* ----- Or « premium » : CTA d'upgrade (badge de plan Free, Passer à Pro, verrous) ----- */
+.btn-gold, .badge-gold {
+    background: linear-gradient(135deg, #f6df9c 0%, #d4af37 48%, #b8891f 100%);
+    color: #241a02;
+    border: 1px solid rgba(184, 137, 31, .55);
+}
+.btn-gold:hover { filter: brightness(1.07); }
+
 .dock {
     position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%);
     display: flex; align-items: flex-end; gap: 10px; padding: 10px 14px;
