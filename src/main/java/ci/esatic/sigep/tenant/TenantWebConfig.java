@@ -15,7 +15,11 @@ public class TenantWebConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(tenantInterceptor);
-        registry.addInterceptor(abonnementInterceptor).addPathPatterns("/admin/**");
+        // ORDRE CRITIQUE : le TenantInterceptor doit s'exécuter APRÈS OpenEntityManagerInView
+        // (ordre 0), sinon le filtre Hibernate est activé sur une session jetable puis perdu
+        // (les requêtes de la page tournent alors SANS isolation tenant). Ordres explicites
+        // pour ne pas dépendre de l'ordre d'enregistrement des configurations.
+        registry.addInterceptor(tenantInterceptor).order(1000);
+        registry.addInterceptor(abonnementInterceptor).addPathPatterns("/admin/**").order(1100);
     }
 }
