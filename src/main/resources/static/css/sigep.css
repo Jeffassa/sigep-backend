@@ -46,6 +46,13 @@ body {
     color: var(--c-ink); background: var(--c-bg); min-height: 100vh;
     transition: background .3s, color .3s;
 }
+
+/* ----- Pas de curseur d'écriture hors saisie : ni caret au clic, ni I-beam au survol
+   du texte. Les champs de formulaire gardent leur comportement normal, et les éléments
+   interactifs leur pointeur. La sélection de texte reste possible. ----- */
+body { caret-color: transparent; cursor: default; }
+input, textarea, [contenteditable="true"] { caret-color: auto; cursor: text; }
+a, button, select, summary, label[for], .btn, .dock-item, .palette-item { cursor: pointer; }
 body::before {
     content:''; position:fixed; inset:0; z-index:-1; pointer-events:none;
     background:
