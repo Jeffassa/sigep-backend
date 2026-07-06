@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- ================= TOP BAR PLATEFORME (super admin) ================= -->
+<header th:fragment="topbar(active)"
+        class="glass sticky top-0 z-50 border-x-0 border-t-0" style="border-radius:0;">
+    <div class="max-w-[1240px] mx-auto h-16 px-5 md:px-8 flex items-center justify-between gap-3">
+        <a th:href="@{/plateforme}" class="flex items-baseline gap-2 shrink-0">
+            <span class="font-serif text-[30px] leading-none tracking-tight">SIGEP</span>
+            <span class="hidden sm:inline font-mono text-[10px] uppercase tracking-[0.2em] text-muted mb-[2px]">Plateforme</span>
+        </a>
+
+        <!-- Navigation propre au super admin -->
+        <nav class="flex items-center gap-1" aria-label="Navigation plateforme">
+            <a th:href="@{/plateforme}"
+               th:classappend="${active=='dashboard'} ? ' bg-ink text-white' : ' glass text-muted hover:text-ink'"
+               class="btn flex items-center gap-1.5 px-3.5 h-10 rounded-full text-[13px] font-medium">
+                <span class="material-symbols-rounded text-[18px]">space_dashboard</span>
+                <span class="hidden md:inline">Vue d'ensemble</span>
+            </a>
+            <a th:href="@{/plateforme/abonnements}"
+               th:classappend="${active=='abonnements'} ? ' bg-ink text-white' : ' glass text-muted hover:text-ink'"
+               class="btn flex items-center gap-1.5 px-3.5 h-10 rounded-full text-[13px] font-medium">
+                <span class="material-symbols-rounded text-[18px]">card_membership</span>
+                <span class="hidden md:inline">Abonnements</span>
+            </a>
+        </nav>
+
+        <div class="flex items-center gap-3 shrink-0">
+            <button type="button" onclick="window.__toggleTheme&&window.__toggleTheme()" title="Mode clair / sombre"
+                    class="theme-toggle btn glass flex items-center justify-center w-10 h-10 rounded-full text-muted hover:text-ink">
+                <span class="material-symbols-rounded text-[20px] icon-moon">dark_mode</span>
+                <span class="material-symbols-rounded text-[20px] icon-sun">light_mode</span>
+            </button>
+            <div class="flex items-center gap-2.5 pl-3 border-l border-line">
+                <div class="text-right hidden md:block leading-tight">
+                    <p class="text-[13px] font-medium">Super administrateur</p>
+                    <p class="font-mono text-[10px] text-muted uppercase tracking-wider"
+                       th:text="${#authentication != null} ? ${#authentication.name} : ''">root</p>
+                </div>
+                <div class="w-9 h-9 rounded-full bg-ink text-white flex items-center justify-center">
+                    <span class="material-symbols-rounded text-[18px]">shield_person</span>
+                </div>
+            </div>
+            <button type="button" onclick="window.__logout&&window.__logout()" title="Déconnexion"
+                    class="btn glass flex items-center justify-center w-10 h-10 rounded-full text-muted hover:text-ink">
+                <span class="material-symbols-rounded text-[20px]">logout</span>
+            </button>
+            <form id="logoutForm" th:action="@{/admin/logout}" method="post" class="hidden"></form>
+        </div>
+    </div>
+</header>
+
+</body>
+</html>

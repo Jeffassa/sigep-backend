@@ -27,6 +27,10 @@ public interface EnseignantRepository extends JpaRepository<Enseignant, Long> {
     /** Nombre d'enseignants d'un établissement (pour le quota de plan). */
     long countByEtablissementId(Long etablissementId);
 
+    /** Effectif d'enseignants par établissement (vue plateforme du super admin). */
+    @Query("SELECT e.etablissementId, COUNT(e) FROM Enseignant e GROUP BY e.etablissementId")
+    List<Object[]> countParEtablissement();
+
     List<Enseignant> findByStatutOrderByNomAsc(StatutEnseignant statut);
 
     @Query(value = "SELECT * FROM enseignants e WHERE " +

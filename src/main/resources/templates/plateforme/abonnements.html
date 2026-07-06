@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('SIGEP | Plateforme · Abonnements')}"></head>
+<body>
+
+<div th:replace="~{plateforme/fragments :: topbar('abonnements')}"></div>
+
+<main class="max-w-[1240px] mx-auto px-5 md:px-8 py-10 pb-24">
+
+    <section class="mb-8" data-reveal>
+        <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mb-2">Plateforme · Facturation</p>
+        <h1 class="font-serif text-[clamp(34px,5vw,52px)] leading-[1.02] tracking-tight">Abonnements</h1>
+        <p class="text-[14px] text-muted mt-3 max-w-[640px]">Paiement reçu (Mobile Money) ? Validez ici : la période de l'établissement est prolongée immédiatement.</p>
+    </section>
+
+    <!-- Messages -->
+    <div th:if="${ok}" class="flex items-center gap-2 p-3 mb-4 rounded-xl text-[13px]"
+         style="background:rgba(10,10,10,.05);border:1px solid var(--c-line)">
+        <span class="material-symbols-rounded text-[18px]">check_circle</span><span th:text="${ok}"></span>
+    </div>
+    <div th:if="${erreur}" class="flex items-center gap-2 p-3 mb-4 rounded-xl text-[13px]"
+         style="background:rgba(186,26,26,.08);color:#7a0010;border:1px solid rgba(186,26,26,.2)">
+        <span class="material-symbols-rounded text-[18px]">error</span><span th:text="${erreur}"></span>
+    </div>
+
+    <!-- Renouvellements -->
+    <section class="glass rounded-3xl overflow-hidden" data-reveal>
+        <div class="px-7 py-5 border-b border-line flex items-center gap-2.5">
+            <span class="material-symbols-rounded">payments</span>
+            <h2 class="font-serif text-[22px]">Valider un renouvellement</h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-[14px]" data-mobile-keep="2">
+                <thead><tr class="border-b border-line font-mono text-[10px] uppercase tracking-wider text-muted">
+                    <th class="px-7 py-3">Établissement</th><th class="px-4 py-3">Plan</th>
+                    <th class="px-4 py-3">Expiration</th><th class="px-4 py-3 text-right">Prolonger</th>
+                </tr></thead>
+                <tbody>
+                <tr th:each="e : ${etablissements}" class="border-b border-line"
+                    th:classappend="${expires.contains(e.id)} ? ' bg-ink/5' : ''">
+                    <td class="px-7 py-3">
+                        <p class="font-medium" th:text="${e.nom}">Nom</p>
+                        <p class="font-mono text-[11px] text-muted" th:text="${e.slug}">slug</p>
+                    </td>
+                    <td class="px-4 py-3 font-mono text-[12px]" th:text="${e.plan}">PLAN</td>
+                    <td class="px-4 py-3">
+                        <span th:text="${e.dateExpiration != null} ? ${#temporals.format(e.dateExpiration,'dd/MM/yyyy')} : 'Illimité'">--</span>
+                        <span th:if="${expires.contains(e.id)}" class="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-ink text-white text-[11px]">Expiré</span>
+                    </td>
+                    <td class="px-4 py-3">
+                        <form th:action="@{/plateforme/abonnements/prolonger}" method="post" class="flex items-center justify-end gap-2">
+                            <input type="hidden" name="slug" th:value="${e.slug}"/>
+                            <select name="mois" class="h-9 px-2 rounded-lg bg-white/60 border border-line text-[13px]">
+                                <option value="1">+1 mois</option>
+                                <option value="3">+3 mois</option>
+                                <option value="12">+12 mois</option>
+                            </select>
+                            <button type="submit" class="btn btn-ink h-9 px-3 rounded-lg text-[12px] font-medium">Valider</button>
+                        </form>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(etablissements)}">
+                    <td colspan="4" class="px-7 py-8 text-center text-muted">Aucun établissement client pour le moment.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+<div th:replace="~{admin/fragments :: scripts}"></div>
+
+</body>
+</html>

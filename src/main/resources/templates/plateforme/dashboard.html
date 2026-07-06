@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('SIGEP | Plateforme')}"></head>
+<body>
+
+<div th:replace="~{plateforme/fragments :: topbar('dashboard')}"></div>
+
+<main class="max-w-[1240px] mx-auto px-5 md:px-8 py-10 pb-24">
+
+    <section class="mb-8" data-reveal>
+        <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mb-2">Plateforme · Vue d'ensemble</p>
+        <h1 class="font-serif text-[clamp(34px,5vw,52px)] leading-[1.02] tracking-tight">Établissements</h1>
+    </section>
+
+    <!-- KPIs -->
+    <section class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8" data-reveal>
+        <div class="glass rounded-3xl p-6">
+            <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Clients</p>
+            <p class="font-serif text-[38px] leading-none" th:text="${nbEtablissements}">0</p>
+        </div>
+        <div class="glass rounded-3xl p-6">
+            <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Actifs</p>
+            <p class="font-serif text-[38px] leading-none" th:text="${nbActifs}">0</p>
+        </div>
+        <div class="glass rounded-3xl p-6">
+            <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Abonnements expirés</p>
+            <p class="font-serif text-[38px] leading-none" th:text="${nbExpires}">0</p>
+        </div>
+        <div class="glass rounded-3xl p-6">
+            <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Par plan</p>
+            <div class="flex flex-wrap gap-x-3 gap-y-1 mt-1 font-mono text-[12px]">
+                <span>FREE&nbsp;<strong th:text="${parPlan['FREE']} ?: 0">0</strong></span>
+                <span>PRO&nbsp;<strong th:text="${parPlan['PRO']} ?: 0">0</strong></span>
+                <span>ENT&nbsp;<strong th:text="${parPlan['ENTERPRISE']} ?: 0">0</strong></span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Liste des établissements -->
+    <section class="glass rounded-3xl overflow-hidden" data-reveal>
+        <div class="px-7 py-5 border-b border-line flex items-center gap-2.5">
+            <span class="material-symbols-rounded">apartment</span>
+            <h2 class="font-serif text-[22px]">Tous les établissements</h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-[14px]" data-mobile-keep="2">
+                <thead><tr class="border-b border-line font-mono text-[10px] uppercase tracking-wider text-muted">
+                    <th class="px-7 py-3">Établissement</th>
+                    <th class="px-4 py-3">Plan</th>
+                    <th class="px-4 py-3">Enseignants</th>
+                    <th class="px-4 py-3">Expiration</th>
+                    <th class="px-4 py-3">Statut</th>
+                </tr></thead>
+                <tbody>
+                <tr th:each="e : ${etablissements}" class="border-b border-line">
+                    <td class="px-7 py-3">
+                        <p class="font-medium" th:text="${e.nom}">Nom</p>
+                        <p class="font-mono text-[11px] text-muted" th:text="${e.slug}">slug</p>
+                    </td>
+                    <td class="px-4 py-3"><span class="font-mono text-[11px] uppercase tracking-wider px-2.5 py-1 rounded-full glass" th:text="${e.plan}">PLAN</span></td>
+                    <td class="px-4 py-3 font-mono" th:text="${enseignantsParEtab[e.id]} ?: 0">0</td>
+                    <td class="px-4 py-3" th:text="${e.dateExpiration != null} ? ${#temporals.format(e.dateExpiration,'dd/MM/yyyy')} : 'Illimité'">--</td>
+                    <td class="px-4 py-3">
+                        <span th:if="${expires.contains(e.id)}" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-ink text-white text-[12px]">
+                            <span class="material-symbols-rounded text-[14px]">lock</span>Expiré</span>
+                        <span th:if="${!expires.contains(e.id) and e.actif}" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full glass text-[12px]">
+                            <span class="material-symbols-rounded text-[14px]">check_circle</span>Actif</span>
+                        <span th:if="${!expires.contains(e.id) and !e.actif}" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full glass text-muted text-[12px]">
+                            <span class="material-symbols-rounded text-[14px]">pause_circle</span>Suspendu</span>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(etablissements)}">
+                    <td colspan="5" class="px-7 py-8 text-center text-muted">Aucun établissement client pour le moment.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+<div th:replace="~{admin/fragments :: scripts}"></div>
+
+</body>
+</html>

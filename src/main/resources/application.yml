@@ -118,6 +118,14 @@ app:
     # est généré au démarrage et affiché UNE fois dans les logs (à changer ensuite).
     email: ${ADMIN_EMAIL:admin@esatic.ci}
     password: ${ADMIN_PASSWORD:}
+  platform:
+    # Propriétaire de la plateforme SaaS. owner-email : contact affiché aux établissements
+    # (page abonnement). admin-email/password : compte SUPER ADMIN (espace /plateforme),
+    # créé au démarrage s'il n'existe pas ; si le mot de passe est vide, il est généré
+    # et affiché UNE fois dans les logs.
+    owner-email: ${PLATFORM_OWNER_EMAIL:assalendahjeanfrancois@gmail.com}
+    admin-email: ${PLATFORM_ADMIN_EMAIL:${app.platform.owner-email}}
+    admin-password: ${PLATFORM_ADMIN_PASSWORD:}
   security:
     # Ne faire confiance au header X-Forwarded-For QUE derrière un reverse proxy de confiance.
     trust-forwarded-for: ${TRUST_FORWARDED_FOR:false}

@@ -65,9 +65,16 @@ public class TenantInterceptor implements HandlerInterceptor {
 
     private Long tenantCourant() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.getPrincipal() instanceof User user && user.getEtablissement() != null) {
-            return user.getEtablissement().getId();
+        if (auth == null || !(auth.getPrincipal() instanceof User user) || user.getEtablissement() == null) {
+            return null;
         }
-        return null;
+        // Super admin (plateforme) : vision globale, AUCUN filtre tenant — il gère tous les
+        // établissements depuis /plateforme et n'a pas accès à /admin/** (rôle distinct).
+        boolean superAdmin = auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_SUPER_ADMIN".equals(a.getAuthority()));
+        if (superAdmin) {
+            return null;
+        }
+        return user.getEtablissement().getId();
     }
 }
