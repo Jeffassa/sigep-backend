@@ -7,11 +7,7 @@
 
     <!-- Marque -->
     <div class="text-center mb-8">
-        <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-ink text-white mb-5 glass-card">
-            <span class="material-symbols-rounded fill">shield_person</span>
-        </div>
-        <h1 class="font-serif text-[52px] leading-none tracking-tight">SIGEP</h1>
-        <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mt-2">Administration · ESATIC</p>
+        <img th:src="@{/images/logo.png}" alt="SIGEP · Solutions de Gestion" class="mx-auto" style="max-height:120px;width:auto"/>
     </div>
 
     <!-- Carte -->
@@ -31,6 +27,12 @@
             <span class="material-symbols-rounded text-[18px]">check_circle</span>
             <span th:text="${logout}">Déconnecté.</span>
         </div>
+        <div th:if="${param.registered}"
+             class="flex items-center gap-2 p-3 mb-4 rounded-xl text-[13px]"
+             style="background:rgba(10,10,10,.05);border:1px solid var(--line)">
+            <span class="material-symbols-rounded text-[18px]">check_circle</span>
+            <span>Établissement créé. Connectez-vous avec vos identifiants.</span>
+        </div>
 
         <form th:action="@{/admin-login}" method="post" class="space-y-4">
             <div>
@@ -40,7 +42,7 @@
                     <input id="username" name="username" type="email" required
                            class="w-full h-12 pl-11 pr-4 rounded-xl bg-white/60 border border-line text-ink
                                   focus:outline-none focus:border-ink focus:ring-1 focus:ring-ink transition"
-                           placeholder="admin@esatic.ci"/>
+                           placeholder="admin@votre-etablissement.com"/>
                 </div>
             </div>
             <div>

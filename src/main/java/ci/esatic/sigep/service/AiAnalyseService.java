@@ -86,7 +86,7 @@ public class AiAnalyseService {
     }
 
     private static final String SYSTEME =
-            "Tu es un analyste de données pour l'administration de l'etablissement ESATIC. "
+            "Tu es un analyste de données pour l'administration d'un etablissement d'enseignement superieur. "
           + "On te fournit des statistiques d'emargement (presence des enseignants en cours). "
           + "Reponds en francais, de facon concise et actionnable, en deux parties :\n"
           + "1) SYNTHESE : 2 a 3 phrases sur la situation et la tendance.\n"

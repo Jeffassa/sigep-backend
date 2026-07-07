@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('SIGEP · Inscrire mon établissement')}"></head>
+<body class="min-h-screen flex items-center justify-center px-5 py-10">
+
+<main class="w-full max-w-[460px]" data-reveal>
+
+    <!-- Marque -->
+    <div class="text-center mb-8">
+        <a th:href="@{/}" class="inline-flex items-baseline gap-2">
+            <span class="font-serif text-[44px] leading-none tracking-tight">SIGEP</span>
+        </a>
+        <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mt-2">Créer l'espace de votre établissement</p>
+    </div>
+
+    <!-- Carte -->
+    <div class="glass-strong rounded-3xl p-8">
+        <h2 class="font-serif text-[26px] mb-1">Bienvenue.</h2>
+        <p class="text-[14px] text-muted mb-6">Commencez gratuitement — vous serez l'administrateur de l'espace.</p>
+
+        <div id="erreur" class="hidden items-center gap-2 p-3 mb-4 rounded-xl text-[13px]"
+             style="background:rgba(186,26,26,.08);color:#7a0010;border:1px solid rgba(186,26,26,.2)">
+            <span class="material-symbols-rounded text-[18px]">error</span>
+            <span id="erreurTexte">Erreur.</span>
+        </div>
+
+        <form id="form" class="space-y-4">
+            <div>
+                <label class="block font-mono text-[11px] uppercase tracking-wider text-muted mb-2">Nom de l'établissement</label>
+                <input id="nomEtablissement" type="text" required
+                       class="w-full h-12 px-4 rounded-xl bg-white/60 border border-line text-ink focus:outline-none focus:border-ink focus:ring-1 focus:ring-ink transition"
+                       placeholder="Université / Grande école"/>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block font-mono text-[11px] uppercase tracking-wider text-muted mb-2">Prénom</label>
+                    <input id="adminPrenom" type="text"
+                           class="w-full h-12 px-4 rounded-xl bg-white/60 border border-line text-ink focus:outline-none focus:border-ink focus:ring-1 focus:ring-ink transition"/>
+                </div>
+                <div>
+                    <label class="block font-mono text-[11px] uppercase tracking-wider text-muted mb-2">Nom</label>
+                    <input id="adminNom" type="text"
+                           class="w-full h-12 px-4 rounded-xl bg-white/60 border border-line text-ink focus:outline-none focus:border-ink focus:ring-1 focus:ring-ink transition"/>
+                </div>
+            </div>
+            <div>
+                <label class="block font-mono text-[11px] uppercase tracking-wider text-muted mb-2">Email administrateur</label>
+                <input id="adminEmail" type="email" required
+                       class="w-full h-12 px-4 rounded-xl bg-white/60 border border-line text-ink focus:outline-none focus:border-ink focus:ring-1 focus:ring-ink transition"
+                       placeholder="vous@etablissement.ci"/>
+            </div>
+            <div>
+                <label class="block font-mono text-[11px] uppercase tracking-wider text-muted mb-2">Mot de passe</label>
+                <input id="adminPassword" type="password" required minlength="8"
+                       class="w-full h-12 px-4 rounded-xl bg-white/60 border border-line text-ink focus:outline-none focus:border-ink focus:ring-1 focus:ring-ink transition"
+                       placeholder="8 caractères minimum"/>
+            </div>
+            <button id="submit" type="submit"
+                    class="btn btn-ink w-full h-12 rounded-xl font-medium flex items-center justify-center gap-2 mt-2">
+                Créer mon espace
+                <span class="material-symbols-rounded text-[20px]">arrow_forward</span>
+            </button>
+        </form>
+
+        <p class="text-center text-[13px] text-muted mt-6">
+            Déjà inscrit ? <a th:href="@{/admin-login}" class="text-ink underline underline-offset-2">Se connecter</a>
+        </p>
+    </div>
+</main>
+
+<script th:inline="none">
+(function () {
+    var form = document.getElementById('form');
+    var btn = document.getElementById('submit');
+    var box = document.getElementById('erreur');
+    var txt = document.getElementById('erreurTexte');
+
+    function erreur(message) {
+        txt.textContent = message;
+        box.classList.remove('hidden');
+        box.classList.add('flex');
+        btn.disabled = false;
+    }
+
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        box.classList.add('hidden');
+        btn.disabled = true;
+
+        var payload = {
+            nomEtablissement: document.getElementById('nomEtablissement').value.trim(),
+            adminPrenom: document.getElementById('adminPrenom').value.trim(),
+            adminNom: document.getElementById('adminNom').value.trim(),
+            adminEmail: document.getElementById('adminEmail').value.trim(),
+            adminPassword: document.getElementById('adminPassword').value
+        };
+
+        fetch('/api/saas/etablissements', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify(payload)
+        }).then(function (r) {
+            if (r.ok) { window.location = '/admin-login?registered=1'; return; }
+            if (r.status === 429) { erreur('Trop de tentatives. Réessayez dans une minute.'); return; }
+            return r.json().then(function (j) {
+                erreur((j && j.message) ? j.message : 'Inscription impossible pour le moment.');
+            }).catch(function () { erreur('Inscription impossible pour le moment.'); });
+        }).catch(function () { erreur('Serveur injoignable. Réessayez dans un instant.'); });
+    });
+})();
+</script>
+
+</body>
+</html>

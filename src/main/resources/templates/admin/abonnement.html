@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('SIGEP | Abonnement')}"></head>
+<body>
+
+<div th:replace="~{admin/fragments :: topbar('abonnement')}"></div>
+
+<main class="max-w-[920px] mx-auto px-5 md:px-8 py-10 pb-36">
+
+    <section class="mb-8" data-reveal>
+        <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mb-2">Facturation</p>
+        <h1 class="font-serif text-[clamp(34px,5vw,52px)] leading-[1.02] tracking-tight">Abonnement</h1>
+    </section>
+
+    <!-- Messages -->
+    <div th:if="${okAbo}" class="flex items-center gap-2 p-3 mb-4 rounded-xl text-[13px]"
+         style="background:rgba(10,10,10,.05);border:1px solid var(--c-line)">
+        <span class="material-symbols-rounded text-[18px]">check_circle</span><span th:text="${okAbo}"></span>
+    </div>
+    <div th:if="${erreurAbo}" class="flex items-center gap-2 p-3 mb-4 rounded-xl text-[13px]"
+         style="background:rgba(186,26,26,.08);color:#7a0010;border:1px solid rgba(186,26,26,.2)">
+        <span class="material-symbols-rounded text-[18px]">error</span><span th:text="${erreurAbo}"></span>
+    </div>
+
+    <!-- Statut de l'abonnement -->
+    <section class="glass rounded-3xl p-7 mb-6" data-reveal>
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div>
+                <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Plan</p>
+                <p class="font-serif text-[28px]" th:text="${etablissementPlan} ?: 'FREE'">PLAN</p>
+            </div>
+            <div>
+                <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Expiration</p>
+                <p class="font-serif text-[28px]"
+                   th:text="${dateExpiration != null} ? ${#temporals.format(dateExpiration,'dd/MM/yyyy')} : 'Illimité'">--</p>
+            </div>
+            <div>
+                <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Statut</p>
+                <span th:if="${abonnementExpire}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-ink text-white text-[13px]">
+                    <span class="material-symbols-rounded text-[18px]">lock</span> Expiré
+                </span>
+                <span th:unless="${abonnementExpire}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full glass text-[13px]">
+                    <span class="material-symbols-rounded text-[18px]">check_circle</span>
+                    <span th:if="${joursAvantExpiration != null}" th:text="'Actif · ' + ${joursAvantExpiration} + ' j restants'">Actif</span>
+                    <span th:unless="${joursAvantExpiration != null}">Actif</span>
+                </span>
+            </div>
+        </div>
+
+        <div th:if="${abonnementExpire}" class="mt-6 p-4 rounded-2xl text-[14px]"
+             style="background:rgba(186,26,26,.06);border:1px solid rgba(186,26,26,.18)">
+            Votre abonnement a expiré : l'accès à l'espace est suspendu jusqu'au renouvellement.
+        </div>
+    </section>
+
+    <!-- Renouvellement (paiement manuel) -->
+    <section class="glass rounded-3xl p-7 mb-6" data-reveal>
+        <div class="flex items-center gap-2.5 mb-4">
+            <span class="material-symbols-rounded">payments</span>
+            <h2 class="font-serif text-[22px]">Renouveler — 10 000 FCFA / mois</h2>
+        </div>
+        <ol class="space-y-2.5 text-[14px] text-muted list-decimal pl-5">
+            <li>Réglez <strong class="text-ink">10 000 FCFA</strong> par Mobile Money au <strong class="text-ink">+225 07 11 08 12 47</strong> (Orange / MTN / Moov / Wave).</li>
+            <li>Cliquez sur « Demander l'activation » : on valide votre paiement et on prolonge votre période.</li>
+        </ol>
+        <a class="btn btn-ink inline-flex items-center gap-2 h-11 px-5 rounded-xl mt-6 font-medium"
+           th:href="'mailto:' + ${ownerEmail} + '?subject=Activation%20abonnement%20SIGEP&body=Etablissement%20:%20' + ${etablissementNom}">
+            <span class="material-symbols-rounded text-[18px]">mail</span> Demander l'activation
+        </a>
+        <p class="text-[12px] text-muted mt-3">Paiement en ligne (Mobile Money / carte) à venir.</p>
+    </section>
+
+    <!-- Espace propriétaire : valider les renouvellements -->
+    <section th:if="${tousEtablissements != null}" class="glass rounded-3xl overflow-hidden" data-reveal>
+        <div class="px-7 py-5 border-b border-line flex items-center gap-2.5">
+            <span class="material-symbols-rounded">admin_panel_settings</span>
+            <h2 class="font-serif text-[22px]">Renouvellements (propriétaire)</h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-[14px]">
+                <thead><tr class="border-b border-line font-mono text-[10px] uppercase tracking-wider text-muted">
+                    <th class="px-7 py-3">Établissement</th><th class="px-4 py-3">Plan</th>
+                    <th class="px-4 py-3">Expiration</th><th class="px-4 py-3 text-right">Prolonger</th>
+                </tr></thead>
+                <tbody>
+                <tr th:each="e : ${tousEtablissements}" class="border-b border-line">
+                    <td class="px-7 py-3" th:text="${e.nom}">Nom</td>
+                    <td class="px-4 py-3 font-mono text-[12px]" th:text="${e.plan}">PLAN</td>
+                    <td class="px-4 py-3" th:text="${e.dateExpiration != null} ? ${#temporals.format(e.dateExpiration,'dd/MM/yyyy')} : 'Illimité'">--</td>
+                    <td class="px-4 py-3">
+                        <form th:action="@{/admin/abonnement/prolonger}" method="post" class="flex items-center justify-end gap-2">
+                            <input type="hidden" name="slug" th:value="${e.slug}"/>
+                            <select name="mois" class="h-9 px-2 rounded-lg bg-white/60 border border-line text-[13px]">
+                                <option value="1">+1 mois</option>
+                                <option value="3">+3 mois</option>
+                                <option value="12">+12 mois</option>
+                            </select>
+                            <button type="submit" class="btn btn-ink h-9 px-3 rounded-lg text-[12px] font-medium">Valider</button>
+                        </form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+<div th:replace="~{admin/fragments :: dock('abonnement')}"></div>
+<div th:replace="~{admin/fragments :: palette}"></div>
+<div th:replace="~{admin/fragments :: scripts}"></div>
+
+</body>
+</html>
