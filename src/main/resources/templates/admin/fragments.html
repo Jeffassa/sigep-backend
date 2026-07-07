@@ -71,10 +71,10 @@
             </button>
             <!-- Plan de l'établissement (+ « Passer à Pro » si Free) -->
             <span th:if="${etablissementPlan != null}" th:text="${etablissementPlan}"
-                  th:classappend="${etablissementPlan == 'FREE'} ? ' bg-ink text-white' : ' glass text-muted'"
+                  th:classappend="${etablissementPlan == 'FREE'} ? ' badge-gold' : ' glass text-muted'"
                   class="hidden md:inline font-mono text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-full">PLAN</span>
             <a th:if="${etablissementPlan == 'FREE'}" th:href="@{/admin/abonnement}"
-               class="hidden md:inline-flex items-center gap-1 px-3 h-9 rounded-full text-[12px] btn glass text-muted hover:text-ink">
+               class="hidden md:inline-flex items-center gap-1 px-3 h-9 rounded-full text-[12px] font-medium btn btn-gold">
                 <span class="material-symbols-rounded text-[16px]">workspace_premium</span>Passer à Pro
             </a>
             <div class="flex items-center gap-2.5 pl-3 border-l border-line">

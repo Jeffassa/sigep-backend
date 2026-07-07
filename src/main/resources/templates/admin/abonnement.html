@@ -70,39 +70,6 @@
         <p class="text-[12px] text-muted mt-3">Paiement en ligne (Mobile Money / carte) à venir.</p>
     </section>
 
-    <!-- Espace propriétaire : valider les renouvellements -->
-    <section th:if="${tousEtablissements != null}" class="glass rounded-3xl overflow-hidden" data-reveal>
-        <div class="px-7 py-5 border-b border-line flex items-center gap-2.5">
-            <span class="material-symbols-rounded">admin_panel_settings</span>
-            <h2 class="font-serif text-[22px]">Renouvellements (propriétaire)</h2>
-        </div>
-        <div class="overflow-x-auto">
-            <table class="w-full text-left text-[14px]">
-                <thead><tr class="border-b border-line font-mono text-[10px] uppercase tracking-wider text-muted">
-                    <th class="px-7 py-3">Établissement</th><th class="px-4 py-3">Plan</th>
-                    <th class="px-4 py-3">Expiration</th><th class="px-4 py-3 text-right">Prolonger</th>
-                </tr></thead>
-                <tbody>
-                <tr th:each="e : ${tousEtablissements}" class="border-b border-line">
-                    <td class="px-7 py-3" th:text="${e.nom}">Nom</td>
-                    <td class="px-4 py-3 font-mono text-[12px]" th:text="${e.plan}">PLAN</td>
-                    <td class="px-4 py-3" th:text="${e.dateExpiration != null} ? ${#temporals.format(e.dateExpiration,'dd/MM/yyyy')} : 'Illimité'">--</td>
-                    <td class="px-4 py-3">
-                        <form th:action="@{/admin/abonnement/prolonger}" method="post" class="flex items-center justify-end gap-2">
-                            <input type="hidden" name="slug" th:value="${e.slug}"/>
-                            <select name="mois" class="h-9 px-2 rounded-lg bg-white/60 border border-line text-[13px]">
-                                <option value="1">+1 mois</option>
-                                <option value="3">+3 mois</option>
-                                <option value="12">+12 mois</option>
-                            </select>
-                            <button type="submit" class="btn btn-ink h-9 px-3 rounded-lg text-[12px] font-medium">Valider</button>
-                        </form>
-                    </td>
-                </tr>
-                </tbody>
-            </table>
-        </div>
-    </section>
 </main>
 
 <div th:replace="~{admin/fragments :: dock('abonnement')}"></div>

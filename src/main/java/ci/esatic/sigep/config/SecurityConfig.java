@@ -40,16 +40,23 @@ public class SecurityConfig {
     @Order(1)
     public SecurityFilterChain adminWebFilterChain(HttpSecurity http) throws Exception {
         http
-                .securityMatcher("/admin/**", "/admin-login")
+                .securityMatcher("/admin/**", "/admin-login", "/plateforme/**")
                 // CSRF activé : Thymeleaf injecte automatiquement le token dans th:action
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/admin-login").permitAll()
+                        // Espace plateforme (super admin) : strictement séparé de l'admin établissement
+                        .requestMatchers("/plateforme/**").hasRole("SUPER_ADMIN")
                         .anyRequest().hasRole("ADMIN")
                 )
                 .formLogin(form -> form
                         .loginPage("/admin-login")
                         .loginProcessingUrl("/admin-login")
-                        .defaultSuccessUrl("/admin/dashboard", true)
+                        // Redirection selon le rôle : super admin → espace plateforme, admin → dashboard
+                        .successHandler((request, response, authentication) -> {
+                            boolean superAdmin = authentication.getAuthorities().stream()
+                                    .anyMatch(a -> "ROLE_SUPER_ADMIN".equals(a.getAuthority()));
+                            response.sendRedirect(superAdmin ? "/plateforme" : "/admin/dashboard");
+                        })
                         .failureUrl("/admin-login?error=true")
                 )
                 .logout(logout -> logout

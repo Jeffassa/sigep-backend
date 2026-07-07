@@ -32,17 +32,28 @@ public class DataInitializer implements CommandLineRunner {
     /** Slug du tenant par défaut (rattache les données du mode mono-établissement actuel). */
     private static final String SLUG_DEFAUT = "default";
 
+    /** Slug de l'établissement technique « plateforme » : héberge UNIQUEMENT le compte
+     *  super admin (users.etablissement_id est NOT NULL). Jamais listé comme client. */
+    public static final String SLUG_PLATEFORME = "plateforme";
+
     @Value("${app.admin.email:admin@esatic.ci}")
     private String adminEmail;
 
     @Value("${app.admin.password:}")
     private String adminPassword;
 
+    @Value("${app.platform.admin-email:${app.platform.owner-email:assalendahjeanfrancois@gmail.com}}")
+    private String platformAdminEmail;
+
+    @Value("${app.platform.admin-password:}")
+    private String platformAdminPassword;
+
     @Override
     public void run(String... args) {
         initRoles();
         Etablissement tenantParDefaut = initEtablissementParDefaut();
         initAdminUser(tenantParDefaut);
+        initSuperAdmin();
     }
 
     /**
@@ -111,6 +122,56 @@ public class DataInitializer implements CommandLineRunner {
             log.warn("====================================================================");
         } else {
             log.info("Admin créé → email: {}", adminEmail);
+        }
+    }
+
+    /**
+     * Compte SUPER ADMIN (propriétaire de la plateforme) : rôle ROLE_SUPER_ADMIN, rattaché à
+     * l'établissement technique « plateforme » (jamais un tenant client). Son espace est
+     * /plateforme. Si l'email est déjà pris par un compte établissement, on n'y touche PAS
+     * (on journalise) : définir PLATFORM_ADMIN_EMAIL pour en choisir un autre.
+     */
+    private void initSuperAdmin() {
+        Etablissement plateforme = etablissementRepository.findBySlug(SLUG_PLATEFORME).orElseGet(() ->
+                etablissementRepository.save(Etablissement.builder()
+                        .nom("SIGEP Plateforme")
+                        .slug(SLUG_PLATEFORME)
+                        .plan(Plan.ENTERPRISE)
+                        .maxEnseignants(0)
+                        .build()));
+
+        Role superRole = roleRepository.findByName(ERole.ROLE_SUPER_ADMIN).orElseThrow();
+
+        var existant = userRepository.findByEmail(platformAdminEmail).orElse(null);
+        if (existant != null) {
+            boolean dejaSuper = existant.getRoles().stream()
+                    .anyMatch(r -> r.getName() == ERole.ROLE_SUPER_ADMIN);
+            if (!dejaSuper) {
+                log.warn("Super admin NON créé : {} appartient déjà à un compte établissement. "
+                        + "Définissez PLATFORM_ADMIN_EMAIL avec un autre email.", platformAdminEmail);
+            }
+            return;
+        }
+
+        boolean genere = platformAdminPassword == null || platformAdminPassword.isBlank();
+        String motDePasse = genere ? genererMotDePasseAleatoire() : platformAdminPassword;
+
+        userRepository.save(User.builder()
+                .email(platformAdminEmail)
+                .password(passwordEncoder.encode(motDePasse))
+                .roles(Set.of(superRole))
+                .etablissement(plateforme)
+                .build());
+
+        if (genere) {
+            log.warn("====================================================================");
+            log.warn("  COMPTE SUPER ADMIN CREE — mot de passe genere aleatoirement :");
+            log.warn("  email    : {}", platformAdminEmail);
+            log.warn("  password : {}", motDePasse);
+            log.warn("  >> Notez-le et changez-le. Definissez PLATFORM_ADMIN_PASSWORD pour le fixer.");
+            log.warn("====================================================================");
+        } else {
+            log.info("Super admin créé → email: {}", platformAdminEmail);
         }
     }
 
