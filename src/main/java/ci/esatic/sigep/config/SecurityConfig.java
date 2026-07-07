@@ -28,7 +28,7 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final UserDetailsServiceImpl userDetailsService;
-    private final ci.esatic.sigep.security.LoginRateLimitFilter loginRateLimitFilter;
+    private final ci.esatic.sigep.security.RateLimitFilter rateLimitFilter;
 
     /** SECURITE : en production, exiger HTTPS (rejette/redirige le trafic non sécurisé).
      *  Désactivé par défaut pour ne pas casser le dev en HTTP local. */
@@ -65,7 +65,9 @@ public class SecurityConfig {
                         .invalidateHttpSession(true)
                         .clearAuthentication(true)
                 )
-                .authenticationProvider(authenticationProvider());
+                .authenticationProvider(authenticationProvider())
+                // Rate-limiting (anti-bruteforce du login admin + filet global) avant l'auth form.
+                .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class);
         if (requireHttps) {
             http.requiresChannel(c -> c.anyRequest().requiresSecure());
         }
@@ -102,7 +104,7 @@ public class SecurityConfig {
                     response.getWriter().write("{\"success\":false,\"message\":\"Authentification requise\"}");
                 }))
                 .authenticationProvider(authenticationProvider())
-                .addFilterBefore(loginRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         if (requireHttps) {
