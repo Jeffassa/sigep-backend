@@ -7,6 +7,11 @@ spring:
   # (mvnw spring-boot:run) — voir pom.xml. Les tests utilisent @ActiveProfiles("test").
   application:
     name: sigep-backend
+  servlet:
+    multipart:
+      # Borne la taille des uploads (import Excel) pour éviter un épuisement mémoire.
+      max-file-size: ${MULTIPART_MAX_FILE_SIZE:10MB}
+      max-request-size: ${MULTIPART_MAX_REQUEST_SIZE:12MB}
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/sigep_db}
     username: ${DB_USERNAME:postgres}
@@ -59,6 +64,19 @@ server:
   # Derrière un reverse proxy qui termine le TLS, respecter X-Forwarded-Proto/Host
   # (sinon l'app croit être en HTTP). Sans effet en accès direct (dev).
   forward-headers-strategy: framework
+  # Borne la taille des en-têtes HTTP (anti-abus). 16 Ko suffisent largement.
+  max-http-request-header-size: ${HTTP_MAX_HEADER_SIZE:16KB}
+  tomcat:
+    # Durcissement anti-flood : échouer vite plutôt que d'empiler indéfiniment les connexions.
+    threads:
+      max: ${TOMCAT_MAX_THREADS:100}
+    max-connections: ${TOMCAT_MAX_CONNECTIONS:2000}
+    accept-count: ${TOMCAT_ACCEPT_COUNT:100}
+    # Délai max pour recevoir la ligne de requête + en-têtes (anti-slowloris).
+    connection-timeout: ${TOMCAT_CONNECTION_TIMEOUT:10s}
+    # Borne le corps des POST de formulaire et la quantité « avalée » sur requête rejetée.
+    max-http-form-post-size: ${TOMCAT_MAX_POST_SIZE:2MB}
+    max-swallow-size: ${TOMCAT_MAX_SWALLOW_SIZE:2MB}
 
 # Observabilité (Spring Boot Actuator)
 management:
@@ -125,7 +143,15 @@ app:
     # Nécessite un reverse proxy TLS + forward-headers-strategy. Laisser false en dev (HTTP local).
     require-https: ${APP_SECURITY_REQUIRE_HTTPS:false}
     login-rate-limit:
-      # Limite anti-bruteforce par IP (fenêtre 1 min). Budgets séparés login / refresh.
+      # Rate-limiting par IP (fenêtre 1 min, réponse HTTP 429). Budgets stricts par endpoint
+      # sensible + un budget global anti-flood, toutes routes. Voir RateLimitFilter.
       enabled: ${LOGIN_RATE_LIMIT_ENABLED:true}
       max-login: ${LOGIN_RATE_LIMIT_MAX:5}
       max-refresh: ${REFRESH_RATE_LIMIT_MAX:30}
+      max-signup: ${SIGNUP_RATE_LIMIT_MAX:5}
+      max-admin-login: ${ADMIN_LOGIN_RATE_LIMIT_MAX:10}
+      # Budget global par IP, toutes routes (0 = désactivé). Généreux : plusieurs utilisateurs
+      # partagent souvent une même IP (NAT d'établissement).
+      max-global: ${RATE_LIMIT_MAX_GLOBAL:300}
+      # Plafond de clés en mémoire (garde anti-épuisement du limiteur lui-même).
+      max-keys: ${RATE_LIMIT_MAX_KEYS:50000}
