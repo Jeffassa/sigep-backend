@@ -476,8 +476,14 @@ public class AdminWebController {
     public String importerEnseignants(@RequestParam("fichier") MultipartFile fichier, RedirectAttributes ra) {
         try {
             Map<String, Object> r = importService.importerEnseignants(fichier);
-            ra.addFlashAttribute("success",
-                    r.get("importes") + " enseignant(s) importé(s), " + r.get("ignores") + " ignoré(s) (déjà présents).");
+            String message = r.get("importes") + " enseignant(s) importé(s), "
+                    + r.get("ignores") + " ignoré(s) (déjà présents).";
+            @SuppressWarnings("unchecked")
+            java.util.List<Integer> invalides = (java.util.List<Integer>) r.get("lignesInvalides");
+            if (invalides != null && !invalides.isEmpty()) {
+                message += " " + invalides.size() + " ligne(s) incomplète(s) non importée(s) : " + invalides + ".";
+            }
+            ra.addFlashAttribute("success", message);
         } catch (Exception e) {
             ra.addFlashAttribute("error", "Import impossible : " + e.getMessage());
         }

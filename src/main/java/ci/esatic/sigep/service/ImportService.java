@@ -48,24 +48,44 @@ public class ImportService {
         return result;
     }
 
+    /** Colonnes attendues (1re ligne) du fichier annuaire enseignants. */
+    private static final String[] COLONNES_ENSEIGNANTS = {"MATRICULE", "NOM", "PRENOM", "DEPARTEMENT", "GRADE"};
+
     // Import admin d'enseignants (annuaire) : crée les profils SANS compte (user=null, statut PENDING).
     // Les enseignants s'inscrivent ensuite eux-mêmes via leur matricule, puis l'admin valide.
-    // Colonnes : MATRICULE | NOM | PRENOM | DEPARTEMENT | GRADE
+    // Colonnes : MATRICULE | NOM | PRENOM | DEPARTEMENT | GRADE — le fichier est REFUSÉ si
+    // l'en-tête ne correspond pas (sinon n'importe quel fichier créerait des données absurdes).
     @Transactional
     public Map<String, Object> importerEnseignants(MultipartFile file) throws Exception {
         int importes = 0, ignores = 0;
-        try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
+        List<Integer> lignesInvalides = new ArrayList<>();
+        Workbook workbook;
+        try {
+            workbook = new XSSFWorkbook(file.getInputStream());
+        } catch (Exception ex) {
+            throw new IllegalArgumentException("fichier illisible — un fichier Excel (.xlsx) est attendu.");
+        }
+        try (workbook) {
             Sheet sheet = workbook.getSheetAt(0);
+            verifierEnteteEnseignants(sheet);
             for (int i = 1; i <= sheet.getLastRowNum(); i++) {
                 Row row = sheet.getRow(i);
                 if (row == null) continue;
                 String matricule = getCellValue(row, 0);
-                if (matricule.isBlank()) continue;
+                String nom = getCellValue(row, 1);
+                String prenom = getCellValue(row, 2);
+                // Ligne entièrement vide : simplement sautée.
+                if (matricule.isBlank() && nom.isBlank() && prenom.isBlank()) continue;
+                // Ligne incomplète (identité obligatoire) : comptée comme invalide.
+                if (matricule.isBlank() || nom.isBlank() || prenom.isBlank()) {
+                    lignesInvalides.add(i + 1);
+                    continue;
+                }
                 if (enseignantRepository.existsByMatricule(matricule)) { ignores++; continue; }
                 Enseignant e = Enseignant.builder()
                         .matricule(matricule)
-                        .nom(getCellValue(row, 1))
-                        .prenom(getCellValue(row, 2))
+                        .nom(nom)
+                        .prenom(prenom)
                         .departement(emptyToNull(getCellValue(row, 3)))
                         .grade(emptyToNull(getCellValue(row, 4)))
                         .build();
@@ -73,11 +93,45 @@ public class ImportService {
                 importes++;
             }
         }
-        log.info("Import enseignants : {} crees, {} ignores (matricule deja existant)", importes, ignores);
+        log.info("Import enseignants : {} crees, {} ignores (matricule existant), {} ligne(s) invalide(s) {}",
+                importes, ignores, lignesInvalides.size(), lignesInvalides);
         Map<String, Object> result = new HashMap<>();
         result.put("importes", importes);
         result.put("ignores", ignores);
+        result.put("lignesInvalides", lignesInvalides);
         return result;
+    }
+
+    /**
+     * Refuse le fichier si sa 1re ligne ne porte pas les en-têtes attendus (MATRICULE | NOM |
+     * PRENOM obligatoires ; DEPARTEMENT | GRADE tolérés absents mais refusés si différents).
+     * Comparaison insensible à la casse et aux accents (« Prénom » accepté pour PRENOM).
+     */
+    private void verifierEnteteEnseignants(Sheet sheet) {
+        String attendu = String.join(" | ", COLONNES_ENSEIGNANTS);
+        Row entete = sheet.getRow(0);
+        if (entete == null) {
+            throw new IllegalArgumentException("fichier non conforme — 1re ligne d'en-têtes absente. "
+                    + "Colonnes attendues : " + attendu + ".");
+        }
+        for (int c = 0; c < COLONNES_ENSEIGNANTS.length; c++) {
+            String trouve = normaliserEntete(getCellValue(entete, c));
+            boolean obligatoire = c < 3; // matricule, nom, prénom
+            if ((obligatoire && !trouve.equals(COLONNES_ENSEIGNANTS[c]))
+                    || (!obligatoire && !trouve.isEmpty() && !trouve.equals(COLONNES_ENSEIGNANTS[c]))) {
+                throw new IllegalArgumentException("fichier non conforme — colonne " + (c + 1)
+                        + " : « " + getCellValue(entete, c) + " » au lieu de « " + COLONNES_ENSEIGNANTS[c]
+                        + " ». Colonnes attendues : " + attendu + ".");
+            }
+        }
+    }
+
+    /** Normalise un libellé d'en-tête : accents retirés, majuscules, lettres uniquement. */
+    private String normaliserEntete(String s) {
+        if (s == null) return "";
+        String sansAccents = java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "");
+        return sansAccents.toUpperCase(Locale.ROOT).replaceAll("[^A-Z_]", "");
     }
 
     private String emptyToNull(String s) {
