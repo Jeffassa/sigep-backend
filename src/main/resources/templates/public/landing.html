@@ -6,9 +6,9 @@
 <!-- ===================== TOP BAR ===================== -->
 <header class="glass sticky top-0 z-50 border-x-0 border-t-0" style="border-radius:0;">
     <div class="max-w-[1180px] mx-auto h-16 px-5 md:px-8 flex items-center justify-between">
-        <a th:href="@{/}" class="flex items-baseline gap-2">
-            <span class="font-serif text-[28px] leading-none tracking-tight">SIGEP</span>
-            <span class="hidden sm:inline font-mono text-[10px] uppercase tracking-[0.2em] text-muted mb-[2px]">Solutions de Gestion</span>
+        <a th:href="@{/}" class="flex items-center gap-2.5">
+            <img th:src="@{/images/logo.png}" alt="SIGEP" class="logo-nav h-10 w-auto"/>
+            <span class="hidden sm:inline font-mono text-[10px] uppercase tracking-[0.2em] text-muted">Solutions de Gestion</span>
         </a>
         <nav class="flex items-center gap-2 md:gap-3">
             <a href="#fonctionnement" class="hidden md:inline px-3 h-10 leading-10 text-[13px] text-muted hover:text-ink">Fonctionnement</a>
@@ -24,7 +24,6 @@
 
     <!-- ===================== HERO ===================== -->
     <section class="max-w-[1180px] mx-auto px-5 md:px-8 pt-16 md:pt-24 pb-10 text-center" data-reveal>
-        <img th:src="@{/images/logo.png}" alt="SIGEP" class="mx-auto mb-6" style="max-height:84px;width:auto"/>
         <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mb-5">Pour universités privées & grandes écoles</p>
         <h1 class="font-serif text-[44px] sm:text-[66px] leading-[1.02] tracking-tight max-w-[880px] mx-auto">
             La preuve des heures réellement faites, sans paperasse.
