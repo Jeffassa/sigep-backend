@@ -88,8 +88,10 @@ public class SecurityConfig {
                         // Onboarding SaaS : inscription publique d'un établissement (rate-limité)
                         .requestMatchers("/api/saas/**").permitAll()
                         .requestMatchers("/api/qr/display/**").permitAll()
-                        // Sondes de supervision publiques ; metrics reste authentifié
+                        // Sondes de supervision publiques ; le reste de l'actuator (metrics…)
+                        // réservé aux admins — pas exposé aux enseignants authentifiés.
                         .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
+                        .requestMatchers("/actuator/**").hasRole("ADMIN")
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
