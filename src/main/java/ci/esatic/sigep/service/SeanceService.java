@@ -52,6 +52,21 @@ public class SeanceService {
                 .orElseThrow(() -> new ResourceNotFoundException("Seance", "id", id)));
     }
 
+    /**
+     * SECURITE (anti-IDOR) : détail d'une séance réservé à SON enseignant. Renvoie 404 si la
+     * séance appartient à un autre enseignant — on ne révèle pas l'existence de la séance d'un
+     * collègue. Le filtre tenant isole déjà par établissement ; ceci ajoute l'isolation par
+     * enseignant à l'intérieur d'un même établissement.
+     */
+    public SeanceResponse getByIdPourEnseignant(Long id, Long enseignantId) {
+        Seance seance = seanceRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Seance", "id", id));
+        if (seance.getEnseignant() == null || !seance.getEnseignant().getId().equals(enseignantId)) {
+            throw new ResourceNotFoundException("Seance", "id", id);
+        }
+        return toResponse(seance);
+    }
+
     // Vue admin : toutes les séances de tous les enseignants
     public List<SeanceResponse> getSeancesAdminJour(LocalDate date) {
         return seanceRepository.findAllByDateOrderByHeureDebutAsc(date)

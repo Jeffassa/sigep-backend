@@ -63,10 +63,17 @@ public class SeanceController {
         return ResponseEntity.ok(ApiResponse.success("Seances du " + date, seances));
     }
 
-    // Détail d'une séance
+    // Détail d'une séance : réservé à SON enseignant (anti-IDOR). Un admin peut consulter
+    // n'importe quelle séance de son établissement (déjà isolé par le filtre tenant).
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<SeanceResponse>> getById(@PathVariable Long id) {
-        return ResponseEntity.ok(ApiResponse.success("Seance", seanceService.getById(id)));
+    public ResponseEntity<ApiResponse<SeanceResponse>> getById(
+            @AuthenticationPrincipal User user, @PathVariable Long id) {
+        boolean admin = user.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+        SeanceResponse seance = admin
+                ? seanceService.getById(id)
+                : seanceService.getByIdPourEnseignant(id, getEnseignantByUser(user).getId());
+        return ResponseEntity.ok(ApiResponse.success("Seance", seance));
     }
 
     // Admin : créer une séance individuelle
