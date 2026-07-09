@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{admin/fragments :: head('SIGEP · Émargement & présence des enseignants')}"></head>
+<head th:replace="~{admin/fragments :: head('SIGEP · Gérez les heures de vos enseignants')}"></head>
 <body>
 
 <!-- ===================== TOP BAR ===================== -->
@@ -25,21 +25,25 @@
     <!-- ===================== HERO ===================== -->
     <section class="max-w-[1180px] mx-auto px-5 md:px-8 pt-16 md:pt-24 pb-10 text-center" data-reveal>
         <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mb-5">Pour universités privées & grandes écoles</p>
-        <h1 class="font-serif text-[44px] sm:text-[66px] leading-[1.02] tracking-tight max-w-[880px] mx-auto">
-            La preuve des heures réellement faites, sans paperasse.
+        <h1 class="font-serif text-[44px] sm:text-[66px] leading-[1.02] tracking-tight max-w-[900px] mx-auto">
+            Gérez les heures de vos enseignants, en toute simplicité.
         </h1>
-        <p class="text-[16px] md:text-[18px] text-muted max-w-[640px] mx-auto mt-6 leading-relaxed">
-            SIGEP digitalise l'émargement des enseignants par QR code et génère les justificatifs de présence.
-            Pilotez l'assiduité et payez vos vacataires sur des heures prouvées.
+        <p class="text-[16px] md:text-[18px] text-muted max-w-[660px] mx-auto mt-6 leading-relaxed">
+            Suivez les heures réellement effectuées, obtenez des statistiques claires et pilotez votre
+            établissement — sans Excel ni ressaisies. SIGEP vous fait gagner du temps au quotidien.
         </p>
         <div class="flex flex-wrap items-center justify-center gap-3 mt-9">
             <a th:href="@{/inscription}" class="btn btn-ink flex items-center gap-2 px-6 h-12 rounded-full font-medium">
                 Démarrer gratuitement
                 <span class="material-symbols-rounded text-[20px]">arrow_forward</span>
             </a>
-            <a href="#fonctionnement" class="btn glass flex items-center px-6 h-12 rounded-full text-muted hover:text-ink">Voir comment ça marche</a>
+            <a href="mailto:assalendahjeanfrancois@gmail.com?subject=Demande%20de%20d%C3%A9mo%20SIGEP"
+               class="btn glass flex items-center gap-2 px-6 h-12 rounded-full text-muted hover:text-ink">
+                <span class="material-symbols-rounded text-[20px]">play_circle</span>
+                Demander une démo
+            </a>
         </div>
-        <p class="font-mono text-[11px] text-muted mt-5">Sans carte bancaire · Mise en route en quelques minutes</p>
+        <p class="font-mono text-[11px] text-muted mt-5">Sans carte bancaire · Sans engagement · Mise en route en quelques minutes</p>
     </section>
 
     <!-- ===================== APERÇU PRODUIT (stylisé) ===================== -->
@@ -109,28 +113,58 @@
         </div>
     </section>
 
-    <!-- ===================== FEATURES ===================== -->
+    <!-- ===================== FEATURES (bénéfices) ===================== -->
     <section class="max-w-[1180px] mx-auto px-5 md:px-8 py-12">
+        <div class="text-center mb-10" data-reveal>
+            <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mb-3">Ce que vous y gagnez</p>
+            <h2 class="font-serif text-[36px] sm:text-[44px] tracking-tight">Un seul outil pour suivre, analyser et piloter</h2>
+        </div>
         <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div class="glass-card rounded-2xl p-6" data-reveal>
-                <span class="material-symbols-rounded text-[28px]">qr_code_2</span>
-                <h3 class="font-serif text-[22px] mt-3">Émargement QR</h3>
-                <p class="text-[14px] text-muted mt-2 leading-relaxed">Anti‑fraude et anti‑rejeu : un code à usage unique, renouvelé en continu, scanné en salle.</p>
+                <span class="material-symbols-rounded text-[28px]">schedule</span>
+                <h3 class="font-serif text-[22px] mt-3">Suivi des heures</h3>
+                <p class="text-[14px] text-muted mt-2 leading-relaxed">Visualisez les heures réellement effectuées par chaque enseignant, en temps réel — fini les tableurs.</p>
             </div>
             <div class="glass-card rounded-2xl p-6" data-reveal>
                 <span class="material-symbols-rounded text-[28px]">monitoring</span>
-                <h3 class="font-serif text-[22px] mt-3">Suivi en temps réel</h3>
-                <p class="text-[14px] text-muted mt-2 leading-relaxed">Taux d'émargement, tendances et alertes immédiates sur les séances non émargées.</p>
+                <h3 class="font-serif text-[22px] mt-3">Statistiques & IA</h3>
+                <p class="text-[14px] text-muted mt-2 leading-relaxed">Taux d'assiduité, tendances et synthèses assistées par IA pour décider plus vite.</p>
+            </div>
+            <div class="glass-card rounded-2xl p-6" data-reveal>
+                <span class="material-symbols-rounded text-[28px]">dashboard</span>
+                <h3 class="font-serif text-[22px] mt-3">Tableau de bord</h3>
+                <p class="text-[14px] text-muted mt-2 leading-relaxed">Toute l'activité de l'établissement d'un coup d'œil, avec alertes sur les oublis.</p>
             </div>
             <div class="glass-card rounded-2xl p-6" data-reveal>
                 <span class="material-symbols-rounded text-[28px]">description</span>
                 <h3 class="font-serif text-[22px] mt-3">Rapports & paie</h3>
                 <p class="text-[14px] text-muted mt-2 leading-relaxed">Justificatifs PDF par enseignant et par période, fiables pour la paie des vacataires.</p>
             </div>
+        </div>
+    </section>
+
+    <!-- ===================== RÉASSURANCE ===================== -->
+    <section class="max-w-[1180px] mx-auto px-5 md:px-8 py-8">
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <div class="glass-card rounded-2xl p-6" data-reveal>
-                <span class="material-symbols-rounded text-[28px]">auto_awesome</span>
-                <h3 class="font-serif text-[22px] mt-3">Analyse par IA</h3>
-                <p class="text-[14px] text-muted mt-2 leading-relaxed">Synthèse et décisions générées par l'IA à partir de vos statistiques d'assiduité.</p>
+                <span class="material-symbols-rounded text-[26px]">verified_user</span>
+                <h3 class="font-medium mt-3">Sécurisé & isolé</h3>
+                <p class="text-[13px] text-muted mt-1.5 leading-relaxed">Émargement anti‑fraude et données strictement cloisonnées par établissement.</p>
+            </div>
+            <div class="glass-card rounded-2xl p-6" data-reveal>
+                <span class="material-symbols-rounded text-[26px]">bolt</span>
+                <h3 class="font-medium mt-3">Simple & rapide</h3>
+                <p class="text-[13px] text-muted mt-1.5 leading-relaxed">Mise en route en quelques minutes, sans installation côté administration.</p>
+            </div>
+            <div class="glass-card rounded-2xl p-6" data-reveal>
+                <span class="material-symbols-rounded text-[26px]">support_agent</span>
+                <h3 class="font-medium mt-3">Accompagné</h3>
+                <p class="text-[13px] text-muted mt-1.5 leading-relaxed">Un accompagnement au démarrage pour cadrer sereinement votre déploiement.</p>
+            </div>
+            <div class="glass-card rounded-2xl p-6" data-reveal>
+                <span class="material-symbols-rounded text-[26px]">event_available</span>
+                <h3 class="font-medium mt-3">Sans engagement</h3>
+                <p class="text-[13px] text-muted mt-1.5 leading-relaxed">Abonnement mensuel flexible, résiliable à tout moment.</p>
             </div>
         </div>
     </section>
@@ -224,12 +258,19 @@
     <!-- ===================== CTA FINAL ===================== -->
     <section class="max-w-[1180px] mx-auto px-5 md:px-8 pb-20">
         <div class="glass-strong rounded-3xl p-10 md:p-14 text-center" data-reveal>
-            <h2 class="font-serif text-[32px] sm:text-[40px] tracking-tight">Prêt à fiabiliser vos heures ?</h2>
-            <p class="text-[15px] text-muted mt-3 max-w-[520px] mx-auto">Créez l'espace de votre établissement en quelques minutes.</p>
-            <a th:href="@{/inscription}" class="btn btn-ink inline-flex items-center gap-2 px-6 h-12 rounded-full font-medium mt-7">
-                Inscrire mon établissement
-                <span class="material-symbols-rounded text-[20px]">arrow_forward</span>
-            </a>
+            <h2 class="font-serif text-[32px] sm:text-[40px] tracking-tight">Passez à une gestion plus simple.</h2>
+            <p class="text-[15px] text-muted mt-3 max-w-[540px] mx-auto">Créez l'espace de votre établissement en quelques minutes, ou demandez une démo — c'est gratuit et sans engagement.</p>
+            <div class="flex flex-wrap items-center justify-center gap-3 mt-7">
+                <a th:href="@{/inscription}" class="btn btn-ink inline-flex items-center gap-2 px-6 h-12 rounded-full font-medium">
+                    Inscrire mon établissement
+                    <span class="material-symbols-rounded text-[20px]">arrow_forward</span>
+                </a>
+                <a href="mailto:assalendahjeanfrancois@gmail.com?subject=Demande%20de%20d%C3%A9mo%20SIGEP"
+                   class="btn glass inline-flex items-center gap-2 px-6 h-12 rounded-full text-muted hover:text-ink">
+                    <span class="material-symbols-rounded text-[20px]">play_circle</span>
+                    Demander une démo
+                </a>
+            </div>
         </div>
     </section>
 </main>
