@@ -30,6 +30,8 @@ public class ImportService {
     private final MatiereRepository matiereRepository;
     private final ClasseRepository classeRepository;
     private final SalleRepository salleRepository;
+    private final ci.esatic.sigep.repository.EtablissementRepository etablissementRepository;
+    private final ci.esatic.sigep.tenant.plan.PlanService planService;
 
     // Import admin : fichier 7 colonnes avec MATRICULE_ENSEIGNANT
     @Transactional
@@ -65,6 +67,13 @@ public class ImportService {
         } catch (Exception ex) {
             throw new IllegalArgumentException("fichier illisible — un fichier Excel (.xlsx) est attendu.");
         }
+        // Quota du plan (Free ≤ 10 enseignants) : appliqué aussi à l'import en masse.
+        Long tenantId = ci.esatic.sigep.tenant.TenantContext.get();
+        Etablissement tenant = tenantId == null ? null
+                : etablissementRepository.findById(tenantId).orElse(null);
+        long existants = tenant == null ? 0 : enseignantRepository.countByEtablissementId(tenant.getId());
+        boolean quotaAtteint = false;
+
         try (workbook) {
             Sheet sheet = workbook.getSheetAt(0);
             verifierEnteteEnseignants(sheet);
@@ -82,6 +91,10 @@ public class ImportService {
                     continue;
                 }
                 if (enseignantRepository.existsByMatricule(matricule)) { ignores++; continue; }
+                if (tenant != null && planService.quotaEnseignantsAtteint(tenant, existants + importes)) {
+                    quotaAtteint = true;
+                    break; // le reste du fichier n'est pas importé
+                }
                 Enseignant e = Enseignant.builder()
                         .matricule(matricule)
                         .nom(nom)
@@ -93,12 +106,13 @@ public class ImportService {
                 importes++;
             }
         }
-        log.info("Import enseignants : {} crees, {} ignores (matricule existant), {} ligne(s) invalide(s) {}",
-                importes, ignores, lignesInvalides.size(), lignesInvalides);
+        log.info("Import enseignants : {} crees, {} ignores (matricule existant), {} ligne(s) invalide(s) {}, quotaAtteint={}",
+                importes, ignores, lignesInvalides.size(), lignesInvalides, quotaAtteint);
         Map<String, Object> result = new HashMap<>();
         result.put("importes", importes);
         result.put("ignores", ignores);
         result.put("lignesInvalides", lignesInvalides);
+        result.put("quotaAtteint", quotaAtteint);
         return result;
     }
 

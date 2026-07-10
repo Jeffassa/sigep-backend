@@ -25,6 +25,7 @@ import java.util.zip.ZipOutputStream;
 public class RapportController {
 
     private final RapportService rapportService;
+    private final ci.esatic.sigep.tenant.plan.PlanService planService;
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<RapportResponse>>> getAll() {
@@ -58,9 +59,13 @@ public class RapportController {
                 .body(bytes);
     }
 
-    // Télécharger plusieurs rapports en archive ZIP
+    // Télécharger plusieurs rapports en archive ZIP — fonction Pro/Enterprise (verrou serveur)
     @PostMapping("/bulk-download")
-    public ResponseEntity<byte[]> bulkDownload(@RequestBody List<Long> ids) throws Exception {
+    public ResponseEntity<byte[]> bulkDownload(
+            @org.springframework.security.core.annotation.AuthenticationPrincipal ci.esatic.sigep.entity.User admin,
+            @RequestBody List<Long> ids) throws Exception {
+        planService.exiger(admin == null ? null : admin.getEtablissement(),
+                ci.esatic.sigep.tenant.plan.Feature.RAPPORTS_AVANCES);
         List<RapportPdf> rapports = rapportService.getRapportsByIds(ids);
 
         ByteArrayOutputStream baos = new ByteArrayOutputStream();

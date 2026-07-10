@@ -42,6 +42,7 @@ class MultiTenantE2ETest {
     @Autowired private MockMvc mockMvc;
     @Autowired private ObjectMapper objectMapper;
     @Autowired private RoleRepository roleRepository;
+    @Autowired private ci.esatic.sigep.repository.EtablissementRepository etablissementRepository;
     @Autowired private EntityManager em;
 
     @BeforeEach
@@ -149,8 +150,23 @@ class MultiTenantE2ETest {
         String body = objectMapper.writeValueAsString(Map.of(
                 "nomEtablissement", nom, "adminEmail", email,
                 "adminPassword", "Secret@2026", "adminNom", "N", "adminPrenom", "P"));
-        MvcResult res = mockMvc.perform(post("/api/saas/etablissements")
+        mockMvc.perform(post("/api/saas/etablissements")
                         .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isOk());
+
+        // SA-2 : l'inscription naît EN_ATTENTE et ne délivre plus de token — on simule la
+        // validation du super admin puis on se connecte pour obtenir la session.
+        etablissementRepository.findAll().stream()
+                .filter(e -> e.getStatut() == ci.esatic.sigep.entity.StatutEtablissement.EN_ATTENTE)
+                .forEach(e -> {
+                    e.setStatut(ci.esatic.sigep.entity.StatutEtablissement.VALIDE);
+                    etablissementRepository.save(e);
+                });
+
+        MvcResult res = mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                Map.of("email", email, "password", "Secret@2026"))))
                 .andExpect(status().isOk())
                 .andReturn();
         return objectMapper.readTree(res.getResponse().getContentAsString())

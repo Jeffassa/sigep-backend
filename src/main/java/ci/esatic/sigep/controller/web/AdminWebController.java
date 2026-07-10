@@ -423,7 +423,8 @@ public class AdminWebController {
 
     @PostMapping("/admin/enseignants")
     @org.springframework.transaction.annotation.Transactional
-    public String creerEnseignant(@RequestParam String matricule,
+    public String creerEnseignant(@org.springframework.security.core.annotation.AuthenticationPrincipal User admin,
+                                   @RequestParam String matricule,
                                    @RequestParam String nom,
                                    @RequestParam String prenom,
                                    @RequestParam(required = false) String departement,
@@ -431,6 +432,16 @@ public class AdminWebController {
                                    @RequestParam String email,
                                    @RequestParam String password,
                                    RedirectAttributes ra) {
+        // Quota du plan (Free ≤ 10 enseignants) : appliqué sur TOUS les chemins de création.
+        if (admin != null && admin.getEtablissement() != null
+                && planService.quotaEnseignantsAtteint(admin.getEtablissement(),
+                    enseignantRepository.countByEtablissementId(admin.getEtablissement().getId()))) {
+            ra.addFlashAttribute("error", "Quota d'enseignants atteint ("
+                    + admin.getEtablissement().getMaxEnseignants()
+                    + ") pour le plan " + admin.getEtablissement().getPlan()
+                    + ". Passez à un plan supérieur pour en ajouter davantage.");
+            return "redirect:/admin/enseignants";
+        }
         if (password == null || password.length() < 8
                 || !password.matches("^(?=.*[A-Za-z])(?=.*\\d).+$")) {
             ra.addFlashAttribute("error",
@@ -482,6 +493,10 @@ public class AdminWebController {
             java.util.List<Integer> invalides = (java.util.List<Integer>) r.get("lignesInvalides");
             if (invalides != null && !invalides.isEmpty()) {
                 message += " " + invalides.size() + " ligne(s) incomplète(s) non importée(s) : " + invalides + ".";
+            }
+            if (Boolean.TRUE.equals(r.get("quotaAtteint"))) {
+                message += " Quota d'enseignants du plan atteint : le reste du fichier n'a pas été importé"
+                        + " — passez à un plan supérieur pour continuer.";
             }
             ra.addFlashAttribute("success", message);
         } catch (Exception e) {
@@ -560,12 +575,18 @@ public class AdminWebController {
         return "admin/rapports";
     }
 
-    /** Télécharge tous les rapports (filtrés) dans une archive ZIP. */
+    /** Télécharge tous les rapports (filtrés) dans une archive ZIP. Fonction Pro/Enterprise :
+     *  verrouillée côté serveur (le bouton masqué en Free ne suffit pas — URL directe possible). */
     @GetMapping("/admin/rapports/telecharger-zip")
     public ResponseEntity<byte[]> telechargerZip(
+            @org.springframework.security.core.annotation.AuthenticationPrincipal User admin,
             @RequestParam(required = false) Long enseignantId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate debut,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fin) {
+        if (admin == null || !planService.estDisponible(admin.getEtablissement(),
+                ci.esatic.sigep.tenant.plan.Feature.RAPPORTS_AVANCES)) {
+            return ResponseEntity.status(403).build();
+        }
         try {
             List<RapportPdf> rapports = rapportService.getRapportPdfsFiltres(enseignantId, debut, fin);
             if (rapports.isEmpty()) return ResponseEntity.noContent().build();
@@ -581,11 +602,17 @@ public class AdminWebController {
         }
     }
 
-    /** Export Excel de synthèse (une ligne par enseignant sur la période). */
+    /** Export Excel de synthèse (une ligne par enseignant sur la période). Fonction
+     *  Pro/Enterprise : verrouillée côté serveur (pas seulement masquée dans l'interface). */
     @GetMapping("/admin/rapports/synthese")
     public ResponseEntity<byte[]> syntheseExcel(
+            @org.springframework.security.core.annotation.AuthenticationPrincipal User admin,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate debut,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fin) {
+        if (admin == null || !planService.estDisponible(admin.getEtablissement(),
+                ci.esatic.sigep.tenant.plan.Feature.RAPPORTS_AVANCES)) {
+            return ResponseEntity.status(403).build();
+        }
         try {
             LocalDate today = LocalDate.now();
             LocalDate d = debut != null ? debut : today.with(DayOfWeek.MONDAY);
