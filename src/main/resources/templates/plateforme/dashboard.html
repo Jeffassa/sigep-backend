@@ -70,7 +70,7 @@
     </section>
 
     <!-- KPIs -->
-    <section class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8" data-reveal>
+    <section class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8" data-reveal>
         <div class="glass rounded-3xl p-6">
             <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Clients</p>
             <p class="font-serif text-[38px] leading-none" th:text="${nbEtablissements}">0</p>
@@ -80,8 +80,19 @@
             <p class="font-serif text-[38px] leading-none" th:text="${nbActifs}">0</p>
         </div>
         <div class="glass rounded-3xl p-6">
-            <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Abonnements expirés</p>
+            <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Expirés</p>
             <p class="font-serif text-[38px] leading-none" th:text="${nbExpires}">0</p>
+        </div>
+        <div class="glass rounded-3xl p-6">
+            <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Inscrits ce mois</p>
+            <p class="font-serif text-[38px] leading-none" th:text="${inscriptionsMois}">0</p>
+        </div>
+        <div class="glass rounded-3xl p-6">
+            <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">MRR estimé</p>
+            <p class="font-serif text-[28px] leading-none mt-1.5">
+                <span th:text="${#numbers.formatInteger(mrr, 1, 'WHITESPACE')}">0</span>
+                <span class="text-[13px] text-muted">FCFA</span>
+            </p>
         </div>
         <div class="glass rounded-3xl p-6">
             <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Par plan</p>
@@ -95,9 +106,27 @@
 
     <!-- Liste des établissements -->
     <section class="glass rounded-3xl overflow-hidden" data-reveal>
-        <div class="px-7 py-5 border-b border-line flex items-center gap-2.5">
+        <div class="px-7 py-5 border-b border-line flex flex-wrap items-center gap-3">
             <span class="material-symbols-rounded">apartment</span>
             <h2 class="font-serif text-[22px]">Tous les établissements</h2>
+            <!-- Recherche + filtres (GET, sans JS) -->
+            <form method="get" th:action="@{/plateforme}" class="ml-auto flex flex-wrap items-center gap-2">
+                <input type="text" name="q" th:value="${q}" placeholder="Rechercher…"
+                       class="h-9 px-3 rounded-lg bg-white/60 border border-line text-[13px] w-40"/>
+                <select name="plan" class="h-9 px-2 rounded-lg bg-white/60 border border-line text-[13px]">
+                    <option value="" th:selected="${fPlan == null or fPlan == ''}">Tous les plans</option>
+                    <option value="FREE" th:selected="${fPlan == 'FREE'}">Free</option>
+                    <option value="PRO" th:selected="${fPlan == 'PRO'}">Pro</option>
+                    <option value="ENTERPRISE" th:selected="${fPlan == 'ENTERPRISE'}">Enterprise</option>
+                </select>
+                <select name="statut" class="h-9 px-2 rounded-lg bg-white/60 border border-line text-[13px]">
+                    <option value="" th:selected="${fStatut == null or fStatut == ''}">Tous les statuts</option>
+                    <option value="VALIDE" th:selected="${fStatut == 'VALIDE'}">Validé</option>
+                    <option value="EN_ATTENTE" th:selected="${fStatut == 'EN_ATTENTE'}">En attente</option>
+                    <option value="REFUSE" th:selected="${fStatut == 'REFUSE'}">Refusé</option>
+                </select>
+                <button type="submit" class="btn btn-ink h-9 px-3 rounded-lg text-[12px] font-medium">Filtrer</button>
+            </form>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-left text-[14px]" data-mobile-keep="2">
@@ -109,9 +138,12 @@
                     <th class="px-4 py-3">Statut</th>
                 </tr></thead>
                 <tbody>
-                <tr th:each="e : ${etablissements}" class="border-b border-line">
+                <tr th:each="e : ${etablissements}" class="border-b border-line hover:bg-white/40 transition">
                     <td class="px-7 py-3">
-                        <p class="font-medium" th:text="${e.nom}">Nom</p>
+                        <a th:href="@{/plateforme/etablissements/{s}(s=${e.slug})}" class="group inline-flex items-center gap-1.5">
+                            <span class="font-medium group-hover:underline" th:text="${e.nom}">Nom</span>
+                            <span class="material-symbols-rounded text-[16px] text-muted">chevron_right</span>
+                        </a>
                         <p class="font-mono text-[11px] text-muted" th:text="${e.slug}">slug</p>
                     </td>
                     <td class="px-4 py-3"><span class="font-mono text-[11px] uppercase tracking-wider px-2.5 py-1 rounded-full glass" th:text="${e.plan}">PLAN</span></td>

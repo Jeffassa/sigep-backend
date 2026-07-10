@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('SIGEP | Plateforme · ' + ${e.nom})}"></head>
+<body>
+
+<div th:replace="~{plateforme/fragments :: topbar('dashboard')}"></div>
+
+<main class="max-w-[920px] mx-auto px-5 md:px-8 py-10 pb-24">
+
+    <a th:href="@{/plateforme}" class="inline-flex items-center gap-1.5 text-[13px] text-muted hover:text-ink mb-6">
+        <span class="material-symbols-rounded text-[18px]">arrow_back</span> Retour aux établissements
+    </a>
+
+    <!-- Messages -->
+    <div th:if="${ok}" class="flex items-center gap-2 p-3 mb-4 rounded-xl text-[13px]"
+         style="background:rgba(10,10,10,.05);border:1px solid var(--c-line)">
+        <span class="material-symbols-rounded text-[18px]">check_circle</span><span th:text="${ok}"></span>
+    </div>
+    <div th:if="${erreur}" class="flex items-center gap-2 p-3 mb-4 rounded-xl text-[13px]"
+         style="background:rgba(186,26,26,.08);color:#7a0010;border:1px solid rgba(186,26,26,.2)">
+        <span class="material-symbols-rounded text-[18px]">error</span><span th:text="${erreur}"></span>
+    </div>
+
+    <section class="mb-8" data-reveal>
+        <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mb-2">Établissement</p>
+        <h1 class="font-serif text-[clamp(30px,4vw,44px)] leading-[1.05] tracking-tight" th:text="${e.nom}">Nom</h1>
+        <p class="font-mono text-[12px] text-muted mt-1" th:text="${e.slug}">slug</p>
+    </section>
+
+    <!-- Synthèse -->
+    <section class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" data-reveal>
+        <div class="glass rounded-2xl p-5">
+            <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Plan</p>
+            <p class="font-serif text-[24px]" th:text="${e.plan}">PLAN</p>
+            <p class="text-[11px] text-muted" th:if="${prixMensuel > 0}"
+               th:text="${#numbers.formatInteger(prixMensuel,1,'WHITESPACE')} + ' FCFA / mois'">—</p>
+        </div>
+        <div class="glass rounded-2xl p-5">
+            <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Statut</p>
+            <p class="font-serif text-[24px]"
+               th:text="${e.statut.name() == 'EN_ATTENTE'} ? 'En attente' : (${e.statut.name() == 'REFUSE'} ? 'Refusé' : (${e.actif} ? 'Actif' : 'Suspendu'))">—</p>
+        </div>
+        <div class="glass rounded-2xl p-5">
+            <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Enseignants</p>
+            <p class="font-serif text-[24px]" th:text="${nbEnseignants}">0</p>
+            <p class="text-[11px] text-muted" th:text="${e.maxEnseignants <= 0} ? 'quota illimité' : ('quota ' + ${e.maxEnseignants})">—</p>
+        </div>
+        <div class="glass rounded-2xl p-5">
+            <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Abonnement</p>
+            <p class="font-serif text-[24px]"
+               th:text="${e.dateExpiration != null} ? ${#temporals.format(e.dateExpiration,'dd/MM/yyyy')} : 'Illimité'">—</p>
+            <p class="text-[11px]" th:if="${expire}" style="color:#7a0010">expiré</p>
+            <p class="text-[11px] text-muted" th:if="${!expire and joursAvantExpiration != null}"
+               th:text="${joursAvantExpiration} + ' j restants'">—</p>
+        </div>
+    </section>
+
+    <!-- Administrateurs -->
+    <section class="glass rounded-3xl p-6 mb-6" data-reveal>
+        <div class="flex items-center gap-2.5 mb-3">
+            <span class="material-symbols-rounded">manage_accounts</span>
+            <h2 class="font-serif text-[20px]">Administrateur(s)</h2>
+        </div>
+        <ul class="space-y-1.5">
+            <li th:each="a : ${admins}" class="font-mono text-[13px]" th:text="${a.email}">email</li>
+            <li th:if="${#lists.isEmpty(admins)}" class="text-[13px] text-muted">Aucun compte rattaché.</li>
+        </ul>
+        <p class="text-[12px] text-muted mt-3" th:text="'Inscrit le ' + ${#temporals.format(e.dateCreation,'dd/MM/yyyy à HH:mm')}">—</p>
+    </section>
+
+    <!-- Actions de gestion -->
+    <section class="glass rounded-3xl p-6 mb-6" data-reveal>
+        <h2 class="font-serif text-[20px] mb-5">Gestion</h2>
+        <div class="grid md:grid-cols-2 gap-5">
+
+            <!-- Changer de plan -->
+            <form th:action="@{/plateforme/etablissements/plan}" method="post" class="flex items-end gap-2">
+                <input type="hidden" name="slug" th:value="${e.slug}"/>
+                <div class="flex-1">
+                    <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-1.5">Plan</label>
+                    <select name="plan" class="w-full h-10 px-3 rounded-lg bg-white/60 border border-line text-[13px]">
+                        <option value="FREE" th:selected="${e.plan.name() == 'FREE'}">Free</option>
+                        <option value="PRO" th:selected="${e.plan.name() == 'PRO'}">Pro</option>
+                        <option value="ENTERPRISE" th:selected="${e.plan.name() == 'ENTERPRISE'}">Enterprise</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-ink h-10 px-4 rounded-lg text-[12px] font-medium">Appliquer</button>
+            </form>
+
+            <!-- Changer le quota -->
+            <form th:action="@{/plateforme/etablissements/quota}" method="post" class="flex items-end gap-2">
+                <input type="hidden" name="slug" th:value="${e.slug}"/>
+                <div class="flex-1">
+                    <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-1.5">Quota d'enseignants (0 = illimité)</label>
+                    <input type="number" name="maxEnseignants" min="0" th:value="${e.maxEnseignants}"
+                           class="w-full h-10 px-3 rounded-lg bg-white/60 border border-line text-[13px]"/>
+                </div>
+                <button type="submit" class="btn btn-ink h-10 px-4 rounded-lg text-[12px] font-medium">Régler</button>
+            </form>
+
+            <!-- Suspendre / réactiver -->
+            <form th:action="@{/plateforme/etablissements/actif}" method="post">
+                <input type="hidden" name="slug" th:value="${e.slug}"/>
+                <input type="hidden" name="actif" th:value="${!e.actif}"/>
+                <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-1.5">Accès</label>
+                <button type="submit" class="btn glass h-10 px-4 rounded-lg text-[13px] inline-flex items-center gap-1.5">
+                    <span class="material-symbols-rounded text-[18px]" th:text="${e.actif} ? 'pause_circle' : 'play_circle'">pause_circle</span>
+                    <span th:text="${e.actif} ? 'Suspendre l\'accès' : 'Réactiver l\'accès'">Suspendre</span>
+                </button>
+            </form>
+
+            <!-- Validation (si en attente) -->
+            <div th:if="${e.statut.name() == 'EN_ATTENTE'}">
+                <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-1.5">Dossier d'inscription</label>
+                <div class="flex items-center gap-2">
+                    <form th:action="@{/plateforme/etablissements/valider}" method="post">
+                        <input type="hidden" name="slug" th:value="${e.slug}"/>
+                        <button type="submit" class="btn btn-ink h-10 px-4 rounded-lg text-[12px] font-medium inline-flex items-center gap-1.5">
+                            <span class="material-symbols-rounded text-[16px]">check</span>Valider</button>
+                    </form>
+                    <form th:action="@{/plateforme/etablissements/refuser}" method="post">
+                        <input type="hidden" name="slug" th:value="${e.slug}"/>
+                        <button type="submit" class="btn glass h-10 px-4 rounded-lg text-[12px] inline-flex items-center gap-1.5 text-muted hover:text-ink">
+                            <span class="material-symbols-rounded text-[16px]">close</span>Refuser</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Zone dangereuse -->
+    <section class="rounded-3xl p-6" data-reveal style="border:1px solid rgba(186,26,26,.28)">
+        <div class="flex items-center gap-2.5 mb-2">
+            <span class="material-symbols-rounded" style="color:#7a0010">warning</span>
+            <h2 class="font-serif text-[20px]">Zone dangereuse</h2>
+        </div>
+        <p class="text-[13px] text-muted mb-4">Supprime définitivement l'établissement et <strong>toutes</strong> ses données
+            (comptes, enseignants, séances, émargements, rapports). Cette action est irréversible.</p>
+        <form th:action="@{/plateforme/etablissements/supprimer}" method="post"
+              onsubmit="return confirm('Supprimer définitivement cet établissement et TOUTES ses données ? Cette action est irréversible.');">
+            <input type="hidden" name="slug" th:value="${e.slug}"/>
+            <button type="submit" class="h-10 px-4 rounded-lg text-[13px] font-medium inline-flex items-center gap-1.5"
+                    style="background:#7a0010;color:#fff">
+                <span class="material-symbols-rounded text-[18px]">delete_forever</span>Supprimer l'établissement
+            </button>
+        </form>
+    </section>
+</main>
+
+<div th:replace="~{admin/fragments :: scripts}"></div>
+
+</body>
+</html>
