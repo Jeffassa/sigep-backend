@@ -27,9 +27,40 @@
         <form id="form" class="space-y-4">
             <div>
                 <label class="block font-mono text-[11px] uppercase tracking-wider text-muted mb-2">Nom de l'établissement</label>
-                <input id="nomEtablissement" type="text" required
+                <input id="nomEtablissement" type="text" required list="ecolesList" autocomplete="off"
                        class="w-full h-12 px-4 rounded-xl bg-white/60 border border-line text-ink focus:outline-none focus:border-ink focus:ring-1 focus:ring-ink transition"
-                       placeholder="Université / Grande école"/>
+                       placeholder="Commencez à saisir le nom…"/>
+                <!-- Suggestions d'établissements (Côte d'Ivoire). Liste non exhaustive :
+                     la saisie libre reste possible pour tout autre établissement. -->
+                <datalist id="ecolesList">
+                    <option value="Université Félix Houphouët-Boigny"></option>
+                    <option value="Université Nangui Abrogoua"></option>
+                    <option value="Université Péléforo Gon Coulibaly"></option>
+                    <option value="Université de Man"></option>
+                    <option value="Université Alassane Ouattara"></option>
+                    <option value="Université Jean Lorougnon Guédé"></option>
+                    <option value="Université Virtuelle de Côte d'Ivoire"></option>
+                    <option value="Institut National Polytechnique Félix Houphouët-Boigny"></option>
+                    <option value="École Normale Supérieure"></option>
+                    <option value="École Supérieure de Commerce d'Abidjan"></option>
+                    <option value="Université Internationale d'Abidjan"></option>
+                    <option value="Université Française d'Abidjan"></option>
+                    <option value="Université Polytechnique Internationale"></option>
+                    <option value="Université Protestante d'Afrique de l'Ouest"></option>
+                    <option value="Université Saint Paul"></option>
+                    <option value="Université des Lagunes"></option>
+                    <option value="Institut Universitaire d'Abidjan"></option>
+                    <option value="École Supérieure des Métiers Appliqués de Côte d'Ivoire"></option>
+                    <option value="École Supérieure de Commerce Castaing"></option>
+                    <option value="Académie de l'Entrepreneuriat et des Métiers"></option>
+                    <option value="Académie de Gestion et d'Hôtellerie"></option>
+                    <option value="École Polytechnique des Oscars"></option>
+                    <option value="Académie Internationale des Sciences et Techniques"></option>
+                    <option value="Université Polytechnique de Bingerville"></option>
+                    <option value="Université Internationale Nayeba"></option>
+                    <option value="École Polytechnique Léonard de Vinci"></option>
+                    <option value="Institut Ivoirien de Technologie"></option>
+                </datalist>
             </div>
             <div class="grid grid-cols-2 gap-3">
                 <div>
