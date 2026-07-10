@@ -2,6 +2,7 @@ package ci.esatic.sigep.tenant.plan;
 
 import ci.esatic.sigep.entity.Etablissement;
 import ci.esatic.sigep.entity.Plan;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.EnumSet;
@@ -9,11 +10,25 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Découpage des fonctionnalités par plan (gating premium) + quotas.
+ * Découpage des fonctionnalités par plan (gating premium) + quotas + tarifs.
  * Table en dur pour l'instant ; externalisable en base/config plus tard.
  */
 @Service
 public class PlanService {
+
+    /** Tarif mensuel du plan Pro (FCFA). Enterprise = « sur mesure » (0 = non chiffré). */
+    @Value("${app.plans.pro-price:10000}")
+    private long prixPro;
+
+    @Value("${app.plans.enterprise-price:0}")
+    private long prixEnterprise;
+
+    /** Tarif mensuel facturé pour un plan (0 pour Free et Enterprise non chiffré). */
+    public long prixMensuel(Plan plan) {
+        if (plan == Plan.PRO) return prixPro;
+        if (plan == Plan.ENTERPRISE) return prixEnterprise;
+        return 0;
+    }
 
     private static final Map<Plan, Set<Feature>> FEATURES = Map.of(
             Plan.FREE, EnumSet.noneOf(Feature.class),
