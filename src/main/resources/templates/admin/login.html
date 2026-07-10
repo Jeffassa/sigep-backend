@@ -29,10 +29,28 @@
             <span th:text="${logout}">Déconnecté.</span>
         </div>
         <div th:if="${param.registered}"
-             class="flex items-center gap-2 p-3 mb-4 rounded-xl text-[13px]"
+             class="p-4 mb-4 rounded-2xl text-[13px] text-center"
              style="background:rgba(10,10,10,.05);border:1px solid var(--line)">
-            <span class="material-symbols-rounded text-[18px]">check_circle</span>
-            <span>Établissement créé. Connectez-vous avec vos identifiants.</span>
+            <span class="material-symbols-rounded text-[28px] block mx-auto mb-1.5">mark_email_read</span>
+            <p class="font-medium text-[14px]">Dossier bien reçu !</p>
+            <p class="text-muted mt-1">Votre inscription est en cours d'analyse par notre équipe.
+                Un e-mail de confirmation vient de vous être envoyé — vous serez averti dès l'activation de votre espace.</p>
+        </div>
+        <div th:if="${param.pending}"
+             class="p-4 mb-4 rounded-2xl text-[13px] text-center"
+             style="background:rgba(10,10,10,.05);border:1px solid var(--line)">
+            <span class="material-symbols-rounded text-[28px] block mx-auto mb-1.5">hourglass_top</span>
+            <p class="font-medium text-[14px]">Votre dossier est en cours de vérification</p>
+            <p class="text-muted mt-1">Notre équipe analyse votre inscription. Vous recevrez un e-mail
+                dès que votre espace sera activé — merci de patienter.</p>
+        </div>
+        <div th:if="${param.rejected}"
+             class="p-4 mb-4 rounded-2xl text-[13px] text-center"
+             style="background:rgba(186,26,26,.06);border:1px solid rgba(186,26,26,.18)">
+            <span class="material-symbols-rounded text-[28px] block mx-auto mb-1.5">contact_support</span>
+            <p class="font-medium text-[14px]">Votre dossier n'a pas été retenu</p>
+            <p class="text-muted mt-1">Contactez-nous pour en discuter ou compléter votre dossier :
+                <a href="mailto:assalendahjeanfrancois@gmail.com" class="underline">nous écrire</a>.</p>
         </div>
 
         <form th:action="@{/admin-login}" method="post" class="space-y-4">

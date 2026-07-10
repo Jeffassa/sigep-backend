@@ -46,6 +46,9 @@ public class AuthService {
 
         User user = (User) authentication.getPrincipal();
 
+        // SA-2 : l'établissement doit avoir été validé par le super admin (dossier d'inscription).
+        verifierEtablissementValide(user);
+
         // Un enseignant ne peut se connecter que si l'administration a validé son compte.
         // (Les comptes administrateurs n'ont pas de profil enseignant : ils ne sont pas concernés.)
         var enseignantOpt = enseignantRepository.findByUserId(user.getId());
@@ -141,6 +144,7 @@ public class AuthService {
         if (!user.isEnabled()) {
             throw new CompteNonValideException("Compte désactivé. Veuillez contacter l'administration.");
         }
+        verifierEtablissementValide(user);
         if (enseignant != null) {
             if (enseignant.getStatut() == StatutEnseignant.PENDING) {
                 throw new CompteNonValideException(
@@ -150,6 +154,25 @@ public class AuthService {
                 throw new CompteNonValideException(
                         "Votre compte a été refusé. Veuillez contacter l'administration.");
             }
+        }
+    }
+
+    /**
+     * SA-2 : le dossier d'inscription de l'établissement doit avoir été validé par le
+     * SUPER ADMIN. Tant qu'il est EN_ATTENTE (ou s'il a été REFUSÉ), aucune connexion
+     * ni aucun refresh n'aboutit pour les comptes de cet établissement.
+     */
+    private void verifierEtablissementValide(User user) {
+        Etablissement e = user.getEtablissement();
+        if (e == null || e.getStatut() == null) return;
+        if (e.getStatut() == StatutEtablissement.EN_ATTENTE) {
+            throw new CompteNonValideException(
+                    "Votre dossier d'inscription est en cours d'analyse. "
+                    + "Vous recevrez un e-mail dès la validation de votre espace — merci de patienter.");
+        }
+        if (e.getStatut() == StatutEtablissement.REFUSE) {
+            throw new CompteNonValideException(
+                    "Votre dossier d'inscription n'a pas été retenu. Contactez-nous pour en savoir plus.");
         }
     }
 

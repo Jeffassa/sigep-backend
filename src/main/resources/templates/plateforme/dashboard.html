@@ -12,6 +12,63 @@
         <h1 class="font-serif text-[clamp(34px,5vw,52px)] leading-[1.02] tracking-tight">Établissements</h1>
     </section>
 
+    <!-- Messages -->
+    <div th:if="${ok}" class="flex items-center gap-2 p-3 mb-4 rounded-xl text-[13px]"
+         style="background:rgba(10,10,10,.05);border:1px solid var(--c-line)">
+        <span class="material-symbols-rounded text-[18px]">check_circle</span><span th:text="${ok}"></span>
+    </div>
+    <div th:if="${erreur}" class="flex items-center gap-2 p-3 mb-4 rounded-xl text-[13px]"
+         style="background:rgba(186,26,26,.08);color:#7a0010;border:1px solid rgba(186,26,26,.2)">
+        <span class="material-symbols-rounded text-[18px]">error</span><span th:text="${erreur}"></span>
+    </div>
+
+    <!-- SA-2 : dossiers d'inscription à valider -->
+    <section th:if="${!#lists.isEmpty(enAttente)}" class="glass rounded-3xl overflow-hidden mb-8" data-reveal
+             style="outline:2px solid var(--c-ink); outline-offset:-2px;">
+        <div class="px-7 py-5 border-b border-line flex items-center gap-2.5">
+            <span class="material-symbols-rounded">how_to_reg</span>
+            <h2 class="font-serif text-[22px]">Inscriptions à valider</h2>
+            <span class="ml-auto font-mono text-[11px] px-2.5 py-1 rounded-full bg-ink text-white"
+                  th:text="${#lists.size(enAttente)}">0</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-[14px]" data-mobile-keep="2">
+                <thead><tr class="border-b border-line font-mono text-[10px] uppercase tracking-wider text-muted">
+                    <th class="px-7 py-3">Établissement</th>
+                    <th class="px-4 py-3">Administrateur</th>
+                    <th class="px-4 py-3">Inscrit le</th>
+                    <th class="px-4 py-3 text-right">Décision</th>
+                </tr></thead>
+                <tbody>
+                <tr th:each="e : ${enAttente}" class="border-b border-line">
+                    <td class="px-7 py-3">
+                        <p class="font-medium" th:text="${e.nom}">Nom</p>
+                        <p class="font-mono text-[11px] text-muted" th:text="${e.slug}">slug</p>
+                    </td>
+                    <td class="px-4 py-3 font-mono text-[12px]" th:text="${adminParEtab[e.id]} ?: '—'">email</td>
+                    <td class="px-4 py-3" th:text="${#temporals.format(e.dateCreation,'dd/MM/yyyy HH:mm')}">--</td>
+                    <td class="px-4 py-3">
+                        <div class="flex items-center justify-end gap-2">
+                            <form th:action="@{/plateforme/etablissements/valider}" method="post">
+                                <input type="hidden" name="slug" th:value="${e.slug}"/>
+                                <button type="submit" class="btn btn-ink h-9 px-4 rounded-lg text-[12px] font-medium inline-flex items-center gap-1.5">
+                                    <span class="material-symbols-rounded text-[16px]">check</span>Valider
+                                </button>
+                            </form>
+                            <form th:action="@{/plateforme/etablissements/refuser}" method="post">
+                                <input type="hidden" name="slug" th:value="${e.slug}"/>
+                                <button type="submit" class="btn glass h-9 px-4 rounded-lg text-[12px] inline-flex items-center gap-1.5 text-muted hover:text-ink">
+                                    <span class="material-symbols-rounded text-[16px]">close</span>Refuser
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
     <!-- KPIs -->
     <section class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8" data-reveal>
         <div class="glass rounded-3xl p-6">
@@ -61,11 +118,15 @@
                     <td class="px-4 py-3 font-mono" th:text="${enseignantsParEtab[e.id]} ?: 0">0</td>
                     <td class="px-4 py-3" th:text="${e.dateExpiration != null} ? ${#temporals.format(e.dateExpiration,'dd/MM/yyyy')} : 'Illimité'">--</td>
                     <td class="px-4 py-3">
-                        <span th:if="${expires.contains(e.id)}" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-ink text-white text-[12px]">
+                        <span th:if="${e.statut.name() == 'EN_ATTENTE'}" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full badge-gold text-[12px]">
+                            <span class="material-symbols-rounded text-[14px]">hourglass_top</span>En attente</span>
+                        <span th:if="${e.statut.name() == 'REFUSE'}" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full glass text-muted text-[12px]">
+                            <span class="material-symbols-rounded text-[14px]">block</span>Refusé</span>
+                        <span th:if="${e.statut.name() == 'VALIDE' and expires.contains(e.id)}" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-ink text-white text-[12px]">
                             <span class="material-symbols-rounded text-[14px]">lock</span>Expiré</span>
-                        <span th:if="${!expires.contains(e.id) and e.actif}" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full glass text-[12px]">
+                        <span th:if="${e.statut.name() == 'VALIDE' and !expires.contains(e.id) and e.actif}" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full glass text-[12px]">
                             <span class="material-symbols-rounded text-[14px]">check_circle</span>Actif</span>
-                        <span th:if="${!expires.contains(e.id) and !e.actif}" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full glass text-muted text-[12px]">
+                        <span th:if="${e.statut.name() == 'VALIDE' and !expires.contains(e.id) and !e.actif}" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full glass text-muted text-[12px]">
                             <span class="material-symbols-rounded text-[14px]">pause_circle</span>Suspendu</span>
                     </td>
                 </tr>

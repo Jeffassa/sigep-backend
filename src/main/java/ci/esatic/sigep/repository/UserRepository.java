@@ -8,4 +8,7 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
     boolean existsByEmail(String email);
+
+    /** Premier compte d'un établissement (= l'admin créé à l'inscription). Vue plateforme. */
+    Optional<User> findFirstByEtablissementIdOrderByIdAsc(Long etablissementId);
 }

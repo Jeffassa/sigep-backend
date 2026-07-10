@@ -28,8 +28,50 @@ public class MailService {
     @Value("${app.mail.from:no-reply@esatic.ci}")
     private String from;
 
+    @Value("${app.platform.owner-email:assalendahjeanfrancois@gmail.com}")
+    private String contactPlateforme;
+
     public MailService(ObjectProvider<JavaMailSender> mailSenderProvider) {
         this.mailSenderProvider = mailSenderProvider;
+    }
+
+    // ─── SA-2 : cycle de validation d'un établissement ────────────────────────
+
+    /** Après l'inscription self-service : le dossier est reçu et en cours d'analyse. */
+    @Async
+    public void notifierInscriptionEtablissementRecue(String email, String prenom, String nomEtablissement) {
+        String bonjour = (prenom == null || prenom.isBlank()) ? "Bonjour," : "Bonjour " + prenom + ",";
+        envoyer(email, "SIGEP — Votre dossier d'inscription est bien reçu",
+                bonjour + "\n\n"
+                + "Merci d'avoir inscrit « " + nomEtablissement + " » sur SIGEP !\n\n"
+                + "Votre dossier est en cours d'analyse par notre équipe. Cette vérification est "
+                + "généralement rapide : vous recevrez un e-mail dès que votre espace sera activé.\n\n"
+                + "Merci de patienter — nous revenons vers vous très vite.\n\n"
+                + "— L'équipe SIGEP · Solutions de Gestion");
+    }
+
+    /** Le super admin a validé le dossier : l'espace est actif. */
+    @Async
+    public void notifierEtablissementValide(String email, String nomEtablissement) {
+        envoyer(email, "SIGEP — Votre espace est activé !",
+                "Bonjour,\n\n"
+                + "Bonne nouvelle : le dossier de « " + nomEtablissement + " » a été validé.\n\n"
+                + "Votre espace SIGEP est maintenant actif. Connectez-vous avec votre e-mail et "
+                + "votre mot de passe :\n"
+                + "https://sigep.store/admin-login\n\n"
+                + "Bienvenue, et bonne gestion !\n\n"
+                + "— L'équipe SIGEP · Solutions de Gestion");
+    }
+
+    /** Le super admin a refusé le dossier. */
+    @Async
+    public void notifierEtablissementRefuse(String email, String nomEtablissement) {
+        envoyer(email, "SIGEP — Suite de votre dossier d'inscription",
+                "Bonjour,\n\n"
+                + "Après examen, nous ne pouvons pas activer l'espace « " + nomEtablissement
+                + " » pour le moment.\n\n"
+                + "Pour en discuter ou compléter votre dossier, écrivez-nous : " + contactPlateforme + "\n\n"
+                + "— L'équipe SIGEP · Solutions de Gestion");
     }
 
     /** Message libre envoyé par l'administration à un enseignant. */

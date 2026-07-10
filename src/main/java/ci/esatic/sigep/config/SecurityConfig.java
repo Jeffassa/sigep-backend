@@ -51,8 +51,22 @@ public class SecurityConfig {
                 .formLogin(form -> form
                         .loginPage("/admin-login")
                         .loginProcessingUrl("/admin-login")
-                        // Redirection selon le rôle : super admin → espace plateforme, admin → dashboard
+                        // SA-2 : établissement non validé → connexion refusée avec message dédié.
+                        // Sinon, redirection selon le rôle : super admin → plateforme, admin → dashboard.
                         .successHandler((request, response, authentication) -> {
+                            if (authentication.getPrincipal() instanceof ci.esatic.sigep.entity.User u
+                                    && u.getEtablissement() != null
+                                    && u.getEtablissement().getStatut() != null
+                                    && u.getEtablissement().getStatut()
+                                            != ci.esatic.sigep.entity.StatutEtablissement.VALIDE) {
+                                boolean enAttente = u.getEtablissement().getStatut()
+                                        == ci.esatic.sigep.entity.StatutEtablissement.EN_ATTENTE;
+                                request.getSession().invalidate();
+                                org.springframework.security.core.context.SecurityContextHolder.clearContext();
+                                response.sendRedirect(enAttente ? "/admin-login?pending=1"
+                                                                : "/admin-login?rejected=1");
+                                return;
+                            }
                             boolean superAdmin = authentication.getAuthorities().stream()
                                     .anyMatch(a -> "ROLE_SUPER_ADMIN".equals(a.getAuthority()));
                             response.sendRedirect(superAdmin ? "/plateforme" : "/admin/dashboard");

@@ -36,6 +36,16 @@ public class Etablissement {
     @Builder.Default
     private Plan plan = Plan.FREE;
 
+    /**
+     * Validation du dossier d'inscription par le SUPER ADMIN : une inscription self-service
+     * naît EN_ATTENTE (connexion bloquée) jusqu'à validation. Les établissements créés en
+     * interne (défaut, plateforme) sont VALIDE d'office.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private StatutEtablissement statut = StatutEtablissement.VALIDE;
+
     @Builder.Default
     private boolean actif = true;
 

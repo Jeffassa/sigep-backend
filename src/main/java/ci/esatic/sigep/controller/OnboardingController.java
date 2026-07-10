@@ -25,6 +25,7 @@ public class OnboardingController {
             @Valid @RequestBody InscriptionEtablissementRequest request) {
         AuthResponse response = onboardingService.inscrire(request);
         return ResponseEntity.ok(ApiResponse.success(
-                "Établissement créé. Bienvenue sur SIGEP !", response));
+                "Dossier reçu ! Votre inscription est en cours d'analyse — vous recevrez un e-mail "
+                + "dès la validation de votre espace.", response));
     }
 }

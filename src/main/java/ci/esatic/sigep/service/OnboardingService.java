@@ -7,10 +7,10 @@ import ci.esatic.sigep.entity.Etablissement;
 import ci.esatic.sigep.entity.Plan;
 import ci.esatic.sigep.entity.Role;
 import ci.esatic.sigep.entity.User;
+import ci.esatic.sigep.entity.StatutEtablissement;
 import ci.esatic.sigep.repository.EtablissementRepository;
 import ci.esatic.sigep.repository.RoleRepository;
 import ci.esatic.sigep.repository.UserRepository;
-import ci.esatic.sigep.security.JwtService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -22,8 +22,9 @@ import java.util.Set;
 
 /**
  * Onboarding SaaS : un nouvel établissement s'inscrit (self-service). On crée le tenant
- * (plan FREE) et son premier administrateur, puis on renvoie une session (le compte est
- * immédiatement utilisable). L'isolation garantit qu'il ne voit que ses propres données.
+ * (plan FREE, statut EN_ATTENTE) et son premier administrateur. SA-2 : AUCUN token n'est
+ * délivré et la connexion est bloquée tant que le SUPER ADMIN n'a pas validé le dossier ;
+ * un e-mail « dossier en cours d'analyse » est envoyé à l'inscription.
  */
 @Service
 @RequiredArgsConstructor
@@ -33,8 +34,7 @@ public class OnboardingService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
-    private final JwtService jwtService;
-    private final RefreshTokenService refreshTokenService;
+    private final MailService mailService;
 
     @Transactional
     public AuthResponse inscrire(InscriptionEtablissementRequest req) {
@@ -47,6 +47,7 @@ public class OnboardingService {
                 .slug(slugUnique(req.getNomEtablissement()))
                 .plan(Plan.FREE)
                 .maxEnseignants(10)
+                .statut(StatutEtablissement.EN_ATTENTE)   // validation super admin requise
                 .actif(true)
                 .build());
 
@@ -60,13 +61,11 @@ public class OnboardingService {
                 .etablissement(etablissement)   // rattachement au nouveau tenant
                 .build());
 
-        String token = jwtService.generateToken(admin);
-        String refreshToken = refreshTokenService.create(admin);
+        mailService.notifierInscriptionEtablissementRecue(
+                admin.getEmail(), req.getAdminPrenom(), etablissement.getNom());
 
+        // Pas de token : le compte ne devient utilisable qu'après validation du dossier.
         return AuthResponse.builder()
-                .token(token)
-                .refreshToken(refreshToken)
-                .type("Bearer")
                 .id(admin.getId())
                 .email(admin.getEmail())
                 .roles(List.of(ERole.ROLE_ADMIN.name()))

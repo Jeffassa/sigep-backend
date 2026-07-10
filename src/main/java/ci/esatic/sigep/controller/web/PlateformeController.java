@@ -2,9 +2,13 @@ package ci.esatic.sigep.controller.web;
 
 import ci.esatic.sigep.config.DataInitializer;
 import ci.esatic.sigep.entity.Etablissement;
+import ci.esatic.sigep.entity.StatutEtablissement;
+import ci.esatic.sigep.entity.User;
 import ci.esatic.sigep.repository.EnseignantRepository;
 import ci.esatic.sigep.repository.EtablissementRepository;
+import ci.esatic.sigep.repository.UserRepository;
 import ci.esatic.sigep.service.AbonnementService;
+import ci.esatic.sigep.service.MailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
@@ -37,9 +41,11 @@ public class PlateformeController {
 
     private final EtablissementRepository etablissementRepository;
     private final EnseignantRepository enseignantRepository;
+    private final UserRepository userRepository;
     private final AbonnementService abonnementService;
+    private final MailService mailService;
 
-    /** Vue d'ensemble : KPIs de la plateforme + liste des établissements clients. */
+    /** Vue d'ensemble : dossiers à valider + KPIs de la plateforme + liste des clients. */
     @GetMapping({"", "/"})
     public String dashboard(Model model) {
         List<Etablissement> etablissements = clients();
@@ -56,6 +62,16 @@ public class PlateformeController {
         Map<String, Long> parPlan = etablissements.stream()
                 .collect(Collectors.groupingBy(e -> e.getPlan().name(), Collectors.counting()));
 
+        // SA-2 : dossiers d'inscription en attente de validation (+ email de l'admin déposant).
+        List<Etablissement> enAttente = etablissements.stream()
+                .filter(e -> e.getStatut() == StatutEtablissement.EN_ATTENTE)
+                .toList();
+        Map<Long, String> adminParEtab = new HashMap<>();
+        for (Etablissement e : enAttente) {
+            userRepository.findFirstByEtablissementIdOrderByIdAsc(e.getId())
+                    .ifPresent(u -> adminParEtab.put(e.getId(), u.getEmail()));
+        }
+
         model.addAttribute("etablissements", etablissements);
         model.addAttribute("enseignantsParEtab", enseignantsParEtab);
         model.addAttribute("expires", expires);
@@ -63,7 +79,37 @@ public class PlateformeController {
         model.addAttribute("nbEtablissements", etablissements.size());
         model.addAttribute("nbActifs", etablissements.stream().filter(Etablissement::isActif).count());
         model.addAttribute("nbExpires", (long) expires.size());
+        model.addAttribute("enAttente", enAttente);
+        model.addAttribute("adminParEtab", adminParEtab);
         return "plateforme/dashboard";
+    }
+
+    /** SA-2 : valider un dossier d'inscription — l'établissement peut alors se connecter. */
+    @PostMapping("/etablissements/valider")
+    @Transactional
+    public String validerEtablissement(@RequestParam String slug, RedirectAttributes ra) {
+        etablissementRepository.findBySlug(slug).ifPresentOrElse(e -> {
+            e.setStatut(StatutEtablissement.VALIDE);
+            etablissementRepository.save(e);
+            userRepository.findFirstByEtablissementIdOrderByIdAsc(e.getId())
+                    .ifPresent(u -> mailService.notifierEtablissementValide(u.getEmail(), e.getNom()));
+            ra.addFlashAttribute("ok", "« " + e.getNom() + " » validé : l'administrateur a été prévenu par e-mail.");
+        }, () -> ra.addFlashAttribute("erreur", "Établissement introuvable : " + slug));
+        return "redirect:/plateforme";
+    }
+
+    /** SA-2 : refuser un dossier d'inscription — la connexion reste bloquée. */
+    @PostMapping("/etablissements/refuser")
+    @Transactional
+    public String refuserEtablissement(@RequestParam String slug, RedirectAttributes ra) {
+        etablissementRepository.findBySlug(slug).ifPresentOrElse(e -> {
+            e.setStatut(StatutEtablissement.REFUSE);
+            etablissementRepository.save(e);
+            userRepository.findFirstByEtablissementIdOrderByIdAsc(e.getId())
+                    .ifPresent(u -> mailService.notifierEtablissementRefuse(u.getEmail(), e.getNom()));
+            ra.addFlashAttribute("ok", "« " + e.getNom() + " » refusé : l'administrateur a été prévenu par e-mail.");
+        }, () -> ra.addFlashAttribute("erreur", "Établissement introuvable : " + slug));
+        return "redirect:/plateforme";
     }
 
     /** Renouvellements : valider un paiement reçu = prolonger la période d'un établissement. */

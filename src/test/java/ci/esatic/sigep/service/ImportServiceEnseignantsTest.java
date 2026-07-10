@@ -44,7 +44,9 @@ class ImportServiceEnseignantsTest {
                 enseignantRepository,
                 Mockito.mock(MatiereRepository.class),
                 Mockito.mock(ClasseRepository.class),
-                Mockito.mock(SalleRepository.class));
+                Mockito.mock(SalleRepository.class),
+                Mockito.mock(ci.esatic.sigep.repository.EtablissementRepository.class),
+                Mockito.mock(ci.esatic.sigep.tenant.plan.PlanService.class));
     }
 
     @Test

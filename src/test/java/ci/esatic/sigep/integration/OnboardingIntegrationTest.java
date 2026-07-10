@@ -59,16 +59,19 @@ class OnboardingIntegrationTest {
     }
 
     @Test
-    void inscription_cree_le_tenant_et_son_admin_et_renvoie_une_session() throws Exception {
+    void inscription_cree_le_tenant_EN_ATTENTE_sans_token() throws Exception {
+        // SA-2 : le dossier doit être validé par le super admin avant toute connexion —
+        // l'inscription ne délivre donc AUCUN token et l'établissement naît EN_ATTENTE.
         mockMvc.perform(post("/api/saas/etablissements")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body("Université Atlantique", "admin@atlantique.ci")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.token").isNotEmpty())
+                .andExpect(jsonPath("$.data.token").doesNotExist())
                 .andExpect(jsonPath("$.data.roles[0]").value("ROLE_ADMIN"));
 
-        assertThat(etablissementRepository.findBySlug("universite-atlantique")).isPresent();
+        var etab = etablissementRepository.findBySlug("universite-atlantique").orElseThrow();
+        assertThat(etab.getStatut()).isEqualTo(ci.esatic.sigep.entity.StatutEtablissement.EN_ATTENTE);
         User admin = userRepository.findByEmail("admin@atlantique.ci").orElseThrow();
         assertThat(admin.getEtablissement()).isNotNull();
         assertThat(admin.getEtablissement().getNom()).isEqualTo("Université Atlantique");
