@@ -29,6 +29,12 @@
             <artifactId>anthropic-java</artifactId>
             <version>2.34.0</version>
         </dependency>
+        <!-- Stripe (paiement en ligne par carte — Checkout + webhook) -->
+        <dependency>
+            <groupId>com.stripe</groupId>
+            <artifactId>stripe-java</artifactId>
+            <version>26.11.0</version>
+        </dependency>
         <!-- Spring Boot Starters -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

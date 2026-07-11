@@ -136,6 +136,8 @@ app:
     # est généré au démarrage et affiché UNE fois dans les logs (à changer ensuite).
     email: ${ADMIN_EMAIL:admin@esatic.ci}
     password: ${ADMIN_PASSWORD:}
+  # URL publique de base (liens de retour Stripe, e-mails). En local : http://localhost:8080
+  base-url: ${APP_BASE_URL:https://sigep.store}
   platform:
     # Propriétaire de la plateforme SaaS. owner-email : contact affiché aux établissements
     # (page abonnement). admin-email/password : compte SUPER ADMIN (espace /plateforme),
@@ -144,6 +146,14 @@ app:
     owner-email: ${PLATFORM_OWNER_EMAIL:assalendahjeanfrancois@gmail.com}
     admin-email: ${PLATFORM_ADMIN_EMAIL:${app.platform.owner-email}}
     admin-password: ${PLATFORM_ADMIN_PASSWORD:}
+  stripe:
+    # Paiement en ligne (Stripe Checkout). Désactivé par défaut : activer avec STRIPE_ENABLED=true
+    # + STRIPE_SECRET_KEY. Le webhook exige STRIPE_WEBHOOK_SECRET. Devise par défaut XOF (sans décimales).
+    # NB : Stripe ne gère pas le Mobile Money en Côte d'Ivoire — mode test (cartes) pour valider le flux.
+    enabled: ${STRIPE_ENABLED:false}
+    secret-key: ${STRIPE_SECRET_KEY:}
+    webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+    currency: ${STRIPE_CURRENCY:xof}
   security:
     # Ne faire confiance au header X-Forwarded-For QUE derrière un reverse proxy de confiance.
     trust-forwarded-for: ${TRUST_FORWARDED_FOR:false}
