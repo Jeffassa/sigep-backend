@@ -2,11 +2,13 @@ package ci.esatic.sigep.controller.web;
 
 import ci.esatic.sigep.config.DataInitializer;
 import ci.esatic.sigep.entity.Etablissement;
+import ci.esatic.sigep.entity.Paiement;
 import ci.esatic.sigep.entity.Plan;
 import ci.esatic.sigep.entity.StatutEtablissement;
 import ci.esatic.sigep.entity.User;
 import ci.esatic.sigep.repository.EnseignantRepository;
 import ci.esatic.sigep.repository.EtablissementRepository;
+import ci.esatic.sigep.repository.PaiementRepository;
 import ci.esatic.sigep.repository.UserRepository;
 import ci.esatic.sigep.service.AbonnementService;
 import ci.esatic.sigep.service.MailService;
@@ -14,6 +16,7 @@ import ci.esatic.sigep.service.SuppressionEtablissementService;
 import ci.esatic.sigep.tenant.plan.PlanService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
@@ -25,6 +28,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -51,6 +55,7 @@ public class PlateformeController {
     private final MailService mailService;
     private final PlanService planService;
     private final SuppressionEtablissementService suppressionEtablissementService;
+    private final PaiementRepository paiementRepository;
 
     /** Vue d'ensemble : dossiers à valider + KPIs (dont MRR) + liste filtrable des clients. */
     @GetMapping({"", "/"})
@@ -113,6 +118,9 @@ public class PlateformeController {
         model.addAttribute("nbExpires", (long) expires.size());
         model.addAttribute("mrr", mrr);
         model.addAttribute("inscriptionsMois", inscriptionsMois);
+        model.addAttribute("totalEncaisse", paiementRepository.totalEncaisse());
+        model.addAttribute("encaisseMois", paiementRepository.encaisseDepuis(
+                now.withDayOfMonth(1).atStartOfDay()));
         model.addAttribute("enAttente", enAttente);
         model.addAttribute("adminParEtab", adminParEtab);
         model.addAttribute("q", q);
@@ -135,6 +143,8 @@ public class PlateformeController {
         model.addAttribute("expire", abonnementService.estExpire(e));
         model.addAttribute("joursAvantExpiration", abonnementService.joursAvantExpiration(e));
         model.addAttribute("prixMensuel", planService.prixMensuel(e.getPlan()));
+        model.addAttribute("paiements", paiementRepository.findByEtablissementIdOrderByDatePaiementDesc(e.getId()));
+        model.addAttribute("totalPaye", paiementRepository.totalParEtablissement(e.getId()));
         return "plateforme/etablissement";
     }
 
@@ -230,7 +240,7 @@ public class PlateformeController {
         return "redirect:/plateforme";
     }
 
-    /** Renouvellements : valider un paiement reçu = prolonger la période d'un établissement. */
+    /** Renouvellements : valider un paiement reçu = enregistrer le paiement + prolonger. */
     @GetMapping("/abonnements")
     public String abonnements(Model model) {
         List<Etablissement> etablissements = clients();
@@ -238,22 +248,58 @@ public class PlateformeController {
                 .filter(abonnementService::estExpire)
                 .map(Etablissement::getId)
                 .collect(Collectors.toSet());
+        Map<Long, Long> tarifParEtab = etablissements.stream()
+                .collect(Collectors.toMap(Etablissement::getId, e -> planService.prixMensuel(e.getPlan())));
         model.addAttribute("etablissements", etablissements);
         model.addAttribute("expires", expires);
+        model.addAttribute("tarifParEtab", tarifParEtab);
         return "plateforme/abonnements";
     }
 
-    /** Prolongation manuelle après paiement constaté (Mobile Money). */
+    /** Historique des paiements reçus (trace comptable de la plateforme). */
+    @GetMapping("/paiements")
+    public String paiements(Model model) {
+        List<Paiement> paiements = paiementRepository.findAllByOrderByDatePaiementDesc();
+        Map<Long, String> nomParEtab = etablissementRepository.findAll().stream()
+                .collect(Collectors.toMap(Etablissement::getId, Etablissement::getNom));
+        LocalDate now = LocalDate.now();
+        model.addAttribute("paiements", paiements);
+        model.addAttribute("nomParEtab", nomParEtab);
+        model.addAttribute("totalEncaisse", paiementRepository.totalEncaisse());
+        model.addAttribute("encaisseMois", paiementRepository.encaisseDepuis(now.withDayOfMonth(1).atStartOfDay()));
+        model.addAttribute("nbPaiements", paiements.size());
+        return "plateforme/paiements";
+    }
+
+    /**
+     * Prolongation manuelle après paiement constaté (Mobile Money) : enregistre un Paiement
+     * (montant reçu, mois crédités, référence) ET prolonge la période de l'établissement.
+     */
     @PostMapping("/abonnements/prolonger")
     @Transactional
-    public String prolonger(@RequestParam String slug,
+    public String prolonger(@AuthenticationPrincipal User superAdmin,
+                            @RequestParam String slug,
                             @RequestParam(defaultValue = "1") int mois,
+                            @RequestParam(required = false) Long montant,
+                            @RequestParam(required = false) String reference,
                             RedirectAttributes ra) {
         etablissementRepository.findBySlug(slug).ifPresentOrElse(e -> {
-            abonnementService.prolonger(e, Math.max(1, mois));
+            int m = Math.max(1, mois);
+            long paye = (montant != null && montant >= 0) ? montant : (long) m * planService.prixMensuel(e.getPlan());
+
+            paiementRepository.save(Paiement.builder()
+                    .etablissementId(e.getId())
+                    .montant(paye)
+                    .moisCredites(m)
+                    .reference(reference == null || reference.isBlank() ? null : reference.trim())
+                    .enregistrePar(superAdmin != null ? superAdmin.getEmail() : null)
+                    .build());
+
+            abonnementService.prolonger(e, m);
             etablissementRepository.save(e);
-            ra.addFlashAttribute("ok", "Abonnement de « " + e.getNom() + " » prolongé de "
-                    + Math.max(1, mois) + " mois (jusqu'au " + e.getDateExpiration() + ").");
+            ra.addFlashAttribute("ok", "Paiement de « " + e.getNom() + " » enregistré ("
+                    + paye + " FCFA) — abonnement prolongé de " + m + " mois (jusqu'au "
+                    + e.getDateExpiration() + ").");
         }, () -> ra.addFlashAttribute("erreur", "Établissement introuvable : " + slug));
         return "redirect:/plateforme/abonnements";
     }

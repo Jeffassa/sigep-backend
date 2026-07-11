@@ -68,6 +68,38 @@
         <p class="text-[12px] text-muted mt-3" th:text="'Inscrit le ' + ${#temporals.format(e.dateCreation,'dd/MM/yyyy à HH:mm')}">—</p>
     </section>
 
+    <!-- Historique des paiements -->
+    <section class="glass rounded-3xl overflow-hidden mb-6" data-reveal>
+        <div class="px-6 py-4 border-b border-line flex items-center gap-2.5">
+            <span class="material-symbols-rounded">receipt_long</span>
+            <h2 class="font-serif text-[20px]">Paiements</h2>
+            <span class="ml-auto font-mono text-[12px] text-muted">Total&nbsp;:&nbsp;
+                <strong class="text-ink" th:text="${#numbers.formatInteger(totalPaye,1,'WHITESPACE')} + ' FCFA'">0</strong></span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-[13px]" data-mobile-keep="2">
+                <thead><tr class="border-b border-line font-mono text-[10px] uppercase tracking-wider text-muted">
+                    <th class="px-6 py-2.5">Date</th><th class="px-4 py-2.5">Montant</th>
+                    <th class="px-4 py-2.5">Mois</th><th class="px-4 py-2.5">Référence</th><th class="px-4 py-2.5">Enregistré par</th>
+                </tr></thead>
+                <tbody>
+                <tr th:each="p : ${paiements}" class="border-b border-line">
+                    <td class="px-6 py-2.5" th:text="${#temporals.format(p.datePaiement,'dd/MM/yyyy HH:mm')}">--</td>
+                    <td class="px-4 py-2.5 font-mono" th:text="${#numbers.formatInteger(p.montant,1,'WHITESPACE')} + ' FCFA'">0</td>
+                    <td class="px-4 py-2.5" th:text="'+' + ${p.moisCredites}">+1</td>
+                    <td class="px-4 py-2.5 font-mono text-[12px] text-muted" th:text="${p.reference} ?: '—'">—</td>
+                    <td class="px-4 py-2.5 font-mono text-[11px] text-muted" th:text="${p.enregistrePar} ?: '—'">—</td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(paiements)}">
+                    <td colspan="5" class="px-6 py-6 text-center text-muted">
+                        Aucun paiement enregistré. <a th:href="@{/plateforme/abonnements}" class="underline">En enregistrer un</a>.
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
     <!-- Actions de gestion -->
     <section class="glass rounded-3xl p-6 mb-6" data-reveal>
         <h2 class="font-serif text-[20px] mb-5">Gestion</h2>

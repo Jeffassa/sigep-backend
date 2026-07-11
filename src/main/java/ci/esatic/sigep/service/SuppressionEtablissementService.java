@@ -31,7 +31,9 @@ public class SuppressionEtablissementService {
         exec("DELETE FROM classes WHERE etablissement_id = :id", etablissementId);
         exec("DELETE FROM matieres WHERE etablissement_id = :id", etablissementId);
         exec("DELETE FROM salles WHERE etablissement_id = :id", etablissementId);
-        // 5) Sessions + rôles des utilisateurs, puis les utilisateurs eux-mêmes
+        // 5) Paiements (trace comptable liée à l'établissement)
+        exec("DELETE FROM paiements WHERE etablissement_id = :id", etablissementId);
+        // 6) Sessions + rôles des utilisateurs, puis les utilisateurs eux-mêmes
         exec("DELETE FROM refresh_tokens WHERE user_id IN "
                 + "(SELECT id FROM users WHERE etablissement_id = :id)", etablissementId);
         exec("DELETE FROM user_roles WHERE user_id IN "
