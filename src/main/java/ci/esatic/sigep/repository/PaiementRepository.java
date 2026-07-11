@@ -27,4 +27,7 @@ public interface PaiementRepository extends JpaRepository<Paiement, Long> {
     /** Total encaissé pour un établissement. */
     @Query("SELECT COALESCE(SUM(p.montant), 0) FROM Paiement p WHERE p.etablissementId = :id")
     long totalParEtablissement(@Param("id") Long etablissementId);
+
+    /** Idempotence webhook Stripe : un paiement a-t-il déjà cette référence ? */
+    boolean existsByReference(String reference);
 }

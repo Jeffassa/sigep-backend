@@ -102,6 +102,8 @@ public class SecurityConfig {
                         // Onboarding SaaS : inscription publique d'un établissement (rate-limité)
                         .requestMatchers("/api/saas/**").permitAll()
                         .requestMatchers("/api/qr/display/**").permitAll()
+                        // Webhook Stripe : public, protégé par la vérification de signature
+                        .requestMatchers("/api/stripe/webhook").permitAll()
                         // Sondes de supervision publiques ; le reste de l'actuator (metrics…)
                         // réservé aux admins — pas exposé aux enseignants authentifiés.
                         .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()

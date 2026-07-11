@@ -63,6 +63,22 @@ public class MailService {
                 + "— L'équipe SIGEP · Solutions de Gestion");
     }
 
+    /** Reçu après un paiement en ligne (Stripe) réussi. */
+    @Async
+    public void notifierPaiementEnLigne(String email, String nomEtablissement, long montant,
+                                        java.time.LocalDate dateExpiration) {
+        String jusqua = dateExpiration != null
+                ? dateExpiration.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+                : "—";
+        envoyer(email, "SIGEP — Paiement reçu, merci !",
+                "Bonjour,\n\n"
+                + "Nous confirmons la réception de votre paiement de " + montant + " FCFA pour « "
+                + nomEtablissement + " ».\n\n"
+                + "Votre abonnement Pro est actif jusqu'au " + jusqua + ".\n\n"
+                + "Merci de votre confiance !\n\n"
+                + "— L'équipe SIGEP · Solutions de Gestion");
+    }
+
     /** Le super admin a refusé le dossier. */
     @Async
     public void notifierEtablissementRefuse(String email, String nomEtablissement) {

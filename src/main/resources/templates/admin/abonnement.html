@@ -21,6 +21,15 @@
          style="background:rgba(186,26,26,.08);color:#7a0010;border:1px solid rgba(186,26,26,.2)">
         <span class="material-symbols-rounded text-[18px]">error</span><span th:text="${erreurAbo}"></span>
     </div>
+    <div th:if="${param.paye}" class="flex items-center gap-2 p-3 mb-4 rounded-xl text-[13px]"
+         style="background:rgba(15,122,61,.10);color:#0f7a3d;border:1px solid rgba(15,122,61,.25)">
+        <span class="material-symbols-rounded text-[18px]">verified</span>
+        <span>Paiement reçu, merci ! Votre abonnement est mis à jour (quelques secondes peuvent être nécessaires).</span>
+    </div>
+    <div th:if="${param.annule}" class="flex items-center gap-2 p-3 mb-4 rounded-xl text-[13px]"
+         style="background:rgba(10,10,10,.05);border:1px solid var(--line)">
+        <span class="material-symbols-rounded text-[18px]">info</span><span>Paiement annulé. Aucun montant n'a été prélevé.</span>
+    </div>
 
     <!-- Statut de l'abonnement -->
     <section class="glass rounded-3xl p-7 mb-6" data-reveal>
@@ -51,6 +60,32 @@
              style="background:rgba(186,26,26,.06);border:1px solid rgba(186,26,26,.18)">
             Votre abonnement a expiré : l'accès à l'espace est suspendu jusqu'au renouvellement.
         </div>
+    </section>
+
+    <!-- Paiement en ligne (Stripe) -->
+    <section th:if="${stripeEnabled}" class="glass-strong rounded-3xl p-7 mb-6" data-reveal
+             style="outline:2px solid var(--c-ink); outline-offset:-2px;">
+        <div class="flex items-center gap-2.5 mb-3">
+            <span class="material-symbols-rounded">credit_card</span>
+            <h2 class="font-serif text-[22px]">Payer en ligne (carte)</h2>
+        </div>
+        <p class="text-[14px] text-muted mb-4">Paiement sécurisé par carte bancaire. Activation
+            <strong class="text-ink">immédiate</strong> dès le paiement confirmé.</p>
+        <form th:action="@{/admin/abonnement/payer}" method="post" class="flex flex-wrap items-end gap-3">
+            <div>
+                <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-1.5">Durée</label>
+                <select name="mois" class="h-11 px-3 rounded-xl bg-white/60 border border-line text-[14px]">
+                    <option value="1">1 mois</option>
+                    <option value="3">3 mois</option>
+                    <option value="12">12 mois</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-ink inline-flex items-center gap-2 h-11 px-5 rounded-xl font-medium">
+                <span class="material-symbols-rounded text-[18px]">lock</span>
+                Payer <span th:text="${#numbers.formatInteger(prixPro,1,'WHITESPACE')} + ' FCFA / mois'">10 000 FCFA</span>
+            </button>
+        </form>
+        <p class="text-[12px] text-muted mt-3">Le paiement passe au plan Pro (enseignants illimités, IA, exports).</p>
     </section>
 
     <!-- Renouvellement (paiement manuel) -->

@@ -129,7 +129,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
         return uri.startsWith("/css/") || uri.startsWith("/js/") || uri.startsWith("/images/")
                 || uri.startsWith("/webjars/") || "/favicon.ico".equals(uri)
                 || uri.startsWith("/actuator/health")
-                || uri.startsWith("/api/qr/display/"); // écran kiosque : rafraîchi en continu
+                || uri.startsWith("/api/qr/display/") // écran kiosque : rafraîchi en continu
+                || uri.startsWith("/api/stripe/");    // webhook Stripe (ne jamais bloquer/retarder)
     }
 
     /** Enregistre un hit et indique si la clé dépasse son budget sur la fenêtre glissante. */
