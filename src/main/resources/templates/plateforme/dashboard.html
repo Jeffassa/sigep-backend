@@ -95,6 +95,14 @@
             </p>
         </div>
         <div class="glass rounded-3xl p-6">
+            <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Encaissé (total)</p>
+            <p class="font-serif text-[28px] leading-none mt-1.5">
+                <span th:text="${#numbers.formatInteger(totalEncaisse, 1, 'WHITESPACE')}">0</span>
+                <span class="text-[13px] text-muted">FCFA</span>
+            </p>
+            <p class="text-[11px] text-muted mt-1" th:text="'dont ' + ${#numbers.formatInteger(encaisseMois,1,'WHITESPACE')} + ' ce mois'">—</p>
+        </div>
+        <div class="glass rounded-3xl p-6">
             <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Par plan</p>
             <div class="flex flex-wrap gap-x-3 gap-y-1 mt-1 font-mono text-[12px]">
                 <span>FREE&nbsp;<strong th:text="${parPlan['FREE']} ?: 0">0</strong></span>

@@ -33,7 +33,7 @@
             <table class="w-full text-left text-[14px]" data-mobile-keep="2">
                 <thead><tr class="border-b border-line font-mono text-[10px] uppercase tracking-wider text-muted">
                     <th class="px-7 py-3">Établissement</th><th class="px-4 py-3">Plan</th>
-                    <th class="px-4 py-3">Expiration</th><th class="px-4 py-3 text-right">Prolonger</th>
+                    <th class="px-4 py-3">Expiration</th><th class="px-4 py-3 text-right">Enregistrer un paiement</th>
                 </tr></thead>
                 <tbody>
                 <tr th:each="e : ${etablissements}" class="border-b border-line"
@@ -48,8 +48,13 @@
                         <span th:if="${expires.contains(e.id)}" class="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-ink text-white text-[11px]">Expiré</span>
                     </td>
                     <td class="px-4 py-3">
-                        <form th:action="@{/plateforme/abonnements/prolonger}" method="post" class="flex items-center justify-end gap-2">
+                        <form th:action="@{/plateforme/abonnements/prolonger}" method="post" class="flex items-center justify-end gap-2 flex-wrap">
                             <input type="hidden" name="slug" th:value="${e.slug}"/>
+                            <input type="number" name="montant" min="0" step="500" th:value="${tarifParEtab[e.id]}"
+                                   title="Montant reçu (FCFA)" placeholder="FCFA"
+                                   class="h-9 px-2 w-24 rounded-lg bg-white/60 border border-line text-[13px]"/>
+                            <input type="text" name="reference" placeholder="Réf. (option)"
+                                   class="h-9 px-2 w-28 rounded-lg bg-white/60 border border-line text-[13px]"/>
                             <select name="mois" class="h-9 px-2 rounded-lg bg-white/60 border border-line text-[13px]">
                                 <option value="1">+1 mois</option>
                                 <option value="3">+3 mois</option>

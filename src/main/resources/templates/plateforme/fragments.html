@@ -25,6 +25,12 @@
                 <span class="material-symbols-rounded text-[18px]">card_membership</span>
                 <span class="hidden md:inline">Abonnements</span>
             </a>
+            <a th:href="@{/plateforme/paiements}"
+               th:classappend="${active=='paiements'} ? ' bg-ink text-white' : ' glass text-muted hover:text-ink'"
+               class="btn flex items-center gap-1.5 px-3.5 h-10 rounded-full text-[13px] font-medium">
+                <span class="material-symbols-rounded text-[18px]">receipt_long</span>
+                <span class="hidden md:inline">Paiements</span>
+            </a>
         </nav>
 
         <div class="flex items-center gap-3 shrink-0">
