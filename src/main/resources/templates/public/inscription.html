@@ -82,9 +82,27 @@
             </div>
             <div>
                 <label class="block font-mono text-[11px] uppercase tracking-wider text-muted mb-2">Mot de passe</label>
-                <input id="adminPassword" type="password" required minlength="8"
-                       class="w-full h-12 px-4 rounded-xl bg-white/60 border border-line text-ink focus:outline-none focus:border-ink focus:ring-1 focus:ring-ink transition"
-                       placeholder="8 caractères minimum"/>
+                <div class="relative">
+                    <input id="adminPassword" type="password" required minlength="8"
+                           class="w-full h-12 px-4 pr-11 rounded-xl bg-white/60 border border-line text-ink focus:outline-none focus:border-ink focus:ring-1 focus:ring-ink transition"
+                           placeholder="8 caractères minimum"/>
+                    <button type="button" data-toggle="adminPassword" aria-label="Afficher le mot de passe"
+                            class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink transition">
+                        <span class="material-symbols-rounded text-[20px]">visibility</span>
+                    </button>
+                </div>
+            </div>
+            <div>
+                <label class="block font-mono text-[11px] uppercase tracking-wider text-muted mb-2">Confirmer le mot de passe</label>
+                <div class="relative">
+                    <input id="adminPasswordConfirm" type="password" required minlength="8"
+                           class="w-full h-12 px-4 pr-11 rounded-xl bg-white/60 border border-line text-ink focus:outline-none focus:border-ink focus:ring-1 focus:ring-ink transition"
+                           placeholder="Retapez le même mot de passe"/>
+                    <button type="button" data-toggle="adminPasswordConfirm" aria-label="Afficher le mot de passe"
+                            class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink transition">
+                        <span class="material-symbols-rounded text-[20px]">visibility</span>
+                    </button>
+                </div>
             </div>
             <button id="submit" type="submit"
                     class="btn btn-ink w-full h-12 rounded-xl font-medium flex items-center justify-center gap-2 mt-2">
@@ -106,6 +124,16 @@
     var box = document.getElementById('erreur');
     var txt = document.getElementById('erreurTexte');
 
+    /* Œil afficher/masquer sur chaque champ mot de passe */
+    document.querySelectorAll('[data-toggle]').forEach(function (b) {
+        b.addEventListener('click', function () {
+            var inp = document.getElementById(b.getAttribute('data-toggle'));
+            var icon = b.querySelector('.material-symbols-rounded');
+            if (inp.type === 'password') { inp.type = 'text'; icon.textContent = 'visibility_off'; }
+            else { inp.type = 'password'; icon.textContent = 'visibility'; }
+        });
+    });
+
     function erreur(message) {
         txt.textContent = message;
         box.classList.remove('hidden');
@@ -117,6 +145,11 @@
         e.preventDefault();
         box.classList.add('hidden');
         btn.disabled = true;
+
+        // Les deux mots de passe doivent correspondre.
+        var mdp = document.getElementById('adminPassword').value;
+        var mdp2 = document.getElementById('adminPasswordConfirm').value;
+        if (mdp !== mdp2) { erreur('Les deux mots de passe ne correspondent pas.'); return; }
 
         var payload = {
             nomEtablissement: document.getElementById('nomEtablissement').value.trim(),
