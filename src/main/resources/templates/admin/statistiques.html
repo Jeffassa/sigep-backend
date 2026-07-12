@@ -284,7 +284,8 @@
     }
 
     btn.addEventListener('click', function () { run(false); });
-    run(true);                                         // génération automatique « à la volée » à l'ouverture
+    // Pas de lancement automatique : l'analyse IA ne démarre que lorsque l'admin clique sur le bouton.
+    // Les recommandations par règles restent affichées par défaut ; l'IA vient en complément à la demande.
 })();
 </script>
 
