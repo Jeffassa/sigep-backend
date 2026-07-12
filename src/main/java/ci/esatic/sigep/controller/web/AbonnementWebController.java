@@ -3,6 +3,7 @@ package ci.esatic.sigep.controller.web;
 import ci.esatic.sigep.entity.Etablissement;
 import ci.esatic.sigep.entity.Plan;
 import ci.esatic.sigep.entity.User;
+import ci.esatic.sigep.service.StripePaymentService;
 import ci.esatic.sigep.service.StripeService;
 import ci.esatic.sigep.tenant.plan.PlanService;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +21,9 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 /**
  * Page d'abonnement d'un établissement (statut + paiement). Deux voies :
  *  - MANUELLE : Mobile Money hors-ligne, validée ensuite par le super admin ;
- *  - EN LIGNE : Stripe Checkout (carte) — le webhook enregistre le paiement et prolonge.
+ *  - EN LIGNE : Stripe Checkout (carte). Le paiement est confirmé de deux façons redondantes :
+ *    (1) au RETOUR sur cette page (réconciliation via l'API Stripe, robuste) et
+ *    (2) par le WEBHOOK (asynchrone). Les deux sont idempotents.
  * Reste accessible même quand l'abonnement est expiré.
  */
 @Controller
@@ -33,13 +36,33 @@ public class AbonnementWebController {
     private String ownerEmail;
 
     private final StripeService stripeService;
+    private final StripePaymentService stripePaymentService;
     private final PlanService planService;
 
     @GetMapping("/admin/abonnement")
-    public String abonnement(Model model) {
+    public String abonnement(@AuthenticationPrincipal User user,
+                             @RequestParam(name = "session_id", required = false) String sessionId,
+                             Model model) {
+        // Retour de paiement : on confirme immédiatement via l'API Stripe (ne dépend pas du webhook).
+        boolean paiementReconcilie = false;
+        if (sessionId != null && !sessionId.isBlank() && stripeService.isEnabled()
+                && user != null && user.getEtablissement() != null) {
+            try {
+                var opt = stripeService.recupererSessionPayee(sessionId);
+                if (opt.isPresent() && opt.get().etablissementId().equals(user.getEtablissement().getId())) {
+                    var p = opt.get();
+                    stripePaymentService.traiterPaiementReussi(p.etablissementId(), p.mois(), p.montant(), p.reference());
+                    paiementReconcilie = true;
+                }
+            } catch (Exception ex) {
+                log.warn("Réconciliation paiement Stripe échouée : {}", ex.getMessage());
+            }
+        }
+
         model.addAttribute("ownerEmail", ownerEmail);
         model.addAttribute("stripeEnabled", stripeService.isEnabled());
         model.addAttribute("prixPro", planService.prixMensuel(Plan.PRO));
+        model.addAttribute("paiementReconcilie", paiementReconcilie);
         return "admin/abonnement";
     }
 
