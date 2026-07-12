@@ -26,6 +26,7 @@ public class RapportController {
 
     private final RapportService rapportService;
     private final ci.esatic.sigep.tenant.plan.PlanService planService;
+    private final ci.esatic.sigep.service.EtablissementCourantService etablissementCourantService;
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<RapportResponse>>> getAll() {
@@ -64,7 +65,8 @@ public class RapportController {
     public ResponseEntity<byte[]> bulkDownload(
             @org.springframework.security.core.annotation.AuthenticationPrincipal ci.esatic.sigep.entity.User admin,
             @RequestBody List<Long> ids) throws Exception {
-        planService.exiger(admin == null ? null : admin.getEtablissement(),
+        // Établissement relu en base : un passage à Pro tout juste payé est pris en compte sans reconnexion.
+        planService.exiger(etablissementCourantService.courant(),
                 ci.esatic.sigep.tenant.plan.Feature.RAPPORTS_AVANCES);
         List<RapportPdf> rapports = rapportService.getRapportsByIds(ids);
 

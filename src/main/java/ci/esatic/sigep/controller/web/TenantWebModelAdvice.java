@@ -3,6 +3,7 @@ package ci.esatic.sigep.controller.web;
 import ci.esatic.sigep.entity.Etablissement;
 import ci.esatic.sigep.entity.User;
 import ci.esatic.sigep.service.AbonnementService;
+import ci.esatic.sigep.service.EtablissementCourantService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
@@ -22,6 +23,7 @@ import java.time.LocalDate;
 public class TenantWebModelAdvice {
 
     private final AbonnementService abonnementService;
+    private final EtablissementCourantService etablissementCourantService;
 
     /** Email du propriétaire de la plateforme (peut valider les renouvellements manuels). */
     @Value("${app.platform.owner-email:assalendahjeanfrancois@gmail.com}")
@@ -73,8 +75,8 @@ public class TenantWebModelAdvice {
     }
 
     private Etablissement etablissementCourant() {
-        User u = utilisateurCourant();
-        return u != null ? u.getEtablissement() : null;
+        // Relu en base : plan, expiration et rappels reflètent un paiement récent sans reconnexion.
+        return etablissementCourantService.courant();
     }
 
     private User utilisateurCourant() {
