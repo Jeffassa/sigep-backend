@@ -8,6 +8,8 @@ import com.stripe.param.checkout.SessionCreateParams;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -59,7 +61,8 @@ public class StripeService {
         Stripe.apiKey = secretKey;
         SessionCreateParams params = SessionCreateParams.builder()
                 .setMode(SessionCreateParams.Mode.PAYMENT)
-                .setSuccessUrl(baseUrl + "/admin/abonnement?paye=1")
+                // {CHECKOUT_SESSION_ID} est remplacé par Stripe : permet la réconciliation au retour.
+                .setSuccessUrl(baseUrl + "/admin/abonnement?paye=1&session_id={CHECKOUT_SESSION_ID}")
                 .setCancelUrl(baseUrl + "/admin/abonnement?annule=1")
                 .setCustomerEmail(email)
                 .putMetadata("etablissementId", String.valueOf(etab.getId()))
@@ -78,4 +81,33 @@ public class StripeService {
                 .build();
         return Session.create(params).getUrl();
     }
+
+    /**
+     * Réconciliation au retour de paiement (source de secours du webhook) : récupère la session
+     * via l'API Stripe et, si elle est PAYÉE, renvoie les infos à comptabiliser. N'utilise que la
+     * clé secrète (déjà configurée) — indépendant du secret du webhook.
+     */
+    public Optional<PaiementStripe> recupererSessionPayee(String sessionId) throws StripeException {
+        Stripe.apiKey = secretKey;
+        Session s = Session.retrieve(sessionId);
+        if (!"paid".equals(s.getPaymentStatus())) {
+            return Optional.empty();
+        }
+        Map<String, String> md = s.getMetadata();
+        if (md == null || md.get("etablissementId") == null) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(new PaiementStripe(
+                    Long.valueOf(md.get("etablissementId")),
+                    Integer.parseInt(md.getOrDefault("mois", "1")),
+                    Long.parseLong(md.getOrDefault("montantFcfa", "0")),
+                    "Stripe " + s.getId()));
+        } catch (NumberFormatException e) {
+            return Optional.empty();
+        }
+    }
+
+    /** Paiement Stripe confirmé, prêt à être comptabilisé. */
+    public record PaiementStripe(Long etablissementId, int mois, long montant, String reference) {}
 }
