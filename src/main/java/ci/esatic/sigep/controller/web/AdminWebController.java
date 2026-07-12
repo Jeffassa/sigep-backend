@@ -49,6 +49,7 @@ public class AdminWebController {
     private final ci.esatic.sigep.service.StatsService statsService;
     private final ci.esatic.sigep.service.AiAnalyseService aiAnalyseService;
     private final ci.esatic.sigep.tenant.plan.PlanService planService;
+    private final ci.esatic.sigep.service.EtablissementCourantService etablissementCourantService;
 
     // ─── COMMUN ───────────────────────────────────────────────────────────────
 
@@ -135,7 +136,8 @@ public class AdminWebController {
             @org.springframework.security.core.annotation.AuthenticationPrincipal User admin) {
         Map<String, Object> out = new HashMap<>();
         // Gating premium : l'analyse IA n'est disponible que pour les plans qui l'incluent (PRO+).
-        if (admin == null || !planService.estDisponible(admin.getEtablissement(),
+        // Établissement relu en base : un passage à Pro tout juste payé est pris en compte sans reconnexion.
+        if (admin == null || !planService.estDisponible(etablissementCourantService.courant(),
                 ci.esatic.sigep.tenant.plan.Feature.ANALYSE_IA)) {
             out.put("texte", "L'analyse IA est réservée à un plan supérieur (PRO ou Enterprise). "
                     + "Passez à un plan supérieur pour l'activer.");
@@ -433,12 +435,14 @@ public class AdminWebController {
                                    @RequestParam String password,
                                    RedirectAttributes ra) {
         // Quota du plan (Free ≤ 10 enseignants) : appliqué sur TOUS les chemins de création.
-        if (admin != null && admin.getEtablissement() != null
-                && planService.quotaEnseignantsAtteint(admin.getEtablissement(),
-                    enseignantRepository.countByEtablissementId(admin.getEtablissement().getId()))) {
+        // Établissement relu en base : le plan et le quota reflètent un paiement récent sans reconnexion.
+        Etablissement etabCourant = etablissementCourantService.courant();
+        if (etabCourant != null
+                && planService.quotaEnseignantsAtteint(etabCourant,
+                    enseignantRepository.countByEtablissementId(etabCourant.getId()))) {
             ra.addFlashAttribute("error", "Quota d'enseignants atteint ("
-                    + admin.getEtablissement().getMaxEnseignants()
-                    + ") pour le plan " + admin.getEtablissement().getPlan()
+                    + etabCourant.getMaxEnseignants()
+                    + ") pour le plan " + etabCourant.getPlan()
                     + ". Passez à un plan supérieur pour en ajouter davantage.");
             return "redirect:/admin/enseignants";
         }
@@ -583,7 +587,7 @@ public class AdminWebController {
             @RequestParam(required = false) Long enseignantId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate debut,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fin) {
-        if (admin == null || !planService.estDisponible(admin.getEtablissement(),
+        if (admin == null || !planService.estDisponible(etablissementCourantService.courant(),
                 ci.esatic.sigep.tenant.plan.Feature.RAPPORTS_AVANCES)) {
             return ResponseEntity.status(403).build();
         }
@@ -609,7 +613,7 @@ public class AdminWebController {
             @org.springframework.security.core.annotation.AuthenticationPrincipal User admin,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate debut,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fin) {
-        if (admin == null || !planService.estDisponible(admin.getEtablissement(),
+        if (admin == null || !planService.estDisponible(etablissementCourantService.courant(),
                 ci.esatic.sigep.tenant.plan.Feature.RAPPORTS_AVANCES)) {
             return ResponseEntity.status(403).build();
         }
