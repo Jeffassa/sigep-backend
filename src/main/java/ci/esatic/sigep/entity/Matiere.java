@@ -7,7 +7,9 @@ import lombok.*;
 import org.hibernate.annotations.Filter;
 
 @Entity
-@Table(name = "matieres")
+@Table(name = "matieres",
+        uniqueConstraints = @UniqueConstraint(name = "uk_matiere_etab_libelle",
+                columnNames = {"etablissement_id", "libelle"}))
 @Filter(name = "tenantFilter", condition = "etablissement_id = :tenantId")
 @EntityListeners(TenantListener.class)
 @Getter
@@ -21,7 +23,7 @@ public class Matiere implements TenantScoped {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true, nullable = false)
+    @Column(nullable = false)
     private String libelle;
 
     private String description;

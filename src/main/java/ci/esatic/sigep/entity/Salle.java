@@ -7,7 +7,9 @@ import lombok.*;
 import org.hibernate.annotations.Filter;
 
 @Entity
-@Table(name = "salles")
+@Table(name = "salles",
+        uniqueConstraints = @UniqueConstraint(name = "uk_salle_etab_libelle",
+                columnNames = {"etablissement_id", "libelle"}))
 @Filter(name = "tenantFilter", condition = "etablissement_id = :tenantId")
 @EntityListeners(TenantListener.class)
 @Getter
@@ -21,9 +23,8 @@ public class Salle implements TenantScoped {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Identifiant court de la salle (ex : A101). Sert aussi de jeton dans le QR
-    // d'émargement : doit rester alphanumérique sans espace (cf. QrController.sanitize).
-    @Column(unique = true, nullable = false)
+    // Identifiant court de la salle (ex : A101). Unique PAR établissement (cf. @Table).
+    @Column(nullable = false)
     private String libelle;
 
     private String batiment;
