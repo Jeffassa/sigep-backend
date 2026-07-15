@@ -35,8 +35,11 @@ public class StatsService {
     private final EmargementRepository emargementRepository;
     private final DemandeRattrapageRepository rattrapageRepository;
 
-    /** Forfait horaire par séance émargée (les séances font 2 h ici). */
-    private static final double HEURES_PAR_SEANCE = 2.0;
+    // E8 : forfait horaire du TABLEAU DE BORD GLOBAL (approximation admin), configurable.
+    // Les stats par enseignant et l'app mobile utilisent, elles, la DURÉE RÉELLE
+    // (heureFin - heureDebut) — cf. getStatsEnseignant.
+    @org.springframework.beans.factory.annotation.Value("${app.stats.heures-par-seance:2.0}")
+    private double heuresParSeance;
     private static final DateTimeFormatter SEM_FMT = DateTimeFormatter.ofPattern("dd/MM");
     private static final String[] JOURS = {"Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"};
     private static final String[] CRENEAUX = {"08h", "10h", "12h", "14h", "16h", "18h"};
@@ -101,7 +104,7 @@ public class StatsService {
         m.put("emargees", emargees);
         m.put("taux", taux);
         m.put("tauxDelta", delta);
-        m.put("heures", arrondi(emargees * HEURES_PAR_SEANCE));
+        m.put("heures", arrondi(emargees * heuresParSeance));
         m.put("profsActifs", enseignantRepository.count());
         m.put("rattrapages", rattrapageRepository.countByStatut(StatutDemande.EN_ATTENTE));
 
@@ -161,8 +164,8 @@ public class StatsService {
             r.put("total", tot);
             r.put("emargees", em);
             r.put("taux", tx);
-            r.put("heures", arrondi(em * HEURES_PAR_SEANCE));
-            r.put("niveau", niveau(tx));
+            r.put("heures", arrondi(em * heuresParSeance));
+            r.put("niveau", Assiduite.niveau(tx));
             out.add(r);
         }
         out.sort((a, b) -> Double.compare((double) b.get("taux"), (double) a.get("taux")));
@@ -262,13 +265,6 @@ public class StatsService {
         r.put("type", type);
         r.put("texte", texte);
         return r;
-    }
-
-    private String niveau(double taux) {
-        if (taux >= 90) return "Excellent";
-        if (taux >= 75) return "Bon";
-        if (taux >= 50) return "Moyen";
-        return "Faible";
     }
 
     private double pct(long part, long total) {

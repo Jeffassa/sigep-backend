@@ -170,6 +170,10 @@ app:
     secret-key: ${STRIPE_SECRET_KEY:}
     webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
     currency: ${STRIPE_CURRENCY:xof}
+  mobile-money:
+    # Webhook Mobile Money générique (C7). Secret partagé exigé (fail-closed si vide).
+    # L'agrégateur (CinetPay/PayDunya/Wave/Orange) poste sur /api/paiement/mobile-money/webhook.
+    webhook-secret: ${MOBILE_MONEY_WEBHOOK_SECRET:}
   security:
     # Ne faire confiance au header X-Forwarded-For QUE derrière un reverse proxy de confiance.
     trust-forwarded-for: ${TRUST_FORWARDED_FOR:false}

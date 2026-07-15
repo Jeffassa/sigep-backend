@@ -407,12 +407,8 @@ public class RapportService {
                 .build();
     }
 
-    /** Classe l'assiduité de l'enseignant sur la période d'après son taux d'émargement. */
+    /** Classe l'assiduité de l'enseignant sur la période (seuils centralisés — F4). */
     private String niveauAssiduite(double taux, long total) {
-        if (total == 0) return "—";
-        if (taux >= 90) return "Excellent";
-        if (taux >= 75) return "Bon";
-        if (taux >= 50) return "Moyen";
-        return "Faible";
+        return total == 0 ? "—" : Assiduite.niveau(taux);
     }
 }

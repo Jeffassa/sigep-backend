@@ -20,14 +20,14 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/** Enregistrement d'un paiement Stripe : upgrade Pro, prolongation, idempotence. */
-class StripePaymentServiceTest {
+/** Enregistrement unifié d'un paiement (M6) : upgrade Pro, prolongation, idempotence. */
+class PaiementServiceTest {
 
     private EtablissementRepository etablissementRepository;
     private PaiementRepository paiementRepository;
     private UserRepository userRepository;
     private MailService mailService;
-    private StripePaymentService service;
+    private PaiementService service;
 
     @BeforeEach
     void setUp() {
@@ -35,7 +35,7 @@ class StripePaymentServiceTest {
         paiementRepository = Mockito.mock(PaiementRepository.class);
         userRepository = Mockito.mock(UserRepository.class);
         mailService = Mockito.mock(MailService.class);
-        service = new StripePaymentService(etablissementRepository, paiementRepository,
+        service = new PaiementService(etablissementRepository, paiementRepository,
                 userRepository, new AbonnementService(), mailService);
     }
 
@@ -47,7 +47,7 @@ class StripePaymentServiceTest {
         when(etablissementRepository.findById(5L)).thenReturn(Optional.of(e));
         when(userRepository.findFirstByEtablissementIdOrderByIdAsc(5L)).thenReturn(Optional.empty());
 
-        service.traiterPaiementReussi(5L, 3, 30000L, "Stripe abc");
+        service.enregistrer(5L, 3, 30000L, "Stripe abc", "Stripe (en ligne)");
 
         ArgumentCaptor<Paiement> cap = ArgumentCaptor.forClass(Paiement.class);
         verify(paiementRepository).save(cap.capture());
@@ -65,7 +65,7 @@ class StripePaymentServiceTest {
     void reference_deja_traitee_estIgnoree() {
         when(paiementRepository.existsByReference("Stripe abc")).thenReturn(true);
 
-        service.traiterPaiementReussi(5L, 1, 10000L, "Stripe abc");
+        service.enregistrer(5L, 1, 10000L, "Stripe abc", "Stripe (en ligne)");
 
         verify(paiementRepository, never()).save(any());
         verify(etablissementRepository, never()).findById(anyLong());
