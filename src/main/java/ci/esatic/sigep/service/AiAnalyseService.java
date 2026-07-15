@@ -4,7 +4,11 @@ import com.anthropic.client.AnthropicClient;
 import com.anthropic.client.okhttp.AnthropicOkHttpClient;
 import com.anthropic.models.messages.Message;
 import com.anthropic.models.messages.MessageCreateParams;
+import ci.esatic.sigep.entity.Etablissement;
+import ci.esatic.sigep.entity.Plan;
 import ci.esatic.sigep.tenant.TenantContext;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -20,6 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * ANTHROPIC_API_KEY est présente. Aucune dépendance au démarrage (client créé à la demande).
  */
 @Service
+@Slf4j
 public class AiAnalyseService {
 
     private static final DateTimeFormatter D = DateTimeFormatter.ofPattern("dd/MM/yyyy");
@@ -28,8 +33,17 @@ public class AiAnalyseService {
     @Value("${app.ai.enabled:false}")
     private boolean enabled;
 
+    /** Modèle premium (offres haut de gamme). */
     @Value("${app.ai.model:claude-opus-4-8}")
     private String model;
+
+    /** Modèle standard (offres inférieures) — maîtrise du coût par plan (E10). */
+    @Value("${app.ai.model-standard:claude-haiku-4-5}")
+    private String modelStandard;
+
+    /** Établissement courant : plan (choix du modèle) + attribution du coût par tenant (E10). */
+    @Autowired(required = false)
+    private EtablissementCourantService etablissementCourantService;
 
     private volatile AnthropicClient client; // créé paresseusement
     private final Map<String, Cache> cache = new ConcurrentHashMap<>();
@@ -78,8 +92,13 @@ public class AiAnalyseService {
                 }
             }
         }
+        // E10 : modèle choisi selon le plan (premium pour ENTERPRISE, standard sinon) et
+        // coût attribué au tenant (log par établissement — base d'une refacturation/quota).
+        String modeleChoisi = modeleSelonPlan();
+        log.info("Analyse IA — tenant={} modele={}", TenantContext.get(), modeleChoisi);
+
         MessageCreateParams params = MessageCreateParams.builder()
-                .model(model)
+                .model(modeleChoisi)
                 .maxTokens(4000L)
                 .system(SYSTEME)
                 .addUserMessage(donnees(debut, fin, stats))
@@ -90,6 +109,12 @@ public class AiAnalyseService {
         response.content().forEach(block -> block.text().ifPresent(t -> sb.append(t.text())));
         String texte = sb.toString().trim();
         return texte.isEmpty() ? "Aucune analyse renvoyée." : texte;
+    }
+
+    /** Modèle premium pour ENTERPRISE, standard (moins coûteux) pour les autres plans. */
+    private String modeleSelonPlan() {
+        Etablissement e = (etablissementCourantService != null) ? etablissementCourantService.courant() : null;
+        return (e != null && e.getPlan() == Plan.ENTERPRISE) ? model : modelStandard;
     }
 
     private static final String SYSTEME =

@@ -82,6 +82,29 @@ public class MailService {
                 + "— L'équipe SIGEP · Solutions de Gestion");
     }
 
+    /** Relance d'expiration d'abonnement (dunning E15). jours > 0 : à venir ; jours <= 0 : expiré. */
+    @Async
+    public void notifierExpirationAbonnement(String email, String nomEtablissement, long jours,
+                                             java.time.LocalDate dateExpiration) {
+        String quand = dateExpiration != null
+                ? dateExpiration.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")) : "—";
+        String sujet;
+        String intro;
+        if (jours <= 0) {
+            sujet = "SIGEP — Votre abonnement a expiré";
+            intro = "L'abonnement de « " + nomEtablissement + " » a expiré (" + quand + ").";
+        } else {
+            sujet = "SIGEP — Votre abonnement expire bientôt (J-" + jours + ")";
+            intro = "L'abonnement de « " + nomEtablissement + " » expire le " + quand
+                    + " (dans " + jours + " jour(s)).";
+        }
+        envoyer(email, sujet,
+                "Bonjour,\n\n" + intro + "\n\n"
+                + "Pour éviter toute interruption d'accès, renouvelez depuis votre espace :\n"
+                + baseUrl + "/admin/abonnement\n\n"
+                + "— L'équipe SIGEP · Solutions de Gestion");
+    }
+
     /** Le super admin a refusé le dossier. */
     @Async
     public void notifierEtablissementRefuse(String email, String nomEtablissement) {
