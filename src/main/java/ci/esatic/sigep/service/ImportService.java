@@ -12,10 +12,13 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.text.Normalizer;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +28,19 @@ public class ImportService {
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
 
+    // E5 : plusieurs formats acceptés en entrée (l'établissement produit son propre EDT).
+    private static final List<DateTimeFormatter> DATE_FMTS = List.of(
+            DateTimeFormatter.ofPattern("dd/MM/yyyy"),
+            DateTimeFormatter.ofPattern("d/M/yyyy"),
+            DateTimeFormatter.ofPattern("yyyy-MM-dd"),
+            DateTimeFormatter.ofPattern("dd-MM-yyyy"));
+    private static final List<DateTimeFormatter> TIME_FMTS = List.of(
+            DateTimeFormatter.ofPattern("HH:mm"),
+            DateTimeFormatter.ofPattern("H:mm"),
+            DateTimeFormatter.ofPattern("HH'h'mm"),
+            DateTimeFormatter.ofPattern("HH'h'"),
+            DateTimeFormatter.ofPattern("HH"));
+
     private final SeanceRepository seanceRepository;
     private final EnseignantRepository enseignantRepository;
     private final MatiereRepository matiereRepository;
@@ -33,30 +49,148 @@ public class ImportService {
     private final ci.esatic.sigep.repository.EtablissementRepository etablissementRepository;
     private final ci.esatic.sigep.tenant.plan.PlanService planService;
 
+    // ─────────────────────────────────────────────────────────────────────────
     // Import admin : fichier 7 colonnes avec MATRICULE_ENSEIGNANT
+    //   DATE | HEURE_DEBUT | HEURE_FIN | MATRICULE_ENSEIGNANT | MATIERE | CLASSE | SALLE
+    // ─────────────────────────────────────────────────────────────────────────
     @Transactional
     public Map<String, Object> importerPlanning(MultipartFile file) throws Exception {
         String filename = file.getOriginalFilename();
-        List<Seance> seances = filename != null && filename.endsWith(".csv")
-                ? importerCSV(file)
-                : importerExcel(file);
+        ContexteImport ctx = new ContexteImport();  // caches référentiels + erreurs (E3/E4/C6)
+
+        List<Seance> seances = estCsv(filename)
+                ? importerPlanningCsv(file, ctx, null)
+                : importerPlanningExcel(file, ctx, null);
 
         List<Seance> saved = seanceRepository.saveAll(seances);
-        log.info("Import admin : {} seances importees", saved.size());
+        log.info("Import admin : {} séances importées, {} ligne(s) en erreur", saved.size(), ctx.erreurs.size());
+        return resultat(filename, saved.size(), ctx, null);
+    }
 
-        Map<String, Object> result = new HashMap<>();
-        result.put("totalImporte", saved.size());
+    // ─────────────────────────────────────────────────────────────────────────
+    // Import enseignant : fichier 6 colonnes SANS matricule (enseignant = connecté)
+    //   DATE | HEURE_DEBUT | HEURE_FIN | MATIERE | CLASSE | SALLE
+    // ─────────────────────────────────────────────────────────────────────────
+    @Transactional
+    public Map<String, Object> importerMonPlanning(MultipartFile file, Long userId) throws Exception {
+        Enseignant enseignant = enseignantRepository.findByUserId(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Profil enseignant introuvable"));
+
+        String filename = file.getOriginalFilename();
+        ContexteImport ctx = new ContexteImport();
+
+        List<Seance> seances = estCsv(filename)
+                ? importerPlanningCsv(file, ctx, enseignant)
+                : importerPlanningExcel(file, ctx, enseignant);
+
+        List<Seance> saved = seanceRepository.saveAll(seances);
+        log.info("Import enseignant {} : {} séances importées, {} ligne(s) en erreur",
+                enseignant.getMatricule(), saved.size(), ctx.erreurs.size());
+        return resultat(filename, saved.size(), ctx, enseignant.getPrenom() + " " + enseignant.getNom());
+    }
+
+    /** Résultat d'import homogène (E3) : totaux + détail des lignes en erreur. */
+    private Map<String, Object> resultat(String filename, int importes, ContexteImport ctx, String enseignant) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("totalImporte", importes);        // clé consommée par le mobile (ImportResponse)
         result.put("fichier", filename);
+        if (enseignant != null) result.put("enseignant", enseignant);
+        result.put("lignesEnErreur", ctx.erreurs.size());
+        result.put("erreurs", ctx.erreurs);          // liste "Ligne N : motif" (affichable à l'admin)
+        result.put("referentielsCrees", ctx.referentielsCrees);
         return result;
     }
 
-    /** Colonnes attendues (1re ligne) du fichier annuaire enseignants. */
+    // ─── Parsing Excel ─────────────────────────────────────────────────────────
+    // enseignantFixe != null → fichier 6 colonnes (l'enseignant est imposé).
+    private List<Seance> importerPlanningExcel(MultipartFile file, ContexteImport ctx, Enseignant enseignantFixe) throws Exception {
+        List<Seance> seances = new ArrayList<>();
+        try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
+            Sheet sheet = workbook.getSheetAt(0);
+            for (int i = 1; i <= sheet.getLastRowNum(); i++) {   // ligne 0 = en-têtes
+                Row row = sheet.getRow(i);
+                if (row == null) continue;
+                int numLigne = i + 1;
+                try {
+                    String[] cols = colonnesExcel(row, enseignantFixe == null ? 7 : 6);
+                    if (ligneVide(cols)) continue;
+                    Seance s = construireSeance(cols, ctx, enseignantFixe, numLigne);
+                    if (s != null) seances.add(s);
+                } catch (Exception e) {
+                    ctx.erreur(numLigne, e.getMessage());
+                }
+            }
+        }
+        return seances;
+    }
+
+    // ─── Parsing CSV ─────────────────────────────────────────────────────────
+    private List<Seance> importerPlanningCsv(MultipartFile file, ContexteImport ctx, Enseignant enseignantFixe) throws Exception {
+        List<Seance> seances = new ArrayList<>();
+        int nbColonnes = enseignantFixe == null ? 7 : 6;
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream()))) {
+            String line;
+            char sep = 0;
+            int numLigne = 0;
+            boolean premiere = true;
+            while ((line = reader.readLine()) != null) {
+                numLigne++;
+                if (premiere) { sep = detecterSeparateur(line); premiere = false; continue; } // saute l'en-tête
+                if (line.isBlank()) continue;
+                try {
+                    String[] cols = decouper(line, sep, nbColonnes);
+                    if (ligneVide(cols)) continue;
+                    Seance s = construireSeance(cols, ctx, enseignantFixe, numLigne);
+                    if (s != null) seances.add(s);
+                } catch (Exception e) {
+                    ctx.erreur(numLigne, e.getMessage());
+                }
+            }
+        }
+        return seances;
+    }
+
+    /**
+     * Construit une séance à partir d'une ligne normalisée (upsert des référentiels — C6).
+     * cols (7) : DATE|HEURE_DEBUT|HEURE_FIN|MATRICULE|MATIERE|CLASSE|SALLE
+     * cols (6) : DATE|HEURE_DEBUT|HEURE_FIN|MATIERE|CLASSE|SALLE (enseignant imposé)
+     */
+    private Seance construireSeance(String[] cols, ContexteImport ctx, Enseignant enseignantFixe, int numLigne) {
+        int decalage = (enseignantFixe == null) ? 1 : 0;   // colonne matricule seulement en mode admin
+        String dateStr  = cols[0];
+        String hDebut   = cols[1];
+        String hFin     = cols[2];
+        String matiere  = cols[3 + decalage];
+        String classe   = cols[4 + decalage];
+        String salle    = cols[5 + decalage];
+
+        if (isBlank(dateStr)) return null;
+
+        Enseignant enseignant = enseignantFixe;
+        if (enseignant == null) {
+            String matricule = cols[3];
+            if (isBlank(matricule)) return null;
+            enseignant = enseignantRepository.findByMatricule(matricule.trim())
+                    .orElseThrow(() -> new IllegalArgumentException(
+                            "matricule enseignant inconnu « " + matricule.trim() + " » (importez d'abord l'annuaire)"));
+        }
+
+        return Seance.builder()
+                .date(parseDate(dateStr))
+                .heureDebut(parseTime(hDebut))
+                .heureFin(parseTime(hFin))
+                .enseignant(enseignant)
+                .matiere(ctx.upsertMatiere(exigerLibelle(matiere, "matière")))
+                .classe(ctx.upsertClasse(exigerLibelle(classe, "classe")))
+                .salle(ctx.upsertSalle(exigerLibelle(salle, "salle")))
+                .type(TypeSeance.NORMALE)
+                .statut(StatutSeance.A_FAIRE)
+                .build();
+    }
+
+    // ─── Import d'annuaire enseignants (inchangé sur le fond) ──────────────────
     private static final String[] COLONNES_ENSEIGNANTS = {"MATRICULE", "NOM", "PRENOM", "DEPARTEMENT", "GRADE"};
 
-    // Import admin d'enseignants (annuaire) : crée les profils SANS compte (user=null, statut PENDING).
-    // Les enseignants s'inscrivent ensuite eux-mêmes via leur matricule, puis l'admin valide.
-    // Colonnes : MATRICULE | NOM | PRENOM | DEPARTEMENT | GRADE — le fichier est REFUSÉ si
-    // l'en-tête ne correspond pas (sinon n'importe quel fichier créerait des données absurdes).
     @Transactional
     public Map<String, Object> importerEnseignants(MultipartFile file) throws Exception {
         int importes = 0, ignores = 0;
@@ -67,7 +201,6 @@ public class ImportService {
         } catch (Exception ex) {
             throw new IllegalArgumentException("fichier illisible — un fichier Excel (.xlsx) est attendu.");
         }
-        // Quota du plan (Free ≤ 10 enseignants) : appliqué aussi à l'import en masse.
         Long tenantId = ci.esatic.sigep.tenant.TenantContext.get();
         Etablissement tenant = tenantId == null ? null
                 : etablissementRepository.findById(tenantId).orElse(null);
@@ -83,9 +216,7 @@ public class ImportService {
                 String matricule = getCellValue(row, 0);
                 String nom = getCellValue(row, 1);
                 String prenom = getCellValue(row, 2);
-                // Ligne entièrement vide : simplement sautée.
                 if (matricule.isBlank() && nom.isBlank() && prenom.isBlank()) continue;
-                // Ligne incomplète (identité obligatoire) : comptée comme invalide.
                 if (matricule.isBlank() || nom.isBlank() || prenom.isBlank()) {
                     lignesInvalides.add(i + 1);
                     continue;
@@ -93,7 +224,7 @@ public class ImportService {
                 if (enseignantRepository.existsByMatricule(matricule)) { ignores++; continue; }
                 if (tenant != null && planService.quotaEnseignantsAtteint(tenant, existants + importes)) {
                     quotaAtteint = true;
-                    break; // le reste du fichier n'est pas importé
+                    break;
                 }
                 Enseignant e = Enseignant.builder()
                         .matricule(matricule)
@@ -106,7 +237,7 @@ public class ImportService {
                 importes++;
             }
         }
-        log.info("Import enseignants : {} crees, {} ignores (matricule existant), {} ligne(s) invalide(s) {}, quotaAtteint={}",
+        log.info("Import enseignants : {} créés, {} ignorés (matricule existant), {} ligne(s) invalide(s) {}, quotaAtteint={}",
                 importes, ignores, lignesInvalides.size(), lignesInvalides, quotaAtteint);
         Map<String, Object> result = new HashMap<>();
         result.put("importes", importes);
@@ -116,11 +247,6 @@ public class ImportService {
         return result;
     }
 
-    /**
-     * Refuse le fichier si sa 1re ligne ne porte pas les en-têtes attendus (MATRICULE | NOM |
-     * PRENOM obligatoires ; DEPARTEMENT | GRADE tolérés absents mais refusés si différents).
-     * Comparaison insensible à la casse et aux accents (« Prénom » accepté pour PRENOM).
-     */
     private void verifierEnteteEnseignants(Sheet sheet) {
         String attendu = String.join(" | ", COLONNES_ENSEIGNANTS);
         Row entete = sheet.getRow(0);
@@ -130,7 +256,7 @@ public class ImportService {
         }
         for (int c = 0; c < COLONNES_ENSEIGNANTS.length; c++) {
             String trouve = normaliserEntete(getCellValue(entete, c));
-            boolean obligatoire = c < 3; // matricule, nom, prénom
+            boolean obligatoire = c < 3;
             if ((obligatoire && !trouve.equals(COLONNES_ENSEIGNANTS[c]))
                     || (!obligatoire && !trouve.isEmpty() && !trouve.equals(COLONNES_ENSEIGNANTS[c]))) {
                 throw new IllegalArgumentException("fichier non conforme — colonne " + (c + 1)
@@ -140,11 +266,9 @@ public class ImportService {
         }
     }
 
-    /** Normalise un libellé d'en-tête : accents retirés, majuscules, lettres uniquement. */
     private String normaliserEntete(String s) {
         if (s == null) return "";
-        String sansAccents = java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD)
-                .replaceAll("\\p{M}", "");
+        String sansAccents = Normalizer.normalize(s, Normalizer.Form.NFD).replaceAll("\\p{M}", "");
         return sansAccents.toUpperCase(Locale.ROOT).replaceAll("[^A-Z_]", "");
     }
 
@@ -152,197 +276,72 @@ public class ImportService {
         return (s == null || s.isBlank()) ? null : s;
     }
 
-    // Import enseignant : fichier 6 colonnes sans MATRICULE (enseignant = utilisateur connecté)
-    // Colonnes : DATE | HEURE_DEBUT | HEURE_FIN | MATIERE | CLASSE | SALLE
-    @Transactional
-    public Map<String, Object> importerMonPlanning(MultipartFile file, Long userId) throws Exception {
-        Enseignant enseignant = enseignantRepository.findByUserId(userId)
-                .orElseThrow(() -> new IllegalArgumentException("Profil enseignant introuvable"));
+    // ─── Helpers de parsing / normalisation ────────────────────────────────────
 
-        String filename = file.getOriginalFilename();
-        List<Seance> seances = filename != null && filename.endsWith(".csv")
-                ? importerCSVEnseignant(file, enseignant)
-                : importerExcelEnseignant(file, enseignant);
-
-        List<Seance> saved = seanceRepository.saveAll(seances);
-        log.info("Import enseignant {} : {} seances importees", enseignant.getMatricule(), saved.size());
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("totalImporte", saved.size());
-        result.put("fichier", filename);
-        result.put("enseignant", enseignant.getPrenom() + " " + enseignant.getNom());
-        return result;
+    private boolean estCsv(String filename) {
+        return filename != null && filename.toLowerCase(Locale.ROOT).endsWith(".csv");
     }
 
-    private List<Seance> importerExcel(MultipartFile file) throws Exception {
-        List<Seance> seances = new ArrayList<>();
-        try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
-            Sheet sheet = workbook.getSheetAt(0);
-            // Ligne 0 = en-têtes, on commence à 1
-            for (int i = 1; i <= sheet.getLastRowNum(); i++) {
-                Row row = sheet.getRow(i);
-                if (row == null) continue;
-                try {
-                    Seance seance = parseRowExcel(row);
-                    if (seance != null) seances.add(seance);
-                } catch (Exception e) {
-                    log.warn("Ligne {} ignoree : {}", i + 1, e.getMessage());
-                }
-            }
+    private boolean isBlank(String s) { return s == null || s.isBlank(); }
+
+    private boolean ligneVide(String[] cols) {
+        for (String c : cols) if (c != null && !c.isBlank()) return false;
+        return true;
+    }
+
+    private String exigerLibelle(String v, String champ) {
+        if (isBlank(v)) throw new IllegalArgumentException("colonne " + champ + " vide");
+        return v.trim();
+    }
+
+    /** Détecte le séparateur CSV le plus probable (E5) : ';', tabulation ou ','. */
+    private char detecterSeparateur(String enteteLine) {
+        if (enteteLine == null) return ';';
+        long pv = enteteLine.chars().filter(c -> c == ';').count();
+        long tab = enteteLine.chars().filter(c -> c == '\t').count();
+        long virg = enteteLine.chars().filter(c -> c == ',').count();
+        if (pv >= tab && pv >= virg) return ';';
+        if (tab >= virg) return '\t';
+        return ',';
+    }
+
+    private String[] decouper(String line, char sep, int nbColonnes) {
+        String[] parts = line.split(java.util.regex.Pattern.quote(String.valueOf(sep)), -1);
+        if (parts.length < nbColonnes) {
+            throw new IllegalArgumentException("ligne incomplète (" + parts.length + " colonnes sur " + nbColonnes + " attendues)");
         }
-        return seances;
+        String[] out = new String[nbColonnes];
+        for (int i = 0; i < nbColonnes; i++) out[i] = parts[i] == null ? "" : parts[i].trim();
+        return out;
     }
 
-    private Seance parseRowExcel(Row row) {
-        // Colonnes attendues : DATE | HEURE_DEBUT | HEURE_FIN | MATRICULE_ENSEIGNANT | MATIERE | CLASSE | SALLE
-        String dateStr = getCellValue(row, 0);
-        String heureDebutStr = getCellValue(row, 1);
-        String heureFinStr = getCellValue(row, 2);
-        String matricule = getCellValue(row, 3);
-        String libelleMatiere = getCellValue(row, 4);
-        String libelleClasse = getCellValue(row, 5);
-        String libelleSalle = getCellValue(row, 6);
-
-        if (dateStr.isBlank() || matricule.isBlank()) return null;
-
-        Enseignant enseignant = enseignantRepository.findByMatricule(matricule)
-                .orElseThrow(() -> new IllegalArgumentException("Enseignant introuvable : " + matricule));
-        Matiere matiere = matiereRepository.findByLibelleIgnoreCase(libelleMatiere)
-                .orElseThrow(() -> new IllegalArgumentException("Matiere introuvable : " + libelleMatiere));
-        Classe classe = classeRepository.findByLibelleIgnoreCase(libelleClasse)
-                .orElseThrow(() -> new IllegalArgumentException("Classe introuvable : " + libelleClasse));
-        Salle salle = salleRepository.findByLibelleIgnoreCase(libelleSalle)
-                .orElseThrow(() -> new IllegalArgumentException("Salle introuvable : " + libelleSalle));
-
-        return Seance.builder()
-                .date(LocalDate.parse(dateStr, DATE_FMT))
-                .heureDebut(LocalTime.parse(heureDebutStr, TIME_FMT))
-                .heureFin(LocalTime.parse(heureFinStr, TIME_FMT))
-                .enseignant(enseignant)
-                .matiere(matiere)
-                .classe(classe)
-                .salle(salle)
-                .type(TypeSeance.NORMALE)
-                .statut(StatutSeance.A_FAIRE)
-                .build();
+    private String[] colonnesExcel(Row row, int nbColonnes) {
+        String[] out = new String[nbColonnes];
+        for (int i = 0; i < nbColonnes; i++) out[i] = getCellValue(row, i);
+        return out;
     }
 
-    private List<Seance> importerCSV(MultipartFile file) throws Exception {
-        List<Seance> seances = new ArrayList<>();
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream()))) {
-            String line;
-            boolean firstLine = true;
-            while ((line = reader.readLine()) != null) {
-                if (firstLine) { firstLine = false; continue; } // skip header
-                String[] cols = line.split(";");
-                if (cols.length < 7) continue;
-                try {
-                    String matricule = cols[3].trim();
-                    Enseignant enseignant = enseignantRepository.findByMatricule(matricule)
-                            .orElseThrow(() -> new IllegalArgumentException("Enseignant : " + matricule));
-                    Matiere matiere = matiereRepository.findByLibelleIgnoreCase(cols[4].trim())
-                            .orElseThrow(() -> new IllegalArgumentException("Matiere : " + cols[4].trim()));
-                    Classe classe = classeRepository.findByLibelleIgnoreCase(cols[5].trim())
-                            .orElseThrow(() -> new IllegalArgumentException("Classe : " + cols[5].trim()));
-                    Salle salle = salleRepository.findByLibelleIgnoreCase(cols[6].trim())
-                            .orElseThrow(() -> new IllegalArgumentException("Salle : " + cols[6].trim()));
-
-                    seances.add(Seance.builder()
-                            .date(LocalDate.parse(cols[0].trim(), DATE_FMT))
-                            .heureDebut(LocalTime.parse(cols[1].trim(), TIME_FMT))
-                            .heureFin(LocalTime.parse(cols[2].trim(), TIME_FMT))
-                            .enseignant(enseignant).matiere(matiere).classe(classe).salle(salle)
-                            .type(TypeSeance.NORMALE).statut(StatutSeance.A_FAIRE)
-                            .build());
-                } catch (Exception e) {
-                    log.warn("Ligne CSV ignoree : {}", e.getMessage());
-                }
-            }
+    private LocalDate parseDate(String s) {
+        String v = s.trim();
+        for (DateTimeFormatter f : DATE_FMTS) {
+            try { return LocalDate.parse(v, f); } catch (Exception ignore) { /* format suivant */ }
         }
-        return seances;
+        throw new IllegalArgumentException("date invalide « " + v + " » (attendu jj/mm/aaaa)");
     }
 
-    // --- Méthodes pour import enseignant (6 colonnes, sans matricule) ---
-
-    private List<Seance> importerExcelEnseignant(MultipartFile file, Enseignant enseignant) throws Exception {
-        List<Seance> seances = new ArrayList<>();
-        try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
-            Sheet sheet = workbook.getSheetAt(0);
-            for (int i = 1; i <= sheet.getLastRowNum(); i++) {
-                Row row = sheet.getRow(i);
-                if (row == null) continue;
-                try {
-                    Seance s = parseRowExcelEnseignant(row, enseignant);
-                    if (s != null) seances.add(s);
-                } catch (Exception e) {
-                    log.warn("Ligne {} ignoree : {}", i + 1, e.getMessage());
-                }
-            }
+    private LocalTime parseTime(String s) {
+        String v = s.trim().replace(" ", "");
+        for (DateTimeFormatter f : TIME_FMTS) {
+            try { return LocalTime.parse(v, f); } catch (Exception ignore) { /* format suivant */ }
         }
-        return seances;
+        throw new IllegalArgumentException("heure invalide « " + v + " » (attendu HH:mm)");
     }
 
-    private Seance parseRowExcelEnseignant(Row row, Enseignant enseignant) {
-        // Colonnes : DATE | HEURE_DEBUT | HEURE_FIN | MATIERE | CLASSE | SALLE
-        String dateStr      = getCellValue(row, 0);
-        String heureDebutStr = getCellValue(row, 1);
-        String heureFinStr  = getCellValue(row, 2);
-        String libelleMatiere = getCellValue(row, 3);
-        String libelleClasse  = getCellValue(row, 4);
-        String libelleSalle   = getCellValue(row, 5);
-
-        if (dateStr.isBlank()) return null;
-
-        Matiere matiere = matiereRepository.findByLibelleIgnoreCase(libelleMatiere)
-                .orElseThrow(() -> new IllegalArgumentException("Matiere introuvable : " + libelleMatiere));
-        Classe classe = classeRepository.findByLibelleIgnoreCase(libelleClasse)
-                .orElseThrow(() -> new IllegalArgumentException("Classe introuvable : " + libelleClasse));
-        Salle salle = salleRepository.findByLibelleIgnoreCase(libelleSalle)
-                .orElseThrow(() -> new IllegalArgumentException("Salle introuvable : " + libelleSalle));
-
-        return Seance.builder()
-                .date(LocalDate.parse(dateStr, DATE_FMT))
-                .heureDebut(LocalTime.parse(heureDebutStr, TIME_FMT))
-                .heureFin(LocalTime.parse(heureFinStr, TIME_FMT))
-                .enseignant(enseignant)
-                .matiere(matiere)
-                .classe(classe)
-                .salle(salle)
-                .type(TypeSeance.NORMALE)
-                .statut(StatutSeance.A_FAIRE)
-                .build();
-    }
-
-    private List<Seance> importerCSVEnseignant(MultipartFile file, Enseignant enseignant) throws Exception {
-        List<Seance> seances = new ArrayList<>();
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream()))) {
-            String line;
-            boolean firstLine = true;
-            while ((line = reader.readLine()) != null) {
-                if (firstLine) { firstLine = false; continue; }
-                String[] cols = line.split(";");
-                if (cols.length < 6) continue;
-                try {
-                    Matiere matiere = matiereRepository.findByLibelleIgnoreCase(cols[3].trim())
-                            .orElseThrow(() -> new IllegalArgumentException("Matiere : " + cols[3].trim()));
-                    Classe classe = classeRepository.findByLibelleIgnoreCase(cols[4].trim())
-                            .orElseThrow(() -> new IllegalArgumentException("Classe : " + cols[4].trim()));
-                    Salle salle = salleRepository.findByLibelleIgnoreCase(cols[5].trim())
-                            .orElseThrow(() -> new IllegalArgumentException("Salle : " + cols[5].trim()));
-
-                    seances.add(Seance.builder()
-                            .date(LocalDate.parse(cols[0].trim(), DATE_FMT))
-                            .heureDebut(LocalTime.parse(cols[1].trim(), TIME_FMT))
-                            .heureFin(LocalTime.parse(cols[2].trim(), TIME_FMT))
-                            .enseignant(enseignant).matiere(matiere).classe(classe).salle(salle)
-                            .type(TypeSeance.NORMALE).statut(StatutSeance.A_FAIRE)
-                            .build());
-                } catch (Exception e) {
-                    log.warn("Ligne CSV enseignant ignoree : {}", e.getMessage());
-                }
-            }
-        }
-        return seances;
+    /** Clé de rapprochement tolérante (E4) : sans accents, espaces compactés, minuscule. */
+    private static String cle(String libelle) {
+        if (libelle == null) return "";
+        String sansAccents = Normalizer.normalize(libelle, Normalizer.Form.NFD).replaceAll("\\p{M}", "");
+        return sansAccents.trim().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
     }
 
     private String getCellValue(Row row, int col) {
@@ -356,7 +355,55 @@ public class ImportService {
                 }
                 yield String.valueOf((long) cell.getNumericCellValue());
             }
+            case BOOLEAN -> String.valueOf(cell.getBooleanCellValue());
+            case FORMULA -> {
+                try { yield cell.getStringCellValue().trim(); }
+                catch (Exception e) { yield String.valueOf((long) cell.getNumericCellValue()); }
+            }
             default -> "";
         };
+    }
+
+    /**
+     * Contexte d'un import : caches normalisés des référentiels du tenant + upsert (C6/E4).
+     * Les entités créées sont estampillées avec l'établissement courant par TenantListener.
+     */
+    private class ContexteImport {
+        final Map<String, Matiere> matieres = charger(matiereRepository.findAll(), Matiere::getLibelle);
+        final Map<String, Classe> classes = charger(classeRepository.findAll(), Classe::getLibelle);
+        final Map<String, Salle> salles = charger(salleRepository.findAll(), Salle::getLibelle);
+        final List<String> erreurs = new ArrayList<>();
+        int referentielsCrees = 0;
+
+        <T> Map<String, T> charger(List<T> liste, Function<T, String> libelle) {
+            Map<String, T> m = new HashMap<>();
+            for (T t : liste) m.putIfAbsent(cle(libelle.apply(t)), t);
+            return m;
+        }
+
+        Matiere upsertMatiere(String libelle) {
+            return matieres.computeIfAbsent(cle(libelle), k -> {
+                referentielsCrees++;
+                return matiereRepository.save(Matiere.builder().libelle(libelle).build());
+            });
+        }
+
+        Classe upsertClasse(String libelle) {
+            return classes.computeIfAbsent(cle(libelle), k -> {
+                referentielsCrees++;
+                return classeRepository.save(Classe.builder().libelle(libelle).build());
+            });
+        }
+
+        Salle upsertSalle(String libelle) {
+            return salles.computeIfAbsent(cle(libelle), k -> {
+                referentielsCrees++;
+                return salleRepository.save(Salle.builder().libelle(libelle).build());
+            });
+        }
+
+        void erreur(int numLigne, String motif) {
+            erreurs.add("Ligne " + numLigne + " : " + (motif == null ? "erreur inconnue" : motif));
+        }
     }
 }
