@@ -25,14 +25,58 @@ public class TenantWebModelAdvice {
     private final AbonnementService abonnementService;
     private final EtablissementCourantService etablissementCourantService;
 
-    /** Email du propriétaire de la plateforme (peut valider les renouvellements manuels). */
+    /** Email du propriétaire de la plateforme (identité SUPER ADMIN — détection). */
     @Value("${app.platform.owner-email:assalendahjeanfrancois@gmail.com}")
     private String ownerEmail;
+
+    /** Marque affichée dans l'interface (M10) — externalisée, plus de « SIGEP » en dur. */
+    @Value("${app.platform.brand-name:SIGEP}")
+    private String brandName;
+
+    /** Contact/support public affiché (E12) — jamais d'e-mail personnel en dur dans les templates. */
+    @Value("${app.platform.contact-email:contact@sigep.store}")
+    private String contactEmail;
+
+    /** Numéro Mobile Money plateforme (repli si l'établissement n'en fixe pas) (E11). */
+    @Value("${app.platform.mobile-money:}")
+    private String platformMobileMoney;
+
+    @ModelAttribute("marque")
+    public String marque() {
+        return brandName;
+    }
+
+    @ModelAttribute("contactPlateforme")
+    public String contactPlateforme() {
+        return contactEmail;
+    }
+
+    /** Numéro Mobile Money à afficher : celui du tenant s'il est défini, sinon celui de la plateforme. */
+    @ModelAttribute("mobileMoney")
+    public String mobileMoney() {
+        Etablissement e = etablissementCourant();
+        if (e != null && e.getMobileMoneyNumero() != null && !e.getMobileMoneyNumero().isBlank()) {
+            return e.getMobileMoneyNumero();
+        }
+        return platformMobileMoney;
+    }
 
     @ModelAttribute("etablissementNom")
     public String etablissementNom() {
         Etablissement e = etablissementCourant();
-        return e != null ? e.getNom() : null;
+        return e != null ? e.getNomEffectif() : null;
+    }
+
+    @ModelAttribute("etablissementLogo")
+    public String etablissementLogo() {
+        Etablissement e = etablissementCourant();
+        return e != null ? e.getLogoUrl() : null;
+    }
+
+    @ModelAttribute("etablissementCouleur")
+    public String etablissementCouleur() {
+        Etablissement e = etablissementCourant();
+        return (e != null && e.getCouleurPrincipale() != null) ? e.getCouleurPrincipale() : null;
     }
 
     @ModelAttribute("etablissementPlan")

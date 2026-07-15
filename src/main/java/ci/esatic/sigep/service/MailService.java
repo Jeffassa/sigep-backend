@@ -28,8 +28,11 @@ public class MailService {
     @Value("${app.mail.from:no-reply@esatic.ci}")
     private String from;
 
-    @Value("${app.platform.owner-email:assalendahjeanfrancois@gmail.com}")
+    @Value("${app.platform.contact-email:contact@sigep.store}")
     private String contactPlateforme;
+
+    @Value("${app.base-url:https://sigep.store}")
+    private String baseUrl;
 
     public MailService(ObjectProvider<JavaMailSender> mailSenderProvider) {
         this.mailSenderProvider = mailSenderProvider;
@@ -58,7 +61,7 @@ public class MailService {
                 + "Bonne nouvelle : le dossier de « " + nomEtablissement + " » a été validé.\n\n"
                 + "Votre espace SIGEP est maintenant actif. Connectez-vous avec votre e-mail et "
                 + "votre mot de passe :\n"
-                + "https://sigep.store/admin-login\n\n"
+                + baseUrl + "/admin-login\n\n"
                 + "Bienvenue, et bonne gestion !\n\n"
                 + "— L'équipe SIGEP · Solutions de Gestion");
     }
@@ -96,46 +99,55 @@ public class MailService {
         envoyer(email, sujet, corps);
     }
 
+    // E9 : les e-mails MÉTIER (destinés aux enseignants d'un tenant) peuvent partir de
+    // l'expéditeur PROPRE à l'établissement. `expediteur` null → expéditeur plateforme.
     @Async
-    public void notifierStatutCompte(String email, String prenom, boolean valide) {
+    public void notifierStatutCompte(String expediteur, String email, String prenom, boolean valide) {
         if (valide) {
-            envoyer(email, "SIGEP — Votre compte est validé",
+            envoyer(expediteur, email, "SIGEP — Votre compte est validé",
                     "Bonjour " + prenom + ",\n\nVotre compte enseignant SIGEP a été validé par l'administration. "
                     + "Vous pouvez désormais vous connecter à l'application.\n\n— SIGEP");
         } else {
-            envoyer(email, "SIGEP — Votre compte a été refusé",
+            envoyer(expediteur, email, "SIGEP — Votre compte a été refusé",
                     "Bonjour " + prenom + ",\n\nVotre demande de compte enseignant SIGEP a été refusée. "
                     + "Veuillez contacter l'administration.\n\n— SIGEP");
         }
     }
 
     @Async
-    public void notifierDecisionRattrapage(String email, String prenom, String matiere,
+    public void notifierDecisionRattrapage(String expediteur, String email, String prenom, String matiere,
                                            String quand, boolean accepte) {
         if (accepte) {
-            envoyer(email, "SIGEP — Rattrapage accepté",
+            envoyer(expediteur, email, "SIGEP — Rattrapage accepté",
                     "Bonjour " + prenom + ",\n\nVotre demande de rattrapage (" + matiere + ") a été ACCEPTÉE "
                     + "pour le " + quand + ".\n\n— SIGEP");
         } else {
-            envoyer(email, "SIGEP — Rattrapage refusé",
+            envoyer(expediteur, email, "SIGEP — Rattrapage refusé",
                     "Bonjour " + prenom + ",\n\nVotre demande de rattrapage (" + matiere + ") a été refusée.\n\n— SIGEP");
         }
     }
 
     @Async
-    public void notifierSeancesNonEmargees(String email, String prenom, List<String> lignes) {
+    public void notifierSeancesNonEmargees(String expediteur, String email, String prenom, List<String> lignes) {
         if (email == null || lignes == null || lignes.isEmpty()) return;
         String corps = "Bonjour " + prenom + ",\n\nVous avez " + lignes.size()
                 + " séance(s) non émargée(s) aujourd'hui :\n"
                 + String.join("\n", lignes)
                 + "\n\nPensez à régulariser votre émargement.\n\n— SIGEP";
-        envoyer(email, "SIGEP — Séances non émargées", corps);
+        envoyer(expediteur, email, "SIGEP — Séances non émargées", corps);
     }
 
+    /** Envoi depuis l'expéditeur plateforme (e-mails de niveau plateforme). */
     private void envoyer(String destinataire, String sujet, String corps) {
+        envoyer(null, destinataire, sujet, corps);
+    }
+
+    /** Envoi avec expéditeur éventuellement propre au tenant (E9) ; null = expéditeur plateforme. */
+    private void envoyer(String expediteur, String destinataire, String sujet, String corps) {
         if (destinataire == null || destinataire.isBlank()) return;
+        String realFrom = (expediteur != null && !expediteur.isBlank()) ? expediteur : from;
         if (!enabled) {
-            log.info("[MAIL désactivé] à={} | sujet={}", destinataire, sujet);
+            log.info("[MAIL désactivé] de={} à={} | sujet={}", realFrom, destinataire, sujet);
             return;
         }
         JavaMailSender sender = mailSenderProvider.getIfAvailable();
@@ -145,7 +157,7 @@ public class MailService {
         }
         try {
             SimpleMailMessage msg = new SimpleMailMessage();
-            msg.setFrom(from);
+            msg.setFrom(realFrom);
             msg.setTo(destinataire);
             msg.setSubject(sujet);
             msg.setText(corps);

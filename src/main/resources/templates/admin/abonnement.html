@@ -94,10 +94,10 @@
     <section class="glass rounded-3xl p-7 mb-6" data-reveal>
         <div class="flex items-center gap-2.5 mb-4">
             <span class="material-symbols-rounded">payments</span>
-            <h2 class="font-serif text-[22px]">Renouveler — 10 000 FCFA / mois</h2>
+            <h2 class="font-serif text-[22px]">Renouveler — <span th:text="${#numbers.formatInteger(prixPro,1,'WHITESPACE')} + ' FCFA / mois'">10 000 FCFA / mois</span></h2>
         </div>
         <ol class="space-y-2.5 text-[14px] text-muted list-decimal pl-5">
-            <li>Réglez <strong class="text-ink">10 000 FCFA</strong> par Mobile Money au <strong class="text-ink">+225 07 11 08 12 47</strong> (Orange / MTN / Moov / Wave).</li>
+            <li>Réglez <strong class="text-ink" th:text="${#numbers.formatInteger(prixPro,1,'WHITESPACE')} + ' FCFA'">10 000 FCFA</strong> par Mobile Money au <strong class="text-ink" th:text="${mobileMoney} ?: 'numéro communiqué par la plateforme'">+225 …</strong> (Orange / MTN / Moov / Wave).</li>
             <li>Cliquez sur « Demander l'activation » : on valide votre paiement et on prolonge votre période.</li>
         </ol>
         <a class="btn btn-ink inline-flex items-center gap-2 h-11 px-5 rounded-xl mt-6 font-medium"

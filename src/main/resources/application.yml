@@ -139,13 +139,20 @@ app:
   # URL publique de base (liens de retour Stripe, e-mails). En local : http://localhost:8080
   base-url: ${APP_BASE_URL:https://sigep.store}
   platform:
-    # Propriétaire de la plateforme SaaS. owner-email : contact affiché aux établissements
-    # (page abonnement). admin-email/password : compte SUPER ADMIN (espace /plateforme),
-    # créé au démarrage s'il n'existe pas ; si le mot de passe est vide, il est généré
-    # et affiché UNE fois dans les logs.
+    # Propriétaire de la plateforme SaaS. owner-email : identité du SUPER ADMIN (détection).
+    # admin-email/password : compte SUPER ADMIN (espace /plateforme), créé au démarrage s'il
+    # n'existe pas ; si le mot de passe est vide, il est généré et affiché UNE fois dans les logs.
     owner-email: ${PLATFORM_OWNER_EMAIL:assalendahjeanfrancois@gmail.com}
     admin-email: ${PLATFORM_ADMIN_EMAIL:${app.platform.owner-email}}
     admin-password: ${PLATFORM_ADMIN_PASSWORD:}
+    # Marque affichée dans l'interface (chrome admin, pages QR). Neutre = mono-marque SIGEP.
+    brand-name: ${PLATFORM_BRAND_NAME:SIGEP}
+    # Adresse de contact/support affichée publiquement (landing, login, page abonnement).
+    # Neutre par défaut — ne jamais coder d'e-mail personnel dans les templates.
+    contact-email: ${PLATFORM_CONTACT_EMAIL:contact@sigep.store}
+    # Numéro Mobile Money d'encaissement de la plateforme (repli si l'établissement n'en fixe pas).
+    # Vide par défaut : à définir en variable d'env (ne jamais coder de numéro personnel).
+    mobile-money: ${PLATFORM_MOBILE_MONEY:}
   stripe:
     # Paiement en ligne (Stripe Checkout). Désactivé par défaut : activer avec STRIPE_ENABLED=true
     # + STRIPE_SECRET_KEY. Le webhook exige STRIPE_WEBHOOK_SECRET. Devise par défaut XOF (sans décimales).

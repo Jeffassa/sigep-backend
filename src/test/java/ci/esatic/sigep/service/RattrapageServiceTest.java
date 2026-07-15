@@ -32,6 +32,7 @@ class RattrapageServiceTest {
     @Mock private ClasseRepository classeRepository;
     @Mock private SeanceRepository seanceRepository;
     @Mock private MailService mailService;
+    @Mock private EtablissementCourantService etablissementCourantService;
 
     @InjectMocks private RattrapageService rattrapageService;
 

@@ -35,11 +35,11 @@ public class RelanceService {
     @Scheduled(cron = "0 0 19 * * *")
     public void relancerSeancesNonEmargees() {
         LocalDate today = LocalDate.now();
-        tenantTaskRunner.pourChaqueTenantActif(etab -> relancerPourTenantCourant(today));
+        tenantTaskRunner.pourChaqueTenantActif(etab -> relancerPourTenantCourant(today, etab.getEmailFrom()));
     }
 
     /** Logique exécutée dans le contexte (transaction + filtre) d'un établissement. */
-    private void relancerPourTenantCourant(LocalDate today) {
+    private void relancerPourTenantCourant(LocalDate today, String expediteurTenant) {
         List<Seance> nonEmargees = seanceRepository.findAllByDateOrderByHeureDebutAsc(today).stream()
                 .filter(s -> s.getStatut() != StatutSeance.EMARGE)
                 .collect(Collectors.toList());
@@ -58,7 +58,7 @@ public class RelanceService {
                             + " (" + s.getHeureDebut().format(HEURE_FMT) + "-" + s.getHeureFin().format(HEURE_FMT) + ")"
                             + " — salle " + s.getSalle().getLibelle())
                     .collect(Collectors.toList());
-            mailService.notifierSeancesNonEmargees(email, ens.getPrenom(), lignes);
+            mailService.notifierSeancesNonEmargees(expediteurTenant, email, ens.getPrenom(), lignes);
             notifies++;
         }
         log.info("Relance e-mail séances non émargées ({}) : {} enseignant(s) notifié(s)", today, notifies);
