@@ -4,6 +4,7 @@ import com.anthropic.client.AnthropicClient;
 import com.anthropic.client.okhttp.AnthropicOkHttpClient;
 import com.anthropic.models.messages.Message;
 import com.anthropic.models.messages.MessageCreateParams;
+import ci.esatic.sigep.tenant.TenantContext;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -44,9 +45,15 @@ public class AiAnalyseService {
         if (!isEnabled()) {
             return "Analyse IA non configurée (définir AI_ENABLED=true et ANTHROPIC_API_KEY).";
         }
-        String cle = debut + "|" + fin;
+        // C1 : clé de cache PRÉFIXÉE PAR TENANT — le texte mis en cache contient des données
+        // nominatives (noms d'enseignants, taux). Sans le tenant, deux établissements regardant
+        // la même période partageraient l'analyse de l'autre.
+        long now = System.currentTimeMillis();
+        // Purge opportuniste des entrées expirées (borne la mémoire).
+        cache.entrySet().removeIf(e -> (now - e.getValue().ts()) >= TTL_MS);
+        String cle = TenantContext.get() + "|" + debut + "|" + fin;
         Cache c = cache.get(cle);
-        if (c != null && (System.currentTimeMillis() - c.ts) < TTL_MS) {
+        if (c != null && (now - c.ts) < TTL_MS) {
             return c.texte;
         }
         try {
