@@ -59,6 +59,11 @@ public class PaiementService {
             e.setPlan(Plan.PRO);
             e.setMaxEnseignants(0);
         }
+        // F6 : un paiement réactive un établissement suspendu (ex. pour impayé).
+        if (!e.isActif()) {
+            e.setActif(true);
+            log.info("Établissement {} réactivé suite à paiement", e.getId());
+        }
         abonnementService.prolonger(e, m);
         etablissementRepository.save(e);
 

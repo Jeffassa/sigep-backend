@@ -100,7 +100,7 @@ public class AiAnalyseService {
         MessageCreateParams params = MessageCreateParams.builder()
                 .model(modeleChoisi)
                 .maxTokens(4000L)
-                .system(SYSTEME)
+                .system(systemePrompt())
                 .addUserMessage(donnees(debut, fin, stats))
                 .build();
 
@@ -117,13 +117,27 @@ public class AiAnalyseService {
         return (e != null && e.getPlan() == Plan.ENTERPRISE) ? model : modelStandard;
     }
 
-    private static final String SYSTEME =
-            "Tu es un analyste de données pour l'administration d'un etablissement d'enseignement superieur. "
+    /** Prompt système contextualisé par le TYPE d'établissement du tenant (F5). */
+    private String systemePrompt() {
+        Etablissement e = (etablissementCourantService != null) ? etablissementCourantService.courant() : null;
+        String type = typeLisible(e != null ? e.getTypeEtablissement() : null);
+        return "Tu es un analyste de données pour l'administration d'un " + type + ". "
           + "On te fournit des statistiques d'emargement (presence des enseignants en cours). "
           + "Reponds en francais, de facon concise et actionnable, en deux parties :\n"
           + "1) SYNTHESE : 2 a 3 phrases sur la situation et la tendance.\n"
           + "2) DECISIONS : 3 a 5 actions priorisees (qui, quoi, pourquoi), de la plus a la moins urgente.\n"
           + "N'invente aucun chiffre : appuie-toi uniquement sur les donnees fournies. Pas de preambule.";
+    }
+
+    private String typeLisible(String type) {
+        if (type == null) return "etablissement d'enseignement superieur";
+        return switch (type) {
+            case "SECONDAIRE" -> "etablissement d'enseignement secondaire";
+            case "PRIMAIRE" -> "etablissement d'enseignement primaire";
+            case "FORMATION" -> "centre de formation professionnelle";
+            default -> "etablissement d'enseignement superieur";
+        };
+    }
 
     @SuppressWarnings("unchecked")
     private String donnees(LocalDate debut, LocalDate fin, Map<String, Object> s) {
