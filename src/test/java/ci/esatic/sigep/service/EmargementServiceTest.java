@@ -35,11 +35,13 @@ class EmargementServiceTest {
     @Mock private EnseignantRepository enseignantRepository;
     @Mock private QrCodeService qrCodeService;
     @Mock private ci.esatic.sigep.security.QrReplayGuard qrReplayGuard;
+    @Mock private ci.esatic.sigep.repository.EtablissementRepository etablissementRepository;
 
     @InjectMocks private EmargementService emargementService;
 
     private static final Long USER_ID   = 1L;
     private static final Long SEANCE_ID = 10L;
+    private static final Long ETAB_ID   = 7L;
     private static final String SIGNATURE_VALIDE = "aGVsbG8="; // "hello" en Base64
 
     /**
@@ -66,7 +68,18 @@ class EmargementServiceTest {
         enseignant = Enseignant.builder()
                 .id(5L).matricule("ENS001").nom("Assale").prenom("Jean")
                 .statut(StatutEnseignant.VALIDATED).user(user)
+                .etablissementId(ETAB_ID)
                 .build();
+
+        // E1/E7 : l'émargement lit le fuseau + les tolérances de l'établissement (défauts).
+        Etablissement etab = Etablissement.builder().nom("ESATIC").slug("esatic").build();
+        etab.setId(ETAB_ID);
+        lenient().when(etablissementRepository.findById(ETAB_ID)).thenReturn(Optional.of(etab));
+    }
+
+    /** C3 : le QR porte bien l'etablissementId de l'enseignant (correspondance OK). */
+    private void stubQrTenantOk() {
+        when(qrCodeService.extractUniversalTokenEtablissementId(any())).thenReturn(ETAB_ID);
     }
 
     /**
@@ -97,6 +110,8 @@ class EmargementServiceTest {
     void emarger_devraitReussirAvecDonneesValides() {
         try (MockedStatic<LocalTime> lt = mockStatic(LocalTime.class, CALLS_REAL_METHODS)) {
             lt.when(LocalTime::now).thenReturn(FIXED_NOW);
+            // E1 : l'émargement évalue l'heure dans le fuseau du tenant → mocker la surcharge ZoneId.
+            lt.when(() -> LocalTime.now(any(java.time.ZoneId.class))).thenReturn(FIXED_NOW);
 
             Seance seance = seanceDansLaFenetre();
             Emargement saved = Emargement.builder()
@@ -107,6 +122,7 @@ class EmargementServiceTest {
             when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seance));
             when(emargementRepository.existsBySeanceId(SEANCE_ID)).thenReturn(false);
             when(qrCodeService.validateUniversalToken("valid-token")).thenReturn(true);
+            stubQrTenantOk();
             when(qrReplayGuard.tryConsume(any(), any())).thenReturn(true);
             when(seanceRepository.save(any())).thenReturn(seance);
             when(emargementRepository.save(any())).thenReturn(saved);
@@ -167,6 +183,8 @@ class EmargementServiceTest {
     void emarger_devraitEchouerSiSeanceDejaEmargee() {
         try (MockedStatic<LocalTime> lt = mockStatic(LocalTime.class, CALLS_REAL_METHODS)) {
             lt.when(LocalTime::now).thenReturn(FIXED_NOW);
+            // E1 : l'émargement évalue l'heure dans le fuseau du tenant → mocker la surcharge ZoneId.
+            lt.when(() -> LocalTime.now(any(java.time.ZoneId.class))).thenReturn(FIXED_NOW);
 
             Seance seance = seanceDansLaFenetre();
             when(enseignantRepository.findByUserId(USER_ID)).thenReturn(Optional.of(enseignant));
@@ -188,6 +206,8 @@ class EmargementServiceTest {
         // FIXED_NOW=10h00, heureDebut=13h00 → debutAutorise=12h45, 10h00 < 12h45 → trop tôt
         try (MockedStatic<LocalTime> lt = mockStatic(LocalTime.class, CALLS_REAL_METHODS)) {
             lt.when(LocalTime::now).thenReturn(FIXED_NOW);
+            // E1 : l'émargement évalue l'heure dans le fuseau du tenant → mocker la surcharge ZoneId.
+            lt.when(() -> LocalTime.now(any(java.time.ZoneId.class))).thenReturn(FIXED_NOW);
 
             Seance seance = Seance.builder()
                     .id(SEANCE_ID).date(LocalDate.now())
@@ -209,6 +229,8 @@ class EmargementServiceTest {
         // FIXED_NOW=10h00, heureFin=07h00 → séance terminée : émargement tardif AUTORISÉ, marqué "en retard"
         try (MockedStatic<LocalTime> lt = mockStatic(LocalTime.class, CALLS_REAL_METHODS)) {
             lt.when(LocalTime::now).thenReturn(FIXED_NOW);
+            // E1 : l'émargement évalue l'heure dans le fuseau du tenant → mocker la surcharge ZoneId.
+            lt.when(() -> LocalTime.now(any(java.time.ZoneId.class))).thenReturn(FIXED_NOW);
 
             Seance seance = Seance.builder()
                     .id(SEANCE_ID).date(LocalDate.now())
@@ -220,6 +242,7 @@ class EmargementServiceTest {
             when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seance));
             when(emargementRepository.existsBySeanceId(SEANCE_ID)).thenReturn(false);
             when(qrCodeService.validateUniversalToken("valid-token")).thenReturn(true);
+            stubQrTenantOk();
             when(qrReplayGuard.tryConsume(any(), any())).thenReturn(true);
             when(seanceRepository.save(any())).thenReturn(seance);
             when(emargementRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -235,6 +258,8 @@ class EmargementServiceTest {
     void emarger_devraitEchouerSiQrUniverselExpire() {
         try (MockedStatic<LocalTime> lt = mockStatic(LocalTime.class, CALLS_REAL_METHODS)) {
             lt.when(LocalTime::now).thenReturn(FIXED_NOW);
+            // E1 : l'émargement évalue l'heure dans le fuseau du tenant → mocker la surcharge ZoneId.
+            lt.when(() -> LocalTime.now(any(java.time.ZoneId.class))).thenReturn(FIXED_NOW);
 
             Seance seance = seanceDansLaFenetre();
             when(enseignantRepository.findByUserId(USER_ID)).thenReturn(Optional.of(enseignant));
@@ -256,6 +281,8 @@ class EmargementServiceTest {
     void emarger_devraitEchouerSiQrCodeInvalide() {
         try (MockedStatic<LocalTime> lt = mockStatic(LocalTime.class, CALLS_REAL_METHODS)) {
             lt.when(LocalTime::now).thenReturn(FIXED_NOW);
+            // E1 : l'émargement évalue l'heure dans le fuseau du tenant → mocker la surcharge ZoneId.
+            lt.when(() -> LocalTime.now(any(java.time.ZoneId.class))).thenReturn(FIXED_NOW);
 
             Seance seance = seanceDansLaFenetre();
             when(enseignantRepository.findByUserId(USER_ID)).thenReturn(Optional.of(enseignant));
@@ -277,12 +304,15 @@ class EmargementServiceTest {
     void emarger_devraitEchouerSiQrDejaUtilise() {
         try (MockedStatic<LocalTime> lt = mockStatic(LocalTime.class, CALLS_REAL_METHODS)) {
             lt.when(LocalTime::now).thenReturn(FIXED_NOW);
+            // E1 : l'émargement évalue l'heure dans le fuseau du tenant → mocker la surcharge ZoneId.
+            lt.when(() -> LocalTime.now(any(java.time.ZoneId.class))).thenReturn(FIXED_NOW);
 
             Seance seance = seanceDansLaFenetre();
             when(enseignantRepository.findByUserId(USER_ID)).thenReturn(Optional.of(enseignant));
             when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seance));
             when(emargementRepository.existsBySeanceId(SEANCE_ID)).thenReturn(false);
             when(qrCodeService.validateUniversalToken("valid-token")).thenReturn(true);
+            stubQrTenantOk();
             when(qrReplayGuard.tryConsume(any(), any())).thenReturn(false); // déjà utilisé
 
             assertThatThrownBy(() -> emargementService.emarger(USER_ID, buildRequest("valid-token", SIGNATURE_VALIDE)))
@@ -299,6 +329,8 @@ class EmargementServiceTest {
     void emargerHorsLigne_devraitReussirSansQrEtMarquerHorsLigne() {
         try (MockedStatic<LocalTime> lt = mockStatic(LocalTime.class, CALLS_REAL_METHODS)) {
             lt.when(LocalTime::now).thenReturn(FIXED_NOW);
+            // E1 : l'émargement évalue l'heure dans le fuseau du tenant → mocker la surcharge ZoneId.
+            lt.when(() -> LocalTime.now(any(java.time.ZoneId.class))).thenReturn(FIXED_NOW);
 
             Seance seance = seanceDansLaFenetre();
             ci.esatic.sigep.entity.Emargement saved = ci.esatic.sigep.entity.Emargement.builder()
@@ -333,12 +365,15 @@ class EmargementServiceTest {
     void emarger_devraitEchouerSiSignatureVide() {
         try (MockedStatic<LocalTime> lt = mockStatic(LocalTime.class, CALLS_REAL_METHODS)) {
             lt.when(LocalTime::now).thenReturn(FIXED_NOW);
+            // E1 : l'émargement évalue l'heure dans le fuseau du tenant → mocker la surcharge ZoneId.
+            lt.when(() -> LocalTime.now(any(java.time.ZoneId.class))).thenReturn(FIXED_NOW);
 
             Seance seance = seanceDansLaFenetre();
             when(enseignantRepository.findByUserId(USER_ID)).thenReturn(Optional.of(enseignant));
             when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seance));
             when(emargementRepository.existsBySeanceId(SEANCE_ID)).thenReturn(false);
             when(qrCodeService.validateUniversalToken(any())).thenReturn(true);
+            stubQrTenantOk();
             when(qrReplayGuard.tryConsume(any(), any())).thenReturn(true);
 
             assertThatThrownBy(() -> emargementService.emarger(USER_ID, buildRequest("valid-token", "")))
@@ -351,12 +386,15 @@ class EmargementServiceTest {
     void emarger_devraitEchouerSiSignatureFormatInvalide() {
         try (MockedStatic<LocalTime> lt = mockStatic(LocalTime.class, CALLS_REAL_METHODS)) {
             lt.when(LocalTime::now).thenReturn(FIXED_NOW);
+            // E1 : l'émargement évalue l'heure dans le fuseau du tenant → mocker la surcharge ZoneId.
+            lt.when(() -> LocalTime.now(any(java.time.ZoneId.class))).thenReturn(FIXED_NOW);
 
             Seance seance = seanceDansLaFenetre();
             when(enseignantRepository.findByUserId(USER_ID)).thenReturn(Optional.of(enseignant));
             when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seance));
             when(emargementRepository.existsBySeanceId(SEANCE_ID)).thenReturn(false);
             when(qrCodeService.validateUniversalToken(any())).thenReturn(true);
+            stubQrTenantOk();
             when(qrReplayGuard.tryConsume(any(), any())).thenReturn(true);
 
             assertThatThrownBy(() -> emargementService.emarger(USER_ID, buildRequest("valid-token", "pas@du@base64!!")))
