@@ -95,8 +95,10 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        // Pages publiques SaaS (accueil + inscription) + ressources statiques
+                        // Pages publiques SaaS (accueil + inscription + pages légales) + SEO + statiques
                         .requestMatchers("/", "/inscription", "/error", "/favicon.ico").permitAll()
+                        .requestMatchers("/mentions-legales", "/confidentialite", "/cgu").permitAll()
+                        .requestMatchers("/robots.txt", "/sitemap.xml").permitAll()
                         .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
                         // Onboarding SaaS : inscription publique d'un établissement (rate-limité)

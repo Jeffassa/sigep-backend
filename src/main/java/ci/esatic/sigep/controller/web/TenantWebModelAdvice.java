@@ -41,6 +41,15 @@ public class TenantWebModelAdvice {
     @Value("${app.platform.mobile-money:}")
     private String platformMobileMoney;
 
+    /** Domaine Plausible (analytics sans cookie) — vide = désactivé. */
+    @Value("${app.analytics.plausible-domain:}")
+    private String plausibleDomain;
+
+    @ModelAttribute("plausibleDomain")
+    public String plausibleDomain() {
+        return (plausibleDomain != null && !plausibleDomain.isBlank()) ? plausibleDomain : null;
+    }
+
     @ModelAttribute("marque")
     public String marque() {
         return brandName;

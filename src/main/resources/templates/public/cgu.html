@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('Conditions générales d’utilisation · SIGEP')}"></head>
+<body>
+<main class="max-w-[820px] mx-auto px-5 md:px-8 py-14">
+    <a th:href="@{/}" class="text-[13px] text-muted hover:text-ink">← Retour à l'accueil</a>
+    <h1 class="font-serif text-[40px] mt-4 mb-3">Conditions générales d'utilisation</h1>
+    <div class="glass rounded-xl p-4 text-[13px] text-muted mb-8">
+        ⚠️ Modèle à faire valider juridiquement avant publication. Champs <strong>[À COMPLÉTER]</strong> à renseigner.
+    </div>
+
+    <article class="space-y-6 text-[15px] leading-relaxed">
+        <section>
+            <h2 class="font-serif text-[22px] mb-1">1. Objet</h2>
+            <p>Les présentes CGU régissent l'accès et l'usage du service <strong th:text="${marque} ?: 'SIGEP'">SIGEP</strong>,
+               plateforme de gestion des émargements et du temps d'enseignement.</p>
+        </section>
+        <section>
+            <h2 class="font-serif text-[22px] mb-1">2. Comptes & accès</h2>
+            <p>L'établissement est responsable de la confidentialité des identifiants de ses comptes. Toute activité
+               réalisée depuis un compte est réputée effectuée par son titulaire.</p>
+        </section>
+        <section>
+            <h2 class="font-serif text-[22px] mb-1">3. Abonnement & paiement</h2>
+            <p>Le service propose une offre gratuite et des offres payantes. Les modalités et tarifs sont indiqués sur la
+               page d'accueil. Le défaut de paiement peut entraîner la suspension de l'accès.</p>
+        </section>
+        <section>
+            <h2 class="font-serif text-[22px] mb-1">4. Disponibilité</h2>
+            <p>Le service est fourni « en l'état ». L'éditeur s'efforce d'assurer une disponibilité continue mais ne
+               garantit pas l'absence d'interruption (maintenance, incident, force majeure).</p>
+        </section>
+        <section>
+            <h2 class="font-serif text-[22px] mb-1">5. Données</h2>
+            <p>Le traitement des données personnelles est décrit dans la
+               <a th:href="@{/confidentialite}" class="underline">politique de confidentialité</a>.</p>
+        </section>
+        <section>
+            <h2 class="font-serif text-[22px] mb-1">6. Résiliation</h2>
+            <p>L'établissement peut cesser d'utiliser le service à tout moment. L'éditeur peut suspendre un compte en cas
+               de manquement aux présentes.</p>
+        </section>
+        <section>
+            <h2 class="font-serif text-[22px] mb-1">7. Droit applicable</h2>
+            <p>Les présentes sont régies par le droit <strong>[À COMPLÉTER : pays]</strong>. Tout litige relève des
+               juridictions compétentes de <strong>[À COMPLÉTER]</strong>.</p>
+        </section>
+    </article>
+
+    <footer class="mt-12 pt-6 border-t border-line text-[13px] text-muted flex gap-3 flex-wrap">
+        <a th:href="@{/mentions-legales}" class="hover:text-ink">Mentions légales</a> ·
+        <a th:href="@{/confidentialite}" class="hover:text-ink">Confidentialité</a>
+    </footer>
+</main>
+</body>
+</html>

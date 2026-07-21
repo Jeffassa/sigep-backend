@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('Politique de confidentialité · SIGEP')}"></head>
+<body>
+<main class="max-w-[820px] mx-auto px-5 md:px-8 py-14">
+    <a th:href="@{/}" class="text-[13px] text-muted hover:text-ink">← Retour à l'accueil</a>
+    <h1 class="font-serif text-[40px] mt-4 mb-3">Politique de confidentialité</h1>
+    <div class="glass rounded-xl p-4 text-[13px] text-muted mb-8">
+        ⚠️ Modèle à faire valider juridiquement (RGPD si UE ; loi ivoirienne n°2013-450 relative à la protection
+        des données personnelles / ARTCI). Champs <strong>[À COMPLÉTER]</strong> à renseigner.
+    </div>
+
+    <article class="space-y-6 text-[15px] leading-relaxed">
+        <section>
+            <h2 class="font-serif text-[22px] mb-1">Responsable du traitement</h2>
+            <p><strong>[À COMPLÉTER : raison sociale]</strong>. Contact :
+               <a th:href="'mailto:' + ${contactPlateforme}" class="underline" th:text="${contactPlateforme}">contact</a>.</p>
+        </section>
+        <section>
+            <h2 class="font-serif text-[22px] mb-1">Données collectées</h2>
+            <p>Comptes (nom, prénom, e-mail, rôle, établissement), données d'émargement (séances, présence, signature),
+               données d'abonnement et de paiement (montant, référence — <em>aucune donnée de carte n'est stockée</em>).</p>
+        </section>
+        <section>
+            <h2 class="font-serif text-[22px] mb-1">Finalités & base légale</h2>
+            <p>Fourniture du service de gestion des émargements (exécution du contrat), facturation (obligation légale),
+               amélioration du service (intérêt légitime). Aucune revente de données.</p>
+        </section>
+        <section>
+            <h2 class="font-serif text-[22px] mb-1">Durée de conservation</h2>
+            <p>Les données sont conservées pendant la durée de la relation contractuelle, puis archivées ou supprimées
+               conformément aux obligations légales <strong>[À COMPLÉTER : durée]</strong>.</p>
+        </section>
+        <section>
+            <h2 class="font-serif text-[22px] mb-1">Vos droits</h2>
+            <p>Accès, rectification, effacement, limitation, opposition et portabilité. Pour les exercer, écrivez à
+               <a th:href="'mailto:' + ${contactPlateforme}" class="underline" th:text="${contactPlateforme}">contact</a>.</p>
+        </section>
+        <section>
+            <h2 class="font-serif text-[22px] mb-1">Cookies & mesure d'audience</h2>
+            <p>Le service utilise une mesure d'audience <strong>sans cookie</strong> et sans données personnelles (Plausible).
+               Aucun traceur publicitaire n'est déposé.</p>
+        </section>
+    </article>
+
+    <footer class="mt-12 pt-6 border-t border-line text-[13px] text-muted flex gap-3 flex-wrap">
+        <a th:href="@{/mentions-legales}" class="hover:text-ink">Mentions légales</a> ·
+        <a th:href="@{/cgu}" class="hover:text-ink">CGU</a>
+    </footer>
+</main>
+</body>
+</html>

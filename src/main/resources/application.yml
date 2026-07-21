@@ -144,6 +144,9 @@ app:
     model: ${AI_MODEL:claude-opus-4-8}
     # Modèle standard (plans inférieurs) — maîtrise du coût par plan (E10).
     model-standard: ${AI_MODEL_STANDARD:claude-haiku-4-5}
+  analytics:
+    # Analytics web sans cookie (Plausible). Vide = désactivé. Ex. PLAUSIBLE_DOMAIN=sigep.store
+    plausible-domain: ${PLAUSIBLE_DOMAIN:}
   onboarding:
     # C5 : auto-validation des inscriptions self-service. false = validation manuelle par le
     # super-admin (défaut, comportement actuel). true = espace actif immédiatement.
