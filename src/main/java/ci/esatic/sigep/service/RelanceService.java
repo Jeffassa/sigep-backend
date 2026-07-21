@@ -33,6 +33,8 @@ public class RelanceService {
     /** Tous les jours à 19h : relance les enseignants ayant des séances non émargées le jour même.
      *  Exécuté PAR ÉTABLISSEMENT (contexte tenant) pour rester cloisonné. */
     @Scheduled(cron = "0 0 19 * * *")
+    @net.javacrumbs.shedlock.spring.annotation.SchedulerLock(
+            name = "relancerSeancesNonEmargees", lockAtMostFor = "PT15M", lockAtLeastFor = "PT1M")
     public void relancerSeancesNonEmargees() {
         LocalDate today = LocalDate.now();
         tenantTaskRunner.pourChaqueTenantActif(etab -> relancerPourTenantCourant(today, etab.getEmailFrom()));

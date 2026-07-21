@@ -25,6 +25,8 @@ public class AbonnementRelanceService {
 
     /** Tous les jours à 8h30 : relances d'expiration d'abonnement. */
     @Scheduled(cron = "0 30 8 * * *")
+    @net.javacrumbs.shedlock.spring.annotation.SchedulerLock(
+            name = "relancerAbonnements", lockAtMostFor = "PT15M", lockAtLeastFor = "PT1M")
     public void relancerAbonnements() {
         int notifies = 0;
         for (Etablissement e : etablissementRepository.findByActifTrue()) {

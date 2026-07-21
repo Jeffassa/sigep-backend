@@ -41,6 +41,8 @@ public class RapportService {
 
     // Génération automatique chaque dimanche à 2h du matin
     @Scheduled(cron = "0 0 2 * * SUN")
+    @net.javacrumbs.shedlock.spring.annotation.SchedulerLock(
+            name = "genererRapportsHebdomadaires", lockAtMostFor = "PT30M", lockAtLeastFor = "PT1M")
     public void genererRapportsHebdomadaires() {
         LocalDate fin = LocalDate.now().with(DayOfWeek.SATURDAY);
         LocalDate debut = fin.with(DayOfWeek.MONDAY);
