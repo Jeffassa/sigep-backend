@@ -1,0 +1,33 @@
+name: Security
+
+# Analyse de sécurité : vulnérabilités des dépendances, secrets, mauvaises configurations.
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 6 * * 1'   # tous les lundis 06h00 UTC
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  trivy:
+    name: Trivy (deps + secrets + IaC)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Scan du système de fichiers
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          scan-type: fs
+          scanners: vuln,secret,misconfig
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          format: table
+          # Informatif au départ (ne bloque pas la CI). Passer à '1' pour rendre bloquant.
+          exit-code: '0'

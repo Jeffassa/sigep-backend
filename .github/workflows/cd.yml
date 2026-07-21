@@ -41,3 +41,19 @@ jobs:
             -Dspring-boot.build-image.publish=true \
             -Ddocker.publishRegistry.username=${{ github.actor }} \
             -Ddocker.publishRegistry.password=${{ secrets.GITHUB_TOKEN }}
+
+  deploy:
+    name: Déclencher le déploiement
+    needs: docker-image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Déclencher le deploy hook (si configuré)
+        env:
+          DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          if [ -n "$DEPLOY_HOOK" ]; then
+            curl -fsSL -X POST "$DEPLOY_HOOK"
+            echo "Déploiement déclenché."
+          else
+            echo "RENDER_DEPLOY_HOOK non configuré — étape de déploiement ignorée."
+          fi
