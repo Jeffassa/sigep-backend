@@ -83,8 +83,8 @@ management:
   endpoints:
     web:
       exposure:
-        # health/info publics (sondes) ; metrics réservé (auth) — voir SecurityConfig
-        include: health,info,metrics
+        # health/info publics (sondes) ; metrics + prometheus réservés ADMIN — voir SecurityConfig
+        include: health,info,metrics,prometheus
   endpoint:
     health:
       show-details: never
@@ -96,6 +96,19 @@ management:
   info:
     env:
       enabled: true
+
+# Suivi des erreurs (Sentry) — INERTE tant que SENTRY_DSN n'est pas défini.
+sentry:
+  dsn: ${SENTRY_DSN:}
+  environment: ${SENTRY_ENV:dev}
+  traces-sample-rate: ${SENTRY_TRACES_RATE:0.1}
+  # Ne jamais transmettre de données personnelles (RGPD).
+  send-default-pii: false
+
+# Documentation API (OpenAPI / Swagger UI). Endpoints protégés (auth requise) ; UI désactivée en prod.
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
 
 app:
   jwt:

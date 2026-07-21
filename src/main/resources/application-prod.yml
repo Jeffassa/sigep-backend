@@ -38,3 +38,8 @@ management:
   endpoint:
     health:
       show-details: never
+
+# En prod : ne pas servir l'UI Swagger (la spec reste générable, réservée aux admins).
+springdoc:
+  swagger-ui:
+    enabled: false
