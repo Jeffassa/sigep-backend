@@ -26,6 +26,7 @@ import java.util.zip.ZipOutputStream;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@org.springframework.context.annotation.Lazy(false)   // eager : cron @Scheduled (rapports hebdo) doit se déclencher malgré lazy-init
 public class RapportService {
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");

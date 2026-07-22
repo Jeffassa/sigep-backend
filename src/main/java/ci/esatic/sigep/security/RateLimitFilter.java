@@ -36,6 +36,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Component
 @Slf4j
+@org.springframework.context.annotation.Lazy(false)   // eager : la purge @Scheduled doit tourner malgré lazy-init
 public class RateLimitFilter extends OncePerRequestFilter {
 
     private static final long WINDOW_MS = 60_000L; // 1 minute

@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@org.springframework.context.annotation.Lazy(false)   // eager : cron @Scheduled (dunning) doit se déclencher malgré lazy-init
 public class AbonnementRelanceService {
 
     private final EtablissementRepository etablissementRepository;

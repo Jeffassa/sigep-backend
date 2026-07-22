@@ -60,7 +60,8 @@ spring:
             enable: true
 
 server:
-  port: 8080
+  # ${PORT} : l'hébergeur (Render, etc.) injecte le port à écouter. 8080 en local.
+  port: ${PORT:8080}
   # Derrière un reverse proxy qui termine le TLS, respecter X-Forwarded-Proto/Host
   # (sinon l'app croit être en HTTP). Sans effet en accès direct (dev).
   forward-headers-strategy: framework

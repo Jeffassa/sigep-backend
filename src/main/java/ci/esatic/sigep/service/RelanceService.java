@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@org.springframework.context.annotation.Lazy(false)   // eager : sinon le cron @Scheduled ne se déclenche pas (lazy-init prod)
 public class RelanceService {
 
     private static final DateTimeFormatter HEURE_FMT = DateTimeFormatter.ofPattern("HH:mm");
