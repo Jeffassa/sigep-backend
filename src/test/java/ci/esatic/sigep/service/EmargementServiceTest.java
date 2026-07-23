@@ -3,6 +3,7 @@ package ci.esatic.sigep.service;
 import ci.esatic.sigep.dto.request.EmargementRequest;
 import ci.esatic.sigep.dto.response.EmargementResponse;
 import ci.esatic.sigep.entity.*;
+import ci.esatic.sigep.exception.MetierException;
 import ci.esatic.sigep.exception.ResourceNotFoundException;
 import ci.esatic.sigep.repository.EmargementRepository;
 import ci.esatic.sigep.repository.EnseignantRepository;
@@ -159,7 +160,7 @@ class EmargementServiceTest {
         when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seance));
 
         assertThatThrownBy(() -> emargementService.emarger(USER_ID, buildRequest("t", SIGNATURE_VALIDE)))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(MetierException.class)
                 .hasMessageContaining("ne vous appartient pas");
     }
 
@@ -178,7 +179,7 @@ class EmargementServiceTest {
         when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seance));
 
         assertThatThrownBy(() -> emargementService.emarger(USER_ID, buildRequest("t", SIGNATURE_VALIDE)))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(MetierException.class)
                 .hasMessageContaining("pas prevue aujourd'hui");
     }
 
@@ -199,7 +200,7 @@ class EmargementServiceTest {
             when(emargementRepository.existsBySeanceId(SEANCE_ID)).thenReturn(true);
 
             assertThatThrownBy(() -> emargementService.emarger(USER_ID, buildRequest("t", SIGNATURE_VALIDE)))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(MetierException.class)
                     .hasMessageContaining("deja ete emargee");
         }
     }
@@ -226,7 +227,7 @@ class EmargementServiceTest {
             when(emargementRepository.existsBySeanceId(SEANCE_ID)).thenReturn(false);
 
             assertThatThrownBy(() -> emargementService.emarger(USER_ID, buildRequest("t", SIGNATURE_VALIDE)))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(MetierException.class)
                     .hasMessageContaining("Trop tot");
         }
     }
@@ -274,7 +275,7 @@ class EmargementServiceTest {
             stubQrInvalide();
 
             assertThatThrownBy(() -> emargementService.emarger(USER_ID, buildRequest("expire", SIGNATURE_VALIDE)))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(MetierException.class)
                     .hasMessageContaining("QR Code invalide");
         }
     }
@@ -297,7 +298,7 @@ class EmargementServiceTest {
             stubQrInvalide();
 
             assertThatThrownBy(() -> emargementService.emarger(USER_ID, buildRequest("mauvais-token", SIGNATURE_VALIDE)))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(MetierException.class)
                     .hasMessageContaining("QR Code invalide");
         }
     }
@@ -321,7 +322,7 @@ class EmargementServiceTest {
             when(qrReplayGuard.tryConsume(any(), any())).thenReturn(false); // déjà utilisé
 
             assertThatThrownBy(() -> emargementService.emarger(USER_ID, buildRequest("valid-token", SIGNATURE_VALIDE)))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(MetierException.class)
                     .hasMessageContaining("deja ete utilise");
         }
     }
@@ -381,7 +382,7 @@ class EmargementServiceTest {
             when(qrReplayGuard.tryConsume(any(), any())).thenReturn(true);
 
             assertThatThrownBy(() -> emargementService.emarger(USER_ID, buildRequest("valid-token", "")))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(MetierException.class)
                     .hasMessageContaining("signature est obligatoire");
         }
     }
@@ -401,7 +402,7 @@ class EmargementServiceTest {
             when(qrReplayGuard.tryConsume(any(), any())).thenReturn(true);
 
             assertThatThrownBy(() -> emargementService.emarger(USER_ID, buildRequest("valid-token", "pas@du@base64!!")))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(MetierException.class)
                     .hasMessageContaining("format Base64 incorrect");
         }
     }

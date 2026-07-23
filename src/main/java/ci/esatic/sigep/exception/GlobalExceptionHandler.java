@@ -1,6 +1,8 @@
 package ci.esatic.sigep.exception;
 
 import ci.esatic.sigep.dto.response.ApiResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -13,6 +15,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Gestion des exceptions des API REST uniquement (réponses JSON).
@@ -20,7 +23,19 @@ import java.util.Map;
  * erreurs sont rendues par la page d'erreur stylisée (templates/error.html).
  */
 @RestControllerAdvice(annotations = RestController.class)
+@Slf4j
 public class GlobalExceptionHandler {
+
+    /** Erreur de règle métier typée (400) : renvoie le message + un code exploitable par le client. */
+    @ExceptionHandler(MetierException.class)
+    public ResponseEntity<ApiResponse<Map<String, String>>> handleMetier(MetierException ex) {
+        return ResponseEntity.badRequest()
+                .body(ApiResponse.<Map<String, String>>builder()
+                        .success(false)
+                        .message(ex.getMessage())
+                        .data(Map.of("code", ex.getCode()))
+                        .build());
+    }
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiResponse<Void>> handleNotFound(ResourceNotFoundException ex) {
@@ -91,8 +106,11 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<Void>> handleGeneric(Exception ex) {
+    public ResponseEntity<ApiResponse<Void>> handleGeneric(Exception ex, HttpServletRequest request) {
+        // Référence courte partagée entre les logs et la réponse : l'utilisateur peut la citer au support.
+        String ref = UUID.randomUUID().toString().substring(0, 8);
+        log.error("[{}] Erreur non gérée sur {} {}", ref, request.getMethod(), request.getRequestURI(), ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error("Erreur interne du serveur"));
+                .body(ApiResponse.error("Erreur interne du serveur (réf. " + ref + ")"));
     }
 }

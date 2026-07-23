@@ -4,6 +4,7 @@ import ci.esatic.sigep.dto.request.EmargementRequest;
 import ci.esatic.sigep.dto.request.EmargementHorsLigneRequest;
 import ci.esatic.sigep.dto.response.EmargementResponse;
 import ci.esatic.sigep.entity.*;
+import ci.esatic.sigep.exception.MetierException;
 import ci.esatic.sigep.exception.ResourceNotFoundException;
 import ci.esatic.sigep.repository.*;
 import ci.esatic.sigep.security.QrReplayGuard;
@@ -122,7 +123,7 @@ public class EmargementService {
     private boolean validerReglesCommunes(Enseignant enseignant, Seance seance, Etablissement etab) {
         // Regle 1 : La seance appartient bien a cet enseignant
         if (!seance.getEnseignant().getId().equals(enseignant.getId())) {
-            throw new IllegalArgumentException("Cette seance ne vous appartient pas");
+            throw new MetierException("SEANCE_NON_ATTRIBUEE", "Cette seance ne vous appartient pas");
         }
 
         // Fuseau + tolérances PROPRES à l'établissement (E1 + E7).
@@ -132,12 +133,12 @@ public class EmargementService {
 
         // Regle 2 : La seance est bien aujourd'hui (dans le fuseau du tenant)
         if (!seance.getDate().equals(LocalDate.now(zone))) {
-            throw new IllegalArgumentException("Cette seance n'est pas prevue aujourd'hui");
+            throw new MetierException("PAS_AUJOURDHUI", "Cette seance n'est pas prevue aujourd'hui");
         }
 
         // Regle 3 : Unicite — pas encore emargee
         if (emargementRepository.existsBySeanceId(seance.getId())) {
-            throw new IllegalArgumentException("Cette seance a deja ete emargee");
+            throw new MetierException("DEJA_EMARGEE", "Cette seance a deja ete emargee");
         }
 
         // Regle 4 : la seance doit avoir commence. On autorise l'emargement APRES
@@ -148,7 +149,7 @@ public class EmargementService {
 
         if (maintenant.isBefore(debutAutorise)) {
             java.time.format.DateTimeFormatter hf = java.time.format.DateTimeFormatter.ofPattern("HH'h'mm");
-            throw new IllegalArgumentException("Trop tot : l'emargement ouvre a " + debutAutorise.format(hf)
+            throw new MetierException("TROP_TOT", "Trop tot : l'emargement ouvre a " + debutAutorise.format(hf)
                     + " (la seance commence a " + seance.getHeureDebut().format(hf) + ").");
         }
 
@@ -164,17 +165,17 @@ public class EmargementService {
 
         // Regle 5 : Token QR universel valide et frais (preuve de presence)
         if (!qr.valide()) {
-            throw new IllegalArgumentException("QR Code invalide ou expire. Rescannez le code affiche.");
+            throw new MetierException("QR_INVALIDE", "QR Code invalide ou expire. Rescannez le code affiche.");
         }
 
         // Regle 5bis (C3) : le QR doit être celui de l'établissement de l'enseignant.
         if (qr.etablissementId() == null || !qr.etablissementId().equals(enseignant.getEtablissementId())) {
-            throw new IllegalArgumentException("Ce QR n'appartient pas a votre etablissement.");
+            throw new MetierException("QR_AUTRE_ETABLISSEMENT", "Ce QR n'appartient pas a votre etablissement.");
         }
 
         // Regle 6 : anti-rejeu — un meme token ne peut servir qu'une fois par enseignant
         if (!qrReplayGuard.tryConsume(enseignant.getId(), qr.jti())) {
-            throw new IllegalArgumentException("Ce QR a deja ete utilise. Rescannez le code affiche.");
+            throw new MetierException("QR_DEJA_UTILISE", "Ce QR a deja ete utilise. Rescannez le code affiche.");
         }
 
         return enRetard;
@@ -182,15 +183,15 @@ public class EmargementService {
 
     private void validerSignature(String signatureBase64) {
         if (signatureBase64 == null || signatureBase64.isBlank()) {
-            throw new IllegalArgumentException("La signature est obligatoire pour l'emargement");
+            throw new MetierException("SIGNATURE_MANQUANTE", "La signature est obligatoire pour l'emargement");
         }
         if (signatureBase64.length() > 700_000) {
-            throw new IllegalArgumentException("Signature invalide (taille hors limites)");
+            throw new MetierException("SIGNATURE_INVALIDE", "Signature invalide (taille hors limites)");
         }
         // Format Base64 strict (peut contenir le prefixe data:image/png;base64,)
         String payload = signatureBase64.contains(",") ? signatureBase64.split(",", 2)[1] : signatureBase64;
         if (!payload.matches("^[A-Za-z0-9+/]+={0,2}$")) {
-            throw new IllegalArgumentException("Signature invalide (format Base64 incorrect)");
+            throw new MetierException("SIGNATURE_INVALIDE", "Signature invalide (format Base64 incorrect)");
         }
     }
 
