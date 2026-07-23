@@ -27,6 +27,7 @@ public class RattrapageService {
     private final SeanceRepository seanceRepository;
     private final MailService mailService;
     private final EtablissementCourantService etablissementCourantService;
+    private final ci.esatic.sigep.mapper.RattrapageMapper rattrapageMapper;
 
     @Transactional
     public RattrapageResponse creerDemande(Long userId, RattrapageRequest request) {
@@ -124,18 +125,6 @@ public class RattrapageService {
     }
 
     private RattrapageResponse toResponse(DemandeRattrapage d) {
-        return RattrapageResponse.builder()
-                .id(d.getId())
-                .enseignantNom(d.getEnseignant().getNom())
-                .enseignantPrenom(d.getEnseignant().getPrenom())
-                .matiereLibelle(d.getMatiere().getLibelle())
-                .classeLibelle(d.getClasse().getLibelle())
-                .dateSouhaitee(d.getDateSouhaitee())
-                .heureSouhaitee(d.getHeureSouhaitee())
-                .motif(d.getMotif())
-                .statut(d.getStatut())
-                .dateCreation(d.getDateCreation())
-                .seanceRattrapageId(d.getSeanceRattrapage() != null ? d.getSeanceRattrapage().getId() : null)
-                .build();
+        return rattrapageMapper.toResponse(d);
     }
 }

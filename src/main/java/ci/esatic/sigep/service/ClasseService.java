@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
 public class ClasseService {
 
     private final ClasseRepository classeRepository;
+    private final ci.esatic.sigep.mapper.ClasseMapper classeMapper;
 
     public List<ClasseResponse> findAll() {
         return classeRepository.findAll().stream()
@@ -64,11 +65,6 @@ public class ClasseService {
     }
 
     private ClasseResponse toResponse(Classe c) {
-        return ClasseResponse.builder()
-                .id(c.getId())
-                .libelle(c.getLibelle())
-                .filiere(c.getFiliere())
-                .niveau(c.getNiveau())
-                .build();
+        return classeMapper.toResponse(c);
     }
 }

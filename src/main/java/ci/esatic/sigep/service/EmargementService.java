@@ -34,6 +34,7 @@ public class EmargementService {
     private final EtablissementRepository etablissementRepository;
     private final QrCodeService qrCodeService;
     private final QrReplayGuard qrReplayGuard;
+    private final ci.esatic.sigep.mapper.EmargementMapper emargementMapper;
 
     @Transactional
     public EmargementResponse emarger(Long userId, EmargementRequest request) {
@@ -196,17 +197,6 @@ public class EmargementService {
     }
 
     private EmargementResponse toResponse(Emargement e) {
-        return EmargementResponse.builder()
-                .id(e.getId())
-                .seanceId(e.getSeance().getId())
-                .matiereLibelle(e.getSeance().getMatiere().getLibelle())
-                .classeLibelle(e.getSeance().getClasse().getLibelle())
-                .salleLibelle(e.getSeance().getSalle().getLibelle())
-                .dateHeure(e.getDateHeure())
-                .enRetard(e.isEnRetard())
-                .horsLigne(e.isHorsLigne())
-                .enseignantNom(e.getEnseignant().getNom())
-                .enseignantPrenom(e.getEnseignant().getPrenom())
-                .build();
+        return emargementMapper.toResponse(e);
     }
 }

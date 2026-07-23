@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
 public class SalleService {
 
     private final SalleRepository salleRepository;
+    private final ci.esatic.sigep.mapper.SalleMapper salleMapper;
 
     public List<SalleResponse> findAll() {
         return salleRepository.findAll().stream()
@@ -67,11 +68,6 @@ public class SalleService {
     }
 
     private SalleResponse toResponse(Salle s) {
-        return SalleResponse.builder()
-                .id(s.getId())
-                .libelle(s.getLibelle())
-                .batiment(s.getBatiment())
-                .capacite(s.getCapacite())
-                .build();
+        return salleMapper.toResponse(s);
     }
 }

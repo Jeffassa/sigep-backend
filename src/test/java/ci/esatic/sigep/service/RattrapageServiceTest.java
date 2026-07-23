@@ -33,6 +33,9 @@ class RattrapageServiceTest {
     @Mock private SeanceRepository seanceRepository;
     @Mock private MailService mailService;
     @Mock private EtablissementCourantService etablissementCourantService;
+    // Mapper RÉEL (impl MapStruct générée) pour mapper effectivement les réponses.
+    @org.mockito.Spy private ci.esatic.sigep.mapper.RattrapageMapper rattrapageMapper =
+            new ci.esatic.sigep.mapper.RattrapageMapperImpl();
 
     @InjectMocks private RattrapageService rattrapageService;
 

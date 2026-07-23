@@ -23,6 +23,7 @@ public class SeanceService {
     private final MatiereRepository matiereRepository;
     private final ClasseRepository classeRepository;
     private final SalleRepository salleRepository;
+    private final ci.esatic.sigep.mapper.SeanceMapper seanceMapper;
 
     public List<SeanceResponse> getSeancesJour(Long enseignantId, LocalDate date) {
         return seanceRepository
@@ -115,19 +116,6 @@ public class SeanceService {
     }
 
     public SeanceResponse toResponse(Seance s) {
-        return SeanceResponse.builder()
-                .id(s.getId())
-                .date(s.getDate())
-                .heureDebut(s.getHeureDebut())
-                .heureFin(s.getHeureFin())
-                .matiereLibelle(s.getMatiere().getLibelle())
-                .classeLibelle(s.getClasse().getLibelle())
-                .salleLibelle(s.getSalle().getLibelle())
-                .salleBatiment(s.getSalle().getBatiment())
-                .enseignantNom(s.getEnseignant().getNom())
-                .enseignantPrenom(s.getEnseignant().getPrenom())
-                .type(s.getType())
-                .statut(s.getStatut())
-                .build();
+        return seanceMapper.toResponse(s);
     }
 }

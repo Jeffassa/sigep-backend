@@ -38,6 +38,9 @@ class EmargementServiceTest {
     @Mock private QrCodeService qrCodeService;
     @Mock private ci.esatic.sigep.security.QrReplayGuard qrReplayGuard;
     @Mock private ci.esatic.sigep.repository.EtablissementRepository etablissementRepository;
+    // Mapper RÉEL (impl MapStruct générée) pour que les réponses soient effectivement mappées.
+    @org.mockito.Spy private ci.esatic.sigep.mapper.EmargementMapper emargementMapper =
+            new ci.esatic.sigep.mapper.EmargementMapperImpl();
 
     @InjectMocks private EmargementService emargementService;
 

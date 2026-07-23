@@ -90,6 +90,12 @@
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
             <version>2.6.0</version>
         </dependency>
+        <!-- Mapping entité ↔ DTO généré (MapStruct) — élimine le mapping manuel dupliqué -->
+        <dependency>
+            <groupId>org.mapstruct</groupId>
+            <artifactId>mapstruct</artifactId>
+            <version>1.6.3</version>
+        </dependency>
         <!-- Verrou distribué des tâches planifiées (ShedLock) : un seul nœud exécute chaque cron -->
         <dependency>
             <groupId>net.javacrumbs.shedlock</groupId>
@@ -239,10 +245,21 @@
                 <configuration>
                     <release>21</release>
                     <annotationProcessorPaths>
+                        <!-- ORDRE IMPORTANT : lombok, puis le binding, puis mapstruct. -->
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
                             <version>${lombok.version}</version>
+                        </path>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok-mapstruct-binding</artifactId>
+                            <version>0.2.0</version>
+                        </path>
+                        <path>
+                            <groupId>org.mapstruct</groupId>
+                            <artifactId>mapstruct-processor</artifactId>
+                            <version>1.6.3</version>
                         </path>
                     </annotationProcessorPaths>
                     <compilerArgs>
