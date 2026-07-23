@@ -1,5 +1,6 @@
 package ci.esatic.sigep.controller;
 
+import ci.esatic.sigep.security.SecurityUtils;
 import ci.esatic.sigep.service.PaiementService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -7,9 +8,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 
 /**
  * Webhook Mobile Money GÉNÉRIQUE (C7) — indépendant de l'agrégateur (CinetPay / PayDunya /
@@ -42,7 +40,7 @@ public class MobileMoneyWebhookController {
             log.warn("Webhook Mobile Money reçu mais aucun secret configuré (app.mobile-money.webhook-secret).");
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body("Webhook non configuré");
         }
-        if (secret == null || !constantTimeEquals(webhookSecret, secret)) {
+        if (secret == null || !SecurityUtils.constantTimeEquals(webhookSecret, secret)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Secret invalide");
         }
         if (event == null || event.etablissementId() == null || event.montant() == null
@@ -54,9 +52,5 @@ public class MobileMoneyWebhookController {
                 event.reference(), "Mobile Money");
         // 200 même si déjà traité (idempotent) : évite les relivraisons inutiles de l'agrégateur.
         return ResponseEntity.ok("OK");
-    }
-
-    private boolean constantTimeEquals(String a, String b) {
-        return MessageDigest.isEqual(a.getBytes(StandardCharsets.UTF_8), b.getBytes(StandardCharsets.UTF_8));
     }
 }
