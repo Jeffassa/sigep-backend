@@ -65,18 +65,9 @@ public class QrCodeService {
                 .build();
     }
 
-    public boolean validateUniversalToken(String token) {
-        return jwtService.isUniversalQrTokenValid(token);
-    }
-
-    /** Établissement (claim "etab") porté par le token QR universel, ou null. */
-    public Long extractUniversalTokenEtablissementId(String token) {
-        return jwtService.extractQrEtablissementId(token);
-    }
-
-    /** Identifiant unique (jti) du token QR, pour l'anti-rejeu. */
-    public String extractTokenId(String token) {
-        return jwtService.extractQrJti(token);
+    /** Lecture unique du QR universel (validité + établissement + jti) — un seul parse/vérif. */
+    public JwtService.QrUniversel lireQrUniversel(String token) {
+        return jwtService.lireQrUniversel(token);
     }
 
     private String generateQrImage(String content) {

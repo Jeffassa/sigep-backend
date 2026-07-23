@@ -159,19 +159,21 @@ public class EmargementService {
     private boolean validerRegles(Enseignant enseignant, Seance seance, String qrToken, Etablissement etab) {
         boolean enRetard = validerReglesCommunes(enseignant, seance, etab);
 
+        // Lecture UNIQUE du QR (une seule vérification de signature pour les 3 contrôles).
+        ci.esatic.sigep.security.JwtService.QrUniversel qr = qrCodeService.lireQrUniversel(qrToken);
+
         // Regle 5 : Token QR universel valide et frais (preuve de presence)
-        if (!qrCodeService.validateUniversalToken(qrToken)) {
+        if (!qr.valide()) {
             throw new IllegalArgumentException("QR Code invalide ou expire. Rescannez le code affiche.");
         }
 
         // Regle 5bis (C3) : le QR doit être celui de l'établissement de l'enseignant.
-        Long qrEtab = qrCodeService.extractUniversalTokenEtablissementId(qrToken);
-        if (qrEtab == null || !qrEtab.equals(enseignant.getEtablissementId())) {
+        if (qr.etablissementId() == null || !qr.etablissementId().equals(enseignant.getEtablissementId())) {
             throw new IllegalArgumentException("Ce QR n'appartient pas a votre etablissement.");
         }
 
         // Regle 6 : anti-rejeu — un meme token ne peut servir qu'une fois par enseignant
-        if (!qrReplayGuard.tryConsume(enseignant.getId(), qrCodeService.extractTokenId(qrToken))) {
+        if (!qrReplayGuard.tryConsume(enseignant.getId(), qr.jti())) {
             throw new IllegalArgumentException("Ce QR a deja ete utilise. Rescannez le code affiche.");
         }
 

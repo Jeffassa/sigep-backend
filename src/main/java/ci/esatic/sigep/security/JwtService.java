@@ -1,6 +1,8 @@
 package ci.esatic.sigep.security;
 
-import io.jsonwebtoken.*;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -11,10 +13,21 @@ import javax.crypto.SecretKey;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Function;
 
+/**
+ * Émission et lecture des JWT (access + QR). Un token n'est parsé/vérifié qu'UNE seule fois
+ * par opération : les méthodes de lecture renvoient les Claims (ou un record) plutôt que de
+ * re-parser pour chaque champ. Les clés HMAC sont décodées une fois au démarrage (immuables).
+ */
 @Service
 public class JwtService {
+
+    // Clés/valeurs de claims centralisées (évite les fautes de frappe entre génération et lecture).
+    private static final String CLAIM_TYPE = "type";
+    private static final String CLAIM_SALLE = "salle";
+    private static final String CLAIM_ETAB = "etab";
+    private static final String TYPE_QR_SALLE = "QR";
+    private static final String TYPE_UNIVERSEL = "QR_UNIVERSAL";
 
     @Value("${app.jwt.secret}")
     private String secretKey;
@@ -25,155 +38,129 @@ public class JwtService {
     @Value("${app.jwt.expiration}")
     private long jwtExpiration;
 
-    public String extractUsername(String token) {
-        return extractClaim(token, Claims::getSubject);
+    // Décodées et mémorisées à la 1re utilisation (immuables) — plus de reconstruction à chaque token.
+    private SecretKey accessKey;
+    private SecretKey qrKey;
+
+    private SecretKey accessKey() {
+        if (accessKey == null) accessKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secretKey));
+        return accessKey;
     }
 
-    public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
-        final Claims claims = extractAllClaims(token);
-        return claimsResolver.apply(claims);
+    private SecretKey qrKey() {
+        if (qrKey == null) qrKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(qrSecretKey));
+        return qrKey;
     }
 
+    // ─── Génération ──────────────────────────────────────────────────────────
     public String generateToken(UserDetails userDetails) {
         return generateToken(new HashMap<>(), userDetails);
     }
 
     public String generateToken(Map<String, Object> extraClaims, UserDetails userDetails) {
-        return buildToken(extraClaims, userDetails, jwtExpiration);
+        return Jwts.builder()
+                .claims(extraClaims)
+                .subject(userDetails.getUsername())
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + jwtExpiration))
+                .signWith(accessKey())
+                .compact();
     }
 
     public String generateQrToken(String salleCode, long expirationMs) {
         Map<String, Object> claims = new HashMap<>();
-        claims.put("salle", salleCode);
-        claims.put("type", "QR");
+        claims.put(CLAIM_SALLE, salleCode);
+        claims.put(CLAIM_TYPE, TYPE_QR_SALLE);
         return Jwts.builder()
                 .claims(claims)
                 .subject(salleCode)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + expirationMs))
-                .signWith(getQrSigningKey())
+                .signWith(qrKey())
                 .compact();
     }
-
-    public boolean isQrTokenValid(String token, String salleCode) {
-        try {
-            Claims claims = Jwts.parser()
-                    .verifyWith(getQrSigningKey())
-                    .build()
-                    .parseSignedClaims(token)
-                    .getPayload();
-            String tokenSalle = (String) claims.get("salle");
-            String type = (String) claims.get("type");
-            boolean expired = claims.getExpiration().before(new Date());
-            return "QR".equals(type) && salleCode.equals(tokenSalle) && !expired;
-        } catch (JwtException e) {
-            return false;
-        }
-    }
-
-    // ─── QR universel d'émargement ──────────────────────────────────────────
-    // Un seul QR (affiché sur un écran), renouvelé toutes les 30 s. Il ne cible
-    // aucune salle : il sert uniquement de preuve de présence au moment du scan.
-
-    private static final String QR_UNIVERSAL_TYPE = "QR_UNIVERSAL";
 
     public String generateUniversalQrToken(long expirationMs, Long etablissementId) {
         Map<String, Object> claims = new HashMap<>();
-        claims.put("type", QR_UNIVERSAL_TYPE);
-        // C3 : le QR est rattaché à un établissement — un enseignant ne peut émarger
-        // qu'avec le QR de SON établissement (preuve de présence cloisonnée par tenant).
-        if (etablissementId != null) claims.put("etab", etablissementId);
+        claims.put(CLAIM_TYPE, TYPE_UNIVERSEL);
+        // C3 : le QR est rattaché à un établissement (preuve de présence cloisonnée par tenant).
+        if (etablissementId != null) claims.put(CLAIM_ETAB, etablissementId);
         return Jwts.builder()
                 .claims(claims)
-                .id(java.util.UUID.randomUUID().toString())   // jti : identifiant unique pour l'anti-rejeu
+                .id(java.util.UUID.randomUUID().toString())   // jti : anti-rejeu
                 .subject("SIGEP-EMARGEMENT")
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + expirationMs))
-                .signWith(getQrSigningKey())
+                .signWith(qrKey())
                 .compact();
     }
 
-    public boolean isUniversalQrTokenValid(String token) {
+    // ─── Access token : parsé UNE fois ─────────────────────────────────────────
+    /** Claims de l'access token, ou {@code null} si signature/format invalide ou expiré non parsable. */
+    public Claims parseAccessClaims(String token) {
         try {
-            Claims claims = Jwts.parser()
-                    .verifyWith(getQrSigningKey())
-                    .build()
-                    .parseSignedClaims(token)
-                    .getPayload();
-            boolean expired = claims.getExpiration().before(new Date());
-            return QR_UNIVERSAL_TYPE.equals(claims.get("type")) && !expired;
+            return parse(token, accessKey());
+        } catch (JwtException | IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    public String extractUsername(String token) {
+        Claims claims = parseAccessClaims(token);
+        return claims == null ? null : claims.getSubject();
+    }
+
+    /** Valide des Claims déjà parsés (pas de re-parsing) contre l'utilisateur. */
+    public boolean isValid(Claims claims, UserDetails userDetails) {
+        return claims != null
+                && userDetails.getUsername().equals(claims.getSubject())
+                && !estExpire(claims);
+    }
+
+    public boolean isTokenValid(String token, UserDetails userDetails) {
+        return isValid(parseAccessClaims(token), userDetails);
+    }
+
+    // ─── QR par salle (chemin historique) ──────────────────────────────────────
+    public boolean isQrTokenValid(String token, String salleCode) {
+        try {
+            Claims claims = parse(token, qrKey());
+            return TYPE_QR_SALLE.equals(claims.get(CLAIM_TYPE))
+                    && salleCode.equals(claims.get(CLAIM_SALLE))
+                    && !estExpire(claims);
         } catch (JwtException e) {
             return false;
         }
     }
 
-    /** Établissement (claim "etab") du token QR universel, ou null si absent/invalide. */
-    public Long extractQrEtablissementId(String token) {
+    // ─── QR universel d'émargement : parsé UNE fois → record ────────────────────
+    /** Lecture unique du QR universel : validité (type + fraîcheur), établissement, jti. */
+    public QrUniversel lireQrUniversel(String token) {
         try {
-            Object v = Jwts.parser()
-                    .verifyWith(getQrSigningKey())
-                    .build()
-                    .parseSignedClaims(token)
-                    .getPayload()
-                    .get("etab");
-            return (v instanceof Number n) ? n.longValue() : null;
+            Claims claims = parse(token, qrKey());
+            boolean valide = TYPE_UNIVERSEL.equals(claims.get(CLAIM_TYPE)) && !estExpire(claims);
+            Object etab = claims.get(CLAIM_ETAB);
+            Long etablissementId = (etab instanceof Number n) ? n.longValue() : null;
+            return new QrUniversel(valide, etablissementId, claims.getId());
         } catch (JwtException e) {
-            return null;
+            return QrUniversel.invalide();
         }
     }
 
-    /** Identifiant unique (jti) du token QR universel, ou null si invalide. */
-    public String extractQrJti(String token) {
-        try {
-            return Jwts.parser()
-                    .verifyWith(getQrSigningKey())
-                    .build()
-                    .parseSignedClaims(token)
-                    .getPayload()
-                    .getId();
-        } catch (JwtException e) {
-            return null;
+    /** Résultat de lecture d'un QR universel (une seule vérification de signature). */
+    public record QrUniversel(boolean valide, Long etablissementId, String jti) {
+        public static QrUniversel invalide() {
+            return new QrUniversel(false, null, null);
         }
     }
 
-    private String buildToken(Map<String, Object> extraClaims, UserDetails userDetails, long expiration) {
-        return Jwts.builder()
-                .claims(extraClaims)
-                .subject(userDetails.getUsername())
-                .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + expiration))
-                .signWith(getSigningKey())
-                .compact();
+    // ─── Helpers ────────────────────────────────────────────────────────────────
+    private Claims parse(String token, SecretKey key) {
+        return Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
     }
 
-    public boolean isTokenValid(String token, UserDetails userDetails) {
-        final String username = extractUsername(token);
-        return username.equals(userDetails.getUsername()) && !isTokenExpired(token);
-    }
-
-    private boolean isTokenExpired(String token) {
-        return extractExpiration(token).before(new Date());
-    }
-
-    private Date extractExpiration(String token) {
-        return extractClaim(token, Claims::getExpiration);
-    }
-
-    private Claims extractAllClaims(String token) {
-        return Jwts.parser()
-                .verifyWith(getSigningKey())
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
-    }
-
-    private SecretKey getSigningKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
-        return Keys.hmacShaKeyFor(keyBytes);
-    }
-
-    private SecretKey getQrSigningKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(qrSecretKey);
-        return Keys.hmacShaKeyFor(keyBytes);
+    private boolean estExpire(Claims claims) {
+        Date expiration = claims.getExpiration();
+        return expiration != null && expiration.before(new Date());
     }
 }

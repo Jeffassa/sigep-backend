@@ -7,6 +7,7 @@ import ci.esatic.sigep.exception.ResourceNotFoundException;
 import ci.esatic.sigep.repository.EmargementRepository;
 import ci.esatic.sigep.repository.EnseignantRepository;
 import ci.esatic.sigep.repository.SeanceRepository;
+import ci.esatic.sigep.security.JwtService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -77,9 +78,16 @@ class EmargementServiceTest {
         lenient().when(etablissementRepository.findById(ETAB_ID)).thenReturn(Optional.of(etab));
     }
 
-    /** C3 : le QR porte bien l'etablissementId de l'enseignant (correspondance OK). */
-    private void stubQrTenantOk() {
-        when(qrCodeService.extractUniversalTokenEtablissementId(any())).thenReturn(ETAB_ID);
+    /** QR universel VALIDE et rattaché à l'établissement de l'enseignant (lecture unique). */
+    private void stubQrValide() {
+        when(qrCodeService.lireQrUniversel(any()))
+                .thenReturn(new JwtService.QrUniversel(true, ETAB_ID, "jti-ok"));
+    }
+
+    /** QR universel INVALIDE/expiré. */
+    private void stubQrInvalide() {
+        when(qrCodeService.lireQrUniversel(any()))
+                .thenReturn(new JwtService.QrUniversel(false, null, null));
     }
 
     /**
@@ -121,8 +129,7 @@ class EmargementServiceTest {
             when(enseignantRepository.findByUserId(USER_ID)).thenReturn(Optional.of(enseignant));
             when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seance));
             when(emargementRepository.existsBySeanceId(SEANCE_ID)).thenReturn(false);
-            when(qrCodeService.validateUniversalToken("valid-token")).thenReturn(true);
-            stubQrTenantOk();
+            stubQrValide();
             when(qrReplayGuard.tryConsume(any(), any())).thenReturn(true);
             when(seanceRepository.save(any())).thenReturn(seance);
             when(emargementRepository.save(any())).thenReturn(saved);
@@ -241,8 +248,7 @@ class EmargementServiceTest {
             when(enseignantRepository.findByUserId(USER_ID)).thenReturn(Optional.of(enseignant));
             when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seance));
             when(emargementRepository.existsBySeanceId(SEANCE_ID)).thenReturn(false);
-            when(qrCodeService.validateUniversalToken("valid-token")).thenReturn(true);
-            stubQrTenantOk();
+            stubQrValide();
             when(qrReplayGuard.tryConsume(any(), any())).thenReturn(true);
             when(seanceRepository.save(any())).thenReturn(seance);
             when(emargementRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -265,7 +271,7 @@ class EmargementServiceTest {
             when(enseignantRepository.findByUserId(USER_ID)).thenReturn(Optional.of(enseignant));
             when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seance));
             when(emargementRepository.existsBySeanceId(SEANCE_ID)).thenReturn(false);
-            when(qrCodeService.validateUniversalToken(any())).thenReturn(false);
+            stubQrInvalide();
 
             assertThatThrownBy(() -> emargementService.emarger(USER_ID, buildRequest("expire", SIGNATURE_VALIDE)))
                     .isInstanceOf(IllegalArgumentException.class)
@@ -288,7 +294,7 @@ class EmargementServiceTest {
             when(enseignantRepository.findByUserId(USER_ID)).thenReturn(Optional.of(enseignant));
             when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seance));
             when(emargementRepository.existsBySeanceId(SEANCE_ID)).thenReturn(false);
-            when(qrCodeService.validateUniversalToken("mauvais-token")).thenReturn(false);
+            stubQrInvalide();
 
             assertThatThrownBy(() -> emargementService.emarger(USER_ID, buildRequest("mauvais-token", SIGNATURE_VALIDE)))
                     .isInstanceOf(IllegalArgumentException.class)
@@ -311,8 +317,7 @@ class EmargementServiceTest {
             when(enseignantRepository.findByUserId(USER_ID)).thenReturn(Optional.of(enseignant));
             when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seance));
             when(emargementRepository.existsBySeanceId(SEANCE_ID)).thenReturn(false);
-            when(qrCodeService.validateUniversalToken("valid-token")).thenReturn(true);
-            stubQrTenantOk();
+            stubQrValide();
             when(qrReplayGuard.tryConsume(any(), any())).thenReturn(false); // déjà utilisé
 
             assertThatThrownBy(() -> emargementService.emarger(USER_ID, buildRequest("valid-token", SIGNATURE_VALIDE)))
@@ -372,8 +377,7 @@ class EmargementServiceTest {
             when(enseignantRepository.findByUserId(USER_ID)).thenReturn(Optional.of(enseignant));
             when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seance));
             when(emargementRepository.existsBySeanceId(SEANCE_ID)).thenReturn(false);
-            when(qrCodeService.validateUniversalToken(any())).thenReturn(true);
-            stubQrTenantOk();
+            stubQrValide();
             when(qrReplayGuard.tryConsume(any(), any())).thenReturn(true);
 
             assertThatThrownBy(() -> emargementService.emarger(USER_ID, buildRequest("valid-token", "")))
@@ -393,8 +397,7 @@ class EmargementServiceTest {
             when(enseignantRepository.findByUserId(USER_ID)).thenReturn(Optional.of(enseignant));
             when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seance));
             when(emargementRepository.existsBySeanceId(SEANCE_ID)).thenReturn(false);
-            when(qrCodeService.validateUniversalToken(any())).thenReturn(true);
-            stubQrTenantOk();
+            stubQrValide();
             when(qrReplayGuard.tryConsume(any(), any())).thenReturn(true);
 
             assertThatThrownBy(() -> emargementService.emarger(USER_ID, buildRequest("valid-token", "pas@du@base64!!")))
