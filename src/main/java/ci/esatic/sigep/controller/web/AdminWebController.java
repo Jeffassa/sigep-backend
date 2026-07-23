@@ -46,7 +46,7 @@ public class AdminWebController {
     private final ClasseRepository classeRepository;
     private final SalleRepository salleRepository;
     private final ci.esatic.sigep.service.RattrapageService rattrapageService;
-    private final ci.esatic.sigep.service.StatsService statsService;
+    private final ci.esatic.sigep.service.StatistiquesService statistiquesService;
     private final ci.esatic.sigep.service.AiAnalyseService aiAnalyseService;
     private final ci.esatic.sigep.tenant.plan.PlanService planService;
     private final ci.esatic.sigep.service.EtablissementCourantService etablissementCourantService;
@@ -120,7 +120,7 @@ public class AdminWebController {
             f = today.withDayOfMonth(today.lengthOfMonth());
             periode = "mois";
         }
-        model.addAllAttributes(statsService.computeStatistiques(d, f));
+        model.addAllAttributes(statistiquesService.computeStatistiques(d, f));
         model.addAttribute("periode", periode);
         model.addAttribute("aiEnabled", aiAnalyseService.isEnabled());
         return "admin/statistiques";
@@ -156,7 +156,7 @@ public class AdminWebController {
             d = today.withDayOfMonth(1);
             f = today.withDayOfMonth(today.lengthOfMonth());
         }
-        Map<String, Object> stats = statsService.computeStatistiques(d, f);
+        Map<String, Object> stats = statistiquesService.computeStatistiques(d, f);
         out.put("texte", aiAnalyseService.analyser(d, f, stats));
         return out;
     }
