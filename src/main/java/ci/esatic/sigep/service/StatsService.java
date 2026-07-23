@@ -153,20 +153,23 @@ public class StatsService {
 
     private List<Map<String, Object>> parEnseignant(LocalDate debut, LocalDate fin) {
         List<Map<String, Object>> out = new ArrayList<>();
-        for (Enseignant e : enseignantRepository.findAll()) {
-            long tot = seanceRepository.countByEnseignantIdAndPeriode(e.getId(), debut, fin);
-            if (tot == 0) continue;
-            long em = seanceRepository.countEmargeesParEnseignant(e.getId(), debut, fin);
+        // UNE seule requête d'agrégation (fini le N+1 : findAll + 2 counts par enseignant).
+        for (Object[] r : seanceRepository.tauxParEnseignant(debut, fin)) {
+            String prenom = (String) r[1];
+            String nom = (String) r[2];
+            String matricule = (String) r[3];
+            long tot = ((Number) r[4]).longValue();
+            long em = r[5] == null ? 0 : ((Number) r[5]).longValue();
             double tx = pct(em, tot);
-            Map<String, Object> r = new HashMap<>();
-            r.put("nom", e.getPrenom() + " " + e.getNom());
-            r.put("matricule", e.getMatricule());
-            r.put("total", tot);
-            r.put("emargees", em);
-            r.put("taux", tx);
-            r.put("heures", arrondi(em * heuresParSeance));
-            r.put("niveau", Assiduite.niveau(tx));
-            out.add(r);
+            Map<String, Object> m = new HashMap<>();
+            m.put("nom", prenom + " " + nom);
+            m.put("matricule", matricule);
+            m.put("total", tot);
+            m.put("emargees", em);
+            m.put("taux", tx);
+            m.put("heures", arrondi(em * heuresParSeance));
+            m.put("niveau", Assiduite.niveau(tx));
+            out.add(m);
         }
         out.sort((a, b) -> Double.compare((double) b.get("taux"), (double) a.get("taux")));
         return out;

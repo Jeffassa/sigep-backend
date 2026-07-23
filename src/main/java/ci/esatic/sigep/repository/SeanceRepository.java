@@ -81,6 +81,14 @@ public interface SeanceRepository extends JpaRepository<Seance, Long> {
            "GROUP BY s.matiere.libelle ORDER BY s.matiere.libelle")
     List<Object[]> tauxParMatiere(@Param("debut") LocalDate debut, @Param("fin") LocalDate fin);
 
+    // Agrégat PAR ENSEIGNANT en UNE requête (remplace la boucle N+1 : findAll + 2 counts/enseignant).
+    // Ne renvoie que les enseignants ayant au moins une séance sur la période.
+    @Query("SELECT s.enseignant.id, s.enseignant.prenom, s.enseignant.nom, s.enseignant.matricule, " +
+           "COUNT(s), SUM(CASE WHEN s.statut = 'EMARGE' THEN 1 ELSE 0 END) " +
+           "FROM Seance s WHERE s.date BETWEEN :debut AND :fin " +
+           "GROUP BY s.enseignant.id, s.enseignant.prenom, s.enseignant.nom, s.enseignant.matricule")
+    List<Object[]> tauxParEnseignant(@Param("debut") LocalDate debut, @Param("fin") LocalDate fin);
+
     // Projection légère (date, heure de début, statut) pour la heatmap et les oublis
     @Query("SELECT s.date, s.heureDebut, s.statut FROM Seance s WHERE s.date BETWEEN :debut AND :fin")
     List<Object[]> projectionPeriode(@Param("debut") LocalDate debut, @Param("fin") LocalDate fin);
