@@ -1,0 +1,72 @@
+package ci.esatic.sigep.controller.web;
+
+import ci.esatic.sigep.entity.Salle;
+import ci.esatic.sigep.entity.StatutDemande;
+import ci.esatic.sigep.entity.StatutEnseignant;
+import ci.esatic.sigep.repository.EnseignantRepository;
+import ci.esatic.sigep.repository.DemandeRattrapageRepository;
+import ci.esatic.sigep.repository.SalleRepository;
+import ci.esatic.sigep.repository.SeanceRepository;
+import ci.esatic.sigep.service.RattrapageService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import java.time.LocalDate;
+import java.time.LocalTime;
+
+/** Espace admin : alertes (séances non émargées, comptes/rattrapages en attente) + décisions rattrapage. */
+@Controller
+@RequiredArgsConstructor
+public class AlerteWebController {
+
+    private final SeanceRepository seanceRepository;
+    private final DemandeRattrapageRepository rattrapageRepository;
+    private final EnseignantRepository enseignantRepository;
+    private final SalleRepository salleRepository;
+    private final RattrapageService rattrapageService;
+
+    @GetMapping("/admin/alertes")
+    public String alertes(Model model) {
+        model.addAttribute("seancesNonEmargees",
+                seanceRepository.findSeancesNonEmargees(LocalDate.now(), LocalTime.now()));
+        model.addAttribute("rattrapagesEnAttente",
+                rattrapageRepository.findByStatutOrderByDateCreationDesc(StatutDemande.EN_ATTENTE));
+        model.addAttribute("enseignantsEnAttente",
+                enseignantRepository.findByStatutOrderByNomAsc(StatutEnseignant.PENDING));
+        model.addAttribute("salles", salleRepository.findAll());
+        return "admin/alertes";
+    }
+
+    /** Accepte une demande de rattrapage : crée la séance dans la salle choisie + email à l'enseignant. */
+    @PostMapping("/admin/rattrapages/{id}/accepter")
+    public String accepterRattrapage(@PathVariable Long id, @RequestParam Long salleId, RedirectAttributes ra) {
+        try {
+            Salle salle = salleRepository.findById(salleId)
+                    .orElseThrow(() -> new IllegalArgumentException("Salle introuvable"));
+            rattrapageService.accepterAvecSalle(id, salle);
+            ra.addFlashAttribute("success",
+                    "Demande acceptee : seance de rattrapage creee, enseignant notifie par email.");
+        } catch (Exception e) {
+            ra.addFlashAttribute("error", "Erreur : " + e.getMessage());
+        }
+        return "redirect:/admin/alertes";
+    }
+
+    /** Refuse une demande de rattrapage + email à l'enseignant. */
+    @PostMapping("/admin/rattrapages/{id}/refuser")
+    public String refuserRattrapage(@PathVariable Long id, RedirectAttributes ra) {
+        try {
+            rattrapageService.refuser(id);
+            ra.addFlashAttribute("success", "Demande refusee : enseignant notifie par email.");
+        } catch (Exception e) {
+            ra.addFlashAttribute("error", "Erreur : " + e.getMessage());
+        }
+        return "redirect:/admin/alertes";
+    }
+}

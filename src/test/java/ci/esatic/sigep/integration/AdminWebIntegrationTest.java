@@ -125,4 +125,48 @@ class AdminWebIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Alertes")));
     }
+
+    // ─── Filet de régression pour le découpage d'AdminWebController ─────────────
+    // (référentiels / messages / statistiques / formulaire enseignant / POST / CSV)
+
+    @Test
+    @WithMockUser(username = "admin@esatic.ci", roles = "ADMIN")
+    void referentiels_devraitSeRendreCorrectement() throws Exception {
+        mockMvc.perform(get("/admin/referentiels")).andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(username = "admin@esatic.ci", roles = "ADMIN")
+    void messages_devraitSeRendreCorrectement() throws Exception {
+        mockMvc.perform(get("/admin/messages")).andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(username = "admin@esatic.ci", roles = "ADMIN")
+    void statistiques_devraitSeRendreCorrectement() throws Exception {
+        mockMvc.perform(get("/admin/statistiques")).andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(username = "admin@esatic.ci", roles = "ADMIN")
+    void nouvelEnseignantForm_devraitSeRendreCorrectement() throws Exception {
+        mockMvc.perform(get("/admin/enseignants/nouveau")).andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(username = "admin@esatic.ci", roles = "ADMIN")
+    void creerMatiere_devraitRedirigerVersReferentiels() throws Exception {
+        mockMvc.perform(post("/admin/matieres").param("libelle", "Algèbre linéaire").with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/referentiels"));
+    }
+
+    @Test
+    @WithMockUser(username = "admin@esatic.ci", roles = "ADMIN")
+    void modeleEmploiDuTemps_devraitRenvoyerUnCsv() throws Exception {
+        mockMvc.perform(get("/admin/planning/modele"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition",
+                        org.hamcrest.Matchers.containsString("modele_emploi_du_temps.csv")));
+    }
 }
