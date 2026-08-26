@@ -21,13 +21,31 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Scan du système de fichiers
+      # 1) Scan complet → SARIF (remonté dans l'onglet Security), NON bloquant.
+      - name: Scan du système de fichiers (SARIF)
         uses: aquasecurity/trivy-action@0.24.0
         with:
           scan-type: fs
           scanners: vuln,secret,misconfig
           severity: CRITICAL,HIGH
           ignore-unfixed: true
-          format: table
-          # Informatif au départ (ne bloque pas la CI). Passer à '1' pour rendre bloquant.
+          format: sarif
+          output: trivy-results.sarif
           exit-code: '0'
+
+      - name: Publier les résultats dans l'onglet Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-results.sarif
+
+      # 2) Gate BLOQUANT : échoue la CI en présence d'une vulnérabilité CRITICAL corrigeable.
+      - name: Gate CRITICAL (bloquant)
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          scan-type: fs
+          scanners: vuln,secret,misconfig
+          severity: CRITICAL
+          ignore-unfixed: true
+          format: table
+          exit-code: '1'

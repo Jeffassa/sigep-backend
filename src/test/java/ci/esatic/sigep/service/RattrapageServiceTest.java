@@ -132,6 +132,21 @@ class RattrapageServiceTest {
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
+    @Test
+    void creerDemande_devraitEchouerSiSeanceDunAutreEnseignant() {
+        Enseignant autre = Enseignant.builder().id(99L).matricule("ENS999").nom("Autre").prenom("Prof").build();
+        Seance seanceAutre = Seance.builder()
+                .id(SEANCE_ID).date(LocalDate.now().plusDays(3))
+                .heureDebut(LocalTime.of(8, 0)).heureFin(LocalTime.of(10, 0))
+                .matiere(matiere).classe(classe).salle(salle).enseignant(autre).build();
+        when(enseignantRepository.findByUserId(USER_ID)).thenReturn(Optional.of(enseignant));
+        when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seanceAutre));
+
+        assertThatThrownBy(() -> rattrapageService.creerDemande(USER_ID, buildRequest()))
+                .isInstanceOf(ci.esatic.sigep.exception.MetierException.class)
+                .hasMessageContaining("ne vous appartient pas");
+    }
+
     // =========================================================================
     // accepterAvecSalle
     // =========================================================================

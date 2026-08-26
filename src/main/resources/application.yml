@@ -96,7 +96,8 @@ management:
       enabled: false
   info:
     env:
-      enabled: true
+      # SECURITE : ne pas exposer les propriétés d'environnement via /actuator/info (public).
+      enabled: false
 
 # Suivi des erreurs (Sentry) — INERTE tant que SENTRY_DSN n'est pas défini.
 sentry:

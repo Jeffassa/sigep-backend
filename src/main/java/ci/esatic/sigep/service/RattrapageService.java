@@ -3,6 +3,7 @@ package ci.esatic.sigep.service;
 import ci.esatic.sigep.dto.request.RattrapageRequest;
 import ci.esatic.sigep.dto.response.RattrapageResponse;
 import ci.esatic.sigep.entity.*;
+import ci.esatic.sigep.exception.MetierException;
 import ci.esatic.sigep.exception.ResourceNotFoundException;
 import ci.esatic.sigep.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +38,12 @@ public class RattrapageService {
         // Récupère la séance pour en déduire la matière et la classe
         Seance seance = seanceRepository.findById(request.getSeanceId())
                 .orElseThrow(() -> new ResourceNotFoundException("Seance", "id", request.getSeanceId()));
+
+        // La séance doit appartenir à l'enseignant demandeur (IDOR intra-tenant : sinon il pourrait
+        // référencer la séance d'un collègue et en divulguer matière/classe).
+        if (!seance.getEnseignant().getId().equals(enseignant.getId())) {
+            throw new MetierException("SEANCE_NON_ATTRIBUEE", "Cette seance ne vous appartient pas");
+        }
 
         DemandeRattrapage demande = DemandeRattrapage.builder()
                 .enseignant(enseignant)

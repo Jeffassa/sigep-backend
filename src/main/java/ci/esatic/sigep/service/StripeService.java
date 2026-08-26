@@ -47,7 +47,7 @@ public class StripeService {
     }
 
     /** Convertit un montant FCFA vers l'unité Stripe (plus petite unité de la devise). */
-    long versUniteStripe(long fcfa) {
+    public long versUniteStripe(long fcfa) {
         return ZERO_DECIMAL.contains(currency.toLowerCase()) ? fcfa : fcfa * 100;
     }
 

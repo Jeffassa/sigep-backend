@@ -1,6 +1,7 @@
 package ci.esatic.sigep.controller;
 
 import ci.esatic.sigep.service.StripePaymentService;
+import ci.esatic.sigep.service.StripeService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stripe.net.Webhook;
@@ -34,6 +35,7 @@ public class StripeWebhookController {
     private String webhookSecret;
 
     private final StripePaymentService stripePaymentService;
+    private final StripeService stripeService;
     private final ObjectMapper objectMapper;
 
     @PostMapping("/webhook")
@@ -65,10 +67,21 @@ public class StripeWebhookController {
             log.info("Webhook Stripe checkout.session.completed : status={} etablissementId={}", paymentStatus, etabId);
 
             if ("paid".equals(paymentStatus) && !etabId.isBlank()) {
+                long montantFcfa = md.path("montantFcfa").asLong(0);
+                // Réconciliation : le montant réellement encaissé (amount_total) doit correspondre
+                // au montant attendu pour ce nombre de FCFA. Sinon on NE crédite PAS (défense contre
+                // un écart metadata/paiement, ex. remise appliquée). 200 pour ne pas boucler Stripe.
+                long attendu = stripeService.versUniteStripe(montantFcfa);
+                long amountTotal = obj.path("amount_total").asLong(-1);
+                if (amountTotal != attendu) {
+                    log.warn("Webhook Stripe : montant encaisse ({}) != attendu ({}) pour etab {} — NON credite.",
+                            amountTotal, attendu, etabId);
+                    return ResponseEntity.ok("");
+                }
                 stripePaymentService.traiterPaiementReussi(
                         Long.valueOf(etabId),
                         md.path("mois").asInt(1),
-                        md.path("montantFcfa").asLong(0),
+                        montantFcfa,
                         "Stripe " + obj.path("id").asText());
             }
         } catch (Exception e) {
