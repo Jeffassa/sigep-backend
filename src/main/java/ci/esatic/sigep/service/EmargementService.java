@@ -304,8 +304,10 @@ public class EmargementService {
     }
 
     private void validerSignature(String signatureBase64) {
+        // Signature OPTIONNELLE : la preuve de présence est le QR (anti-fraude principal, cf. C2).
+        // Si une signature est fournie, on en valide le format ; absente, l'émargement reste valide.
         if (signatureBase64 == null || signatureBase64.isBlank()) {
-            throw new MetierException("SIGNATURE_MANQUANTE", "La signature est obligatoire pour l'emargement");
+            return;
         }
         if (signatureBase64.length() > 700_000) {
             throw new MetierException("SIGNATURE_INVALIDE", "Signature invalide (taille hors limites)");

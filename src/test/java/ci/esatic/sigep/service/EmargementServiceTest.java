@@ -457,10 +457,10 @@ class EmargementServiceTest {
     // =========================================================================
 
     @Test
-    void emarger_devraitEchouerSiSignatureVide() {
+    void emarger_devraitReussirSansSignature() {
+        // La signature est optionnelle : le QR est la preuve de présence (C2).
         try (MockedStatic<LocalTime> lt = mockStatic(LocalTime.class, CALLS_REAL_METHODS)) {
             lt.when(LocalTime::now).thenReturn(FIXED_NOW);
-            // E1 : l'émargement évalue l'heure dans le fuseau du tenant → mocker la surcharge ZoneId.
             lt.when(() -> LocalTime.now(any(java.time.ZoneId.class))).thenReturn(FIXED_NOW);
 
             Seance seance = seanceDansLaFenetre();
@@ -469,10 +469,13 @@ class EmargementServiceTest {
             when(emargementRepository.existsBySeanceId(SEANCE_ID)).thenReturn(false);
             stubQrValide();
             when(qrReplayGuard.tryConsume(any(), any())).thenReturn(true);
+            when(seanceRepository.save(any())).thenReturn(seance);
+            when(emargementRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-            assertThatThrownBy(() -> emargementService.emarger(USER_ID, buildRequest("valid-token", "")))
-                    .isInstanceOf(MetierException.class)
-                    .hasMessageContaining("signature est obligatoire");
+            EmargementResponse r = emargementService.emarger(USER_ID, buildRequest("valid-token", ""));
+
+            assertThat(r).isNotNull();
+            assertThat(r.getSeanceId()).isEqualTo(SEANCE_ID);
         }
     }
 

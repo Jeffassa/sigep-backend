@@ -16,10 +16,10 @@ public class EmargementHorsLigneRequest {
     @NotNull
     private Long seanceId;
 
-    @NotBlank
+    // Optionnelle (le QR est la preuve de présence) ; validée seulement pour son format si fournie.
     private String signatureBase64;
 
-    // Token du QR universel scanné hors-ligne pendant la séance (JWT signé par le kiosque).
+    // Token du QR universel scanné hors-ligne pendant la séance (JWT signé par le kiosque). OBLIGATOIRE.
     @NotBlank
     private String qrToken;
 }
