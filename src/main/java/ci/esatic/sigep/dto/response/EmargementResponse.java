@@ -20,6 +20,8 @@ public class EmargementResponse {
     private LocalDateTime dateHeure;
     private boolean enRetard;
     private boolean horsLigne;
+    // false = émargement hors-ligne en attente de validation admin (présence non encore confirmée).
+    private boolean valide;
     private String enseignantNom;
     private String enseignantPrenom;
 }

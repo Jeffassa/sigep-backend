@@ -23,10 +23,13 @@ public class AlerteService {
     private final SeanceRepository seanceRepository;
     private final DemandeRattrapageRepository rattrapageRepository;
     private final EnseignantRepository enseignantRepository;
+    private final ci.esatic.sigep.repository.EmargementRepository emargementRepository;
 
     public long compter() {
         return seanceRepository.countSeancesNonEmargees(LocalDate.now(), LocalTime.now())
                 + rattrapageRepository.countByStatut(StatutDemande.EN_ATTENTE)
-                + enseignantRepository.countByStatut(StatutEnseignant.PENDING);
+                + enseignantRepository.countByStatut(StatutEnseignant.PENDING)
+                // Hors-ligne EN ATTENTE de validation (actionnable) — pas le cumul historique.
+                + emargementRepository.countByHorsLigneTrueAndValideFalse();
     }
 }

@@ -1,6 +1,7 @@
 package ci.esatic.sigep.security;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
@@ -10,6 +11,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
+import java.time.Instant;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -151,6 +153,43 @@ public class JwtService {
     public record QrUniversel(boolean valide, Long etablissementId, String jti) {
         public static QrUniversel invalide() {
             return new QrUniversel(false, null, null);
+        }
+    }
+
+    // ─── QR universel pour la synchro HORS-LIGNE : signature vérifiée, expiration TOLÉRÉE ──────
+    /**
+     * Lecture d'un QR universel SANS exiger la fraîcheur (exp), pour un émargement hors-ligne
+     * synchronisé plus tard. La signature reste vérifiée (une signature invalide → {@code invalide()}),
+     * ce qui prouve qu'un vrai QR de kiosque a été scanné. On renvoie l'instant d'émission signé
+     * ({@code iat}) afin de borner l'écart avec la fenêtre de la séance (preuve de présence différée).
+     */
+    public QrUniverselDiffere lireQrUniverselDiffere(String token) {
+        try {
+            return depuisClaims(parse(token, qrKey()));
+        } catch (ExpiredJwtException e) {
+            // La signature est déjà vérifiée avant le contrôle d'expiration : claims exploitables.
+            return depuisClaims(e.getClaims());
+        } catch (JwtException | IllegalArgumentException e) {
+            return QrUniverselDiffere.invalide();
+        }
+    }
+
+    private QrUniverselDiffere depuisClaims(Claims claims) {
+        boolean typeOk = TYPE_UNIVERSEL.equals(claims.get(CLAIM_TYPE));
+        Object etab = claims.get(CLAIM_ETAB);
+        Long etablissementId = (etab instanceof Number n) ? n.longValue() : null;
+        Instant emisLe = claims.getIssuedAt() == null ? null : claims.getIssuedAt().toInstant();
+        return new QrUniverselDiffere(typeOk, etablissementId, claims.getId(), emisLe);
+    }
+
+    /**
+     * QR universel lu en mode différé. {@code signatureEtTypeValides} = signature OK ET type QR universel ;
+     * {@code emisLe} = instant d'émission signé par le kiosque (horodatage de confiance serveur).
+     */
+    public record QrUniverselDiffere(boolean signatureEtTypeValides, Long etablissementId,
+                                     String jti, Instant emisLe) {
+        public static QrUniverselDiffere invalide() {
+            return new QrUniverselDiffere(false, null, null, null);
         }
     }
 

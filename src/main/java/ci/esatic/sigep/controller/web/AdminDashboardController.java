@@ -42,6 +42,7 @@ public class AdminDashboardController {
     private final PlanService planService;
     private final EtablissementCourantService etablissementCourantService;
     private final AlerteService alerteService;
+    private final ci.esatic.sigep.repository.EmargementRepository emargementRepository;
 
     @GetMapping("/admin-login")
     public String loginPage(@RequestParam(required = false) String error,
@@ -190,6 +191,7 @@ public class AdminDashboardController {
         stats.put("totalEnseignants", enseignantRepository.count());
         stats.put("totalSeancesAujourdhui", seanceRepository.countAllByDate(today));
         stats.put("rattrapagesEnAttente", rattrapageRepository.countByStatut(StatutDemande.EN_ATTENTE));
+        stats.put("emargementsHorsLigneCount", emargementRepository.countByHorsLigneTrueAndValideFalse());
         stats.put("tauxEmargement", tauxEmargement);
         stats.put("heuresEffectuees", emargesSemaine * 2);
         stats.put("tauxParJour", tauxParJour);

@@ -70,6 +70,11 @@ public class QrCodeService {
         return jwtService.lireQrUniversel(token);
     }
 
+    /** Lecture du QR universel pour la synchro hors-ligne : signature vérifiée, expiration tolérée. */
+    public JwtService.QrUniverselDiffere lireQrUniverselDiffere(String token) {
+        return jwtService.lireQrUniverselDiffere(token);
+    }
+
     private String generateQrImage(String content) {
         try {
             Map<EncodeHintType, Object> hints = new EnumMap<>(EncodeHintType.class);
