@@ -50,7 +50,7 @@ class PaiementServiceTest {
         service.enregistrer(5L, 3, 30000L, "Stripe abc", "Stripe (en ligne)");
 
         ArgumentCaptor<Paiement> cap = ArgumentCaptor.forClass(Paiement.class);
-        verify(paiementRepository).save(cap.capture());
+        verify(paiementRepository).saveAndFlush(cap.capture());
         assertThat(cap.getValue().getMontant()).isEqualTo(30000L);
         assertThat(cap.getValue().getMoisCredites()).isEqualTo(3);
         assertThat(cap.getValue().getReference()).isEqualTo("Stripe abc");
@@ -67,7 +67,7 @@ class PaiementServiceTest {
 
         service.enregistrer(5L, 1, 10000L, "Stripe abc", "Stripe (en ligne)");
 
-        verify(paiementRepository, never()).save(any());
+        verify(paiementRepository, never()).saveAndFlush(any());
         verify(etablissementRepository, never()).findById(anyLong());
     }
 }
