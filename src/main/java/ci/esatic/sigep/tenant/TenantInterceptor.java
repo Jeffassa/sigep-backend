@@ -38,21 +38,46 @@ public class TenantInterceptor implements HandlerInterceptor {
     private final EntityManagerFactory entityManagerFactory;
 
     @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-        Long tenant = tenantCourant();
-        if (tenant != null) {
-            TenantContext.set(tenant);
-            EntityManager em = EntityManagerFactoryUtils.getTransactionalEntityManager(entityManagerFactory);
-            if (em != null) {
-                em.unwrap(Session.class)
-                        .enableFilter("tenantFilter")
-                        .setParameter("tenantId", tenant);
-            } else {
-                // Ne devrait jamais arriver avec OSIV actif + ordre des intercepteurs correct.
-                log.error("Aucune session liée à la requête {} : filtre tenant NON activé "
-                        + "(le garde-fou @PostLoad reste actif). Vérifier l'ordre des intercepteurs / OSIV.",
-                        request.getRequestURI());
-            }
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
+            throws Exception {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+
+        // Non authentifié, ou principal non applicatif (endpoints publics, @WithMockUser de test) :
+        // pas de filtre tenant (ces requêtes n'accèdent pas aux données d'un établissement précis).
+        if (auth == null || !(auth.getPrincipal() instanceof User user)) {
+            return true;
+        }
+
+        // Super admin (plateforme) : vision globale, AUCUN filtre tenant — il gère tous les
+        // établissements depuis /plateforme et n'a pas accès à /admin/** (rôle distinct).
+        boolean superAdmin = auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_SUPER_ADMIN".equals(a.getAuthority()));
+        if (superAdmin) {
+            return true;
+        }
+
+        // E2 (fail-closed) : un non-super-admin authentifié DOIT être rattaché à un établissement.
+        // Sinon on REFUSE, plutôt que d'exécuter SANS filtre (ce qui ouvrirait une lecture
+        // inter-tenant — cf. E1). L'isolation échoue ainsi en mode FERMÉ.
+        if (user.getEtablissement() == null) {
+            log.warn("Acces refuse : utilisateur {} authentifie sans etablissement (non super-admin).",
+                    user.getId());
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Compte non rattache a un etablissement.");
+            return false;
+        }
+
+        Long tenant = user.getEtablissement().getId();
+        TenantContext.set(tenant);
+        EntityManager em = EntityManagerFactoryUtils.getTransactionalEntityManager(entityManagerFactory);
+        if (em != null) {
+            em.unwrap(Session.class)
+                    .enableFilter("tenantFilter")
+                    .setParameter("tenantId", tenant);
+        } else {
+            // Ne devrait jamais arriver avec OSIV actif + ordre des intercepteurs correct.
+            log.error("Aucune session liée à la requête {} : filtre tenant NON activé "
+                    + "(le garde-fou @PostLoad reste actif). Vérifier l'ordre des intercepteurs / OSIV.",
+                    request.getRequestURI());
         }
         return true;
     }
@@ -61,20 +86,5 @@ public class TenantInterceptor implements HandlerInterceptor {
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response,
                                Object handler, Exception ex) {
         TenantContext.clear();
-    }
-
-    private Long tenantCourant() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !(auth.getPrincipal() instanceof User user) || user.getEtablissement() == null) {
-            return null;
-        }
-        // Super admin (plateforme) : vision globale, AUCUN filtre tenant — il gère tous les
-        // établissements depuis /plateforme et n'a pas accès à /admin/** (rôle distinct).
-        boolean superAdmin = auth.getAuthorities().stream()
-                .anyMatch(a -> "ROLE_SUPER_ADMIN".equals(a.getAuthority()));
-        if (superAdmin) {
-            return null;
-        }
-        return user.getEtablissement().getId();
     }
 }

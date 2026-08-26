@@ -117,10 +117,15 @@ public class EnseignantWebController {
 
         Role role = roleRepository.findByName(ERole.ROLE_ENSEIGNANT).orElseThrow();
 
+        // E1 (isolation) : rattacher le compte à l'établissement courant, comme les autres
+        // chemins de création (AuthService.registerEnseignant/inscription, OnboardingService).
+        // Sans cela, user.etablissement=null → à la connexion mobile, aucun tenant posé → filtre
+        // Hibernate + garde @PostLoad désactivés → lecture inter-tenant possible.
         User user = User.builder()
                 .email(email)
                 .password(passwordEncoder.encode(password))
                 .roles(Set.of(role))
+                .etablissement(etablissementCourantService.courant())
                 .build();
         userRepository.save(user);
 
