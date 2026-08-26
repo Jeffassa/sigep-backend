@@ -122,6 +122,11 @@ app:
     # SECURITE : clé distincte pour les tokens QR (ne jamais utiliser la même que jwt.secret) — OBLIGATOIRE
     qr-secret: ${JWT_QR_SECRET}
   qr:
+    # SECURITE (E3) : validité COURTE du QR d'émargement en ligne pour réduire la fenêtre
+    # de relais d'une capture d'écran (un QR photographié n'est réutilisable que quelques
+    # secondes). Le mode hors-ligne, lui, tolère l'expiration (preuve via l'iat signé).
+    expiration-ms: ${QR_EXPIRATION_MS:45000}
+    refresh-seconds: ${QR_REFRESH_SECONDS:15}
     display:
       # SECURITE : l'affichage du QR d'émargement est une preuve de présence physique.
       # Il NE doit PAS être public sur internet. Définir au moins l'un des deux ci-dessous,
