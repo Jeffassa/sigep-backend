@@ -1,18 +1,103 @@
-version: '3.8'
-
-services:
+﻿services:
+  # ---------------------------------------------------------
+  # Base de données PostgreSQL
+  # ---------------------------------------------------------
   postgres:
     image: postgres:16-alpine
     container_name: sigep_postgres
-    restart: always
     environment:
-      POSTGRES_DB: sigep_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: sigep_secret_password
+      POSTGRES_DB: ${DB_NAME:-sigep_db}
+      POSTGRES_USER: ${DB_USER:-sigep_user}
+      # SECURITE : jamais de mot de passe en dur — interpolé depuis .env (non versionné).
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD requis (voir .env.docker.example)}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - sigep_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sigep_user -d sigep_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------------------------------------------
+  # Cache Redis (Session & Rate Limiting distribué)
+  # ---------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: sigep_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - sigep_network
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------------------------------------------
+  # Application Spring Boot (Scalable)
+  # ---------------------------------------------------------
+  app:
+    build: .
+    # Pas de container_name ici pour permettre le scaling
+    expose:
+      - "8080"
+    # SECURITE : les secrets sont interpolés depuis le fichier .env (auto-chargé par docker-compose,
+    # non versionné). Copier .env.docker.example vers .env et y mettre des valeurs propres.
+    # Aucun secret en dur dans ce fichier.
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-sigep_db}
+      DB_USER: ${DB_USER:-sigep_user}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD requis (voir .env.docker.example)}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET requis (min 256 bits base64, voir .env.docker.example)}
+      JWT_QR_SECRET: ${JWT_QR_SECRET:?JWT_QR_SECRET requis (min 256 bits base64, voir .env.docker.example)}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - sigep_network
+    restart: unless-stopped
+    # Optionnel: limiter les ressources par instance
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+
+  # ---------------------------------------------------------
+  # Nginx Load Balancer (Point d'entrée unique)
+  # ---------------------------------------------------------
+  nginx:
+    image: nginx:alpine
+    container_name: sigep_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - app
+    networks:
+      - sigep_network
+    restart: unless-stopped
+networks:
+  sigep_network:
+    driver: bridge
 
 volumes:
   postgres_data:
+  redis_data:

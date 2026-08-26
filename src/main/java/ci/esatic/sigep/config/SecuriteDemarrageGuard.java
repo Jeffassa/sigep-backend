@@ -6,6 +6,7 @@ import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Set;
 
 /**
@@ -27,6 +28,9 @@ public class SecuriteDemarrageGuard {
             "ZGV2LXNpZ2VwLWp3dC1zZWNyZXQta2V5LW5vdC1mb3ItcHJvZHVjdGlvbi0yMDI2",
             "ZGV2LXFyLXNpZ2VwLXNlY3JldC1rZXktbm90LWZvci1wcm9kdWN0aW9uLTIwMjY="
     );
+
+    /** Minimum requis pour HMAC-SHA256 : 256 bits = 32 octets (aligné sur Keys.hmacShaKeyFor). */
+    private static final int MIN_OCTETS = 32;
 
     private final Environment env;
     private final String jwtSecret;
@@ -52,6 +56,38 @@ public class SecuriteDemarrageGuard {
                   + "versionnée) est utilisée hors du profil 'dev'. Définissez des valeurs propres "
                   + "à l'environnement pour JWT_SECRET et JWT_QR_SECRET, et activez le bon profil "
                   + "(SPRING_PROFILES_ACTIVE=prod en production).");
+        }
+        // Défense en profondeur : rejeter toute clé faible (vide, non base64, < 256 bits) même
+        // si elle n'est pas dans la blacklist ci-dessus (ex. anciens replis 'dev_secret_change_in_prod').
+        verifierRobustesse("JWT_SECRET (app.jwt.secret)", jwtSecret);
+        verifierRobustesse("JWT_QR_SECRET (app.jwt.qr-secret)", qrSecret);
+        // Les deux clés doivent être DISTINCTES (une fuite du QR ne doit pas compromettre l'access token).
+        if (jwtSecret.equals(qrSecret)) {
+            throw new IllegalStateException(
+                    "Démarrage refusé (sécurité) : JWT_SECRET et JWT_QR_SECRET sont identiques. "
+                  + "Utilisez deux clés distinctes (≥ 256 bits, base64).");
+        }
+    }
+
+    private void verifierRobustesse(String nom, String valeurBase64) {
+        if (valeurBase64 == null || valeurBase64.isBlank()) {
+            throw new IllegalStateException(
+                    "Démarrage refusé (sécurité) : " + nom + " est absent. Définissez une clé "
+                  + "≥ 256 bits (base64) en variable d'environnement.");
+        }
+        int octets;
+        try {
+            octets = Base64.getDecoder().decode(valeurBase64).length;
+        } catch (IllegalArgumentException e) {
+            throw new IllegalStateException(
+                    "Démarrage refusé (sécurité) : " + nom + " n'est pas un base64 valide. "
+                  + "Générez une clé aléatoire (ex. `openssl rand -base64 48`).");
+        }
+        if (octets < MIN_OCTETS) {
+            throw new IllegalStateException(
+                    "Démarrage refusé (sécurité) : " + nom + " ne fait que " + octets + " octets "
+                  + "(< " + MIN_OCTETS + " requis pour HMAC-SHA256). Générez une clé plus longue "
+                  + "(ex. `openssl rand -base64 48`).");
         }
     }
 }
