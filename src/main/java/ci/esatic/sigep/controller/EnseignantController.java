@@ -41,8 +41,10 @@ public class EnseignantController {
         return ResponseEntity.ok(ApiResponse.success("Liste des enseignants", page));
     }
 
+    // Réservé à l'ADMIN : un enseignant consulte son propre profil via /moi (évite l'énumération
+    // des profils de collègues du même établissement).
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('ENSEIGNANT')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<EnseignantResponse>> getById(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.success("Enseignant trouvé", enseignantService.getById(id)));
     }

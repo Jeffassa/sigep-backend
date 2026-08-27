@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('Mentions légales · SIGEP')}"></head>
+<body>
+<main class="max-w-[820px] mx-auto px-5 md:px-8 py-14">
+    <a th:href="@{/}" class="text-[13px] text-muted hover:text-ink">← Retour à l'accueil</a>
+    <h1 class="font-serif text-[40px] mt-4 mb-3">Mentions légales</h1>
+    <div class="glass rounded-xl p-4 text-[13px] text-muted mb-8">
+        ⚠️ Modèle à faire valider par un juriste avant publication. Les champs <strong>[À COMPLÉTER]</strong> doivent être renseignés.
+    </div>
+
+    <article class="space-y-6 text-[15px] leading-relaxed">
+        <section>
+            <h2 class="font-serif text-[22px] mb-1">Éditeur</h2>
+            <p>Le service <strong th:text="${marque} ?: 'SIGEP'">SIGEP</strong> est édité par <strong>[À COMPLÉTER : raison sociale]</strong>,
+               <strong>[À COMPLÉTER : forme juridique]</strong> au capital de <strong>[À COMPLÉTER]</strong>,
+               dont le siège est situé <strong>[À COMPLÉTER : adresse]</strong>, immatriculée au RCCM sous le n° <strong>[À COMPLÉTER]</strong>.</p>
+            <p>Contact : <a th:href="'mailto:' + ${contactPlateforme}" class="underline" th:text="${contactPlateforme}">contact</a></p>
+        </section>
+        <section>
+            <h2 class="font-serif text-[22px] mb-1">Directeur de la publication</h2>
+            <p>[À COMPLÉTER : nom du responsable de la publication].</p>
+        </section>
+        <section>
+            <h2 class="font-serif text-[22px] mb-1">Hébergement</h2>
+            <p>Le service est hébergé par <strong>[À COMPLÉTER : hébergeur]</strong> — <strong>[À COMPLÉTER : adresse / pays]</strong>.</p>
+        </section>
+        <section>
+            <h2 class="font-serif text-[22px] mb-1">Propriété intellectuelle</h2>
+            <p>L'ensemble des contenus, marques et logiciels de ce service sont protégés. Toute reproduction non autorisée est interdite.</p>
+        </section>
+    </article>
+
+    <footer class="mt-12 pt-6 border-t border-line text-[13px] text-muted flex gap-3 flex-wrap">
+        <a th:href="@{/confidentialite}" class="hover:text-ink">Politique de confidentialité</a> ·
+        <a th:href="@{/cgu}" class="hover:text-ink">CGU</a>
+    </footer>
+</main>
+</body>
+</html>

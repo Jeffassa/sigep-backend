@@ -20,6 +20,7 @@ public class EnseignantService {
     private final MailService mailService;
     private final RefreshTokenService refreshTokenService;
     private final EtablissementCourantService etablissementCourantService;
+    private final ci.esatic.sigep.mapper.EnseignantMapper enseignantMapper;
 
     public Page<EnseignantResponse> searchEnseignants(String search, String departement,
                                                        StatutEnseignant statut, Pageable pageable) {
@@ -82,16 +83,6 @@ public class EnseignantService {
     }
 
     private EnseignantResponse toResponse(Enseignant e) {
-        return EnseignantResponse.builder()
-                .id(e.getId())
-                .matricule(e.getMatricule())
-                .nom(e.getNom())
-                .prenom(e.getPrenom())
-                .email(e.getUser() != null ? e.getUser().getEmail() : null)
-                .departement(e.getDepartement())
-                .grade(e.getGrade())
-                .statut(e.getStatut())
-                .photoUrl(e.getPhotoUrl())
-                .build();
+        return enseignantMapper.toResponse(e);
     }
 }

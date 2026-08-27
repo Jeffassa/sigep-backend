@@ -21,6 +21,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 public class PaiementService {
 
+    /** Plafond de mois crédités par paiement (défense : pas de prolongation arbitraire si un secret fuit). */
+    private static final int MAX_MOIS_PAR_PAIEMENT = 24;
+
     private final EtablissementRepository etablissementRepository;
     private final PaiementRepository paiementRepository;
     private final UserRepository userRepository;
@@ -43,9 +46,12 @@ public class PaiementService {
             log.warn("Paiement ({}) pour un établissement introuvable : id={}", source, etablissementId);
             return false;
         }
-        int m = Math.max(1, mois);
+        int m = Math.min(MAX_MOIS_PAR_PAIEMENT, Math.max(1, mois));
 
-        paiementRepository.save(Paiement.builder()
+        // saveAndFlush : la contrainte UNIQUE(reference) rend l'enregistrement idempotent même en
+        // course (deux livraisons simultanées) — la requête perdante échoue ici, sa transaction est
+        // annulée (aucun double crédit) et le webhook rejoue (la voie rapide existsByReference l'ignore).
+        paiementRepository.saveAndFlush(Paiement.builder()
                 .etablissementId(e.getId())
                 .montant(montantFcfa)
                 .moisCredites(m)

@@ -4,6 +4,10 @@
 # d'environnement (aucune valeur par défaut de dev ici). Voir .env.prod.example
 # =====================================================================
 spring:
+  main:
+    # Démarrage plus léger/rapide (beans créés à la demande) — utile sur instance contrainte.
+    # ⚠️ Les beans @Scheduled sont forcés en eager (@Lazy(false)) pour que les crons se déclenchent.
+    lazy-initialization: true
   jpa:
     hibernate:
       # Schéma géré par Flyway → Hibernate valide seulement (jamais 'update' en prod).
@@ -38,3 +42,8 @@ management:
   endpoint:
     health:
       show-details: never
+
+# En prod : ne pas servir l'UI Swagger (la spec reste générable, réservée aux admins).
+springdoc:
+  swagger-ui:
+    enabled: false

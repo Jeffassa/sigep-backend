@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@org.springframework.context.annotation.Lazy(false)   // eager : cron @Scheduled (dunning) doit se déclencher malgré lazy-init
 public class AbonnementRelanceService {
 
     private final EtablissementRepository etablissementRepository;
@@ -25,6 +26,8 @@ public class AbonnementRelanceService {
 
     /** Tous les jours à 8h30 : relances d'expiration d'abonnement. */
     @Scheduled(cron = "0 30 8 * * *")
+    @net.javacrumbs.shedlock.spring.annotation.SchedulerLock(
+            name = "relancerAbonnements", lockAtMostFor = "PT15M", lockAtLeastFor = "PT1M")
     public void relancerAbonnements() {
         int notifies = 0;
         for (Etablissement e : etablissementRepository.findByActifTrue()) {

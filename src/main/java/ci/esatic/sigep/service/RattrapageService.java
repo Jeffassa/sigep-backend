@@ -3,6 +3,7 @@ package ci.esatic.sigep.service;
 import ci.esatic.sigep.dto.request.RattrapageRequest;
 import ci.esatic.sigep.dto.response.RattrapageResponse;
 import ci.esatic.sigep.entity.*;
+import ci.esatic.sigep.exception.MetierException;
 import ci.esatic.sigep.exception.ResourceNotFoundException;
 import ci.esatic.sigep.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +28,7 @@ public class RattrapageService {
     private final SeanceRepository seanceRepository;
     private final MailService mailService;
     private final EtablissementCourantService etablissementCourantService;
+    private final ci.esatic.sigep.mapper.RattrapageMapper rattrapageMapper;
 
     @Transactional
     public RattrapageResponse creerDemande(Long userId, RattrapageRequest request) {
@@ -36,6 +38,12 @@ public class RattrapageService {
         // Récupère la séance pour en déduire la matière et la classe
         Seance seance = seanceRepository.findById(request.getSeanceId())
                 .orElseThrow(() -> new ResourceNotFoundException("Seance", "id", request.getSeanceId()));
+
+        // La séance doit appartenir à l'enseignant demandeur (IDOR intra-tenant : sinon il pourrait
+        // référencer la séance d'un collègue et en divulguer matière/classe).
+        if (!seance.getEnseignant().getId().equals(enseignant.getId())) {
+            throw new MetierException("SEANCE_NON_ATTRIBUEE", "Cette seance ne vous appartient pas");
+        }
 
         DemandeRattrapage demande = DemandeRattrapage.builder()
                 .enseignant(enseignant)
@@ -124,18 +132,6 @@ public class RattrapageService {
     }
 
     private RattrapageResponse toResponse(DemandeRattrapage d) {
-        return RattrapageResponse.builder()
-                .id(d.getId())
-                .enseignantNom(d.getEnseignant().getNom())
-                .enseignantPrenom(d.getEnseignant().getPrenom())
-                .matiereLibelle(d.getMatiere().getLibelle())
-                .classeLibelle(d.getClasse().getLibelle())
-                .dateSouhaitee(d.getDateSouhaitee())
-                .heureSouhaitee(d.getHeureSouhaitee())
-                .motif(d.getMotif())
-                .statut(d.getStatut())
-                .dateCreation(d.getDateCreation())
-                .seanceRattrapageId(d.getSeanceRattrapage() != null ? d.getSeanceRattrapage().getId() : null)
-                .build();
+        return rattrapageMapper.toResponse(d);
     }
 }

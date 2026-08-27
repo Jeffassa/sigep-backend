@@ -60,7 +60,8 @@ spring:
             enable: true
 
 server:
-  port: 8080
+  # ${PORT} : l'hébergeur (Render, etc.) injecte le port à écouter. 8080 en local.
+  port: ${PORT:8080}
   # Derrière un reverse proxy qui termine le TLS, respecter X-Forwarded-Proto/Host
   # (sinon l'app croit être en HTTP). Sans effet en accès direct (dev).
   forward-headers-strategy: framework
@@ -83,8 +84,8 @@ management:
   endpoints:
     web:
       exposure:
-        # health/info publics (sondes) ; metrics réservé (auth) — voir SecurityConfig
-        include: health,info,metrics
+        # health/info publics (sondes) ; metrics + prometheus réservés ADMIN — voir SecurityConfig
+        include: health,info,metrics,prometheus
   endpoint:
     health:
       show-details: never
@@ -95,7 +96,21 @@ management:
       enabled: false
   info:
     env:
-      enabled: true
+      # SECURITE : ne pas exposer les propriétés d'environnement via /actuator/info (public).
+      enabled: false
+
+# Suivi des erreurs (Sentry) — INERTE tant que SENTRY_DSN n'est pas défini.
+sentry:
+  dsn: ${SENTRY_DSN:}
+  environment: ${SENTRY_ENV:dev}
+  traces-sample-rate: ${SENTRY_TRACES_RATE:0.1}
+  # Ne jamais transmettre de données personnelles (RGPD).
+  send-default-pii: false
+
+# Documentation API (OpenAPI / Swagger UI). Endpoints protégés (auth requise) ; UI désactivée en prod.
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
 
 app:
   jwt:
@@ -108,6 +123,11 @@ app:
     # SECURITE : clé distincte pour les tokens QR (ne jamais utiliser la même que jwt.secret) — OBLIGATOIRE
     qr-secret: ${JWT_QR_SECRET}
   qr:
+    # SECURITE (E3) : validité COURTE du QR d'émargement en ligne pour réduire la fenêtre
+    # de relais d'une capture d'écran (un QR photographié n'est réutilisable que quelques
+    # secondes). Le mode hors-ligne, lui, tolère l'expiration (preuve via l'iat signé).
+    expiration-ms: ${QR_EXPIRATION_MS:45000}
+    refresh-seconds: ${QR_REFRESH_SECONDS:15}
     display:
       # SECURITE : l'affichage du QR d'émargement est une preuve de présence physique.
       # Il NE doit PAS être public sur internet. Définir au moins l'un des deux ci-dessous,
@@ -131,6 +151,9 @@ app:
     model: ${AI_MODEL:claude-opus-4-8}
     # Modèle standard (plans inférieurs) — maîtrise du coût par plan (E10).
     model-standard: ${AI_MODEL_STANDARD:claude-haiku-4-5}
+  analytics:
+    # Analytics web sans cookie (Plausible). Vide = désactivé. Ex. PLAUSIBLE_DOMAIN=sigep.store
+    plausible-domain: ${PLAUSIBLE_DOMAIN:}
   onboarding:
     # C5 : auto-validation des inscriptions self-service. false = validation manuelle par le
     # super-admin (défaut, comportement actuel). true = espace actif immédiatement.

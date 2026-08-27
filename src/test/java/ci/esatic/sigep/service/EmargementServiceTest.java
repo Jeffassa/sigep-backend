@@ -1,12 +1,15 @@
 package ci.esatic.sigep.service;
 
 import ci.esatic.sigep.dto.request.EmargementRequest;
+import ci.esatic.sigep.dto.request.EmargementHorsLigneRequest;
 import ci.esatic.sigep.dto.response.EmargementResponse;
 import ci.esatic.sigep.entity.*;
+import ci.esatic.sigep.exception.MetierException;
 import ci.esatic.sigep.exception.ResourceNotFoundException;
 import ci.esatic.sigep.repository.EmargementRepository;
 import ci.esatic.sigep.repository.EnseignantRepository;
 import ci.esatic.sigep.repository.SeanceRepository;
+import ci.esatic.sigep.security.JwtService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,9 +18,11 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -36,6 +41,9 @@ class EmargementServiceTest {
     @Mock private QrCodeService qrCodeService;
     @Mock private ci.esatic.sigep.security.QrReplayGuard qrReplayGuard;
     @Mock private ci.esatic.sigep.repository.EtablissementRepository etablissementRepository;
+    // Mapper RÉEL (impl MapStruct générée) pour que les réponses soient effectivement mappées.
+    @org.mockito.Spy private ci.esatic.sigep.mapper.EmargementMapper emargementMapper =
+            new ci.esatic.sigep.mapper.EmargementMapperImpl();
 
     @InjectMocks private EmargementService emargementService;
 
@@ -77,9 +85,16 @@ class EmargementServiceTest {
         lenient().when(etablissementRepository.findById(ETAB_ID)).thenReturn(Optional.of(etab));
     }
 
-    /** C3 : le QR porte bien l'etablissementId de l'enseignant (correspondance OK). */
-    private void stubQrTenantOk() {
-        when(qrCodeService.extractUniversalTokenEtablissementId(any())).thenReturn(ETAB_ID);
+    /** QR universel VALIDE et rattaché à l'établissement de l'enseignant (lecture unique). */
+    private void stubQrValide() {
+        when(qrCodeService.lireQrUniversel(any()))
+                .thenReturn(new JwtService.QrUniversel(true, ETAB_ID, "jti-ok"));
+    }
+
+    /** QR universel INVALIDE/expiré. */
+    private void stubQrInvalide() {
+        when(qrCodeService.lireQrUniversel(any()))
+                .thenReturn(new JwtService.QrUniversel(false, null, null));
     }
 
     /**
@@ -102,6 +117,25 @@ class EmargementServiceTest {
         return req;
     }
 
+    private EmargementHorsLigneRequest buildHorsLigne(String qrToken) {
+        EmargementHorsLigneRequest req = new EmargementHorsLigneRequest();
+        req.setSeanceId(SEANCE_ID);
+        req.setSignatureBase64(SIGNATURE_VALIDE);
+        req.setQrToken(qrToken);
+        return req;
+    }
+
+    /** QR universel « différé » valide, rattaché à l'établissement, émis à {@code emisLe}. */
+    private void stubQrDiffereValide(Instant emisLe) {
+        when(qrCodeService.lireQrUniverselDiffere(any()))
+                .thenReturn(new JwtService.QrUniverselDiffere(true, ETAB_ID, "jti-hl", emisLe));
+    }
+
+    /** Instant du jour à l'heure {@code h} dans le fuseau du tenant (Africa/Abidjan par défaut). */
+    private Instant scanLeJourA(int h, int min) {
+        return LocalDate.now().atTime(h, min).atZone(ZoneId.of("Africa/Abidjan")).toInstant();
+    }
+
     // =========================================================================
     // Cas de succès
     // =========================================================================
@@ -121,8 +155,7 @@ class EmargementServiceTest {
             when(enseignantRepository.findByUserId(USER_ID)).thenReturn(Optional.of(enseignant));
             when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seance));
             when(emargementRepository.existsBySeanceId(SEANCE_ID)).thenReturn(false);
-            when(qrCodeService.validateUniversalToken("valid-token")).thenReturn(true);
-            stubQrTenantOk();
+            stubQrValide();
             when(qrReplayGuard.tryConsume(any(), any())).thenReturn(true);
             when(seanceRepository.save(any())).thenReturn(seance);
             when(emargementRepository.save(any())).thenReturn(saved);
@@ -152,7 +185,7 @@ class EmargementServiceTest {
         when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seance));
 
         assertThatThrownBy(() -> emargementService.emarger(USER_ID, buildRequest("t", SIGNATURE_VALIDE)))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(MetierException.class)
                 .hasMessageContaining("ne vous appartient pas");
     }
 
@@ -171,7 +204,7 @@ class EmargementServiceTest {
         when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seance));
 
         assertThatThrownBy(() -> emargementService.emarger(USER_ID, buildRequest("t", SIGNATURE_VALIDE)))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(MetierException.class)
                 .hasMessageContaining("pas prevue aujourd'hui");
     }
 
@@ -192,7 +225,7 @@ class EmargementServiceTest {
             when(emargementRepository.existsBySeanceId(SEANCE_ID)).thenReturn(true);
 
             assertThatThrownBy(() -> emargementService.emarger(USER_ID, buildRequest("t", SIGNATURE_VALIDE)))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(MetierException.class)
                     .hasMessageContaining("deja ete emargee");
         }
     }
@@ -219,7 +252,7 @@ class EmargementServiceTest {
             when(emargementRepository.existsBySeanceId(SEANCE_ID)).thenReturn(false);
 
             assertThatThrownBy(() -> emargementService.emarger(USER_ID, buildRequest("t", SIGNATURE_VALIDE)))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(MetierException.class)
                     .hasMessageContaining("Trop tot");
         }
     }
@@ -241,8 +274,7 @@ class EmargementServiceTest {
             when(enseignantRepository.findByUserId(USER_ID)).thenReturn(Optional.of(enseignant));
             when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seance));
             when(emargementRepository.existsBySeanceId(SEANCE_ID)).thenReturn(false);
-            when(qrCodeService.validateUniversalToken("valid-token")).thenReturn(true);
-            stubQrTenantOk();
+            stubQrValide();
             when(qrReplayGuard.tryConsume(any(), any())).thenReturn(true);
             when(seanceRepository.save(any())).thenReturn(seance);
             when(emargementRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -265,10 +297,10 @@ class EmargementServiceTest {
             when(enseignantRepository.findByUserId(USER_ID)).thenReturn(Optional.of(enseignant));
             when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seance));
             when(emargementRepository.existsBySeanceId(SEANCE_ID)).thenReturn(false);
-            when(qrCodeService.validateUniversalToken(any())).thenReturn(false);
+            stubQrInvalide();
 
             assertThatThrownBy(() -> emargementService.emarger(USER_ID, buildRequest("expire", SIGNATURE_VALIDE)))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(MetierException.class)
                     .hasMessageContaining("QR Code invalide");
         }
     }
@@ -288,10 +320,10 @@ class EmargementServiceTest {
             when(enseignantRepository.findByUserId(USER_ID)).thenReturn(Optional.of(enseignant));
             when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seance));
             when(emargementRepository.existsBySeanceId(SEANCE_ID)).thenReturn(false);
-            when(qrCodeService.validateUniversalToken("mauvais-token")).thenReturn(false);
+            stubQrInvalide();
 
             assertThatThrownBy(() -> emargementService.emarger(USER_ID, buildRequest("mauvais-token", SIGNATURE_VALIDE)))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(MetierException.class)
                     .hasMessageContaining("QR Code invalide");
         }
     }
@@ -311,12 +343,11 @@ class EmargementServiceTest {
             when(enseignantRepository.findByUserId(USER_ID)).thenReturn(Optional.of(enseignant));
             when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seance));
             when(emargementRepository.existsBySeanceId(SEANCE_ID)).thenReturn(false);
-            when(qrCodeService.validateUniversalToken("valid-token")).thenReturn(true);
-            stubQrTenantOk();
+            stubQrValide();
             when(qrReplayGuard.tryConsume(any(), any())).thenReturn(false); // déjà utilisé
 
             assertThatThrownBy(() -> emargementService.emarger(USER_ID, buildRequest("valid-token", SIGNATURE_VALIDE)))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(MetierException.class)
                     .hasMessageContaining("deja ete utilise");
         }
     }
@@ -326,35 +357,99 @@ class EmargementServiceTest {
     // =========================================================================
 
     @Test
-    void emargerHorsLigne_devraitReussirSansQrEtMarquerHorsLigne() {
-        try (MockedStatic<LocalTime> lt = mockStatic(LocalTime.class, CALLS_REAL_METHODS)) {
-            lt.when(LocalTime::now).thenReturn(FIXED_NOW);
-            // E1 : l'émargement évalue l'heure dans le fuseau du tenant → mocker la surcharge ZoneId.
-            lt.when(() -> LocalTime.now(any(java.time.ZoneId.class))).thenReturn(FIXED_NOW);
+    void emargerHorsLigne_devraitExigerQrEtMettreEnAttenteValidation() {
+        Seance seance = seanceDansLaFenetre(); // aujourd'hui, 9h-11h
+        when(enseignantRepository.findByUserId(USER_ID)).thenReturn(Optional.of(enseignant));
+        when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seance));
+        when(emargementRepository.existsBySeanceId(SEANCE_ID)).thenReturn(false);
+        stubQrDiffereValide(scanLeJourA(10, 0)); // QR émis pendant la fenêtre
+        when(qrReplayGuard.tryConsume(any(), any())).thenReturn(true);
+        when(emargementRepository.countHorsLigneByEnseignantEtPeriode(any(), any(), any())).thenReturn(0L);
+        when(seanceRepository.save(any())).thenReturn(seance);
+        when(emargementRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-            Seance seance = seanceDansLaFenetre();
-            ci.esatic.sigep.entity.Emargement saved = ci.esatic.sigep.entity.Emargement.builder()
-                    .id(1L).seance(seance).enseignant(enseignant)
-                    .dateHeure(java.time.LocalDateTime.now()).horsLigne(true)
-                    .signatureBase64(SIGNATURE_VALIDE).build();
+        EmargementResponse r = emargementService.emargerHorsLigne(USER_ID, buildHorsLigne("qr-token"));
 
-            when(enseignantRepository.findByUserId(USER_ID)).thenReturn(Optional.of(enseignant));
-            when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seance));
-            when(emargementRepository.existsBySeanceId(SEANCE_ID)).thenReturn(false);
-            when(seanceRepository.save(any())).thenReturn(seance);
-            when(emargementRepository.save(any())).thenReturn(saved);
+        assertThat(r).isNotNull();
+        assertThat(r.isHorsLigne()).isTrue();
+        assertThat(r.isValide()).isFalse();                                  // présence à confirmer
+        assertThat(seance.getStatut()).isEqualTo(StatutSeance.EN_ATTENTE_VALIDATION);
+    }
 
-            ci.esatic.sigep.dto.request.EmargementHorsLigneRequest req =
-                    new ci.esatic.sigep.dto.request.EmargementHorsLigneRequest();
-            req.setSeanceId(SEANCE_ID);
-            req.setSignatureBase64(SIGNATURE_VALIDE);
+    @Test
+    void emargerHorsLigne_devraitEchouerSansQrValide() {
+        Seance seance = seanceDansLaFenetre();
+        when(enseignantRepository.findByUserId(USER_ID)).thenReturn(Optional.of(enseignant));
+        when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seance));
+        when(emargementRepository.existsBySeanceId(SEANCE_ID)).thenReturn(false);
+        when(qrCodeService.lireQrUniverselDiffere(any()))
+                .thenReturn(JwtService.QrUniverselDiffere.invalide());
 
-            EmargementResponse r = emargementService.emargerHorsLigne(USER_ID, req);
+        assertThatThrownBy(() -> emargementService.emargerHorsLigne(USER_ID, buildHorsLigne("bad")))
+                .isInstanceOf(MetierException.class)
+                .hasMessageContaining("QR invalide");
+    }
 
-            assertThat(r).isNotNull();
-            assertThat(r.isHorsLigne()).isTrue();
-            verifyNoInteractions(qrCodeService, qrReplayGuard); // aucun appel au QR
-        }
+    @Test
+    void emargerHorsLigne_devraitEchouerSiQrScanneHorsFenetre() {
+        Seance seance = seanceDansLaFenetre(); // 9h-11h → fenêtre [8h45, 11h30]
+        when(enseignantRepository.findByUserId(USER_ID)).thenReturn(Optional.of(enseignant));
+        when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seance));
+        when(emargementRepository.existsBySeanceId(SEANCE_ID)).thenReturn(false);
+        stubQrDiffereValide(scanLeJourA(18, 0)); // QR émis à 18h → hors fenêtre
+
+        assertThatThrownBy(() -> emargementService.emargerHorsLigne(USER_ID, buildHorsLigne("qr")))
+                .isInstanceOf(MetierException.class)
+                .hasMessageContaining("hors de la fenetre");
+    }
+
+    @Test
+    void emargerHorsLigne_devraitEchouerSiPlafondAtteint() {
+        Seance seance = seanceDansLaFenetre();
+        when(enseignantRepository.findByUserId(USER_ID)).thenReturn(Optional.of(enseignant));
+        when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seance));
+        when(emargementRepository.existsBySeanceId(SEANCE_ID)).thenReturn(false);
+        stubQrDiffereValide(scanLeJourA(10, 0));
+        when(qrReplayGuard.tryConsume(any(), any())).thenReturn(true);
+        // Déjà 5 hors-ligne ce mois-ci (plafond par défaut = 5) → refus.
+        when(emargementRepository.countHorsLigneByEnseignantEtPeriode(any(), any(), any())).thenReturn(5L);
+
+        assertThatThrownBy(() -> emargementService.emargerHorsLigne(USER_ID, buildHorsLigne("qr")))
+                .isInstanceOf(MetierException.class)
+                .hasMessageContaining("Plafond");
+    }
+
+    @Test
+    void validerHorsLigne_devraitConfirmerLaPresence() {
+        Seance seance = seanceDansLaFenetre();
+        seance.setStatut(StatutSeance.EN_ATTENTE_VALIDATION);
+        Emargement em = Emargement.builder()
+                .id(3L).seance(seance).enseignant(enseignant)
+                .horsLigne(true).valide(false).build();
+        when(emargementRepository.findById(3L)).thenReturn(Optional.of(em));
+        when(seanceRepository.save(any())).thenReturn(seance);
+        when(emargementRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        emargementService.validerHorsLigne(3L);
+
+        assertThat(em.isValide()).isTrue();
+        assertThat(seance.getStatut()).isEqualTo(StatutSeance.EMARGE);
+    }
+
+    @Test
+    void refuserHorsLigne_devraitLibererLaSeance() {
+        Seance seance = seanceDansLaFenetre();
+        seance.setStatut(StatutSeance.EN_ATTENTE_VALIDATION);
+        Emargement em = Emargement.builder()
+                .id(4L).seance(seance).enseignant(enseignant)
+                .horsLigne(true).valide(false).build();
+        when(emargementRepository.findById(4L)).thenReturn(Optional.of(em));
+        when(seanceRepository.save(any())).thenReturn(seance);
+
+        emargementService.refuserHorsLigne(4L);
+
+        assertThat(seance.getStatut()).isEqualTo(StatutSeance.A_FAIRE);
+        verify(emargementRepository).delete(em);
     }
 
     // =========================================================================
@@ -362,23 +457,25 @@ class EmargementServiceTest {
     // =========================================================================
 
     @Test
-    void emarger_devraitEchouerSiSignatureVide() {
+    void emarger_devraitReussirSansSignature() {
+        // La signature est optionnelle : le QR est la preuve de présence (C2).
         try (MockedStatic<LocalTime> lt = mockStatic(LocalTime.class, CALLS_REAL_METHODS)) {
             lt.when(LocalTime::now).thenReturn(FIXED_NOW);
-            // E1 : l'émargement évalue l'heure dans le fuseau du tenant → mocker la surcharge ZoneId.
             lt.when(() -> LocalTime.now(any(java.time.ZoneId.class))).thenReturn(FIXED_NOW);
 
             Seance seance = seanceDansLaFenetre();
             when(enseignantRepository.findByUserId(USER_ID)).thenReturn(Optional.of(enseignant));
             when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seance));
             when(emargementRepository.existsBySeanceId(SEANCE_ID)).thenReturn(false);
-            when(qrCodeService.validateUniversalToken(any())).thenReturn(true);
-            stubQrTenantOk();
+            stubQrValide();
             when(qrReplayGuard.tryConsume(any(), any())).thenReturn(true);
+            when(seanceRepository.save(any())).thenReturn(seance);
+            when(emargementRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-            assertThatThrownBy(() -> emargementService.emarger(USER_ID, buildRequest("valid-token", "")))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("signature est obligatoire");
+            EmargementResponse r = emargementService.emarger(USER_ID, buildRequest("valid-token", ""));
+
+            assertThat(r).isNotNull();
+            assertThat(r.getSeanceId()).isEqualTo(SEANCE_ID);
         }
     }
 
@@ -393,12 +490,11 @@ class EmargementServiceTest {
             when(enseignantRepository.findByUserId(USER_ID)).thenReturn(Optional.of(enseignant));
             when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seance));
             when(emargementRepository.existsBySeanceId(SEANCE_ID)).thenReturn(false);
-            when(qrCodeService.validateUniversalToken(any())).thenReturn(true);
-            stubQrTenantOk();
+            stubQrValide();
             when(qrReplayGuard.tryConsume(any(), any())).thenReturn(true);
 
             assertThatThrownBy(() -> emargementService.emarger(USER_ID, buildRequest("valid-token", "pas@du@base64!!")))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(MetierException.class)
                     .hasMessageContaining("format Base64 incorrect");
         }
     }

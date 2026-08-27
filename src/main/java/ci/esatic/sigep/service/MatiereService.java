@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
 public class MatiereService {
 
     private final MatiereRepository matiereRepository;
+    private final ci.esatic.sigep.mapper.MatiereMapper matiereMapper;
 
     public List<MatiereResponse> findAll() {
         return matiereRepository.findAll().stream()
@@ -62,10 +63,6 @@ public class MatiereService {
     }
 
     private MatiereResponse toResponse(Matiere m) {
-        return MatiereResponse.builder()
-                .id(m.getId())
-                .libelle(m.getLibelle())
-                .description(m.getDescription())
-                .build();
+        return matiereMapper.toResponse(m);
     }
 }

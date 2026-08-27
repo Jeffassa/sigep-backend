@@ -4,6 +4,8 @@ import ci.esatic.sigep.dto.response.ApiResponse;
 import ci.esatic.sigep.dto.response.QrCodeResponse;
 import ci.esatic.sigep.entity.Etablissement;
 import ci.esatic.sigep.repository.EtablissementRepository;
+import ci.esatic.sigep.security.ClientIpResolver;
+import ci.esatic.sigep.security.SecurityUtils;
 import ci.esatic.sigep.service.QrCodeService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -13,8 +15,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.List;
 
@@ -25,6 +25,7 @@ public class QrController {
 
     private final QrCodeService qrCodeService;
     private final EtablissementRepository etablissementRepository;
+    private final ClientIpResolver clientIpResolver;
 
     // SECURITE : l'affichage du QR est une PREUVE DE PRESENCE → ne doit jamais être public
     // sur internet. Au moins l'un des deux doit être défini, sinon l'affichage renvoie 403.
@@ -35,10 +36,6 @@ public class QrController {
 
     @Value("${app.qr.display.allowed-ips:}")
     private String displayAllowedIps;
-
-    // X-Forwarded-For n'est lu que derrière un proxy de confiance (true en prod).
-    @Value("${app.security.trust-forwarded-for:false}")
-    private boolean trustForwardedFor;
 
     // Endpoint JSON pour le mobile (image Base64 + token) — AUTHENTIFICATION REQUISE
     @GetMapping("/salle/{code}")
@@ -88,7 +85,7 @@ public class QrController {
         if (slug == null || slug.isBlank() || key == null || key.isBlank()) return null;
         Etablissement e = etablissementRepository.findBySlug(slug.trim()).orElse(null);
         if (e == null || !e.isActif() || e.getKioskKey() == null || e.getKioskKey().isBlank()) return null;
-        return constantTimeEquals(e.getKioskKey(), key) ? e : null;
+        return SecurityUtils.constantTimeEquals(e.getKioskKey(), key) ? e : null;
     }
 
     // Seuls alphanumériques, tirets et underscores autorisés — prévient XSS et path traversal
@@ -112,8 +109,8 @@ public class QrController {
         if (!cleConfiguree && ipsAutorisees.isEmpty()) {
             return "Affichage du QR non configuré : définir QR_DISPLAY_KEY ou QR_DISPLAY_ALLOWED_IPS.";
         }
-        if (cleConfiguree && key != null && constantTimeEquals(displayKey, key)) return null;
-        if (!ipsAutorisees.isEmpty() && ipsAutorisees.contains(resolveClientIp(request))) return null;
+        if (cleConfiguree && key != null && SecurityUtils.constantTimeEquals(displayKey, key)) return null;
+        if (!ipsAutorisees.isEmpty() && ipsAutorisees.contains(clientIpResolver.resolve(request))) return null;
         return "Accès à l'affichage du QR refusé.";
     }
 
@@ -125,19 +122,6 @@ public class QrController {
                 + "margin:0;text-align:center;padding:24px\"><div><h1 style=\"margin:0 0 8px\">Accès refusé</h1>"
                 + "<p style=\"color:#bdc2ff\">" + motif + "</p></div></body></html>";
         return ResponseEntity.status(HttpStatus.FORBIDDEN).contentType(MediaType.TEXT_HTML).body(html);
-    }
-
-    private String resolveClientIp(HttpServletRequest request) {
-        if (trustForwardedFor) {
-            String xff = request.getHeader("X-Forwarded-For");
-            if (xff != null && !xff.isBlank()) return xff.split(",")[0].trim();
-        }
-        return request.getRemoteAddr();
-    }
-
-    /** Comparaison à temps constant (évite une attaque temporelle sur la clé kiosque). */
-    private boolean constantTimeEquals(String a, String b) {
-        return MessageDigest.isEqual(a.getBytes(StandardCharsets.UTF_8), b.getBytes(StandardCharsets.UTF_8));
     }
 
     private String buildQrPage(String salleCode, String imageBase64, long refreshSeconds) {

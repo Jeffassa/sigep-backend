@@ -6,6 +6,15 @@
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
     <title th:text="${pageTitle}">SIGEP</title>
+    <!-- SEO -->
+    <meta name="description" th:content="${pageDescription} ?: 'SIGEP — logiciel de gestion des émargements et du temps d’enseignement pour établissements du supérieur.'"/>
+    <meta name="robots" content="index,follow"/>
+    <meta property="og:type" content="website"/>
+    <meta property="og:title" th:content="${pageTitle}"/>
+    <meta property="og:site_name" th:content="${marque} ?: 'SIGEP'"/>
+    <!-- Analytics sans cookie (Plausible) — activé seulement si un domaine est configuré -->
+    <script th:if="${plausibleDomain}" defer th:data-domain="${plausibleDomain}"
+            src="https://plausible.io/js/script.js"></script>
     <!-- Thème : applique le mode (clair/sombre) AVANT le rendu pour éviter le flash -->
     <script>
         (function () {

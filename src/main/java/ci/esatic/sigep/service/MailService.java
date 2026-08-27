@@ -178,16 +178,35 @@ public class MailService {
             log.warn("Envoi e-mail impossible : aucun JavaMailSender configuré (spring.mail.host manquant)");
             return;
         }
-        try {
-            SimpleMailMessage msg = new SimpleMailMessage();
-            msg.setFrom(realFrom);
-            msg.setTo(destinataire);
-            msg.setSubject(sujet);
-            msg.setText(corps);
-            sender.send(msg);
-            log.info("E-mail envoyé à {} : {}", destinataire, sujet);
-        } catch (Exception e) {
-            log.error("Échec envoi e-mail à {} : {}", destinataire, e.getMessage());
+        SimpleMailMessage msg = new SimpleMailMessage();
+        msg.setFrom(realFrom);
+        msg.setTo(destinataire);
+        msg.setSubject(sujet);
+        msg.setText(corps);
+
+        // Fiabilité : jusqu'à 3 tentatives avec backoff (absorbe les défaillances SMTP transitoires).
+        for (int tentative = 1; tentative <= MAX_TENTATIVES_MAIL; tentative++) {
+            try {
+                sender.send(msg);
+                log.info("E-mail envoyé à {} : {}", destinataire, sujet);
+                return;
+            } catch (Exception e) {
+                if (tentative >= MAX_TENTATIVES_MAIL) {
+                    log.error("Échec envoi e-mail à {} après {} tentatives : {}",
+                            destinataire, tentative, e.getMessage());
+                    return;
+                }
+                log.warn("Échec envoi e-mail à {} (tentative {}/{}) : {} — nouvelle tentative",
+                        destinataire, tentative, MAX_TENTATIVES_MAIL, e.getMessage());
+                try {
+                    Thread.sleep(2000L * tentative);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+            }
         }
     }
+
+    private static final int MAX_TENTATIVES_MAIL = 3;
 }

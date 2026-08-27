@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Allow: /inscription
+Allow: /mentions-legales
+Allow: /confidentialite
+Allow: /cgu
+Disallow: /admin
+Disallow: /admin-login
+Disallow: /plateforme
+Disallow: /api
+
+Sitemap: https://sigep.store/sitemap.xml

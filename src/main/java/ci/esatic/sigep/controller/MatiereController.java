@@ -20,11 +20,13 @@ public class MatiereController {
     private final MatiereService matiereService;
 
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<List<MatiereResponse>>> getAll() {
         return ResponseEntity.ok(ApiResponse.success("Liste des matieres", matiereService.findAll()));
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<MatiereResponse>> getById(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.success("Matiere", matiereService.getById(id)));
     }

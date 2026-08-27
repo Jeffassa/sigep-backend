@@ -30,4 +30,23 @@ public interface EmargementRepository extends JpaRepository<Emargement, Long> {
     @Query("SELECT COUNT(e) FROM Emargement e WHERE e.enRetard = true " +
            "AND e.seance.date BETWEEN :debut AND :fin")
     long countEnRetardByPeriode(@Param("debut") LocalDate debut, @Param("fin") LocalDate fin);
+
+    // Statistiques admin : émargements enregistrés HORS-LIGNE (sans QR de salle)
+    @Query("SELECT COUNT(e) FROM Emargement e WHERE e.horsLigne = true " +
+           "AND e.seance.date BETWEEN :debut AND :fin")
+    long countHorsLigneByPeriode(@Param("debut") LocalDate debut, @Param("fin") LocalDate fin);
+
+    // C2 — file d'attente admin : hors-ligne EN ATTENTE de validation (présence non confirmée).
+    @Query("SELECT e FROM Emargement e WHERE e.horsLigne = true AND e.valide = false ORDER BY e.dateHeure DESC")
+    List<Emargement> findEmargementsHorsLigneEnAttente();
+
+    // Badge d'alertes : nb de hors-ligne en attente (actionnable, contrairement au cumul total).
+    long countByHorsLigneTrueAndValideFalse();
+
+    // C2 — plafond : nb de hors-ligne d'un enseignant sur une plage de dates de séance.
+    @Query("SELECT COUNT(e) FROM Emargement e WHERE e.horsLigne = true " +
+           "AND e.enseignant.id = :enseignantId AND e.seance.date BETWEEN :debut AND :fin")
+    long countHorsLigneByEnseignantEtPeriode(@Param("enseignantId") Long enseignantId,
+                                             @Param("debut") LocalDate debut,
+                                             @Param("fin") LocalDate fin);
 }

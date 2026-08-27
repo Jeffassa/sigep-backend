@@ -42,7 +42,8 @@ class SeanceServiceIdorTest {
                 Mockito.mock(EnseignantRepository.class),
                 Mockito.mock(MatiereRepository.class),
                 Mockito.mock(ClasseRepository.class),
-                Mockito.mock(SalleRepository.class));
+                Mockito.mock(SalleRepository.class),
+                new ci.esatic.sigep.mapper.SeanceMapperImpl());   // mapper réel généré
     }
 
     private Seance seanceDe(long enseignantId) {

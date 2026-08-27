@@ -36,6 +36,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Component
 @Slf4j
+@org.springframework.context.annotation.Lazy(false)   // eager : la purge @Scheduled doit tourner malgré lazy-init
 public class RateLimitFilter extends OncePerRequestFilter {
 
     private static final long WINDOW_MS = 60_000L; // 1 minute
@@ -77,12 +78,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
     @Value("${app.security.login-rate-limit.max-keys:50000}")
     private int maxKeys;
 
-    /**
-     * Ne faire confiance à X-Forwarded-For QUE derrière un reverse proxy de confiance.
-     * Sinon un client peut falsifier ce header et contourner le rate-limiting.
-     */
-    @Value("${app.security.trust-forwarded-for:false}")
-    private boolean trustForwardedFor;
+    // Résolution de l'IP cliente CENTRALISÉE (gestion X-Forwarded-For selon la confiance proxy).
+    @org.springframework.beans.factory.annotation.Autowired
+    private ClientIpResolver clientIpResolver;
 
     @Override
     protected void doFilterInternal(
@@ -92,7 +90,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
 
         if (enabled) {
-            String ip = resolveClientIp(request);
+            String ip = clientIpResolver.resolve(request);
 
             // 1) Budget strict par endpoint sensible (clé par (IP, chemin) : budgets indépendants).
             int strict = budgetStrict(request);
@@ -177,18 +175,4 @@ public class RateLimitFilter extends OncePerRequestFilter {
         }));
     }
 
-    /**
-     * Résout l'IP cliente. N'utilise X-Forwarded-For que si l'application est explicitement
-     * déclarée derrière un proxy de confiance (trustForwardedFor=true), car ce header est
-     * falsifiable par le client en accès direct.
-     */
-    private String resolveClientIp(HttpServletRequest request) {
-        if (trustForwardedFor) {
-            String xff = request.getHeader("X-Forwarded-For");
-            if (xff != null && !xff.isBlank()) {
-                return xff.split(",")[0].trim();
-            }
-        }
-        return request.getRemoteAddr();
-    }
 }

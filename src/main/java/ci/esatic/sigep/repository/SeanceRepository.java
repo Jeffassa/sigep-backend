@@ -54,12 +54,14 @@ public interface SeanceRepository extends JpaRepository<Seance, Long> {
     // Alertes admin : séances dont l'émargement est manquant (statut != EMARGE) ET déjà
     // terminées — jours précédents + créneaux d'aujourd'hui dont l'heure de fin est dépassée.
     // (aligné sur la relance e-mail qui couvre les oublis du jour même.)
-    @Query("SELECT s FROM Seance s WHERE s.statut <> 'EMARGE' " +
+    // Les séances EN_ATTENTE_VALIDATION (hors-ligne à valider) sont EXCLUES : elles ont leur
+    // propre file dédiée et ne doivent pas être comptées comme des oublis à relancer.
+    @Query("SELECT s FROM Seance s WHERE s.statut NOT IN ('EMARGE', 'EN_ATTENTE_VALIDATION') " +
            "AND (s.date < :date OR (s.date = :date AND s.heureFin < :heure)) " +
            "ORDER BY s.date DESC, s.heureDebut DESC")
     List<Seance> findSeancesNonEmargees(@Param("date") LocalDate date, @Param("heure") LocalTime heure);
 
-    @Query("SELECT COUNT(s) FROM Seance s WHERE s.statut <> 'EMARGE' " +
+    @Query("SELECT COUNT(s) FROM Seance s WHERE s.statut NOT IN ('EMARGE', 'EN_ATTENTE_VALIDATION') " +
            "AND (s.date < :date OR (s.date = :date AND s.heureFin < :heure))")
     long countSeancesNonEmargees(@Param("date") LocalDate date, @Param("heure") LocalTime heure);
 
@@ -80,6 +82,14 @@ public interface SeanceRepository extends JpaRepository<Seance, Long> {
            "FROM Seance s WHERE s.date BETWEEN :debut AND :fin " +
            "GROUP BY s.matiere.libelle ORDER BY s.matiere.libelle")
     List<Object[]> tauxParMatiere(@Param("debut") LocalDate debut, @Param("fin") LocalDate fin);
+
+    // Agrégat PAR ENSEIGNANT en UNE requête (remplace la boucle N+1 : findAll + 2 counts/enseignant).
+    // Ne renvoie que les enseignants ayant au moins une séance sur la période.
+    @Query("SELECT s.enseignant.id, s.enseignant.prenom, s.enseignant.nom, s.enseignant.matricule, " +
+           "COUNT(s), SUM(CASE WHEN s.statut = 'EMARGE' THEN 1 ELSE 0 END) " +
+           "FROM Seance s WHERE s.date BETWEEN :debut AND :fin " +
+           "GROUP BY s.enseignant.id, s.enseignant.prenom, s.enseignant.nom, s.enseignant.matricule")
+    List<Object[]> tauxParEnseignant(@Param("debut") LocalDate debut, @Param("fin") LocalDate fin);
 
     // Projection légère (date, heure de début, statut) pour la heatmap et les oublis
     @Query("SELECT s.date, s.heureDebut, s.statut FROM Seance s WHERE s.date BETWEEN :debut AND :fin")

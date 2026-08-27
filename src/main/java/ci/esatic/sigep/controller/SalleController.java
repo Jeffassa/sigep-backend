@@ -20,11 +20,13 @@ public class SalleController {
     private final SalleService salleService;
 
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<List<SalleResponse>>> getAll() {
         return ResponseEntity.ok(ApiResponse.success("Liste des salles", salleService.findAll()));
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<SalleResponse>> getById(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.success("Salle", salleService.getById(id)));
     }

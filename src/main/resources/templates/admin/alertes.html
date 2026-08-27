@@ -13,7 +13,7 @@
     </div>
 
     <!-- Résumé -->
-    <section class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5 mb-8">
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5 mb-8">
         <div class="glass glass-card rounded-3xl p-6 flex items-center gap-4" data-reveal>
             <span class="material-symbols-rounded text-[28px]">event_busy</span>
             <div><p class="font-serif text-[40px] leading-none" th:text="${seancesNonEmargees.size()}">0</p>
@@ -23,6 +23,11 @@
             <span class="material-symbols-rounded text-[28px]">history_toggle_off</span>
             <div><p class="font-serif text-[40px] leading-none" th:text="${rattrapagesEnAttente.size()}">0</p>
                 <p class="font-mono text-[10px] uppercase tracking-wider text-muted mt-1">Rattrapages en attente</p></div>
+        </div>
+        <div class="glass glass-card rounded-3xl p-6 flex items-center gap-4" data-reveal>
+            <span class="material-symbols-rounded text-[28px] text-amber-600 dark:text-amber-400">wifi_off</span>
+            <div><p class="font-serif text-[40px] leading-none text-amber-600 dark:text-amber-400" th:text="${emargementsHorsLigne.size()}">0</p>
+                <p class="font-mono text-[10px] uppercase tracking-wider text-muted mt-1">Émargements hors-ligne</p></div>
         </div>
         <div class="glass glass-card rounded-3xl p-6 flex items-center gap-4" data-reveal>
             <span class="material-symbols-rounded text-[28px]">person_alert</span>
@@ -66,7 +71,78 @@
         </div>
     </section>
 
-    <!-- 2. Rattrapages -->
+    <!-- 2. Émargements hors-ligne (Audit présence sans QR de salle) -->
+    <section class="glass rounded-3xl overflow-hidden mb-6" data-reveal>
+        <div class="px-7 py-5 border-b border-line flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+                <span class="material-symbols-rounded text-amber-600 dark:text-amber-400">wifi_off</span>
+                <div>
+                    <h2 class="font-serif text-[22px]">Émargements hors-ligne (à valider)</h2>
+                    <p class="text-[12px] text-muted mt-0.5">Présence prouvée par QR scanné hors-réseau · À confirmer par la scolarité avant comptage</p>
+                </div>
+            </div>
+            <span th:if="${!emargementsHorsLigne.isEmpty()}"
+                  class="font-mono text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold"
+                  th:text="${emargementsHorsLigne.size() + ' à vérifier'}">0</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead><tr class="border-b border-line">
+                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Date Séance</th>
+                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Horodatage Envoi</th>
+                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Enseignant</th>
+                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Matière</th>
+                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Classe</th>
+                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Salle</th>
+                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Signature</th>
+                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted text-right">Action</th>
+                </tr></thead>
+                <tbody>
+                <tr th:if="${emargementsHorsLigne.isEmpty()}">
+                    <td colspan="8" class="px-6 py-12 text-center text-muted">
+                        <span class="material-symbols-rounded text-[36px] block mb-2 opacity-40">check_circle</span>Aucun émargement hors-ligne à valider.</td>
+                </tr>
+                <tr th:each="eh : ${emargementsHorsLigne}" class="zebra border-b border-line/60">
+                    <td class="px-6 py-3.5 font-mono text-[12px] font-medium" th:text="${#temporals.format(eh.seance.date,'dd/MM/yyyy')}">--</td>
+                    <td class="px-6 py-3.5 font-mono text-[12px] text-muted" th:text="${#temporals.format(eh.dateHeure,'dd/MM HH:mm')}">--</td>
+                    <td class="px-6 py-3.5 text-[14px] font-medium" th:text="${eh.enseignant.prenom + ' ' + eh.enseignant.nom}">Ens.</td>
+                    <td class="px-6 py-3.5 text-[14px] text-muted" th:text="${eh.seance.matiere.libelle}">Matière</td>
+                    <td class="px-6 py-3.5 text-[14px] text-muted" th:text="${eh.seance.classe.libelle}">Classe</td>
+                    <td class="px-6 py-3.5 text-[14px] text-muted" th:text="${eh.seance.salle.libelle}">Salle</td>
+                    <td class="px-6 py-3.5">
+                        <span th:if="${eh.signatureBase64 != null and !eh.signatureBase64.isBlank()}"
+                              class="inline-flex items-center gap-1 font-mono text-[11px] text-emerald-600 dark:text-emerald-400">
+                            <span class="material-symbols-rounded text-[14px]">draw</span> Présente
+                        </span>
+                        <span th:if="${eh.signatureBase64 == null or eh.signatureBase64.isBlank()}"
+                              class="font-mono text-[11px] text-muted">—</span>
+                    </td>
+                    <td class="px-6 py-3.5">
+                        <div class="flex items-center gap-2 justify-end">
+                            <!-- Valider : présence confirmée => séance émargée (comptée) -->
+                            <form th:action="@{'/admin/emargements/hors-ligne/' + ${eh.id} + '/valider'}" method="post">
+                                <button type="submit"
+                                        class="btn btn-ink h-9 px-3 rounded-lg text-[12px] font-medium inline-flex items-center gap-1">
+                                    <span class="material-symbols-rounded text-[16px]">check</span> Valider
+                                </button>
+                            </form>
+                            <!-- Refuser : séance à régulariser (émargement supprimé) -->
+                            <form th:action="@{'/admin/emargements/hors-ligne/' + ${eh.id} + '/refuser'}" method="post"
+                                  onsubmit="return confirm('Refuser cet émargement hors-ligne ? La séance redeviendra à régulariser.');">
+                                <button type="submit"
+                                        class="h-9 px-3 rounded-lg border border-line text-[12px] font-medium inline-flex items-center gap-1 hover:bg-ink hover:text-white transition">
+                                    <span class="material-symbols-rounded text-[16px]">close</span> Refuser
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- 3. Rattrapages -->
     <section class="glass rounded-3xl overflow-hidden mb-6" data-reveal>
         <div class="px-7 py-5 border-b border-line flex items-center gap-2.5">
             <span class="material-symbols-rounded">history_toggle_off</span>

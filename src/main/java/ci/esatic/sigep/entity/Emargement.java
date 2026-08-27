@@ -39,10 +39,16 @@ public class Emargement implements TenantScoped {
     @Builder.Default
     private boolean enRetard = false;
 
-    // true si émargé hors-ligne (file d'attente) : présence NON vérifiée par QR
+    // true si émargé hors-ligne (file d'attente) : synchronisé au retour du réseau
     @Column(nullable = false)
     @Builder.Default
     private boolean horsLigne = false;
+
+    // Présence CONFIRMÉE. En ligne : true d'emblée. Hors-ligne : false jusqu'à validation admin
+    // (la séance reste EN_ATTENTE_VALIDATION et n'est pas comptée tant que valide=false).
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean valide = true;
 
     @Column(columnDefinition = "TEXT")
     private String signatureBase64;

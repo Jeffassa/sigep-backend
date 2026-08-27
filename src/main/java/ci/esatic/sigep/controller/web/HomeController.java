@@ -19,4 +19,20 @@ public class HomeController {
     public String inscription() {
         return "public/inscription";
     }
+
+    // Pages légales (conformité B2B / protection des données personnelles).
+    @GetMapping("/mentions-legales")
+    public String mentionsLegales() {
+        return "public/mentions-legales";
+    }
+
+    @GetMapping("/confidentialite")
+    public String confidentialite() {
+        return "public/confidentialite";
+    }
+
+    @GetMapping("/cgu")
+    public String cgu() {
+        return "public/cgu";
+    }
 }

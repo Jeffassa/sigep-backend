@@ -11,7 +11,10 @@ import java.time.LocalDateTime;
  * Enregistré au moment où le super admin valide un renouvellement.
  */
 @Entity
-@Table(name = "paiements")
+// Idempotence : une même référence de transaction ne peut être enregistrée qu'une fois
+// (les NULL restent multiples — saisies manuelles sans référence).
+@Table(name = "paiements",
+        uniqueConstraints = @UniqueConstraint(name = "uk_paiements_reference", columnNames = "reference"))
 @Getter
 @Setter
 @NoArgsConstructor

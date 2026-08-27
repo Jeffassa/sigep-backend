@@ -50,6 +50,27 @@ services:
       - "8080"
     # Pas de port publié : nginx fait le reverse proxy.
 
+  # Sauvegarde PostgreSQL planifiée avec rétention (pg_dump). Écrit dans le volume db_backups.
+  # OFFSITE : synchroniser ce volume hors-serveur (rclone/S3) — un backup local ne protège
+  # pas d'une perte du serveur. Restauration : gunzip -c <dump>.sql.gz | psql ...
+  db-backup:
+    image: prodrigestivill/postgres-backup-local:16-alpine
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_DB: ${DB_NAME:-sigep_db}
+      POSTGRES_USER: ${DB_USERNAME:-sigep}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD requis}
+      SCHEDULE: ${BACKUP_SCHEDULE:-@daily}
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-7}
+      BACKUP_KEEP_WEEKS: ${BACKUP_KEEP_WEEKS:-4}
+      BACKUP_KEEP_MONTHS: ${BACKUP_KEEP_MONTHS:-6}
+    volumes:
+      - db_backups:/backups
+
   # Reverse proxy + HTTPS automatique (Let's Encrypt géré par Caddy : obtention + renouvellement).
   caddy:
     image: caddy:2-alpine
@@ -70,5 +91,6 @@ services:
 volumes:
   pgdata:
   rapports:
+  db_backups:
   caddy_data:
   caddy_config:

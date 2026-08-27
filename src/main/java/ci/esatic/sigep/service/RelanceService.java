@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@org.springframework.context.annotation.Lazy(false)   // eager : sinon le cron @Scheduled ne se déclenche pas (lazy-init prod)
 public class RelanceService {
 
     private static final DateTimeFormatter HEURE_FMT = DateTimeFormatter.ofPattern("HH:mm");
@@ -33,6 +34,8 @@ public class RelanceService {
     /** Tous les jours à 19h : relance les enseignants ayant des séances non émargées le jour même.
      *  Exécuté PAR ÉTABLISSEMENT (contexte tenant) pour rester cloisonné. */
     @Scheduled(cron = "0 0 19 * * *")
+    @net.javacrumbs.shedlock.spring.annotation.SchedulerLock(
+            name = "relancerSeancesNonEmargees", lockAtMostFor = "PT15M", lockAtLeastFor = "PT1M")
     public void relancerSeancesNonEmargees() {
         LocalDate today = LocalDate.now();
         tenantTaskRunner.pourChaqueTenantActif(etab -> relancerPourTenantCourant(today, etab.getEmailFrom()));

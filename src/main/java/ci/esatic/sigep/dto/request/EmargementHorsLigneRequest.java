@@ -6,7 +6,9 @@ import lombok.Data;
 
 /**
  * Émargement enregistré hors-ligne puis envoyé au retour du réseau.
- * Pas de token QR : la présence n'est pas vérifiée (marqué horsLigne côté serveur).
+ * Le QR scanné pendant la séance est OBLIGATOIRE : c'est la preuve de présence (vérifiée à la
+ * synchro — signature + établissement + fenêtre horaire via l'iat signé + anti-rejeu). La présence
+ * reste À CONFIRMER par l'admin (séance EN_ATTENTE_VALIDATION) tant qu'elle n'est pas validée.
  */
 @Data
 public class EmargementHorsLigneRequest {
@@ -14,6 +16,10 @@ public class EmargementHorsLigneRequest {
     @NotNull
     private Long seanceId;
 
-    @NotBlank
+    // Optionnelle (le QR est la preuve de présence) ; validée seulement pour son format si fournie.
     private String signatureBase64;
+
+    // Token du QR universel scanné hors-ligne pendant la séance (JWT signé par le kiosque). OBLIGATOIRE.
+    @NotBlank
+    private String qrToken;
 }
