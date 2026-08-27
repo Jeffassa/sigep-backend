@@ -1,6 +1,7 @@
 package ci.esatic.sigep.dto.response;
 
 import ci.esatic.sigep.entity.StatutDemande;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -20,7 +21,11 @@ public class RattrapageResponse {
     private String enseignantPrenom;
     private String matiereLibelle;
     private String classeLibelle;
+    // Même format qu'en requête (RattrapageRequest) : le mobile envoie et reçoit
+    // dd/MM/yyyy + HH:mm de façon symétrique (sinon la réponse repartait en ISO).
+    @JsonFormat(pattern = "dd/MM/yyyy")
     private LocalDate dateSouhaitee;
+    @JsonFormat(pattern = "HH:mm")
     private LocalTime heureSouhaitee;
     private String motif;
     private StatutDemande statut;

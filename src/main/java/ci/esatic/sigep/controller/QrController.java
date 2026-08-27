@@ -2,6 +2,8 @@ package ci.esatic.sigep.controller;
 
 import ci.esatic.sigep.dto.response.ApiResponse;
 import ci.esatic.sigep.dto.response.QrCodeResponse;
+import ci.esatic.sigep.entity.Etablissement;
+import ci.esatic.sigep.repository.EtablissementRepository;
 import ci.esatic.sigep.service.QrCodeService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +24,7 @@ import java.util.List;
 public class QrController {
 
     private final QrCodeService qrCodeService;
+    private final EtablissementRepository etablissementRepository;
 
     // SECURITE : l'affichage du QR est une PREUVE DE PRESENCE → ne doit jamais être public
     // sur internet. Au moins l'un des deux doit être défini, sinon l'affichage renvoie 403.
@@ -58,15 +61,34 @@ public class QrController {
         return ResponseEntity.ok(html);
     }
 
-    // Page HTML du QR UNIVERSEL d'émargement (kiosque autorisé — clé ou IP, cf. controleAcces).
-    // Se renouvelle automatiquement à la cadence QR_REFRESH_SECONDS (cf. QrCodeService).
+    // Page HTML du QR UNIVERSEL d'émargement, PROPRE À UN ÉTABLISSEMENT (C3 + C4).
+    // Accès par clé kiosque PAR TENANT (en base, révocable, aucune variable d'ENV ni redéploiement) :
+    //   /api/qr/display?etab=<slug>&key=<kioskKey>
+    // Le QR généré porte l'etablissementId : un enseignant ne peut émarger qu'avec le QR de SON établissement.
     @GetMapping(value = "/display", produces = MediaType.TEXT_HTML_VALUE)
-    public ResponseEntity<String> displayUniversalQrPage(@RequestParam(required = false) String key,
-                                                         HttpServletRequest request) {
-        String refus = motifRefusAffichage(request, key);
-        if (refus != null) return reponseRefus(refus);
-        QrCodeResponse qr = qrCodeService.generateUniversalQr();
-        return ResponseEntity.ok(buildUniversalQrPage(qr.getQrImageBase64(), qr.getExpiresInSeconds()));
+    public ResponseEntity<String> displayUniversalQrPage(@RequestParam(required = false) String etab,
+                                                         @RequestParam(required = false) String key) {
+        Etablissement tenant = tenantKiosqueAutorise(etab, key);
+        if (tenant == null) {
+            return reponseRefus("Écran non autorisé. Paramètres requis : 'etab' (identifiant de l'établissement) "
+                    + "et 'key' (clé kiosque, disponible dans l'espace admin).");
+        }
+        QrCodeResponse qr = qrCodeService.generateUniversalQr(tenant.getId());
+        return ResponseEntity.ok(buildUniversalQrPage(
+                tenant.getNomEffectif(), tenant.getCouleurPrincipale(),
+                qr.getQrImageBase64(), qr.getExpiresInSeconds()));
+    }
+
+    /**
+     * Autorise l'affichage du QR d'un établissement via sa clé kiosque (C4).
+     * Renvoie l'établissement si le couple (slug, clé) est valide et le tenant actif, sinon null.
+     * La clé vit en base (kiosk_key) : régénérable/révocable depuis l'admin, sans redéploiement.
+     */
+    private Etablissement tenantKiosqueAutorise(String slug, String key) {
+        if (slug == null || slug.isBlank() || key == null || key.isBlank()) return null;
+        Etablissement e = etablissementRepository.findBySlug(slug.trim()).orElse(null);
+        if (e == null || !e.isActif() || e.getKioskKey() == null || e.getKioskKey().isBlank()) return null;
+        return constantTimeEquals(e.getKioskKey(), key) ? e : null;
     }
 
     // Seuls alphanumériques, tirets et underscores autorisés — prévient XSS et path traversal
@@ -193,18 +215,21 @@ public class QrController {
                 """.formatted(salleCode, salleCode, imageBase64, refreshSeconds, refreshSeconds);
     }
 
-    private String buildUniversalQrPage(String imageBase64, long refreshSeconds) {
+    private String buildUniversalQrPage(String nomEtablissement, String couleur,
+                                        String imageBase64, long refreshSeconds) {
+        String bg = (couleur != null && couleur.matches("#[0-9a-fA-F]{3,8}")) ? couleur : "#000666";
+        String titre = htmlEscape(nomEtablissement == null || nomEtablissement.isBlank() ? "SIGEP" : nomEtablissement);
         return """
                 <!DOCTYPE html>
                 <html lang="fr">
                 <head>
                     <meta charset="UTF-8"/>
                     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-                    <title>SIGEP - Émargement</title>
+                    <title>%s - Émargement</title>
                     <style>
                         * { margin: 0; padding: 0; box-sizing: border-box; }
                         body {
-                            background: #000666;
+                            background: %s;
                             color: white;
                             font-family: 'Inter', sans-serif;
                             display: flex;
@@ -237,7 +262,7 @@ public class QrController {
                     </style>
                 </head>
                 <body>
-                    <h1>SIGEP</h1>
+                    <h1>%s</h1>
                     <p class="subtitle">Scannez ce code pour émarger votre séance</p>
                     <div class="qr-container">
                         <img src="data:image/png;base64,%s" alt="QR Code" fetchpriority="high"/>
@@ -260,6 +285,13 @@ public class QrController {
                     </script>
                 </body>
                 </html>
-                """.formatted(imageBase64, refreshSeconds, refreshSeconds);
+                """.formatted(titre, bg, titre, imageBase64, refreshSeconds, refreshSeconds);
+    }
+
+    /** Échappe le texte injecté dans le HTML de la page kiosque (nom d'établissement). */
+    private String htmlEscape(String s) {
+        if (s == null) return "";
+        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                .replace("\"", "&quot;").replace("'", "&#39;");
     }
 }

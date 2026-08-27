@@ -87,6 +87,7 @@ public class AuthService {
                 .roles(roles)
                 .nom(nom)
                 .prenom(prenom)
+                .etablissementNom(user.getEtablissement() != null ? user.getEtablissement().getNomEffectif() : null)
                 .build();
     }
 
@@ -124,6 +125,7 @@ public class AuthService {
                 .roles(roles)
                 .nom(nom)
                 .prenom(prenom)
+                .etablissementNom(user.getEtablissement() != null ? user.getEtablissement().getNomEffectif() : null)
                 .build();
     }
 
@@ -256,14 +258,16 @@ public class AuthService {
                 .prenom(request.getPrenom())
                 .departement(request.getDepartement())
                 .grade(request.getGrade())
-                .statut(StatutEnseignant.PENDING)
+                // E2 : compte créé PAR l'admin (avec identifiants) → PRÉ-VALIDÉ, utilisable
+                // immédiatement (pas de double validation). L'auto-inscription reste PENDING.
+                .statut(StatutEnseignant.VALIDATED)
                 .user(user)
                 .etablissementId(tenant != null ? tenant.getId() : null)
                 .build();
         enseignantRepository.save(enseignant);
 
-        // Aucun token n'est délivré : le compte est créé en attente (PENDING) et ne
-        // pourra se connecter qu'après validation explicite par l'administration.
+        // Aucun token délivré ici : l'enseignant se connecte lui-même avec ses identifiants
+        // (compte déjà validé, aucune étape d'attente).
         return AuthResponse.builder()
                 .token(null)
                 .type("Bearer")

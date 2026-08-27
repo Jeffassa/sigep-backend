@@ -19,6 +19,7 @@ public class EnseignantService {
     private final EnseignantRepository enseignantRepository;
     private final MailService mailService;
     private final RefreshTokenService refreshTokenService;
+    private final EtablissementCourantService etablissementCourantService;
 
     public Page<EnseignantResponse> searchEnseignants(String search, String departement,
                                                        StatutEnseignant statut, Pageable pageable) {
@@ -59,10 +60,17 @@ public class EnseignantService {
         if (statut == StatutEnseignant.VALIDATED || statut == StatutEnseignant.REJECTED) {
             String email = saved.getUser() != null ? saved.getUser().getEmail() : null;
             if (email != null) {
-                mailService.notifierStatutCompte(email, saved.getPrenom(), statut == StatutEnseignant.VALIDATED);
+                mailService.notifierStatutCompte(expediteurTenant(), email, saved.getPrenom(),
+                        statut == StatutEnseignant.VALIDATED);
             }
         }
         return toResponse(saved);
+    }
+
+    /** Expéditeur e-mail propre à l'établissement courant (E9), ou null (repli plateforme). */
+    private String expediteurTenant() {
+        var etab = etablissementCourantService.courant();
+        return etab != null ? etab.getEmailFrom() : null;
     }
 
     @Transactional

@@ -50,7 +50,7 @@
             <span class="material-symbols-rounded text-[28px] block mx-auto mb-1.5">contact_support</span>
             <p class="font-medium text-[14px]">Votre dossier n'a pas été retenu</p>
             <p class="text-muted mt-1">Contactez-nous pour en discuter ou compléter votre dossier :
-                <a href="mailto:assalendahjeanfrancois@gmail.com" class="underline">nous écrire</a>.</p>
+                <a th:href="'mailto:' + ${contactPlateforme}" href="mailto:contact@sigep.store" class="underline">nous écrire</a>.</p>
         </div>
 
         <form th:action="@{/admin-login}" method="post" class="space-y-4">

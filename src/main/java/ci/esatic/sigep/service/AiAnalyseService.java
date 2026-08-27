@@ -4,6 +4,11 @@ import com.anthropic.client.AnthropicClient;
 import com.anthropic.client.okhttp.AnthropicOkHttpClient;
 import com.anthropic.models.messages.Message;
 import com.anthropic.models.messages.MessageCreateParams;
+import ci.esatic.sigep.entity.Etablissement;
+import ci.esatic.sigep.entity.Plan;
+import ci.esatic.sigep.tenant.TenantContext;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -19,6 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * ANTHROPIC_API_KEY est présente. Aucune dépendance au démarrage (client créé à la demande).
  */
 @Service
+@Slf4j
 public class AiAnalyseService {
 
     private static final DateTimeFormatter D = DateTimeFormatter.ofPattern("dd/MM/yyyy");
@@ -27,8 +33,17 @@ public class AiAnalyseService {
     @Value("${app.ai.enabled:false}")
     private boolean enabled;
 
+    /** Modèle premium (offres haut de gamme). */
     @Value("${app.ai.model:claude-opus-4-8}")
     private String model;
+
+    /** Modèle standard (offres inférieures) — maîtrise du coût par plan (E10). */
+    @Value("${app.ai.model-standard:claude-haiku-4-5}")
+    private String modelStandard;
+
+    /** Établissement courant : plan (choix du modèle) + attribution du coût par tenant (E10). */
+    @Autowired(required = false)
+    private EtablissementCourantService etablissementCourantService;
 
     private volatile AnthropicClient client; // créé paresseusement
     private final Map<String, Cache> cache = new ConcurrentHashMap<>();
@@ -44,9 +59,15 @@ public class AiAnalyseService {
         if (!isEnabled()) {
             return "Analyse IA non configurée (définir AI_ENABLED=true et ANTHROPIC_API_KEY).";
         }
-        String cle = debut + "|" + fin;
+        // C1 : clé de cache PRÉFIXÉE PAR TENANT — le texte mis en cache contient des données
+        // nominatives (noms d'enseignants, taux). Sans le tenant, deux établissements regardant
+        // la même période partageraient l'analyse de l'autre.
+        long now = System.currentTimeMillis();
+        // Purge opportuniste des entrées expirées (borne la mémoire).
+        cache.entrySet().removeIf(e -> (now - e.getValue().ts()) >= TTL_MS);
+        String cle = TenantContext.get() + "|" + debut + "|" + fin;
         Cache c = cache.get(cle);
-        if (c != null && (System.currentTimeMillis() - c.ts) < TTL_MS) {
+        if (c != null && (now - c.ts) < TTL_MS) {
             return c.texte;
         }
         try {
@@ -71,10 +92,15 @@ public class AiAnalyseService {
                 }
             }
         }
+        // E10 : modèle choisi selon le plan (premium pour ENTERPRISE, standard sinon) et
+        // coût attribué au tenant (log par établissement — base d'une refacturation/quota).
+        String modeleChoisi = modeleSelonPlan();
+        log.info("Analyse IA — tenant={} modele={}", TenantContext.get(), modeleChoisi);
+
         MessageCreateParams params = MessageCreateParams.builder()
-                .model(model)
+                .model(modeleChoisi)
                 .maxTokens(4000L)
-                .system(SYSTEME)
+                .system(systemePrompt())
                 .addUserMessage(donnees(debut, fin, stats))
                 .build();
 
@@ -85,13 +111,33 @@ public class AiAnalyseService {
         return texte.isEmpty() ? "Aucune analyse renvoyée." : texte;
     }
 
-    private static final String SYSTEME =
-            "Tu es un analyste de données pour l'administration d'un etablissement d'enseignement superieur. "
+    /** Modèle premium pour ENTERPRISE, standard (moins coûteux) pour les autres plans. */
+    private String modeleSelonPlan() {
+        Etablissement e = (etablissementCourantService != null) ? etablissementCourantService.courant() : null;
+        return (e != null && e.getPlan() == Plan.ENTERPRISE) ? model : modelStandard;
+    }
+
+    /** Prompt système contextualisé par le TYPE d'établissement du tenant (F5). */
+    private String systemePrompt() {
+        Etablissement e = (etablissementCourantService != null) ? etablissementCourantService.courant() : null;
+        String type = typeLisible(e != null ? e.getTypeEtablissement() : null);
+        return "Tu es un analyste de données pour l'administration d'un " + type + ". "
           + "On te fournit des statistiques d'emargement (presence des enseignants en cours). "
           + "Reponds en francais, de facon concise et actionnable, en deux parties :\n"
           + "1) SYNTHESE : 2 a 3 phrases sur la situation et la tendance.\n"
           + "2) DECISIONS : 3 a 5 actions priorisees (qui, quoi, pourquoi), de la plus a la moins urgente.\n"
           + "N'invente aucun chiffre : appuie-toi uniquement sur les donnees fournies. Pas de preambule.";
+    }
+
+    private String typeLisible(String type) {
+        if (type == null) return "etablissement d'enseignement superieur";
+        return switch (type) {
+            case "SECONDAIRE" -> "etablissement d'enseignement secondaire";
+            case "PRIMAIRE" -> "etablissement d'enseignement primaire";
+            case "FORMATION" -> "centre de formation professionnelle";
+            default -> "etablissement d'enseignement superieur";
+        };
+    }
 
     @SuppressWarnings("unchecked")
     private String donnees(LocalDate debut, LocalDate fin, Map<String, Object> s) {

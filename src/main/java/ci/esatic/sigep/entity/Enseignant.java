@@ -7,7 +7,9 @@ import lombok.*;
 import org.hibernate.annotations.Filter;
 
 @Entity
-@Table(name = "enseignants")
+@Table(name = "enseignants",
+        uniqueConstraints = @UniqueConstraint(name = "uk_enseignant_etab_matricule",
+                columnNames = {"etablissement_id", "matricule"}))
 @Filter(name = "tenantFilter", condition = "etablissement_id = :tenantId")
 @EntityListeners(TenantListener.class)
 @Getter
@@ -21,7 +23,8 @@ public class Enseignant implements TenantScoped {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true, nullable = false)
+    // Unique PAR établissement (cf. @Table) : deux écoles peuvent réutiliser le même matricule.
+    @Column(nullable = false)
     private String matricule;
 
     @Column(nullable = false)

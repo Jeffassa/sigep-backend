@@ -22,4 +22,6 @@ public class AuthResponse {
     private List<String> roles;
     private String nom;
     private String prenom;
+    /** Nom de l'établissement (tenant) — permet à l'app mobile d'afficher SON établissement (E14). */
+    private String etablissementNom;
 }

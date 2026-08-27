@@ -26,6 +26,7 @@ public class RattrapageService {
     private final ClasseRepository classeRepository;
     private final SeanceRepository seanceRepository;
     private final MailService mailService;
+    private final EtablissementCourantService etablissementCourantService;
 
     @Transactional
     public RattrapageResponse creerDemande(Long userId, RattrapageRequest request) {
@@ -117,7 +118,9 @@ public class RattrapageService {
         if (email == null) return;
         String matiere = d.getMatiere() != null ? d.getMatiere().getLibelle() : "";
         String quand = d.getDateSouhaitee().format(DATE_FMT) + " à " + d.getHeureSouhaitee().format(HEURE_FMT);
-        mailService.notifierDecisionRattrapage(email, ens.getPrenom(), matiere, quand, accepte);
+        var etab = etablissementCourantService.courant();
+        String expediteur = etab != null ? etab.getEmailFrom() : null;
+        mailService.notifierDecisionRattrapage(expediteur, email, ens.getPrenom(), matiere, quand, accepte);
     }
 
     private RattrapageResponse toResponse(DemandeRattrapage d) {

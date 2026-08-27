@@ -77,9 +77,12 @@ public class JwtService {
 
     private static final String QR_UNIVERSAL_TYPE = "QR_UNIVERSAL";
 
-    public String generateUniversalQrToken(long expirationMs) {
+    public String generateUniversalQrToken(long expirationMs, Long etablissementId) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("type", QR_UNIVERSAL_TYPE);
+        // C3 : le QR est rattaché à un établissement — un enseignant ne peut émarger
+        // qu'avec le QR de SON établissement (preuve de présence cloisonnée par tenant).
+        if (etablissementId != null) claims.put("etab", etablissementId);
         return Jwts.builder()
                 .claims(claims)
                 .id(java.util.UUID.randomUUID().toString())   // jti : identifiant unique pour l'anti-rejeu
@@ -101,6 +104,21 @@ public class JwtService {
             return QR_UNIVERSAL_TYPE.equals(claims.get("type")) && !expired;
         } catch (JwtException e) {
             return false;
+        }
+    }
+
+    /** Établissement (claim "etab") du token QR universel, ou null si absent/invalide. */
+    public Long extractQrEtablissementId(String token) {
+        try {
+            Object v = Jwts.parser()
+                    .verifyWith(getQrSigningKey())
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload()
+                    .get("etab");
+            return (v instanceof Number n) ? n.longValue() : null;
+        } catch (JwtException e) {
+            return null;
         }
     }
 

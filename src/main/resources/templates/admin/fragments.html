@@ -53,7 +53,7 @@
         class="glass sticky top-0 z-50 border-x-0 border-t-0" style="border-radius:0;">
     <div class="max-w-[1240px] mx-auto h-16 px-5 md:px-8 flex items-center justify-between">
         <a th:href="@{/admin/dashboard}" class="flex items-baseline gap-2 group">
-            <span class="font-serif text-[30px] leading-none tracking-tight">SIGEP</span>
+            <span class="font-serif text-[30px] leading-none tracking-tight" th:text="${marque} ?: 'SIGEP'">SIGEP</span>
             <span class="hidden sm:inline font-mono text-[10px] uppercase tracking-[0.2em] text-muted mb-[2px]">Solutions de Gestion</span>
         </a>
 

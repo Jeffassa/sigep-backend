@@ -24,23 +24,28 @@ import java.util.Map;
 @Slf4j
 public class QrCodeService {
 
-    // Validité du token QR : assez longue pour « scanner → signer → valider »,
-    // tout en restant une preuve de présence (l'anti-rejeu par jti empêche la réutilisation).
-    private static final long QR_EXPIRATION_MS = 120_000L; // 2 minutes (temps de signer puis valider)
-    private static final int QR_REFRESH_SECONDS = 15;      // rotation rapide : un nouveau code toutes les 15 s
-                                                           // (réduit l'attente entre deux émargements consécutifs)
-    private static final int QR_SIZE = 400; // Plus grand = lisible de plus loin
+    // Cadence/expiration/taille du QR — externalisées (M2). Défauts = comportement actuel.
+    // Validité assez longue pour « scanner → signer → valider », tout en restant une preuve
+    // de présence (l'anti-rejeu par jti empêche la réutilisation).
+    @org.springframework.beans.factory.annotation.Value("${app.qr.expiration-ms:120000}")
+    private long qrExpirationMs;
+
+    @org.springframework.beans.factory.annotation.Value("${app.qr.refresh-seconds:15}")
+    private int qrRefreshSeconds;
+
+    @org.springframework.beans.factory.annotation.Value("${app.qr.size:400}")
+    private int qrSize;
 
     private final JwtService jwtService;
 
     public QrCodeResponse generateQrForSalle(String salleCode) {
-        String token = jwtService.generateQrToken(salleCode, QR_EXPIRATION_MS);
+        String token = jwtService.generateQrToken(salleCode, qrExpirationMs);
         String qrImageBase64 = generateQrImage(token);
 
         return QrCodeResponse.builder()
                 .salleCode(salleCode)
                 .qrImageBase64(qrImageBase64)
-                .expiresInSeconds(QR_REFRESH_SECONDS)
+                .expiresInSeconds(qrRefreshSeconds)
                 .generatedAt(System.currentTimeMillis())
                 .build();
     }
@@ -49,19 +54,24 @@ public class QrCodeService {
         return jwtService.isQrTokenValid(token, salleCode);
     }
 
-    /** QR universel d'émargement (un seul écran, renouvelé toutes les 30 s). */
-    public QrCodeResponse generateUniversalQr() {
-        String token = jwtService.generateUniversalQrToken(QR_EXPIRATION_MS);
+    /** QR universel d'émargement d'un établissement (un écran par tenant, renouvelé régulièrement). */
+    public QrCodeResponse generateUniversalQr(Long etablissementId) {
+        String token = jwtService.generateUniversalQrToken(qrExpirationMs, etablissementId);
         return QrCodeResponse.builder()
                 .salleCode(null)
                 .qrImageBase64(generateQrImage(token))
-                .expiresInSeconds(QR_REFRESH_SECONDS)
+                .expiresInSeconds(qrRefreshSeconds)
                 .generatedAt(System.currentTimeMillis())
                 .build();
     }
 
     public boolean validateUniversalToken(String token) {
         return jwtService.isUniversalQrTokenValid(token);
+    }
+
+    /** Établissement (claim "etab") porté par le token QR universel, ou null. */
+    public Long extractUniversalTokenEtablissementId(String token) {
+        return jwtService.extractQrEtablissementId(token);
     }
 
     /** Identifiant unique (jti) du token QR, pour l'anti-rejeu. */
@@ -79,7 +89,7 @@ public class QrCodeService {
             hints.put(EncodeHintType.MARGIN, 1);
 
             QRCodeWriter writer = new QRCodeWriter();
-            BitMatrix bitMatrix = writer.encode(content, BarcodeFormat.QR_CODE, QR_SIZE, QR_SIZE, hints);
+            BitMatrix bitMatrix = writer.encode(content, BarcodeFormat.QR_CODE, qrSize, qrSize, hints);
 
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             MatrixToImageWriter.writeToStream(bitMatrix, "PNG", outputStream);

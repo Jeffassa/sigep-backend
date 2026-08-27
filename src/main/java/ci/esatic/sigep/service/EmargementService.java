@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -23,12 +24,13 @@ import java.util.stream.Collectors;
 @Slf4j
 public class EmargementService {
 
-    private static final int TOLERANCE_AVANT_MINUTES = 15;
-    private static final int TOLERANCE_APRES_MINUTES = 30;
+    /** Fuseau de repli si l'établissement n'en définit pas (comportement historique CI/UTC+0). */
+    private static final String FUSEAU_DEFAUT = "Africa/Abidjan";
 
     private final EmargementRepository emargementRepository;
     private final SeanceRepository seanceRepository;
     private final EnseignantRepository enseignantRepository;
+    private final EtablissementRepository etablissementRepository;
     private final QrCodeService qrCodeService;
     private final QrReplayGuard qrReplayGuard;
 
@@ -40,7 +42,8 @@ public class EmargementService {
         Seance seance = seanceRepository.findById(request.getSeanceId())
                 .orElseThrow(() -> new ResourceNotFoundException("Seance", "id", request.getSeanceId()));
 
-        boolean enRetard = validerRegles(enseignant, seance, request.getQrToken());
+        Etablissement etab = etablissementDe(enseignant);
+        boolean enRetard = validerRegles(enseignant, seance, request.getQrToken(), etab);
         validerSignature(request.getSignatureBase64());
 
         seance.setStatut(StatutSeance.EMARGE);
@@ -49,7 +52,7 @@ public class EmargementService {
         Emargement emargement = Emargement.builder()
                 .seance(seance)
                 .enseignant(enseignant)
-                .dateHeure(LocalDateTime.now())
+                .dateHeure(LocalDateTime.now(zoneDe(etab)))
                 .enRetard(enRetard)
                 .signatureBase64(request.getSignatureBase64())
                 .qrTokenUtilise(request.getQrToken())
@@ -69,8 +72,9 @@ public class EmargementService {
         Seance seance = seanceRepository.findById(request.getSeanceId())
                 .orElseThrow(() -> new ResourceNotFoundException("Seance", "id", request.getSeanceId()));
 
+        Etablissement etab = etablissementDe(enseignant);
         // Pas de vérification QR (présence non confirmée) → on garde les règles 1 à 4.
-        boolean enRetard = validerReglesCommunes(enseignant, seance);
+        boolean enRetard = validerReglesCommunes(enseignant, seance, etab);
         validerSignature(request.getSignatureBase64());
 
         seance.setStatut(StatutSeance.EMARGE);
@@ -79,7 +83,7 @@ public class EmargementService {
         Emargement emargement = Emargement.builder()
                 .seance(seance)
                 .enseignant(enseignant)
-                .dateHeure(LocalDateTime.now())
+                .dateHeure(LocalDateTime.now(zoneDe(etab)))
                 .enRetard(enRetard)
                 .horsLigne(true)
                 .signatureBase64(request.getSignatureBase64())
@@ -97,15 +101,37 @@ public class EmargementService {
                 .stream().map(this::toResponse).collect(Collectors.toList());
     }
 
+    /** Établissement (tenant) de l'enseignant, pour ses réglages (fuseau, tolérances). */
+    private Etablissement etablissementDe(Enseignant enseignant) {
+        return enseignant.getEtablissementId() == null ? null
+                : etablissementRepository.findById(enseignant.getEtablissementId()).orElse(null);
+    }
+
+    /** Fuseau horaire du tenant (E1), avec repli sûr si absent/invalide. */
+    private ZoneId zoneDe(Etablissement etab) {
+        String tz = (etab != null && etab.getFuseau() != null && !etab.getFuseau().isBlank())
+                ? etab.getFuseau() : FUSEAU_DEFAUT;
+        try {
+            return ZoneId.of(tz);
+        } catch (Exception e) {
+            return ZoneId.of(FUSEAU_DEFAUT);
+        }
+    }
+
     /** Règles communes (appartenance, jour, unicité, fenêtre horaire). Renvoie true si tardif. */
-    private boolean validerReglesCommunes(Enseignant enseignant, Seance seance) {
+    private boolean validerReglesCommunes(Enseignant enseignant, Seance seance, Etablissement etab) {
         // Regle 1 : La seance appartient bien a cet enseignant
         if (!seance.getEnseignant().getId().equals(enseignant.getId())) {
             throw new IllegalArgumentException("Cette seance ne vous appartient pas");
         }
 
-        // Regle 2 : La seance est bien aujourd'hui
-        if (!seance.getDate().equals(LocalDate.now())) {
+        // Fuseau + tolérances PROPRES à l'établissement (E1 + E7).
+        ZoneId zone = zoneDe(etab);
+        int toleranceAvant = etab != null ? etab.getToleranceAvantMinutes() : 15;
+        int toleranceApres = etab != null ? etab.getToleranceApresMinutes() : 30;
+
+        // Regle 2 : La seance est bien aujourd'hui (dans le fuseau du tenant)
+        if (!seance.getDate().equals(LocalDate.now(zone))) {
             throw new IllegalArgumentException("Cette seance n'est pas prevue aujourd'hui");
         }
 
@@ -116,9 +142,9 @@ public class EmargementService {
 
         // Regle 4 : la seance doit avoir commence. On autorise l'emargement APRES
         // la fin (rattrapage d'oubli, le jour meme) ; il sera simplement marque "en retard".
-        LocalTime maintenant = LocalTime.now();
-        LocalTime debutAutorise = seance.getHeureDebut().minusMinutes(TOLERANCE_AVANT_MINUTES);
-        LocalTime finAutorisee = seance.getHeureFin().plusMinutes(TOLERANCE_APRES_MINUTES);
+        LocalTime maintenant = LocalTime.now(zone);
+        LocalTime debutAutorise = seance.getHeureDebut().minusMinutes(toleranceAvant);
+        LocalTime finAutorisee = seance.getHeureFin().plusMinutes(toleranceApres);
 
         if (maintenant.isBefore(debutAutorise)) {
             java.time.format.DateTimeFormatter hf = java.time.format.DateTimeFormatter.ofPattern("HH'h'mm");
@@ -129,13 +155,19 @@ public class EmargementService {
         return maintenant.isAfter(finAutorisee);
     }
 
-    /** Règles d'émargement EN LIGNE : communes + QR frais + anti-rejeu. Renvoie true si tardif. */
-    private boolean validerRegles(Enseignant enseignant, Seance seance, String qrToken) {
-        boolean enRetard = validerReglesCommunes(enseignant, seance);
+    /** Règles d'émargement EN LIGNE : communes + QR frais + appartenance tenant + anti-rejeu. */
+    private boolean validerRegles(Enseignant enseignant, Seance seance, String qrToken, Etablissement etab) {
+        boolean enRetard = validerReglesCommunes(enseignant, seance, etab);
 
         // Regle 5 : Token QR universel valide et frais (preuve de presence)
         if (!qrCodeService.validateUniversalToken(qrToken)) {
             throw new IllegalArgumentException("QR Code invalide ou expire. Rescannez le code affiche.");
+        }
+
+        // Regle 5bis (C3) : le QR doit être celui de l'établissement de l'enseignant.
+        Long qrEtab = qrCodeService.extractUniversalTokenEtablissementId(qrToken);
+        if (qrEtab == null || !qrEtab.equals(enseignant.getEtablissementId())) {
+            throw new IllegalArgumentException("Ce QR n'appartient pas a votre etablissement.");
         }
 
         // Regle 6 : anti-rejeu — un meme token ne peut servir qu'une fois par enseignant

@@ -62,4 +62,67 @@ public class Etablissement {
      * l'accès au SaaS est bloqué jusqu'au renouvellement (cf. AbonnementService).
      */
     private LocalDate dateExpiration;
+
+    // ─── Configuration propre au tenant (V16) ───────────────────────────
+    // Défauts = comportement historique (ESATIC / UTC+0) pour ne rien changer
+    // aux établissements existants.
+
+    /** Fuseau horaire IANA (ex. "Africa/Abidjan"). Base des calculs d'émargement et des crons (E1). */
+    @Column(nullable = false, length = 64)
+    @Builder.Default
+    private String fuseau = "Africa/Abidjan";
+
+    /** Locale (ex. "fr") : langue des e-mails, PDF et prompts IA (F5). */
+    @Column(nullable = false, length = 10)
+    @Builder.Default
+    private String locale = "fr";
+
+    /** Type d'établissement (SUPERIEUR, SECONDAIRE, …) : contextualise l'analyse IA (F5). */
+    @Column(name = "type_etablissement", nullable = false, length = 40)
+    @Builder.Default
+    private String typeEtablissement = "SUPERIEUR";
+
+    /** Tolérance d'émargement AVANT le début de séance, en minutes (E7). */
+    @Column(name = "tolerance_avant_minutes", nullable = false)
+    @Builder.Default
+    private int toleranceAvantMinutes = 15;
+
+    /** Tolérance d'émargement APRÈS la fin de séance, en minutes (E7). */
+    @Column(name = "tolerance_apres_minutes", nullable = false)
+    @Builder.Default
+    private int toleranceApresMinutes = 30;
+
+    /** Nom affiché (branding) ; à défaut, {@link #nom} est utilisé (E13). */
+    @Column(name = "nom_affiche")
+    private String nomAffiche;
+
+    /** URL du logo de l'établissement (branding E13). */
+    @Column(name = "logo_url", length = 512)
+    private String logoUrl;
+
+    /** Couleur principale hex (ex. "#000666") ; null = couleur plateforme (E13). */
+    @Column(name = "couleur_principale", length = 9)
+    private String couleurPrincipale;
+
+    /** Expéditeur des e-mails métier de ce tenant ; null = expéditeur plateforme (E9). */
+    @Column(name = "email_from")
+    private String emailFrom;
+
+    /** Adresse de réponse des e-mails métier de ce tenant (E9). */
+    @Column(name = "email_reply_to")
+    private String emailReplyTo;
+
+    /** Numéro Mobile Money d'encaissement propre à l'établissement (E11). */
+    @Column(name = "mobile_money_numero", length = 40)
+    private String mobileMoneyNumero;
+
+    /** Clé kiosque QR propre au tenant (autorise l'affichage du QR) — remplace la variable globale (C4). */
+    @Column(name = "kiosk_key", length = 64)
+    private String kioskKey;
+
+    /** Libellé affichable du tenant : nom personnalisé si défini, sinon nom légal. */
+    @Transient
+    public String getNomEffectif() {
+        return (nomAffiche != null && !nomAffiche.isBlank()) ? nomAffiche : nom;
+    }
 }

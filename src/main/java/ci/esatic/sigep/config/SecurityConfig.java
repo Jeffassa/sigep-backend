@@ -104,6 +104,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/qr/display/**").permitAll()
                         // Webhook Stripe : public, protégé par la vérification de signature
                         .requestMatchers("/api/stripe/webhook").permitAll()
+                        // Webhook Mobile Money (générique) : public, protégé par un secret partagé
+                        .requestMatchers("/api/paiement/mobile-money/webhook").permitAll()
                         // Sondes de supervision publiques ; le reste de l'actuator (metrics…)
                         // réservé aux admins — pas exposé aux enseignants authentifiés.
                         .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()

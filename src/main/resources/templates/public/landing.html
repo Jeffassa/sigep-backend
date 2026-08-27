@@ -220,7 +220,7 @@
                     <li class="flex gap-2"><span class="material-symbols-rounded text-[18px]">check</span> Intégrations paie / ENT</li>
                     <li class="flex gap-2"><span class="material-symbols-rounded text-[18px]">check</span> Support dédié & SLA</li>
                 </ul>
-                <a href="mailto:assalendahjeanfrancois@gmail.com" class="btn glass flex items-center justify-center h-11 rounded-xl mt-7 text-muted hover:text-ink">Nous contacter</a>
+                <a th:href="'mailto:' + ${contactPlateforme}" href="mailto:contact@sigep.store" class="btn glass flex items-center justify-center h-11 rounded-xl mt-7 text-muted hover:text-ink">Nous contacter</a>
             </div>
         </div>
     </section>
@@ -274,7 +274,7 @@
         <div class="flex items-center gap-5 font-mono text-[10px] uppercase tracking-[0.2em] text-muted">
             <a href="#tarifs" class="hover:text-ink">Tarifs</a>
             <a href="#faq" class="hover:text-ink">FAQ</a>
-            <a href="mailto:assalendahjeanfrancois@gmail.com" class="hover:text-ink">Contact</a>
+            <a th:href="'mailto:' + ${contactPlateforme}" href="mailto:contact@sigep.store" class="hover:text-ink">Contact</a>
             <a th:href="@{/admin-login}" class="hover:text-ink">Connexion</a>
         </div>
     </div>

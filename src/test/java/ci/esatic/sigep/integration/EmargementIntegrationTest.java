@@ -45,6 +45,7 @@ class EmargementIntegrationTest {
     @Autowired private PasswordEncoder passwordEncoder;
     @Autowired private RoleRepository roleRepository;
     @Autowired private UserRepository userRepository;
+    @Autowired private EtablissementRepository etablissementRepository;
     @Autowired private EnseignantRepository enseignantRepository;
     @Autowired private MatiereRepository matiereRepository;
     @Autowired private ClasseRepository classeRepository;
@@ -57,6 +58,7 @@ class EmargementIntegrationTest {
 
     private String jwt;
     private Long seanceId;
+    private Long etablissementId;
     private User user;
 
     @BeforeEach
@@ -69,15 +71,22 @@ class EmargementIntegrationTest {
         Role role = roleRepository.findByName(ERole.ROLE_ENSEIGNANT)
                 .orElseGet(() -> roleRepository.save(new Role(null, ERole.ROLE_ENSEIGNANT)));
 
+        Etablissement etab = etablissementRepository.save(Etablissement.builder()
+                .nom("ESATIC Test").slug("esatic-test")
+                .build());
+        etablissementId = etab.getId();
+
         user = userRepository.save(User.builder()
                 .email("prof.integration@esatic.ci")
                 .password(passwordEncoder.encode("Secret@2026"))
                 .roles(Set.of(role))
+                .etablissement(etab)
                 .build());
 
         Enseignant enseignant = enseignantRepository.save(Enseignant.builder()
                 .matricule("ENS-INT-001").nom("Kone").prenom("Awa")
                 .statut(StatutEnseignant.VALIDATED).user(user)
+                .etablissementId(etablissementId)
                 .build());
 
         Matiere matiere = matiereRepository.save(Matiere.builder().libelle("Bases de données").build());
@@ -98,7 +107,7 @@ class EmargementIntegrationTest {
 
     @Test
     void emargement_completDevraitReussirEtPersister() throws Exception {
-        String qrToken = jwtService.generateUniversalQrToken(30_000L);
+        String qrToken = jwtService.generateUniversalQrToken(30_000L, etablissementId);
         String body = objectMapper.writeValueAsString(Map.of(
                 "seanceId", seanceId, "qrToken", qrToken, "signatureBase64", SIGNATURE));
 
@@ -132,7 +141,7 @@ class EmargementIntegrationTest {
 
     @Test
     void emargement_devraitEchouerSansToken() throws Exception {
-        String qrToken = jwtService.generateUniversalQrToken(30_000L);
+        String qrToken = jwtService.generateUniversalQrToken(30_000L, etablissementId);
         String body = objectMapper.writeValueAsString(Map.of(
                 "seanceId", seanceId, "qrToken", qrToken, "signatureBase64", SIGNATURE));
 
