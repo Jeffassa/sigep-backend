@@ -1,0 +1,13 @@
+{
+  "name": "sigep-tailwind",
+  "private": true,
+  "description": "Build Tailwind statique pour SIGEP (remplace le Play-CDN).",
+  "scripts": {
+    "build": "tailwindcss -c tailwind.config.js -i input.css -o ../src/main/resources/static/css/tailwind.css --minify",
+    "watch": "tailwindcss -c tailwind.config.js -i input.css -o ../src/main/resources/static/css/tailwind.css --watch"
+  },
+  "devDependencies": {
+    "@tailwindcss/forms": "^0.5.9",
+    "tailwindcss": "^3.4.17"
+  }
+}

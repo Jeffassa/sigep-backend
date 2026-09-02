@@ -25,7 +25,9 @@
             } catch (e) {}
         })();
     </script>
-    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <!-- Tailwind précompilé (CSS statique) — remplace le Play-CDN : plus de recompilation
+         à chaque page (fin du flash/FOUC + navigation instantanée). Régénéré via tailwind/. -->
+    <link rel="stylesheet" th:href="@{/css/tailwind.css}"/>
 
     <!-- Polices : Instrument Serif (display) · Geist (UI) · JetBrains Mono (data) -->
     <link rel="preconnect" href="https://fonts.googleapis.com"/>
@@ -34,24 +36,6 @@
     <link href="https://fonts.cdnfonts.com/css/geist" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet"/>
     <link rel="stylesheet" th:href="@{/css/sigep.css}"/>
-
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        ink: "var(--c-ink)", "ink-2": "var(--c-ink2)", muted: "var(--c-muted)",
-                        line: "var(--c-line)", paper: "var(--c-bg)"
-                    },
-                    fontFamily: {
-                        serif: ['"Instrument Serif"', 'ui-serif', 'Georgia', 'serif'],
-                        sans: ['"Geist"', '"Geist Sans"', 'system-ui', '-apple-system', 'sans-serif'],
-                        mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace']
-                    }
-                }
-            }
-        }
-    </script>
 
 </head>
 
