@@ -7,9 +7,15 @@
 
 <main class="max-w-[1240px] mx-auto px-5 md:px-8 py-10 pb-24">
 
-    <section class="mb-8" data-reveal>
-        <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mb-2">Plateforme · Vue d'ensemble</p>
-        <h1 class="font-serif text-[clamp(34px,5vw,52px)] leading-[1.02] tracking-tight">Établissements</h1>
+    <section class="mb-8 flex flex-wrap items-end justify-between gap-4" data-reveal>
+        <div>
+            <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mb-2">Plateforme · Vue d'ensemble</p>
+            <h1 class="font-serif text-[clamp(34px,5vw,52px)] leading-[1.02] tracking-tight">Établissements</h1>
+        </div>
+        <a th:href="@{/plateforme/etablissements/nouveau}"
+           class="btn btn-ink h-11 px-5 rounded-xl text-[13px] font-medium inline-flex items-center gap-1.5 shrink-0">
+            <span class="material-symbols-rounded text-[18px]">add_business</span>Nouvel établissement
+        </a>
     </section>
 
     <!-- Messages -->

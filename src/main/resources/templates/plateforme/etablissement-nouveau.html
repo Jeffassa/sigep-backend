@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('SIGEP | Nouvel établissement')}"></head>
+<body>
+
+<div th:replace="~{plateforme/fragments :: topbar('dashboard')}"></div>
+
+<main class="max-w-[760px] mx-auto px-5 md:px-8 py-10 pb-24">
+
+    <section class="mb-8" data-reveal>
+        <a th:href="@{/plateforme}" class="inline-flex items-center gap-1.5 text-[13px] text-muted hover:text-ink mb-4">
+            <span class="material-symbols-rounded text-[18px]">arrow_back</span>Retour à la vue d'ensemble
+        </a>
+        <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mb-2">Plateforme · Création</p>
+        <h1 class="font-serif text-[clamp(30px,4.5vw,44px)] leading-[1.04] tracking-tight">Nouvel établissement</h1>
+        <p class="text-[14px] text-muted mt-2">L'établissement est créé <strong>activé immédiatement</strong> (aucune validation à faire) avec son premier administrateur.</p>
+    </section>
+
+    <!-- Message d'erreur (email déjà pris, champ manquant…) -->
+    <div th:if="${erreur}" class="flex items-center gap-2 p-3 mb-5 rounded-xl text-[13px]"
+         style="background:rgba(186,26,26,.08);color:#7a0010;border:1px solid rgba(186,26,26,.2)">
+        <span class="material-symbols-rounded text-[18px]">error</span><span th:text="${erreur}"></span>
+    </div>
+
+    <form th:action="@{/plateforme/etablissements/creer}" method="post" class="glass rounded-3xl p-7 md:p-9 space-y-6" data-reveal>
+
+        <!-- Établissement -->
+        <div>
+            <label for="nom" class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Nom de l'établissement</label>
+            <input id="nom" name="nom" type="text" required autofocus placeholder="Ex. Institut Polytechnique de…"
+                   class="w-full h-12 px-4 rounded-xl bg-white/60 border border-line text-[15px] focus:border-ink outline-none transition"/>
+        </div>
+
+        <div>
+            <label for="plan" class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Plan</label>
+            <select id="plan" name="plan"
+                    class="w-full h-12 px-4 rounded-xl bg-white/60 border border-line text-[15px] focus:border-ink outline-none transition">
+                <option th:each="p : ${plans}" th:value="${p}" th:text="${p}" th:selected="${p.name() == 'FREE'}">PLAN</option>
+            </select>
+            <p class="text-[11px] text-muted mt-1.5">FREE = quota d'enseignants limité · PRO / ENTERPRISE = illimité.</p>
+        </div>
+
+        <hr class="border-line"/>
+
+        <!-- Administrateur de l'établissement -->
+        <div>
+            <p class="font-serif text-[18px] mb-1">Premier administrateur</p>
+            <p class="text-[12px] text-muted mb-4">Ce compte pourra se connecter à <span class="font-mono">/admin-login</span> et gérer l'établissement.</p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                    <label for="adminEmail" class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-2">E-mail admin</label>
+                    <input id="adminEmail" name="adminEmail" type="email" required placeholder="admin@etablissement.ci"
+                           class="w-full h-12 px-4 rounded-xl bg-white/60 border border-line text-[15px] focus:border-ink outline-none transition"/>
+                </div>
+                <div>
+                    <label for="adminPassword" class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Mot de passe (≥ 8 car.)</label>
+                    <input id="adminPassword" name="adminPassword" type="password" required minlength="8" placeholder="••••••••"
+                           class="w-full h-12 px-4 rounded-xl bg-white/60 border border-line text-[15px] focus:border-ink outline-none transition"/>
+                </div>
+                <div>
+                    <label for="adminPrenom" class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Prénom <span class="text-muted/60">(optionnel)</span></label>
+                    <input id="adminPrenom" name="adminPrenom" type="text"
+                           class="w-full h-12 px-4 rounded-xl bg-white/60 border border-line text-[15px] focus:border-ink outline-none transition"/>
+                </div>
+                <div>
+                    <label for="adminNom" class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Nom <span class="text-muted/60">(optionnel)</span></label>
+                    <input id="adminNom" name="adminNom" type="text"
+                           class="w-full h-12 px-4 rounded-xl bg-white/60 border border-line text-[15px] focus:border-ink outline-none transition"/>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-3 pt-2">
+            <a th:href="@{/plateforme}" class="btn glass h-11 px-5 rounded-xl text-[13px] text-muted hover:text-ink flex items-center">Annuler</a>
+            <button type="submit" class="btn btn-ink h-11 px-6 rounded-xl text-[13px] font-medium inline-flex items-center gap-1.5">
+                <span class="material-symbols-rounded text-[18px]">add_business</span>Créer l'établissement
+            </button>
+        </div>
+    </form>
+</main>
+
+<div th:replace="~{admin/fragments :: scripts}"></div>
+
+</body>
+</html>
