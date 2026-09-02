@@ -94,6 +94,43 @@ public class OnboardingService {
                 .build();
     }
 
+    /**
+     * Création DIRECTE par le SUPER ADMIN : le tenant naît immédiatement {@code VALIDE} et actif
+     * (aucune étape de validation, puisque c'est le propriétaire de la plateforme qui le crée),
+     * avec le plan choisi et son premier administrateur. Un e-mail « espace prêt » est envoyé.
+     */
+    @Transactional
+    public Etablissement creerParSuperAdmin(String nom, String adminEmail, String adminPassword,
+                                            String adminNom, String adminPrenom, Plan plan) {
+        if (userRepository.existsByEmail(adminEmail)) {
+            throw new IllegalArgumentException("Email déjà utilisé : " + adminEmail);
+        }
+        Plan p = plan != null ? plan : Plan.FREE;
+
+        Etablissement etablissement = etablissementRepository.save(Etablissement.builder()
+                .nom(nom.trim())
+                .slug(slugUnique(nom))
+                .plan(p)
+                .maxEnseignants(p == Plan.FREE ? freeMaxEnseignants : 0)   // Pro/Enterprise = illimité
+                .statut(StatutEtablissement.VALIDE)
+                .actif(true)
+                .kioskKey(genererKioskKey())
+                .build());
+
+        Role adminRole = roleRepository.findByName(ERole.ROLE_ADMIN)
+                .orElseThrow(() -> new RuntimeException("Rôle ADMIN non trouvé en base"));
+
+        userRepository.save(User.builder()
+                .email(adminEmail.trim())
+                .password(passwordEncoder.encode(adminPassword))
+                .roles(Set.of(adminRole))
+                .etablissement(etablissement)
+                .build());
+
+        mailService.notifierEtablissementValide(adminEmail.trim(), etablissement.getNom());
+        return etablissement;
+    }
+
     /** Clé kiosque QR aléatoire (autorise l'affichage du QR de ce tenant — C4). */
     private String genererKioskKey() {
         return java.util.UUID.randomUUID().toString().replace("-", "");

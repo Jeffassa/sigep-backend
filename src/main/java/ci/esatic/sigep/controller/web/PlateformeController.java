@@ -12,6 +12,7 @@ import ci.esatic.sigep.repository.PaiementRepository;
 import ci.esatic.sigep.repository.UserRepository;
 import ci.esatic.sigep.service.AbonnementService;
 import ci.esatic.sigep.service.MailService;
+import ci.esatic.sigep.service.OnboardingService;
 import ci.esatic.sigep.service.SuppressionEtablissementService;
 import ci.esatic.sigep.tenant.plan.PlanService;
 import lombok.RequiredArgsConstructor;
@@ -57,6 +58,7 @@ public class PlateformeController {
     private final UserRepository userRepository;
     private final AbonnementService abonnementService;
     private final MailService mailService;
+    private final OnboardingService onboardingService;
     private final PlanService planService;
     private final SuppressionEtablissementService suppressionEtablissementService;
     private final PaiementRepository paiementRepository;
@@ -197,6 +199,40 @@ public class PlateformeController {
         model.addAttribute("paiements", paiementRepository.findByEtablissementIdOrderByDatePaiementDesc(e.getId()));
         model.addAttribute("totalPaye", paiementRepository.totalParEtablissement(e.getId()));
         return "plateforme/etablissement";
+    }
+
+    /** Formulaire de création directe d'un établissement (super-admin). */
+    @GetMapping("/etablissements/nouveau")
+    public String nouveauEtablissementForm(Model model) {
+        model.addAttribute("plans", Plan.values());
+        return "plateforme/etablissement-nouveau";
+    }
+
+    /** Création directe d'un établissement (VALIDE, actif) + son premier administrateur. */
+    @PostMapping("/etablissements/creer")
+    public String creerEtablissement(@RequestParam String nom,
+                                     @RequestParam String adminEmail,
+                                     @RequestParam String adminPassword,
+                                     @RequestParam(required = false) String adminNom,
+                                     @RequestParam(required = false) String adminPrenom,
+                                     @RequestParam(required = false) Plan plan,
+                                     RedirectAttributes ra) {
+        if (nom == null || nom.isBlank() || adminEmail == null || adminEmail.isBlank()
+                || adminPassword == null || adminPassword.length() < 8) {
+            ra.addFlashAttribute("erreur",
+                    "Nom de l'établissement, e-mail admin et mot de passe (≥ 8 caractères) sont requis.");
+            return "redirect:/plateforme/etablissements/nouveau";
+        }
+        try {
+            Etablissement e = onboardingService.creerParSuperAdmin(
+                    nom, adminEmail.trim(), adminPassword, adminNom, adminPrenom, plan);
+            ra.addFlashAttribute("ok", "« " + e.getNom() + " » créé et activé (plan " + e.getPlan()
+                    + "). L'administrateur peut se connecter : " + adminEmail.trim() + ".");
+            return "redirect:/plateforme/etablissements/" + e.getSlug();
+        } catch (IllegalArgumentException ex) {
+            ra.addFlashAttribute("erreur", ex.getMessage());
+            return "redirect:/plateforme/etablissements/nouveau";
+        }
     }
 
     /** Suspendre / réactiver l'accès d'un établissement. */
