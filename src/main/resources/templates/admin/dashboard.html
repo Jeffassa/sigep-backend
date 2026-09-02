@@ -52,19 +52,18 @@
 
     <!-- Graphe + Activités -->
     <section class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <!-- Graphe -->
+        <!-- Tendance d'émargement (6 semaines) -->
         <div class="lg:col-span-2 glass rounded-3xl p-7 flex flex-col" data-reveal>
-            <div class="flex items-center justify-between mb-7">
+            <div class="flex items-center justify-between mb-5">
                 <div>
-                    <h2 class="font-serif text-[24px] leading-none">Tendances hebdomadaires</h2>
-                    <p class="text-[13px] text-muted mt-1">Présence confirmée · lundi → samedi</p>
+                    <h2 class="font-serif text-[24px] leading-none">Tendance d'émargement</h2>
+                    <p class="text-[13px] text-muted mt-1">Taux de présence · 6 dernières semaines</p>
                 </div>
                 <span class="glass px-3 py-1 rounded-full font-mono text-[10px] uppercase tracking-wider text-muted flex items-center gap-1.5">
                     <span class="w-1.5 h-1.5 rounded-full bg-ink inline-block" style="animation:rise 1s infinite alternate"></span>Live
                 </span>
             </div>
-            <!-- Courbe (SVG) tracée par JS : 1er rendu via le poll immédiat de /admin/api/stats -->
-            <div id="chartTrend" class="flex-grow w-full h-60"></div>
+            <div id="chartLine" class="flex-grow w-full" style="min-height:260px"></div>
         </div>
 
         <!-- Activités récentes -->
@@ -96,39 +95,21 @@
         </div>
     </section>
 
-    <!-- Tendance multi-semaines + Classement des enseignants -->
-    <section class="grid grid-cols-1 lg:grid-cols-3 gap-5 mt-5">
-        <!-- Tendance 6 dernières semaines -->
-        <div class="lg:col-span-2 glass rounded-3xl p-7" data-reveal>
-            <h2 class="font-serif text-[24px] leading-none mb-1">Tendance · 6 dernières semaines</h2>
-            <p class="text-[13px] text-muted mb-7">Taux d'émargement par semaine</p>
-            <div class="flex items-end gap-3 md:gap-5 h-52">
-                <div th:each="s : ${tendanceSemaines}" class="flex-grow flex flex-col items-center justify-end h-full">
-                    <span class="font-mono text-[10px] text-muted mb-1" th:text="${#numbers.formatDecimal(s.taux,1,0)} + '%'">0%</span>
-                    <div class="w-full rounded-t-xl transition-all duration-700"
-                         th:style="'height:' + ${s.taux > 3 ? s.taux : 3} + '%; background:linear-gradient(180deg,var(--c-bar1),var(--c-bar2));'"></div>
-                    <span class="mt-2.5 font-mono text-[10px] text-muted" th:text="${s.label}">--</span>
-                </div>
-            </div>
+    <!-- Profil hebdomadaire (radar) + Classement des enseignants (barres) -->
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-5">
+        <!-- Profil de la semaine (radar Lun→Sam) -->
+        <div class="glass rounded-3xl p-7" data-reveal>
+            <h2 class="font-serif text-[24px] leading-none mb-1">Profil de la semaine</h2>
+            <p class="text-[13px] text-muted mb-2">Taux d'émargement par jour · lundi → samedi</p>
+            <div id="chartRadar" class="w-full" style="height:300px"></div>
         </div>
 
-        <!-- Classement par assiduité -->
+        <!-- Classement par assiduité (barres horizontales) -->
         <div class="glass rounded-3xl p-7 flex flex-col" data-reveal>
             <h2 class="font-serif text-[24px] leading-none mb-1">Classement</h2>
-            <p class="text-[13px] text-muted mb-5">Assiduité · 30 derniers jours</p>
-            <div class="space-y-1.5 overflow-y-auto max-h-[340px] -mx-1 px-1">
-                <p th:if="${classement.isEmpty()}" class="text-[14px] text-muted py-10 text-center">Aucune donnée.</p>
-                <div th:each="c,st : ${classement}" class="flex items-center gap-3 p-2.5 rounded-2xl hover:bg-black/5 transition">
-                    <span class="font-mono text-[12px] text-muted w-5 text-right" th:text="${st.count}">1</span>
-                    <div class="min-w-0 flex-grow">
-                        <p class="text-[13px] font-medium truncate" th:text="${c.nom}">Nom</p>
-                        <div class="h-1.5 mt-1 rounded-full bg-black/10 overflow-hidden">
-                            <div class="h-full rounded-full bg-ink" th:style="'width:' + ${c.taux} + '%'"></div>
-                        </div>
-                    </div>
-                    <span class="font-mono text-[12px] whitespace-nowrap" th:text="${#numbers.formatDecimal(c.taux,1,0)} + '%'">0%</span>
-                </div>
-            </div>
+            <p class="text-[13px] text-muted mb-2">Assiduité par enseignant · 30 derniers jours</p>
+            <div id="chartRanking" class="w-full" style="height:300px"></div>
+            <p th:if="${classement.isEmpty()}" class="text-[14px] text-muted py-8 text-center">Aucune donnée.</p>
         </div>
     </section>
 </main>
@@ -137,55 +118,92 @@
 <div th:replace="~{admin/fragments :: palette}"></div>
 <div th:replace="~{admin/fragments :: scripts}"></div>
 
-<script th:inline="none">
+<!-- ECharts (data-viz du tableau de bord établissement) — chargé uniquement ici -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.6.0/echarts.min.js"></script>
+<script th:inline="javascript">
+/*<![CDATA[*/
 (function () {
-    const JOURS = ['Lun','Mar','Mer','Jeu','Ven','Sam'];
-    const setText = (id, v) => { const e = document.getElementById(id); if (e && e.textContent !== String(v)) e.textContent = v; };
-    function renderCurve(t) {
-        const c = document.getElementById('chartTrend');
-        if (!c || !Array.isArray(t) || !t.length) return;
-        window.__lastTaux = t;
-        const W = c.clientWidth || 600, H = c.clientHeight || 240, pad = 26, n = t.length;
-        const X = i => pad + (W - 2 * pad) * (n === 1 ? 0.5 : i / (n - 1));
-        const Y = v => (H - pad) - (H - 2 * pad) * (Math.max(0, Math.min(100, Number(v) || 0)) / 100);
-        const pts = t.map((v, i) => [X(i), Y(v)]);
-        // Courbe lissée (Catmull-Rom -> Bézier cubique)
-        let line = 'M' + pts[0][0].toFixed(1) + ',' + pts[0][1].toFixed(1);
-        for (let i = 0; i < pts.length - 1; i++) {
-            const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
-            const c1x = p1[0] + (p2[0] - p0[0]) / 6, c1y = p1[1] + (p2[1] - p0[1]) / 6;
-            const c2x = p2[0] - (p3[0] - p1[0]) / 6, c2y = p2[1] - (p3[1] - p1[1]) / 6;
-            line += ' C' + c1x.toFixed(1) + ',' + c1y.toFixed(1) + ' ' + c2x.toFixed(1) + ',' + c2y.toFixed(1) + ' ' + p2[0].toFixed(1) + ',' + p2[1].toFixed(1);
-        }
-        const area = line + ' L' + X(n - 1).toFixed(1) + ',' + (H - pad) + ' L' + X(0).toFixed(1) + ',' + (H - pad) + ' Z';
-        const dots = pts.map(p => '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="3.5" fill="currentColor"/>').join('');
-        const vlab = pts.map((p, i) => '<text x="' + p[0].toFixed(1) + '" y="' + (p[1] - 10).toFixed(1) + '" text-anchor="middle" font-size="10" fill="currentColor" font-family="JetBrains Mono,monospace">' + (Math.round((Number(t[i]) || 0) * 10) / 10) + '%</text>').join('');
-        const dlab = pts.map((p, i) => '<text x="' + p[0].toFixed(1) + '" y="' + (H - 6) + '" text-anchor="middle" font-size="11" fill="currentColor" fill-opacity="0.55" font-family="JetBrains Mono,monospace">' + (JOURS[i] || '') + '</text>').join('');
-        c.innerHTML = '<svg width="100%" height="100%" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" style="display:block;overflow:visible;color:var(--c-bar1)">'
-            + '<defs><linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="currentColor" stop-opacity="0.16"/><stop offset="100%" stop-color="currentColor" stop-opacity="0"/></linearGradient></defs>'
-            + '<path d="' + area + '" fill="url(#trendFill)"/>'
-            + '<path d="' + line + '" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>'
-            + dots + vlab + dlab + '</svg>';
+    // ---- KPIs en direct (poll léger toutes les 5 s) ----
+    var setText = function (id, v) { var e = document.getElementById(id); if (e && e.textContent !== String(v)) e.textContent = String(v); };
+    setInterval(function () {
+        fetch('/admin/api/stats', { credentials:'same-origin', headers:{'Accept':'application/json'} })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (s) { if (!s) return;
+                setText('kpiTotalEnseignants', s.totalEnseignants);
+                setText('kpiTaux', s.tauxEmargement);
+                setText('kpiRattrapages', s.rattrapagesEnAttente);
+                setText('kpiHeures', s.heuresEffectuees);
+                setText('apercuRattrapages', s.rattrapagesEnAttente);
+                var w = document.getElementById('apercuRattrapagesWrap');
+                if (w) w.style.display = (Number(s.rattrapagesEnAttente) || 0) > 0 ? '' : 'none';
+                if (window.__updateRadar && Array.isArray(s.tauxParJour)) window.__updateRadar(s.tauxParJour);
+            }).catch(function () {});
+    }, 5000);
+
+    if (!window.echarts) return;
+    var root = document.documentElement, GOLD = '#d4af37', DUR = 1100, EASE = 'cubicInOut';
+    var JOURS = ['Lun','Mar','Mer','Jeu','Ven','Sam'];
+    var DATA = {
+        semaines:   /*[[${tendanceSemaines}]]*/ [],
+        jour:       /*[[${tauxParJour}]]*/ [],
+        classement: /*[[${classement}]]*/ []
+    };
+    var css = function (n) { return getComputedStyle(root).getPropertyValue(n).trim(); };
+    function pal() { return { ink:css('--c-ink'), muted:css('--c-muted'), line:css('--c-line'), grey:css('--c-bar2'), surface:css('--c-surface'), bg:css('--c-bg') }; }
+    function toRgb(h) { h=h.replace('#',''); if(h.length===3) h=h.split('').map(function(c){return c+c;}).join(''); return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)]; }
+    function rgba(h,a) { var c=toRgb(h); return 'rgba('+c[0]+','+c[1]+','+c[2]+','+a+')'; }
+    function tip(p) { return { backgroundColor:p.surface, borderColor:p.line, borderWidth:1, textStyle:{color:p.ink,fontFamily:'JetBrains Mono, monospace',fontSize:12}, extraCssText:'border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.15);backdrop-filter:blur(8px);' }; }
+
+    var elLine=document.getElementById('chartLine'), elRadar=document.getElementById('chartRadar'), elRank=document.getElementById('chartRanking');
+    var line = elLine && echarts.init(elLine);
+    var radar = elRadar && echarts.init(elRadar);
+    var rank = elRank && echarts.init(elRank);
+
+    function buildLine() {
+        if (!line) return; var p = pal();
+        var lbls = (DATA.semaines||[]).map(function(s){return s.label;});
+        var vals = (DATA.semaines||[]).map(function(s){return s.taux;});
+        line.setOption({ animationDuration:DUR, animationEasing:EASE, animationDelay:function(i){return i*80;},
+            grid:{left:6,right:14,top:24,bottom:6,containLabel:true},
+            tooltip:Object.assign({trigger:'axis',valueFormatter:function(v){return v+'%';},axisPointer:{lineStyle:{color:p.muted,type:'dashed'}}}, tip(p)),
+            xAxis:{type:'category',data:lbls,boundaryGap:false,axisTick:{show:false},axisLine:{lineStyle:{color:p.line}},axisLabel:{color:p.muted,fontFamily:'JetBrains Mono, monospace',fontSize:11}},
+            yAxis:{type:'value',min:0,max:100,splitNumber:4,axisLine:{show:false},axisTick:{show:false},axisLabel:{color:p.muted,fontFamily:'JetBrains Mono, monospace',fontSize:11,formatter:'{value}%'},splitLine:{lineStyle:{color:p.line,type:'dashed'}}},
+            series:[{name:'Taux',type:'line',smooth:.5,showSymbol:false,z:3,lineStyle:{color:p.ink,width:2.6},
+                areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:rgba(p.ink,.20)},{offset:1,color:rgba(p.ink,0)}])},
+                markPoint:{symbol:'circle',symbolSize:9,itemStyle:{color:p.ink,borderColor:p.bg,borderWidth:2},label:{show:false},data:vals.length?[{coord:[lbls.length-1,vals[vals.length-1]]}]:[]},
+                data:vals}]}, true);
     }
-    async function refresh() {
-        try {
-            const r = await fetch('/admin/api/stats', { credentials:'same-origin', headers:{'Accept':'application/json'} });
-            if (!r.ok) return;
-            const s = await r.json();
-            setText('kpiTotalEnseignants', s.totalEnseignants);
-            setText('kpiTaux', s.tauxEmargement);
-            setText('kpiRattrapages', s.rattrapagesEnAttente);
-            setText('kpiHeures', s.heuresEffectuees);
-            setText('apercuRattrapages', s.rattrapagesEnAttente);
-            const w = document.getElementById('apercuRattrapagesWrap');
-            if (w) w.style.display = (Number(s.rattrapagesEnAttente)||0) > 0 ? '' : 'none';
-            renderCurve(s.tauxParJour);
-        } catch (e) {}
+    function buildRadar(vals) {
+        if (!radar) return; var p = pal(); vals = vals || DATA.jour || [];
+        radar.setOption({ animationDuration:DUR, animationEasing:EASE,
+            tooltip:Object.assign({},tip(p)),
+            radar:{indicator:JOURS.map(function(j){return {name:j,max:100};}),center:['50%','54%'],radius:'66%',
+                axisName:{color:p.muted,fontFamily:'JetBrains Mono, monospace',fontSize:11},
+                splitLine:{lineStyle:{color:p.line}},splitArea:{areaStyle:{color:['transparent',rgba(p.ink,.03)]}},axisLine:{lineStyle:{color:p.line}}},
+            series:[{type:'radar',data:[{value:JOURS.map(function(_,i){return Math.round((+vals[i]||0)*10)/10;}),name:'Taux %',
+                areaStyle:{color:rgba(GOLD,.18)},lineStyle:{color:GOLD,width:2},itemStyle:{color:GOLD},symbol:'circle',symbolSize:5}]}]}, true);
     }
-    renderCurve(window.__tauxInit || []);   // 1er rendu immédiat avec les données serveur
-    window.addEventListener('resize', () => renderCurve(window.__lastTaux || window.__tauxInit || []));
-    setInterval(refresh, 1000); refresh();
+    window.__updateRadar = function (v) { buildRadar(v); };
+    function buildRank() {
+        if (!rank) return; var p = pal();
+        var arr = (DATA.classement||[]).slice(0,8).reverse();   // meilleur en haut
+        var noms = arr.map(function(c){return c.nom;});
+        var vals = arr.map(function(c){return c.taux;});
+        rank.setOption({ animationDuration:DUR, animationEasing:EASE, animationDelay:function(i){return i*60;},
+            grid:{left:6,right:38,top:8,bottom:6,containLabel:true},
+            tooltip:Object.assign({trigger:'item',formatter:function(x){return x.name+' · <b>'+x.value+'%</b>';}}, tip(p)),
+            xAxis:{type:'value',min:0,max:100,axisLine:{show:false},axisTick:{show:false},splitLine:{lineStyle:{color:p.line,type:'dashed'}},axisLabel:{color:p.muted,fontFamily:'JetBrains Mono, monospace',fontSize:10,formatter:'{value}%'}},
+            yAxis:{type:'category',data:noms,axisTick:{show:false},axisLine:{show:false},axisLabel:{color:p.ink,fontSize:12,width:120,overflow:'truncate'}},
+            series:[{type:'bar',barWidth:'58%',
+                data:vals.map(function(v){return {value:v,itemStyle:{color:(v>=75?p.ink:(v>=50?p.grey:rgba(p.ink,.35))),borderRadius:[0,6,6,0]}};}),
+                label:{show:true,position:'right',color:p.muted,fontFamily:'JetBrains Mono, monospace',fontSize:11,formatter:'{c}%'}}]}, true);
+    }
+    function buildAll() { buildLine(); buildRadar(); buildRank(); }
+    buildAll();
+    window.addEventListener('resize', function () { line&&line.resize(); radar&&radar.resize(); rank&&rank.resize(); });
+    new MutationObserver(buildAll).observe(root, { attributes:true, attributeFilter:['class'] });
 })();
+/*]]>*/
 </script>
 
 </body>
