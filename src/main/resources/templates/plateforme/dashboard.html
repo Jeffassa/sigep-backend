@@ -112,6 +112,37 @@
         </div>
     </section>
 
+    <!-- Synthèse graphique (données réelles du système) -->
+    <section class="mb-8" data-reveal>
+        <div class="glass rounded-3xl overflow-hidden mb-5">
+            <div class="px-7 py-5 border-b border-line flex items-center gap-2.5">
+                <span class="material-symbols-rounded">show_chart</span>
+                <h2 class="font-serif text-[22px]">Revenus &amp; croissance</h2>
+                <span class="ml-auto font-mono text-[10px] uppercase tracking-wider text-muted">8 derniers mois</span>
+            </div>
+            <div class="p-3 pt-4"><div id="chartLine" style="height:340px;width:100%"></div></div>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <div class="glass rounded-3xl overflow-hidden">
+                <div class="px-7 py-5 border-b border-line flex items-center gap-2.5">
+                    <span class="material-symbols-rounded">donut_large</span>
+                    <h2 class="font-serif text-[22px]">Répartition par plan</h2>
+                    <span class="ml-auto font-mono text-[11px] px-2.5 py-1 rounded-full glass"
+                          th:text="${nbEtablissements} + ' clients'">0</span>
+                </div>
+                <div class="p-3 pt-4"><div id="chartDonut" style="height:300px;width:100%"></div></div>
+                <div id="donutLegend" class="flex flex-wrap gap-x-5 gap-y-2 justify-center pb-5 pt-1"></div>
+            </div>
+            <div class="glass rounded-3xl overflow-hidden">
+                <div class="px-7 py-5 border-b border-line flex items-center gap-2.5">
+                    <span class="material-symbols-rounded">filter_alt</span>
+                    <h2 class="font-serif text-[22px]">Entonnoir d'onboarding</h2>
+                </div>
+                <div class="p-3 pt-4"><div id="chartFunnel" style="height:320px;width:100%"></div></div>
+            </div>
+        </div>
+    </section>
+
     <!-- Liste des établissements -->
     <section class="glass rounded-3xl overflow-hidden" data-reveal>
         <div class="px-7 py-5 border-b border-line flex flex-wrap items-center gap-3">
@@ -180,6 +211,126 @@
 </main>
 
 <div th:replace="~{admin/fragments :: scripts}"></div>
+
+<!-- ECharts (data-viz de la vue d'ensemble) — chargé uniquement ici -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.6.0/echarts.min.js"></script>
+<script th:inline="javascript">
+/*<![CDATA[*/
+(function () {
+    if (!window.echarts) return;
+    var root = document.documentElement;
+    var DATA = {
+        mois:     /*[[${moisLabels}]]*/ [],
+        encaisse: /*[[${encaisseParMois}]]*/ [],
+        nouveaux: /*[[${nouveauxParMois}]]*/ [],
+        planNoms: /*[[${planNoms}]]*/ [],
+        planVals: /*[[${planValeurs}]]*/ [],
+        funNoms:  /*[[${funnelNoms}]]*/ [],
+        funVals:  /*[[${funnelValeurs}]]*/ []
+    };
+    var GOLD = '#d4af37', DUR = 1100, EASE = 'cubicInOut';
+    var css = function (n) { return getComputedStyle(root).getPropertyValue(n).trim(); };
+    function pal() { return {
+        ink: css('--c-ink'), muted: css('--c-muted'), line: css('--c-line'),
+        grey: css('--c-bar2'), surface: css('--c-surface'), bg: css('--c-bg')
+    }; }
+    function toRgb(h) { h = h.replace('#',''); if (h.length === 3) h = h.split('').map(function(c){return c+c;}).join('');
+        return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)]; }
+    function rgba(h,a) { var c = toRgb(h); return 'rgba('+c[0]+','+c[1]+','+c[2]+','+a+')'; }
+    function mix(a,b,t) { var A=toRgb(a),B=toRgb(b); return 'rgb('+A.map(function(v,i){return Math.round(v+(B[i]-v)*t);}).join(',')+')'; }
+    function kfmt(v) { return v >= 1000 ? Math.round(v/1000)+'k' : v; }
+
+    var line = echarts.init(document.getElementById('chartLine'));
+    var donut = echarts.init(document.getElementById('chartDonut'));
+    var funnel = echarts.init(document.getElementById('chartFunnel'));
+
+    function tip(p) { return { backgroundColor:p.surface, borderColor:p.line, borderWidth:1,
+        textStyle:{color:p.ink, fontFamily:'JetBrains Mono, monospace', fontSize:12},
+        extraCssText:'border-radius:12px; box-shadow:0 10px 40px rgba(0,0,0,.15); backdrop-filter:blur(8px);' }; }
+
+    function buildLine() {
+        var p = pal(), enc = DATA.encaisse || [], nouv = DATA.nouveaux || [], mois = DATA.mois || [];
+        var moy = enc.length ? Math.round(enc.reduce(function(s,x){return s+(+x||0);},0)/enc.length) : 0;
+        line.setOption({
+            animationDuration:DUR, animationEasing:EASE, animationDelay:function(i){return i*70;},
+            grid:{left:6,right:12,top:26,bottom:6,containLabel:true},
+            tooltip:Object.assign({trigger:'axis',axisPointer:{type:'line',lineStyle:{color:p.muted,type:'dashed'}}}, tip(p)),
+            xAxis:{type:'category',data:mois,boundaryGap:false,axisTick:{show:false},
+                axisLine:{lineStyle:{color:p.line}}, axisLabel:{color:p.muted,fontFamily:'JetBrains Mono, monospace',fontSize:11}},
+            yAxis:[
+                {type:'value',position:'left',splitNumber:4,axisLine:{show:false},axisTick:{show:false},
+                    axisLabel:{color:p.muted,fontFamily:'JetBrains Mono, monospace',fontSize:11,formatter:function(v){return kfmt(v);}},
+                    splitLine:{lineStyle:{color:p.line,type:'dashed'}}},
+                {type:'value',position:'right',splitNumber:4,axisLine:{show:false},axisTick:{show:false},splitLine:{show:false},
+                    axisLabel:{color:p.muted,fontFamily:'JetBrains Mono, monospace',fontSize:11}}
+            ],
+            series:[
+                {name:'Encaissé (FCFA)',type:'line',smooth:.5,showSymbol:false,z:3,
+                    lineStyle:{color:p.ink,width:2.4},
+                    areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:rgba(p.ink,.20)},{offset:1,color:rgba(p.ink,0)}])},
+                    markLine:{silent:true,symbol:'none',lineStyle:{color:p.muted,type:'dashed',width:1},
+                        label:{show:true,position:'insideEndTop',color:p.muted,fontFamily:'JetBrains Mono, monospace',fontSize:10,formatter:'moy. '+kfmt(moy)},
+                        data:[{yAxis:moy}]},
+                    markPoint:{symbol:'circle',symbolSize:9,itemStyle:{color:p.ink,borderColor:p.bg,borderWidth:2},label:{show:false},
+                        data: enc.length ? [{coord:[mois.length-1, enc[enc.length-1]]}] : []},
+                    data:enc},
+                {name:'Nouveaux établissements',type:'line',yAxisIndex:1,smooth:.5,showSymbol:false,z:2,
+                    lineStyle:{color:GOLD,width:2.4,type:[6,4]}, itemStyle:{color:GOLD},
+                    markPoint:{symbol:'circle',symbolSize:8,itemStyle:{color:GOLD,borderColor:p.bg,borderWidth:2},label:{show:false},
+                        data: nouv.length ? [{coord:[mois.length-1, nouv[nouv.length-1]]}] : []},
+                    data:nouv}
+            ]
+        }, true);
+    }
+    function buildDonut() {
+        var p = pal(), colors = [p.ink, GOLD, p.grey];
+        var noms = DATA.planNoms || [], vals = DATA.planVals || [];
+        var total = vals.reduce(function(s,x){return s+(+x||0);},0);
+        donut.setOption({
+            animationDuration:DUR, animationEasing:EASE, animationDelay:function(i){return i*120;},
+            color:colors,
+            tooltip:Object.assign({trigger:'item',formatter:function(x){return x.name+' · <b>'+x.value+'</b> ('+x.percent+'%)';}}, tip(p)),
+            series:[{type:'pie',radius:['60%','84%'],center:['50%','50%'],padAngle:3,minAngle:4,avoidLabelOverlap:true,
+                label:{show:false},labelLine:{show:false},
+                itemStyle:{borderRadius:7,borderColor:p.bg,borderWidth:3},
+                emphasis:{scale:true,scaleSize:9,itemStyle:{shadowBlur:16,shadowColor:rgba(p.ink,.18)}},
+                data:noms.map(function(n,i){return {name:n,value:(+vals[i]||0)};})}],
+            graphic:[
+                {type:'text',left:'center',top:'42%',style:{text:String(total),fill:p.ink,fontFamily:'Instrument Serif, serif',fontSize:46}},
+                {type:'text',left:'center',top:'59%',style:{text:'CLIENTS',fill:p.muted,fontFamily:'JetBrains Mono, monospace',fontSize:10,fontWeight:600}}
+            ]
+        }, true);
+        var lg = document.getElementById('donutLegend');
+        if (lg) lg.innerHTML = noms.map(function(n,i){
+            return '<span class="inline-flex items-center gap-2 text-[12px]">'
+                + '<span style="width:10px;height:10px;border-radius:3px;background:'+colors[i]+'"></span>'
+                + '<span class="font-mono font-bold" style="font-variant-numeric:tabular-nums">'+(+vals[i]||0)+'</span>'
+                + '<span class="text-muted">'+n+'</span></span>';
+        }).join('');
+    }
+    function buildFunnel() {
+        var p = pal(), noms = DATA.funNoms || [], vals = DATA.funVals || [];
+        var max = vals.length ? (+vals[0]||0) : 0; if (max <= 0) max = 1;
+        funnel.setOption({
+            animationDuration:DUR, animationEasing:EASE, animationDelay:function(i){return i*120;},
+            tooltip:Object.assign({trigger:'item',formatter:function(x){return x.name+' · <b>'+x.value+'</b> ('+Math.round(x.value/max*100)+'%)';}}, tip(p)),
+            series:[{type:'funnel',top:14,bottom:14,left:'8%',right:'8%',min:0,max:max,minSize:'26%',maxSize:'100%',
+                sort:'descending',gap:4,funnelAlign:'center',
+                label:{position:'inside',color:p.bg,fontFamily:'JetBrains Mono, monospace',fontSize:12,fontWeight:600,
+                    formatter:function(x){return x.name+'  '+x.value+'  ·  '+Math.round(x.value/max*100)+'%';}},
+                labelLine:{show:false}, itemStyle:{borderWidth:0,borderRadius:6}, emphasis:{label:{fontSize:13}},
+                data:noms.map(function(n,i){ var t = noms.length>1 ? i/(noms.length-1) : 0;
+                    return {name:n,value:(+vals[i]||0),itemStyle:{color:mix(p.ink,GOLD,t)}}; })}]
+        }, true);
+    }
+    function buildAll() { buildLine(); buildDonut(); buildFunnel(); }
+    buildAll();
+    window.addEventListener('resize', function(){ line.resize(); donut.resize(); funnel.resize(); });
+    // Suivre le thème clair/sombre de l'app (bascule via la classe .dark sur <html>).
+    new MutationObserver(buildAll).observe(root, {attributes:true, attributeFilter:['class']});
+})();
+/*]]>*/
+</script>
 
 </body>
 </html>
