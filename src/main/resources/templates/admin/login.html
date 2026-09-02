@@ -69,9 +69,13 @@
                 <div class="relative">
                     <span class="material-symbols-rounded absolute left-3.5 top-1/2 -translate-y-1/2 text-muted text-[20px]">lock</span>
                     <input id="password" name="password" type="password" required
-                           class="w-full h-12 pl-11 pr-4 rounded-xl bg-white/60 border border-line text-ink
+                           class="w-full h-12 pl-11 pr-12 rounded-xl bg-white/60 border border-line text-ink
                                   focus:outline-none focus:border-ink focus:ring-1 focus:ring-ink transition"
                            placeholder="••••••••"/>
+                    <button type="button" id="togglePwd" aria-label="Afficher le mot de passe"
+                            class="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-lg flex items-center justify-center text-muted hover:text-ink transition">
+                        <span class="material-symbols-rounded text-[20px]" id="togglePwdIcon">visibility</span>
+                    </button>
                 </div>
             </div>
             <button type="submit"
@@ -86,6 +90,22 @@
         Système Intelligent de Gestion des Enseignements
     </p>
 </main>
+
+<script>
+(function () {
+    var btn = document.getElementById('togglePwd');
+    var inp = document.getElementById('password');
+    var ic  = document.getElementById('togglePwdIcon');
+    if (!btn || !inp || !ic) return;
+    btn.addEventListener('click', function () {
+        var show = inp.type === 'password';
+        inp.type = show ? 'text' : 'password';
+        ic.textContent = show ? 'visibility_off' : 'visibility';
+        btn.setAttribute('aria-label', show ? 'Masquer le mot de passe' : 'Afficher le mot de passe');
+        inp.focus();
+    });
+})();
+</script>
 
 </body>
 </html>
