@@ -29,8 +29,12 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
+import java.time.format.TextStyle;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -126,6 +130,53 @@ public class PlateformeController {
         model.addAttribute("q", q);
         model.addAttribute("fPlan", plan);
         model.addAttribute("fStatut", statut);
+
+        // ===== Données pour les graphiques (data-viz) — toutes issues du système réel =====
+        // Entonnoir d'onboarding : Inscrits → Validés → Actifs → Abonnés (payants, non expirés).
+        long fInscrits = tous.size();
+        long fValides  = tous.stream().filter(e -> e.getStatut() == StatutEtablissement.VALIDE).count();
+        long fActifs   = tous.stream().filter(e -> e.getStatut() == StatutEtablissement.VALIDE && e.isActif()).count();
+        long fAbonnes  = tous.stream().filter(e -> e.getStatut() == StatutEtablissement.VALIDE
+                && e.isActif() && !expires.contains(e.getId())).count();
+        model.addAttribute("funnelNoms", List.of("Inscrits", "Validés", "Actifs", "Abonnés"));
+        model.addAttribute("funnelValeurs", List.of(fInscrits, fValides, fActifs, fAbonnes));
+
+        // Répartition par plan (ordre fixe, 0 si absent).
+        List<String> planNoms = List.of("FREE", "PRO", "ENTERPRISE");
+        model.addAttribute("planNoms", planNoms);
+        model.addAttribute("planValeurs", planNoms.stream().map(n -> parPlan.getOrDefault(n, 0L)).toList());
+
+        // Série sur les 8 derniers mois : encaissements réels + nouveaux établissements.
+        List<YearMonth> derniersMois = new ArrayList<>();
+        YearMonth courant = YearMonth.now();
+        for (int i = 7; i >= 0; i--) derniersMois.add(courant.minusMonths(i));
+
+        Map<YearMonth, Long> encParMois = new HashMap<>();
+        for (var p : paiementRepository.findAllByOrderByDatePaiementDesc()) {
+            if (p.getDatePaiement() != null) {
+                encParMois.merge(YearMonth.from(p.getDatePaiement()), p.getMontant(), Long::sum);
+            }
+        }
+        Map<YearMonth, Long> nouvParMois = new HashMap<>();
+        for (Etablissement e : tous) {
+            if (e.getDateCreation() != null) {
+                nouvParMois.merge(YearMonth.from(e.getDateCreation()), 1L, Long::sum);
+            }
+        }
+        List<String> moisLabels = new ArrayList<>();
+        List<Long> encaisseParMois = new ArrayList<>();
+        List<Long> nouveauxParMois = new ArrayList<>();
+        for (YearMonth m : derniersMois) {
+            String lbl = m.getMonth().getDisplayName(TextStyle.SHORT, Locale.FRENCH).replace(".", "");
+            if (!lbl.isEmpty()) lbl = Character.toUpperCase(lbl.charAt(0)) + lbl.substring(1);
+            moisLabels.add(lbl);
+            encaisseParMois.add(encParMois.getOrDefault(m, 0L));
+            nouveauxParMois.add(nouvParMois.getOrDefault(m, 0L));
+        }
+        model.addAttribute("moisLabels", moisLabels);
+        model.addAttribute("encaisseParMois", encaisseParMois);
+        model.addAttribute("nouveauxParMois", nouveauxParMois);
+
         return "plateforme/dashboard";
     }
 
