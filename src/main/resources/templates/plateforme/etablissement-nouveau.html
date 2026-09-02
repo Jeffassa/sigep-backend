@@ -55,8 +55,14 @@
                 </div>
                 <div>
                     <label for="adminPassword" class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Mot de passe (≥ 8 car.)</label>
-                    <input id="adminPassword" name="adminPassword" type="password" required minlength="8" placeholder="••••••••"
-                           class="w-full h-12 px-4 rounded-xl bg-white/60 border border-line text-[15px] focus:border-ink outline-none transition"/>
+                    <div class="relative">
+                        <input id="adminPassword" name="adminPassword" type="password" required minlength="8" placeholder="••••••••"
+                               class="w-full h-12 pl-4 pr-12 rounded-xl bg-white/60 border border-line text-[15px] focus:border-ink outline-none transition"/>
+                        <button type="button" id="togglePwd" aria-label="Afficher le mot de passe"
+                                class="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-lg flex items-center justify-center text-muted hover:text-ink transition">
+                            <span class="material-symbols-rounded text-[20px]" id="togglePwdIcon">visibility</span>
+                        </button>
+                    </div>
                 </div>
                 <div>
                     <label for="adminPrenom" class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Prénom <span class="text-muted/60">(optionnel)</span></label>
@@ -81,6 +87,22 @@
 </main>
 
 <div th:replace="~{admin/fragments :: scripts}"></div>
+
+<script>
+(function () {
+    var btn = document.getElementById('togglePwd');
+    var inp = document.getElementById('adminPassword');
+    var ic  = document.getElementById('togglePwdIcon');
+    if (!btn || !inp || !ic) return;
+    btn.addEventListener('click', function () {
+        var show = inp.type === 'password';
+        inp.type = show ? 'text' : 'password';
+        ic.textContent = show ? 'visibility_off' : 'visibility';
+        btn.setAttribute('aria-label', show ? 'Masquer le mot de passe' : 'Afficher le mot de passe');
+        inp.focus();
+    });
+})();
+</script>
 
 </body>
 </html>
