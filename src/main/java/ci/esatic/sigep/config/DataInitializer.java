@@ -68,6 +68,7 @@ public class DataInitializer implements CommandLineRunner {
                     .slug(SLUG_DEFAUT)
                     .plan(Plan.ENTERPRISE)   // établissement « propriétaire » : accès complet
                     .maxEnseignants(0)        // 0 = illimité
+                    .kioskKey(genererKioskKey())  // C4 : clé kiosque QR d'émargement dès la création
                     .build();
             e = etablissementRepository.save(e);
             log.info("Établissement par défaut créé (slug={})", SLUG_DEFAUT);
@@ -138,6 +139,7 @@ public class DataInitializer implements CommandLineRunner {
                         .slug(SLUG_PLATEFORME)
                         .plan(Plan.ENTERPRISE)
                         .maxEnseignants(0)
+                        .kioskKey(genererKioskKey())
                         .build()));
 
         Role superRole = roleRepository.findByName(ERole.ROLE_SUPER_ADMIN).orElseThrow();
@@ -179,5 +181,10 @@ public class DataInitializer implements CommandLineRunner {
         byte[] bytes = new byte[24];
         new SecureRandom().nextBytes(bytes);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
+    /** Clé kiosque QR aléatoire (autorise l'affichage du QR d'émargement de ce tenant — C4). */
+    private String genererKioskKey() {
+        return java.util.UUID.randomUUID().toString().replace("-", "");
     }
 }
