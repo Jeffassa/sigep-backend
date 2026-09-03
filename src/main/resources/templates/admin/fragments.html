@@ -6,6 +6,8 @@
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
     <title th:text="${pageTitle}">SIGEP</title>
+    <link rel="icon" th:href="@{/favicon.ico}" sizes="any"/>
+    <link rel="apple-touch-icon" th:href="@{/images/logo_sigep.png}"/>
     <!-- SEO -->
     <meta name="description" th:content="${pageDescription} ?: 'SIGEP — logiciel de gestion des émargements et du temps d’enseignement pour établissements du supérieur.'"/>
     <meta name="robots" content="index,follow"/>
@@ -45,8 +47,8 @@
 <header th:fragment="topbar(active)"
         class="glass sticky top-0 z-50 border-x-0 border-t-0" style="border-radius:0;">
     <div class="max-w-[1240px] mx-auto h-16 px-5 md:px-8 flex items-center justify-between">
-        <a th:href="@{/admin/dashboard}" class="flex items-baseline gap-2 group">
-            <span class="font-serif text-[30px] leading-none tracking-tight" th:text="${marque} ?: 'SIGEP'">SIGEP</span>
+        <a th:href="@{/admin/dashboard}" class="flex items-center gap-2.5 group">
+            <img th:src="@{/images/logo_sigep.png}" alt="" style="width:32px;height:32px;border-radius:9px;flex:none;display:block"/><span class="font-serif text-[30px] leading-none tracking-tight" th:text="${marque} ?: 'SIGEP'">SIGEP</span>
             <span class="hidden sm:inline font-mono text-[10px] uppercase tracking-[0.2em] text-muted mb-[2px]">Solutions de Gestion</span>
         </a>
 
