@@ -52,6 +52,7 @@ class PaiementIntegrationTest {
     @Autowired private UserRepository userRepository;
     @Autowired private RoleRepository roleRepository;
     @Autowired private PaiementRepository paiementRepository;
+    @Autowired private ci.esatic.sigep.tenant.plan.PlanService planService;
     @Autowired private EntityManager em;
 
     private User superAdmin;
@@ -102,12 +103,14 @@ class PaiementIntegrationTest {
 
     @Test
     void montant_absent_utilise_le_tarif_du_plan() throws Exception {
-        // Pas de montant fourni → mois × prix du plan Pro (10 000 FCFA par défaut).
+        // Pas de montant fourni → mois × prix du plan Pro. On lit le tarif CONFIGURÉ plutôt que
+        // de le coder en dur : le test reste valable si la grille tarifaire ou la devise change.
+        long attendu = 2 * planService.prixMensuel(ci.esatic.sigep.entity.Plan.PRO);
         mockMvc.perform(post("/plateforme/abonnements/prolonger").with(user(superAdmin)).with(csrf())
                         .param("slug", cible.getSlug()).param("mois", "2"))
                 .andExpect(status().is3xxRedirection());
         em.flush(); em.clear();
-        assertThat(paiementRepository.totalEncaisse()).isEqualTo(20000L);
+        assertThat(paiementRepository.totalEncaisse()).isEqualTo(attendu);
     }
 
     @Test

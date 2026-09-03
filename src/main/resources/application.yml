@@ -177,9 +177,18 @@ app:
     # C5 : auto-validation des inscriptions self-service. false = validation manuelle par le
     # super-admin (défaut, comportement actuel). true = espace actif immédiatement.
     auto-validation: ${ONBOARDING_AUTO_VALIDATION:false}
+  billing:
+    # Devise de facturation (code ISO en minuscules). SOURCE UNIQUE : sert à l'affichage ET à
+    # Stripe — les deux ne peuvent donc pas diverger. EUR a 2 décimales : la conversion vers
+    # l'unité Stripe (centimes) est automatique (cf. StripeService.versUniteStripe).
+    currency: ${BILLING_CURRENCY:eur}
+    symbole: ${BILLING_SYMBOLE:€}
   plans:
     # Quota d'enseignants du plan FREE (source unique — M1).
     free-max-enseignants: ${FREE_MAX_ENSEIGNANTS:10}
+    # Tarifs mensuels en unité MAJEURE de la devise (ex. 20 = 20 €).
+    pro-price: ${PLAN_PRO_PRICE:20}
+    enterprise-price: ${PLAN_ENTERPRISE_PRICE:146}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:8080,http://localhost:3000}
   admin:
@@ -206,12 +215,12 @@ app:
     mobile-money: ${PLATFORM_MOBILE_MONEY:}
   stripe:
     # Paiement en ligne (Stripe Checkout). Désactivé par défaut : activer avec STRIPE_ENABLED=true
-    # + STRIPE_SECRET_KEY. Le webhook exige STRIPE_WEBHOOK_SECRET. Devise par défaut XOF (sans décimales).
-    # NB : Stripe ne gère pas le Mobile Money en Côte d'Ivoire — mode test (cartes) pour valider le flux.
+    # + STRIPE_SECRET_KEY. Le webhook exige STRIPE_WEBHOOK_SECRET.
+    # La DEVISE n'est PAS définie ici : elle vient de app.billing.currency (source unique),
+    # pour qu'on ne puisse jamais encaisser dans une devise différente de celle affichée.
     enabled: ${STRIPE_ENABLED:false}
     secret-key: ${STRIPE_SECRET_KEY:}
     webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
-    currency: ${STRIPE_CURRENCY:xof}
   mobile-money:
     # Webhook Mobile Money générique (C7). Secret partagé exigé (fail-closed si vide).
     # L'agrégateur (CinetPay/PayDunya/Wave/Orange) poste sur /api/paiement/mobile-money/webhook.

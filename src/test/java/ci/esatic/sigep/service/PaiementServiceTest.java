@@ -27,6 +27,7 @@ class PaiementServiceTest {
     private PaiementRepository paiementRepository;
     private UserRepository userRepository;
     private MailService mailService;
+    private ci.esatic.sigep.tenant.plan.PlanService planService;
     private PaiementService service;
 
     @BeforeEach
@@ -35,8 +36,10 @@ class PaiementServiceTest {
         paiementRepository = Mockito.mock(PaiementRepository.class);
         userRepository = Mockito.mock(UserRepository.class);
         mailService = Mockito.mock(MailService.class);
+        planService = Mockito.mock(ci.esatic.sigep.tenant.plan.PlanService.class);
+        when(planService.devise()).thenReturn("eur");   // devise historisée sur le paiement
         service = new PaiementService(etablissementRepository, paiementRepository,
-                userRepository, new AbonnementService(), mailService);
+                userRepository, new AbonnementService(), mailService, planService);
     }
 
     @Test
@@ -59,6 +62,26 @@ class PaiementServiceTest {
         assertThat(e.getMaxEnseignants()).isZero();
         assertThat(e.getDateExpiration()).isNotNull();
         verify(etablissementRepository).save(e);
+    }
+
+    @Test
+    void paiement_enterprise_appliqueLePlanAchete_etHistoriseLaDevise() {
+        Etablissement e = Etablissement.builder().nom("Y").slug("y").plan(Plan.FREE).maxEnseignants(10).build();
+        e.setId(7L);
+        when(paiementRepository.existsByReference("Stripe ent")).thenReturn(false);
+        when(etablissementRepository.findById(7L)).thenReturn(Optional.of(e));
+        when(userRepository.findFirstByEtablissementIdOrderByIdAsc(7L)).thenReturn(Optional.empty());
+
+        service.enregistrer(7L, 1, 146L, "Stripe ent", "Stripe (en ligne)", Plan.ENTERPRISE, "EUR");
+
+        ArgumentCaptor<Paiement> cap = ArgumentCaptor.forClass(Paiement.class);
+        verify(paiementRepository).saveAndFlush(cap.capture());
+        assertThat(cap.getValue().getPlan()).isEqualTo(Plan.ENTERPRISE);
+        assertThat(cap.getValue().getDevise()).isEqualTo("EUR");
+        assertThat(cap.getValue().getMontant()).isEqualTo(146L);
+        // Le plan acheté est bien appliqué (et non un « toujours PRO » codé en dur).
+        assertThat(e.getPlan()).isEqualTo(Plan.ENTERPRISE);
+        assertThat(e.getMaxEnseignants()).isZero();
     }
 
     @Test

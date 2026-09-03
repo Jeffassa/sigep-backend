@@ -51,7 +51,8 @@ public class AbonnementWebController {
                 var opt = stripeService.recupererSessionPayee(sessionId);
                 if (opt.isPresent() && opt.get().etablissementId().equals(user.getEtablissement().getId())) {
                     var p = opt.get();
-                    stripePaymentService.traiterPaiementReussi(p.etablissementId(), p.mois(), p.montant(), p.reference());
+                    stripePaymentService.traiterPaiementReussi(p.etablissementId(), p.mois(), p.montant(),
+                            p.reference(), p.plan(), p.devise());
                     paiementReconcilie = true;
                 }
             } catch (Exception ex) {
@@ -62,13 +63,21 @@ public class AbonnementWebController {
         model.addAttribute("ownerEmail", ownerEmail);
         model.addAttribute("stripeEnabled", stripeService.isEnabled());
         model.addAttribute("prixPro", planService.prixMensuel(Plan.PRO));
+        model.addAttribute("prixEnterprise", planService.prixMensuel(Plan.ENTERPRISE));
+        model.addAttribute("devise", planService.devise().toUpperCase());
+        model.addAttribute("symbole", planService.symbole());
+        model.addAttribute("plansPayants", planService.plansPayants());
         model.addAttribute("paiementReconcilie", paiementReconcilie);
         return "admin/abonnement";
     }
 
-    /** Paiement en ligne : crée une session Stripe Checkout et redirige vers la page de paiement. */
+    /**
+     * Paiement en ligne : crée une session Stripe Checkout pour le PLAN choisi et redirige.
+     * Le montant est toujours recalculé côté serveur (jamais fourni par le client).
+     */
     @PostMapping("/admin/abonnement/payer")
     public String payer(@AuthenticationPrincipal User user,
+                        @RequestParam(defaultValue = "PRO") String plan,
                         @RequestParam(defaultValue = "1") int mois,
                         RedirectAttributes ra) {
         if (!stripeService.isEnabled()) {
@@ -80,10 +89,20 @@ public class AbonnementWebController {
             ra.addFlashAttribute("erreurAbo", "Compte sans établissement.");
             return "redirect:/admin/abonnement";
         }
-        int m = Math.max(1, mois);
-        long montant = (long) m * planService.prixMensuel(Plan.PRO);
+        Plan choisi;
         try {
-            return "redirect:" + stripeService.creerSessionCheckout(e, m, montant, user.getEmail());
+            choisi = Plan.valueOf(plan == null ? "PRO" : plan.trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            choisi = Plan.PRO;
+        }
+        if (!planService.estAchetable(choisi)) {
+            ra.addFlashAttribute("erreurAbo", "Ce plan n'est pas disponible à l'achat en ligne.");
+            return "redirect:/admin/abonnement";
+        }
+        int m = Math.max(1, mois);
+        long montant = (long) m * planService.prixMensuel(choisi);   // recalculé serveur
+        try {
+            return "redirect:" + stripeService.creerSessionCheckout(e, choisi, m, montant, user.getEmail());
         } catch (Exception ex) {
             log.error("Création session Stripe échouée : {}", ex.getMessage());
             ra.addFlashAttribute("erreurAbo", "Paiement en ligne indisponible. Réessayez plus tard.");

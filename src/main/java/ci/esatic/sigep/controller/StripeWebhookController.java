@@ -67,22 +67,33 @@ public class StripeWebhookController {
             log.info("Webhook Stripe checkout.session.completed : status={} etablissementId={}", paymentStatus, etabId);
 
             if ("paid".equals(paymentStatus) && !etabId.isBlank()) {
-                long montantFcfa = md.path("montantFcfa").asLong(0);
+                // "montant" est la clé courante ; "montantFcfa" est l'alias hérité (sessions en vol).
+                long montant = md.hasNonNull("montant")
+                        ? md.path("montant").asLong(0) : md.path("montantFcfa").asLong(0);
                 // Réconciliation : le montant réellement encaissé (amount_total) doit correspondre
-                // au montant attendu pour ce nombre de FCFA. Sinon on NE crédite PAS (défense contre
-                // un écart metadata/paiement, ex. remise appliquée). 200 pour ne pas boucler Stripe.
-                long attendu = stripeService.versUniteStripe(montantFcfa);
+                // au montant attendu. Sinon on NE crédite PAS (défense contre un écart
+                // metadata/paiement, ex. remise appliquée). 200 pour ne pas boucler Stripe.
+                long attendu = stripeService.versUniteStripe(montant);
                 long amountTotal = obj.path("amount_total").asLong(-1);
                 if (amountTotal != attendu) {
                     log.warn("Webhook Stripe : montant encaisse ({}) != attendu ({}) pour etab {} — NON credite.",
                             amountTotal, attendu, etabId);
                     return ResponseEntity.ok("");
                 }
+                // Plan acheté (métadonnée) : null si absent → comportement historique (Free → Pro).
+                ci.esatic.sigep.entity.Plan plan = null;
+                try {
+                    String p = md.path("plan").asText("");
+                    if (!p.isBlank()) plan = ci.esatic.sigep.entity.Plan.valueOf(p);
+                } catch (IllegalArgumentException ignore) { /* métadonnée inconnue */ }
+
                 stripePaymentService.traiterPaiementReussi(
                         Long.valueOf(etabId),
                         md.path("mois").asInt(1),
-                        montantFcfa,
-                        "Stripe " + obj.path("id").asText());
+                        montant,
+                        "Stripe " + obj.path("id").asText(),
+                        plan,
+                        md.path("devise").asText(null));
             }
         } catch (Exception e) {
             // 500 → Stripe réessaiera (le traitement est idempotent, donc sûr).

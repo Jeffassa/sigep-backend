@@ -100,7 +100,9 @@ class AdminWebIntegrationTest {
     void abonnement_devraitSeRendreCorrectement() throws Exception {
         mockMvc.perform(get("/admin/abonnement"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Renouveler")));
+                // Titre de page stable (les libellés des sections de paiement évoluent).
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Abonnement")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Mobile Money")));
     }
 
     @Test
