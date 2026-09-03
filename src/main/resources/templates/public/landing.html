@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title th:text="(${marque} ?: 'SIGEP') + ' · Émargement intelligent pour écoles & universités'">SIGEP · Émargement intelligent</title>
     <meta name="description" content="SIGEP — suivez les heures réellement effectuées par vos enseignants via un émargement QR sécurisé. Statistiques, alertes et rapports de paie, sans Excel."/>
+    <link rel="icon" th:href="@{/favicon.ico}" href="/favicon.ico" sizes="any"/>
+    <link rel="apple-touch-icon" th:href="@{/images/logo_sigep.png}" href="/images/logo_sigep.png"/>
     <link rel="preconnect" href="https://fonts.googleapis.com"/>
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="crossorigin"/>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
@@ -88,6 +90,9 @@
             display: grid; place-items: center; color: var(--accent-ink);
             font-weight: 700; font-family: var(--font-display); font-size: 17px; flex: none;
         }
+        /* Logo de marque (image). .brand-mark reste utilisee pour l'avatar d'etablissement du mockup. */
+        .brand-logo { width: 32px; height: 32px; border-radius: 9px; flex: none; display: block; }
+        .foot .brand-logo { width: 30px; height: 30px; }
         .brand-name { font-family: var(--font-display); font-weight: 700; font-size: 22px; letter-spacing: -.02em; color: var(--nav-text); }
         .nav-links { display: flex; align-items: center; gap: 4px; }
         .nav-links a.link {
@@ -291,7 +296,7 @@
 <div class="nav-outer">
     <nav class="nav">
         <a th:href="@{/}" href="#" class="brand">
-            <span class="brand-mark">S</span>
+            <img class="brand-logo" th:src="@{/images/logo_sigep.png}" src="/images/logo_sigep.png" alt="" width="32" height="32"/>
             <span class="brand-name" th:text="${marque} ?: 'SIGEP'">SIGEP</span>
         </a>
         <div class="nav-links" id="navLinks">
@@ -559,7 +564,7 @@
     <div class="wrap">
         <div class="foot">
             <div class="col about">
-                <a class="brand" href="#"><span class="brand-mark">S</span><span class="brand-name" style="color:var(--text)" th:text="${marque} ?: 'SIGEP'">SIGEP</span></a>
+                <a class="brand" href="#"><img class="brand-logo" th:src="@{/images/logo_sigep.png}" src="/images/logo_sigep.png" alt="" width="32" height="32"/><span class="brand-name" style="color:var(--text)" th:text="${marque} ?: 'SIGEP'">SIGEP</span></a>
                 <p>Système Intelligent de Gestion des Enseignements et du Pointage. Émargement fiable pour écoles &amp; universités.</p>
             </div>
             <div class="col">
