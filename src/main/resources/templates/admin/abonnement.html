@@ -25,6 +25,24 @@
             <strong th:text="${etablissementPlan} ?: 'Pro'">Pro</strong> —
             pris en compte <strong>immédiatement</strong>, aucune reconnexion nécessaire.</span>
     </div>
+    <!-- Mobile Money confirmé. Repose sur un attribut FLASH posé par le serveur après
+         vérification réelle du paiement — et non sur un paramètre d'URL, qu'il suffirait
+         de taper pour faire croire à un paiement réussi. -->
+    <div th:if="${momoConfirme}" class="flex items-start gap-2 p-3 mb-4 rounded-xl text-[13px]"
+         style="background:rgba(16,185,129,.12);color:#0f7a3d;border:1px solid rgba(16,185,129,.35)">
+        <span class="material-symbols-rounded text-[18px]" style="color:#10b981">verified</span>
+        <span>Paiement Mobile Money confirmé, merci ! Votre abonnement est actif au plan
+            <strong th:text="${etablissementPlan} ?: 'Pro'">Pro</strong>.</span>
+    </div>
+    <!-- Avertissement MODE TEST : l'argent est fictif chez le fournisseur, mais l'abonnement
+         prolongé en base est bien réel. Sans ce repère, une mauvaise configuration créditerait
+         des clients sans qu'aucun encaissement n'ait eu lieu. -->
+    <div th:if="${momoSandbox}" class="flex items-start gap-2 p-3 mb-4 rounded-xl text-[13px]"
+         style="background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.45)">
+        <span class="material-symbols-rounded text-[18px]" style="color:#d97706">science</span>
+        <span><strong>Mode test (sandbox)</strong> — les paiements Mobile Money sont simulés et
+            aucun argent réel n'est débité, alors que l'abonnement est réellement prolongé.</span>
+    </div>
     <!-- Retour de Stripe sans confirmation encore obtenue : le webhook finalisera. -->
     <div th:if="${param.paye != null and !paiementReconcilie}" class="flex items-start gap-2 p-3 mb-4 rounded-xl text-[13px]"
          style="background:rgba(10,10,10,.05);border:1px solid var(--c-line)">
@@ -126,8 +144,84 @@
         </script>
     </section>
 
-    <!-- Renouvellement (paiement manuel) -->
-    <section class="glass rounded-3xl p-7 mb-6" data-reveal>
+    <!-- Mobile Money AUTOMATISÉ (NovaSend) : demande poussée sur le téléphone du client -->
+    <section th:if="${momoEnabled}" class="glass-strong rounded-3xl p-7 mb-6" data-reveal>
+        <div class="flex items-center gap-2.5 mb-3">
+            <span class="material-symbols-rounded">smartphone</span>
+            <h2 class="font-serif text-[22px]">Payer par Mobile Money</h2>
+        </div>
+        <p class="text-[14px] text-muted mb-5">Wave, Orange Money, MTN MoMo ou Moov. Vous recevez une
+            demande de validation sur votre téléphone ; l'abonnement est prolongé
+            <strong class="text-ink">automatiquement</strong> dès confirmation.</p>
+
+        <form th:action="@{/admin/abonnement/momo}" method="post" class="flex flex-wrap items-end gap-3">
+            <div>
+                <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-1.5">Plan</label>
+                <select name="plan" id="momoPlan" class="h-11 px-3 rounded-xl bg-white/60 border border-line text-[14px]">
+                    <option value="PRO" th:attr="data-prix=${prixPro}"
+                            th:text="'Pro — ' + ${#numbers.formatInteger(prixPro,1,'WHITESPACE')} + ' ' + ${symbole}">Pro</option>
+                    <option value="ENTERPRISE" th:if="${prixEnterprise > 0}" th:attr="data-prix=${prixEnterprise}"
+                            th:text="'Enterprise — ' + ${#numbers.formatInteger(prixEnterprise,1,'WHITESPACE')} + ' ' + ${symbole}">Enterprise</option>
+                </select>
+            </div>
+            <div>
+                <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-1.5">Durée</label>
+                <select name="mois" id="momoMois" class="h-11 px-3 rounded-xl bg-white/60 border border-line text-[14px]">
+                    <option value="1">1 mois</option>
+                    <option value="3">3 mois</option>
+                    <option value="12">12 mois</option>
+                </select>
+            </div>
+            <div>
+                <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-1.5">Opérateur</label>
+                <select name="provider" id="momoProvider" class="h-11 px-3 rounded-xl bg-white/60 border border-line text-[14px]">
+                    <option value="WAVE">Wave</option>
+                    <option value="ORANGE">Orange Money</option>
+                    <option value="MOMO">MTN MoMo</option>
+                    <option value="MOOV">Moov Money</option>
+                </select>
+            </div>
+            <div>
+                <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-1.5">Téléphone</label>
+                <input type="tel" name="msisdn" required placeholder="+2250700000000" pattern="\+?[0-9]{8,15}"
+                       class="h-11 px-3 rounded-xl bg-white/60 border border-line text-[14px]"/>
+            </div>
+            <div id="momoOtpBloc" style="display:none">
+                <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-1.5">Code OTP</label>
+                <input type="text" name="otp" inputmode="numeric" maxlength="8" placeholder="#144*82#"
+                       class="h-11 px-3 rounded-xl bg-white/60 border border-line text-[14px] w-[130px]"/>
+            </div>
+            <button type="submit" class="btn btn-ink inline-flex items-center gap-2 h-11 px-5 rounded-xl font-medium">
+                <span class="material-symbols-rounded text-[18px]">send_to_mobile</span>
+                Payer <span id="momoTotal">—</span>
+            </button>
+        </form>
+        <p class="text-[12px] text-muted mt-3" id="momoAide">
+            Orange Money : obtenez d'abord votre code OTP en composant <strong class="text-ink">#144*82#</strong>.
+        </p>
+
+        <script th:inline="javascript">
+            (function () {
+                var sym = /*[[${symbole}]]*/ 'FCFA';
+                var p = document.getElementById('momoPlan'), m = document.getElementById('momoMois'),
+                    prov = document.getElementById('momoProvider'), otp = document.getElementById('momoOtpBloc'),
+                    t = document.getElementById('momoTotal');
+                if (!p || !m || !prov || !t) return;
+                function maj() {
+                    var prix = parseInt(p.options[p.selectedIndex].getAttribute('data-prix') || '0', 10);
+                    t.textContent = (prix * parseInt(m.value, 10)).toLocaleString('fr-FR').replace(/ /g, ' ') + ' ' + sym;
+                    // L'OTP n'est demandé que par Orange Money.
+                    otp.style.display = (prov.value === 'ORANGE') ? '' : 'none';
+                }
+                p.addEventListener('change', maj); m.addEventListener('change', maj);
+                prov.addEventListener('change', maj);
+                maj();
+            })();
+        </script>
+    </section>
+
+    <!-- Repli : validation manuelle tant que l'encaissement automatique n'est pas activé -->
+    <section th:unless="${momoEnabled}" class="glass rounded-3xl p-7 mb-6" data-reveal>
         <div class="flex items-center gap-2.5 mb-4">
             <span class="material-symbols-rounded">payments</span>
             <h2 class="font-serif text-[22px]">Payer par Mobile Money</h2>

@@ -45,6 +45,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private static final String SIGNUP_PATH = "/api/saas/etablissements";
     private static final String REGISTER_PATH = "/api/auth/register";      // auto-inscription enseignant
     private static final String ADMIN_LOGIN_PATH = "/admin-login";
+    /** Initiation Mobile Money : chaque appel pousse une demande sur un téléphone réel. */
+    private static final String MOMO_INIT_PATH = "/admin/abonnement/momo";
     private static final String ANALYSE_IA_PATH = "/admin/api/stats/analyse"; // appels Claude facturés (GET)
 
     private final ConcurrentHashMap<String, Deque<Long>> hits = new ConcurrentHashMap<>();
@@ -147,6 +149,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
         if (REFRESH_PATH.equals(uri)) return maxRefresh;
         if (SIGNUP_PATH.equals(uri)) return maxSignup;
         if (REGISTER_PATH.equals(uri)) return maxSignup;   // même budget anti-spam que l'inscription établissement
+        // Anti-harcèlement : sans borne, on pourrait faire sonner un numéro tiers en rafale.
+        if (MOMO_INIT_PATH.equals(uri)) return maxSignup;
         if (ADMIN_LOGIN_PATH.equals(uri)) return maxAdminLogin;
         return 0;
     }
@@ -157,7 +161,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
         if (uri == null) return false;
         if (ANALYSE_IA_PATH.equals(uri)) return true;                 // analyse IA (GET)
         if (!"POST".equalsIgnoreCase(request.getMethod())) return false;
-        return "/api/rapports/generer".equals(uri)
+        return MOMO_INIT_PATH.equals(uri)
+                || "/api/rapports/generer".equals(uri)
                 || "/api/rapports/bulk-download".equals(uri)
                 || uri.startsWith("/api/import/")
                 || uri.startsWith("/api/admin/import/");
@@ -181,7 +186,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
                 || uri.startsWith("/webjars/") || "/favicon.ico".equals(uri)
                 || uri.startsWith("/actuator/health")
                 || uri.startsWith("/api/qr/display/") // écran kiosque : rafraîchi en continu
-                || uri.startsWith("/api/stripe/");    // webhook Stripe (ne jamais bloquer/retarder)
+                || uri.startsWith("/api/stripe/")     // webhook Stripe (ne jamais bloquer/retarder)
+                || uri.startsWith("/api/paiement/novasend/"); // webhook NovaSend (idem)
     }
 
     /** Enregistre un hit et indique si la clé dépasse son budget sur la fenêtre.

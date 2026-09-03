@@ -32,9 +32,18 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class TenantIsolationGuardTest {
 
-    /** Entités volontairement NON cloisonnées (globales à la plateforme). */
+    /**
+     * Entités volontairement NON cloisonnées (globales à la plateforme).
+     *
+     * <p>{@code Paiement} et {@code PaiementIntent} sont des écritures de niveau plateforme,
+     * manipulées HORS contexte tenant : le super admin les consulte toutes, et le relanceur
+     * de paiements Mobile Money s'exécute dans un cron sans TenantContext — les filtrer les
+     * rendrait invisibles à ce cron, donc des abonnements payés ne seraient jamais crédités.
+     * L'appartenance à l'établissement est vérifiée EXPLICITEMENT côté contrôleur
+     * (cf. MobileMoneyWebController.intentAutorisee).
+     */
     private static final Set<String> ENTITES_GLOBALES =
-            Set.of("User", "Role", "RefreshToken", "Etablissement", "Paiement");
+            Set.of("User", "Role", "RefreshToken", "Etablissement", "Paiement", "PaiementIntent");
 
     @Test
     void toutesLesEntitesMetierSontCloisonneesParTenant() throws Exception {

@@ -38,6 +38,7 @@ public class AbonnementWebController {
     private final StripeService stripeService;
     private final StripePaymentService stripePaymentService;
     private final PlanService planService;
+    private final ci.esatic.sigep.service.MobileMoneyService mobileMoneyService;
 
     @GetMapping("/admin/abonnement")
     public String abonnement(@AuthenticationPrincipal User user,
@@ -62,6 +63,8 @@ public class AbonnementWebController {
 
         model.addAttribute("ownerEmail", ownerEmail);
         model.addAttribute("stripeEnabled", stripeService.isEnabled());
+        model.addAttribute("momoEnabled", mobileMoneyService.isEnabled());
+        model.addAttribute("momoSandbox", mobileMoneyService.isEnabled() && mobileMoneyService.estSandbox());
         model.addAttribute("prixPro", planService.prixMensuel(Plan.PRO));
         model.addAttribute("prixEnterprise", planService.prixMensuel(Plan.ENTERPRISE));
         model.addAttribute("devise", planService.devise().toUpperCase());

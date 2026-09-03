@@ -60,6 +60,12 @@ spring:
             enable: true
   # Cache applicatif. OPTIONNEL : 'simple' (mémoire locale, défaut) tant que Redis n'est pas
   # provisionné. Pour activer le cache distribué : CACHE_TYPE=redis + REDIS_URL (voir ci-dessous).
+  task:
+    scheduling:
+      # Plusieurs threads : sinon un seul cron lent (ex. appel réseau à un prestataire) gèle
+      # TOUS les autres (purge du rate-limit, relances, rapports).
+      pool:
+        size: ${SCHEDULING_POOL_SIZE:3}
   cache:
     type: ${CACHE_TYPE:simple}
     redis:
@@ -228,6 +234,40 @@ app:
     # Webhook Mobile Money générique (C7). Secret partagé exigé (fail-closed si vide).
     # L'agrégateur (CinetPay/PayDunya/Wave/Orange) poste sur /api/paiement/mobile-money/webhook.
     webhook-secret: ${MOBILE_MONEY_WEBHOOK_SECRET:}
+  novasend:
+    # Encaissement Mobile Money automatisé via NovaSend (WAVE / ORANGE / MOMO / MOOV).
+    # Désactivé par défaut : activer avec NOVASEND_ENABLED=true + identifiants API.
+    # IMPORTANT : NovaSend n'expose PAS de webhook. La confirmation d'un paiement est
+    # TOUJOURS vérifiée par un appel serveur à GET /v1/payin/{reference} — jamais en se
+    # fiant à la redirection successUrl, qui n'est qu'une URL ouvrable par n'importe qui.
+    enabled: ${NOVASEND_ENABLED:false}
+    # Sandbox et Production sont strictement isolés chez NovaSend : c'est le COUPLE DE CLÉS qui
+    # détermine l'environnement (en sandbox l'argent est fictif, aucun mouvement réel).
+    # Si NovaSend fournit une URL distincte pour la sandbox, la surcharger ici.
+    base-url: ${NOVASEND_BASE_URL:https://business.novasend.app}
+    # Identifiants créés dans Paramètres > Token. L'en-tête est Basic base64(cle_api:cle_secrete).
+    api-key: ${NOVASEND_API_KEY:}
+    secret-key: ${NOVASEND_SECRET_KEY:}
+    # Secret du WEBHOOK (Paramètres > Webhook) — DIFFÉRENT de la clé secrète API, propre à
+    # chaque webhook. Sert à vérifier l'en-tête X-Signature-Value = HMAC_SHA256(corps, secret).
+    # Vide = webhook refusé (fail-closed) ; le relanceur périodique reste le filet de sécurité.
+    webhook-secret: ${NOVASEND_WEBHOOK_SECRET:}
+    # Code pays ISO envoyé à NovaSend (CI, CM).
+    country: ${NOVASEND_COUNTRY:CI}
+    # Environnement DÉCLARÉ (sandbox|production). Sert uniquement à AFFICHER un avertissement :
+    # en sandbox l'argent est fictif, mais SIGEP prolonge de vrais abonnements en base.
+    # Sans ce repère, un déploiement mal configuré créditerait des clients sans encaisser.
+    environment: ${NOVASEND_ENV:sandbox}
+    # Durée pendant laquelle on fait PATIENTER l'utilisateur devant la page d'attente.
+    # (Le suivi en arrière-plan, lui, continue : voir suivi-heures.)
+    expiration-minutes: ${NOVASEND_EXPIRATION_MINUTES:30}
+    # Durée pendant laquelle on continue à réclamer un verdict au fournisseur. Un paiement
+    # encaissé ne doit JAMAIS être clos parce que NovaSend a été injoignable un moment.
+    suivi-heures: ${NOVASEND_SUIVI_HEURES:48}
+    # Intervalle du relanceur (ms) et conservation des intentions terminées (jours, RGPD :
+    # elles contiennent le numéro de téléphone du payeur).
+    poll-ms: ${NOVASEND_POLL_MS:60000}
+    retention-jours: ${NOVASEND_RETENTION_JOURS:90}
   security:
     # Ne faire confiance au header X-Forwarded-For QUE derrière un reverse proxy de confiance.
     trust-forwarded-for: ${TRUST_FORWARDED_FOR:false}
