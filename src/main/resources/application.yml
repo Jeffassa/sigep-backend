@@ -179,16 +179,19 @@ app:
     auto-validation: ${ONBOARDING_AUTO_VALIDATION:false}
   billing:
     # Devise de facturation (code ISO en minuscules). SOURCE UNIQUE : sert à l'affichage ET à
-    # Stripe — les deux ne peuvent donc pas diverger. EUR a 2 décimales : la conversion vers
-    # l'unité Stripe (centimes) est automatique (cf. StripeService.versUniteStripe).
-    currency: ${BILLING_CURRENCY:eur}
-    symbole: ${BILLING_SYMBOLE:€}
+    # Stripe — les deux ne peuvent donc pas diverger.
+    # XOF (franc CFA) est une devise SANS décimale : le montant Stripe est le montant réel,
+    # sans ×100 (cf. StripeService.versUniteStripe). Le XOF est indexé à l'euro à taux fixe
+    # (1 € = 655,957 FCFA), donc les tarifs restent stables face à l'euro.
+    currency: ${BILLING_CURRENCY:xof}
+    symbole: ${BILLING_SYMBOLE:FCFA}
   plans:
     # Quota d'enseignants du plan FREE (source unique — M1).
     free-max-enseignants: ${FREE_MAX_ENSEIGNANTS:10}
-    # Tarifs mensuels en unité MAJEURE de la devise (ex. 20 = 20 €).
-    pro-price: ${PLAN_PRO_PRICE:20}
-    enterprise-price: ${PLAN_ENTERPRISE_PRICE:146}
+    # Tarifs mensuels en unité MAJEURE de la devise (XOF = pas de décimale).
+    # 13 000 FCFA ≈ 19,82 € · 96 000 FCFA ≈ 146,35 €
+    pro-price: ${PLAN_PRO_PRICE:13000}
+    enterprise-price: ${PLAN_ENTERPRISE_PRICE:96000}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:8080,http://localhost:3000}
   admin:

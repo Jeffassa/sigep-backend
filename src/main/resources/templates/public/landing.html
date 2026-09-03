@@ -499,7 +499,7 @@
                 <span class="tag-pop">Populaire</span>
                 <div class="plan">Pro</div>
                 <div class="who">Pour un établissement</div>
-                <div class="amt"><span th:text="${prixPro} ?: 20">20</span> <small th:text="(${symbole} ?: '€') + ' / mois'">€ / mois</small></div>
+                <div class="amt"><span th:text="${#numbers.formatInteger(prixPro,1,'WHITESPACE')}">13 000</span> <small th:text="${symbole} + ' / mois'">FCFA / mois</small></div>
                 <ul>
                     <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="20 6 9 17 4 12"/></svg> Enseignants illimités</li>
                     <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="20 6 9 17 4 12"/></svg> Multi-campus</li>
@@ -512,7 +512,7 @@
             <div class="price reveal">
                 <div class="plan">Enterprise</div>
                 <div class="who">Groupes &amp; universités</div>
-                <div class="amt"><span th:text="${prixEnterprise} ?: 146">146</span> <small th:text="(${symbole} ?: '€') + ' / mois'">€ / mois</small></div>
+                <div class="amt"><span th:text="${#numbers.formatInteger(prixEnterprise,1,'WHITESPACE')}">96 000</span> <small th:text="${symbole} + ' / mois'">FCFA / mois</small></div>
                 <ul>
                     <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="20 6 9 17 4 12"/></svg> Tout le plan Pro</li>
                     <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="20 6 9 17 4 12"/></svg> Multi-établissements</li>
