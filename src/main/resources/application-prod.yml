@@ -35,7 +35,12 @@ server:
         # Cookie de session admin : durci explicitement (ne pas dépendre des défauts).
         secure: true
         http-only: true
-        same-site: ${SESSION_COOKIE_SAMESITE:strict}
+        # 'lax' et non 'strict' : le retour depuis une page de paiement externe (NovaSend,
+        # Stripe) est une navigation cross-site ; en 'strict' le cookie de session ne serait
+        # PAS envoyé et l'utilisateur retomberait sur l'écran de connexion après avoir payé.
+        # 'lax' n'envoie le cookie que sur les navigations GET de premier niveau : la
+        # protection CSRF sur les POST reste entière (et les jetons CSRF Spring restent actifs).
+        same-site: ${SESSION_COOKIE_SAMESITE:lax}
         name: SIGEPSESSIONID
 
 app:

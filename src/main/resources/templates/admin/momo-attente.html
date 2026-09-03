@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('SIGEP | Paiement Mobile Money')}"></head>
+<body>
+
+<div th:replace="~{admin/fragments :: topbar('abonnement')}"></div>
+
+<main class="max-w-[720px] mx-auto px-5 md:px-8 py-10 pb-36">
+
+    <section class="mb-8" data-reveal>
+        <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mb-2">Paiement en cours</p>
+        <h1 class="font-serif text-[clamp(30px,5vw,44px)] leading-[1.02] tracking-tight">Confirmez sur votre téléphone</h1>
+    </section>
+
+    <section class="glass-strong rounded-3xl p-7 mb-6" data-reveal>
+        <div class="flex flex-wrap items-baseline justify-between gap-3 mb-5">
+            <div>
+                <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Montant</p>
+                <p class="font-serif text-[32px] leading-none">
+                    <span th:text="${#numbers.formatInteger(intent.montantAttendu,1,'WHITESPACE')}">13 000</span>
+                    <span class="text-[14px] text-muted" th:text="${intent.devise}">XOF</span>
+                </p>
+            </div>
+            <div class="text-right">
+                <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Plan</p>
+                <p class="text-[15px] font-medium">
+                    <span th:text="${intent.plan}">PRO</span>
+                    · <span th:text="${intent.mois} + ' mois'">1 mois</span>
+                </p>
+            </div>
+        </div>
+
+        <div id="etat" class="rounded-2xl p-4 mb-5 text-[14px] flex items-start gap-2.5"
+             style="background:var(--c-accent-soft);border:1px solid var(--c-accent)">
+            <span class="material-symbols-rounded text-[20px]" style="color:var(--c-accent)">hourglass_top</span>
+            <span id="etatTexte">Demande envoyée au <strong th:text="${intent.provider}">opérateur</strong>
+                sur le <strong th:text="${intent.msisdn}">numéro</strong>. Validez la demande sur votre téléphone…</span>
+        </div>
+
+        <!-- Wave / NovaSend : lien de confirmation (uniquement si le tiers a bien fourni du HTTPS) -->
+        <a th:if="${paymentUrlSure}" th:href="${paymentUrlSure}" target="_blank" rel="noopener"
+           class="btn btn-ink inline-flex items-center gap-2 h-11 px-5 rounded-xl font-medium mb-5">
+            <span class="material-symbols-rounded text-[18px]">open_in_new</span> Ouvrir la page de confirmation
+        </a>
+
+        <!-- Instructions spécifiques opérateur : sans elles, l'utilisateur reste bloqué -->
+        <div class="text-[13px] text-muted space-y-2">
+            <p th:if="${intent.provider == 'MOMO'}">
+                Si aucune demande n'apparaît, composez <strong class="text-ink">*133#</strong> sur votre
+                téléphone MTN pour accéder au menu de validation.
+            </p>
+            <p th:if="${intent.provider == 'MOOV'}">
+                Si aucune demande n'apparaît, composez <strong class="text-ink">*155#</strong> sur votre
+                téléphone Moov pour accéder au menu de validation.
+            </p>
+            <p th:if="${intent.provider == 'ORANGE'}">
+                Paiement Orange Money validé avec le code obtenu via <strong class="text-ink">#144*82#</strong>.
+            </p>
+            <p>Cette page se met à jour automatiquement — inutile de la rafraîchir.</p>
+        </div>
+    </section>
+
+    <a th:href="@{/admin/abonnement}" class="text-[13px] text-muted hover:text-ink">← Retour à l'abonnement</a>
+
+</main>
+
+<div th:replace="~{admin/fragments :: dock('abonnement')}"></div>
+<div th:replace="~{admin/fragments :: palette}"></div>
+<div th:replace="~{admin/fragments :: scripts}"></div>
+
+<script th:inline="javascript">
+    (function () {
+        var ref = /*[[${intent.reference}]]*/ '';
+        var boite = document.getElementById('etat');
+        var texte = document.getElementById('etatTexte');
+        var fini = false;
+
+        function afficherErreur(msg) {
+            boite.style.background = 'rgba(239,68,68,.12)';
+            boite.style.borderColor = 'rgba(239,68,68,.35)';
+            texte.innerHTML = msg;
+        }
+
+        // Recul progressif : chaque sondage déclenche un appel réel au fournisseur. Marteler
+        // toutes les 4 s indéfiniment le surchargerait et n'apporterait rien.
+        var essais = 0, delai = 4000, MAX_ESSAIS = 90, timer = null;
+
+        function planifier() {
+            if (fini) return;
+            if (essais >= MAX_ESSAIS) {
+                // On cesse d'attendre côté écran, mais le suivi serveur, lui, CONTINUE :
+                // il ne faut surtout pas laisser croire que le paiement est perdu.
+                texte.innerHTML = 'La confirmation prend plus de temps que prévu. '
+                    + '<strong>Vous pouvez fermer cette page :</strong> dès réception du paiement, '
+                    + 'votre abonnement sera activé automatiquement. '
+                    + '<a href="/admin/abonnement" style="text-decoration:underline">Retour</a>';
+                return;
+            }
+            timer = setTimeout(function () {
+                sonder();
+                essais++;
+                if (essais > 8 && delai < 15000) delai = 8000;    // après ~30 s
+                if (essais > 25 && delai < 20000) delai = 15000;  // après ~3 min
+                planifier();
+            }, delai);
+        }
+
+        function sonder() {
+            if (fini) return;
+            fetch('/admin/abonnement/momo/statut?ref=' + encodeURIComponent(ref),
+                  { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
+                .then(function (r) {
+                    // Session expirée : la réponse n'est plus du JSON mais la page de connexion.
+                    if (r.redirected || !r.ok) { fini = true; window.location.reload(); return null; }
+                    var ct = r.headers.get('content-type') || '';
+                    if (ct.indexOf('application/json') === -1) { fini = true; window.location.reload(); return null; }
+                    return r.json();
+                })
+                .then(function (d) {
+                    if (!d) return;
+                    if (d.statut === 'REUSSI') {
+                        fini = true;
+                        // Le bandeau de succès est posé côté serveur : on repasse par /retour.
+                        window.location = '/admin/abonnement/momo/retour?ref=' + encodeURIComponent(ref);
+                    } else if (d.statut === 'A_VERIFIER') {
+                        fini = true;
+                        boite.style.background = 'rgba(251,191,36,.12)';
+                        boite.style.borderColor = 'rgba(251,191,36,.45)';
+                        texte.innerHTML = '<strong>Paiement en cours de vérification.</strong> '
+                            + 'Si votre compte a été débité, l\'abonnement sera activé sous peu — '
+                            + 'ne payez pas une seconde fois. '
+                            + '<a href="/admin/abonnement" style="text-decoration:underline">Retour</a>';
+                    } else if (d.statut === 'ECHOUE' || d.statut === 'EXPIRE') {
+                        fini = true;
+                        afficherErreur('Paiement non abouti. <strong>Aucun montant n\'a été crédité.</strong> '
+                            + (d.message || '') + ' <a href="/admin/abonnement" style="text-decoration:underline">Réessayer</a>');
+                    }
+                })
+                .catch(function () { /* réseau instable : on retentera au prochain tick */ });
+        }
+
+        planifier();
+    })();
+</script>
+
+</body>
+</html>

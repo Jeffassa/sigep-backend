@@ -31,7 +31,10 @@ public class SuppressionEtablissementService {
         exec("DELETE FROM classes WHERE etablissement_id = :id", etablissementId);
         exec("DELETE FROM matieres WHERE etablissement_id = :id", etablissementId);
         exec("DELETE FROM salles WHERE etablissement_id = :id", etablissementId);
-        // 5) Paiements (trace comptable liée à l'établissement)
+        // 5) Paiements (trace comptable) + intentions de paiement Mobile Money en cours.
+        //    Les intentions portent le numéro de téléphone du payeur : donnée personnelle
+        //    à effacer au même titre que le reste (RGPD).
+        exec("DELETE FROM paiement_intents WHERE etablissement_id = :id", etablissementId);
         exec("DELETE FROM paiements WHERE etablissement_id = :id", etablissementId);
         // 6) Sessions + rôles des utilisateurs, puis les utilisateurs eux-mêmes
         exec("DELETE FROM refresh_tokens WHERE user_id IN "
