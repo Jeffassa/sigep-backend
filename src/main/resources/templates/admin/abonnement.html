@@ -40,7 +40,7 @@
     <div th:if="${momoSandbox}" class="flex items-start gap-2 p-3 mb-4 rounded-xl text-[13px]"
          style="background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.45)">
         <span class="material-symbols-rounded text-[18px]" style="color:#d97706">science</span>
-        <span><strong>Mode test (sandbox)</strong> — les paiements Mobile Money sont simulés et
+        <span><strong>Mode test (sandbox)</strong> les paiements Mobile Money sont simulés et
             aucun argent réel n'est débité, alors que l'abonnement est réellement prolongé.</span>
     </div>
     <!-- Retour de Stripe sans confirmation encore obtenue : le webhook finalisera. -->
@@ -94,7 +94,7 @@
             <h2 class="font-serif text-[22px]">Choisir un plan &amp; payer</h2>
         </div>
         <p class="text-[14px] text-muted mb-5">Paiement sécurisé par carte bancaire. Activation
-            <strong class="text-ink">immédiate</strong> dès confirmation — aucune reconnexion nécessaire.</p>
+            <strong class="text-ink">immédiate</strong> dès confirmation, aucune reconnexion nécessaire.</p>
 
         <form th:action="@{/admin/abonnement/payer}" method="post" class="flex flex-wrap items-end gap-3">
             <div>
@@ -116,7 +116,7 @@
             </div>
             <button type="submit" class="btn btn-ink inline-flex items-center gap-2 h-11 px-5 rounded-xl font-medium">
                 <span class="material-symbols-rounded text-[18px]">lock</span>
-                Payer <span id="totalPaye">—</span>
+                Payer <span id="totalPaye"></span>
             </button>
         </form>
         <p class="text-[12px] text-muted mt-3">
