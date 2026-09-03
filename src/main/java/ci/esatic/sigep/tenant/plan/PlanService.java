@@ -6,8 +6,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Stream;
 
 /**
  * Découpage des fonctionnalités par plan (gating premium) + quotas + tarifs.
@@ -16,18 +18,45 @@ import java.util.Set;
 @Service
 public class PlanService {
 
-    /** Tarif mensuel du plan Pro (FCFA). Enterprise = « sur mesure » (0 = non chiffré). */
-    @Value("${app.plans.pro-price:10000}")
+    /** Tarifs mensuels en unité MAJEURE de la devise de facturation (ex. 20 = 20 €). */
+    @Value("${app.plans.pro-price:20}")
     private long prixPro;
 
-    @Value("${app.plans.enterprise-price:0}")
+    @Value("${app.plans.enterprise-price:146}")
     private long prixEnterprise;
 
-    /** Tarif mensuel facturé pour un plan (0 pour Free et Enterprise non chiffré). */
+    /** Devise de facturation (source unique, partagée avec Stripe). */
+    @Value("${app.billing.currency:eur}")
+    private String devise;
+
+    @Value("${app.billing.symbole:€}")
+    private String symbole;
+
+    /** Tarif mensuel facturé pour un plan (0 pour Free). */
     public long prixMensuel(Plan plan) {
         if (plan == Plan.PRO) return prixPro;
         if (plan == Plan.ENTERPRISE) return prixEnterprise;
         return 0;
+    }
+
+    /** Code ISO de la devise de facturation (minuscules, ex. "eur"). */
+    public String devise() {
+        return devise == null ? "eur" : devise.toLowerCase();
+    }
+
+    /** Symbole d'affichage de la devise (ex. "€"). */
+    public String symbole() {
+        return symbole;
+    }
+
+    /** Plans réellement achetables en ligne (tarif > 0). */
+    public List<Plan> plansPayants() {
+        return Stream.of(Plan.PRO, Plan.ENTERPRISE).filter(p -> prixMensuel(p) > 0).toList();
+    }
+
+    /** Le plan est-il achetable en ligne (tarif configuré) ? */
+    public boolean estAchetable(Plan plan) {
+        return plan != null && plan != Plan.FREE && prixMensuel(plan) > 0;
     }
 
     private static final Map<Plan, Set<Feature>> FEATURES = Map.of(

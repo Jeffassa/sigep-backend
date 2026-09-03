@@ -17,11 +17,20 @@
          style="background:rgba(186,26,26,.08);color:#7a0010;border:1px solid rgba(186,26,26,.2)">
         <span class="material-symbols-rounded text-[18px]">error</span><span th:text="${erreurAbo}"></span>
     </div>
-    <div th:if="${param.paye}" class="flex items-start gap-2 p-3 mb-4 rounded-xl text-[13px]"
-         style="background:rgba(15,122,61,.10);color:#0f7a3d;border:1px solid rgba(15,122,61,.25)">
-        <span class="material-symbols-rounded text-[18px]">verified</span>
-        <span>Paiement reçu, merci ! Votre abonnement est actif au plan <strong>Pro</strong> —
-            le changement est pris en compte <strong>immédiatement</strong>, aucune reconnexion nécessaire.</span>
+    <!-- Paiement CONFIRMÉ (réconcilié via l'API Stripe : montant vérifié, plan appliqué). -->
+    <div th:if="${paiementReconcilie}" class="flex items-start gap-2 p-3 mb-4 rounded-xl text-[13px]"
+         style="background:rgba(16,185,129,.12);color:#0f7a3d;border:1px solid rgba(16,185,129,.35)">
+        <span class="material-symbols-rounded text-[18px]" style="color:#10b981">verified</span>
+        <span>Paiement confirmé, merci ! Votre abonnement est actif au plan
+            <strong th:text="${etablissementPlan} ?: 'Pro'">Pro</strong> —
+            pris en compte <strong>immédiatement</strong>, aucune reconnexion nécessaire.</span>
+    </div>
+    <!-- Retour de Stripe sans confirmation encore obtenue : le webhook finalisera. -->
+    <div th:if="${param.paye != null and !paiementReconcilie}" class="flex items-start gap-2 p-3 mb-4 rounded-xl text-[13px]"
+         style="background:rgba(10,10,10,.05);border:1px solid var(--c-line)">
+        <span class="material-symbols-rounded text-[18px]">hourglass_top</span>
+        <span>Paiement reçu — <strong>confirmation en cours</strong>. Votre plan sera activé dès
+            validation par notre système (quelques secondes). Actualisez cette page si besoin.</span>
     </div>
     <div th:if="${param.annule}" class="flex items-center gap-2 p-3 mb-4 rounded-xl text-[13px]"
          style="background:rgba(10,10,10,.05);border:1px solid var(--line)">
@@ -59,19 +68,29 @@
         </div>
     </section>
 
-    <!-- Paiement en ligne (Stripe) -->
+    <!-- Paiement en ligne (Stripe) — choix du plan -->
     <section th:if="${stripeEnabled}" class="glass-strong rounded-3xl p-7 mb-6" data-reveal
-             style="outline:2px solid var(--c-ink); outline-offset:-2px;">
+             style="outline:2px solid var(--c-accent); outline-offset:-2px;">
         <div class="flex items-center gap-2.5 mb-3">
             <span class="material-symbols-rounded">credit_card</span>
-            <h2 class="font-serif text-[22px]">Payer en ligne (carte)</h2>
+            <h2 class="font-serif text-[22px]">Choisir un plan &amp; payer</h2>
         </div>
-        <p class="text-[14px] text-muted mb-4">Paiement sécurisé par carte bancaire. Activation
-            <strong class="text-ink">immédiate</strong> dès le paiement confirmé.</p>
+        <p class="text-[14px] text-muted mb-5">Paiement sécurisé par carte bancaire. Activation
+            <strong class="text-ink">immédiate</strong> dès confirmation — aucune reconnexion nécessaire.</p>
+
         <form th:action="@{/admin/abonnement/payer}" method="post" class="flex flex-wrap items-end gap-3">
             <div>
+                <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-1.5">Plan</label>
+                <select name="plan" id="planSel" class="h-11 px-3 rounded-xl bg-white/60 border border-line text-[14px]">
+                    <option value="PRO" th:attr="data-prix=${prixPro}"
+                            th:text="'Pro — ' + ${prixPro} + ' ' + ${symbole} + ' / mois'">Pro</option>
+                    <option value="ENTERPRISE" th:if="${prixEnterprise > 0}" th:attr="data-prix=${prixEnterprise}"
+                            th:text="'Enterprise — ' + ${prixEnterprise} + ' ' + ${symbole} + ' / mois'">Enterprise</option>
+                </select>
+            </div>
+            <div>
                 <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-1.5">Durée</label>
-                <select name="mois" class="h-11 px-3 rounded-xl bg-white/60 border border-line text-[14px]">
+                <select name="mois" id="moisSel" class="h-11 px-3 rounded-xl bg-white/60 border border-line text-[14px]">
                     <option value="1">1 mois</option>
                     <option value="3">3 mois</option>
                     <option value="12">12 mois</option>
@@ -79,27 +98,53 @@
             </div>
             <button type="submit" class="btn btn-ink inline-flex items-center gap-2 h-11 px-5 rounded-xl font-medium">
                 <span class="material-symbols-rounded text-[18px]">lock</span>
-                Payer <span th:text="${#numbers.formatInteger(prixPro,1,'WHITESPACE')} + ' FCFA / mois'">10 000 FCFA</span>
+                Payer <span id="totalPaye">—</span>
             </button>
         </form>
-        <p class="text-[12px] text-muted mt-3">Le paiement passe au plan Pro (enseignants illimités, IA, exports).</p>
+        <p class="text-[12px] text-muted mt-3">
+            Le montant est <strong class="text-ink">recalculé côté serveur</strong> et le plan choisi
+            est appliqué dès la confirmation du paiement.
+        </p>
+
+        <script th:inline="javascript">
+            (function () {
+                var sym = /*[[${symbole}]]*/ '€';
+                var p = document.getElementById('planSel'),
+                    m = document.getElementById('moisSel'),
+                    t = document.getElementById('totalPaye');
+                if (!p || !m || !t) return;
+                function maj() {
+                    var prix = parseInt(p.options[p.selectedIndex].getAttribute('data-prix') || '0', 10);
+                    t.textContent = (prix * parseInt(m.value, 10)) + ' ' + sym;
+                }
+                p.addEventListener('change', maj);
+                m.addEventListener('change', maj);
+                maj();
+            })();
+        </script>
     </section>
 
     <!-- Renouvellement (paiement manuel) -->
     <section class="glass rounded-3xl p-7 mb-6" data-reveal>
         <div class="flex items-center gap-2.5 mb-4">
             <span class="material-symbols-rounded">payments</span>
-            <h2 class="font-serif text-[22px]">Renouveler — <span th:text="${#numbers.formatInteger(prixPro,1,'WHITESPACE')} + ' FCFA / mois'">10 000 FCFA / mois</span></h2>
+            <h2 class="font-serif text-[22px]">Payer par Mobile Money</h2>
         </div>
         <ol class="space-y-2.5 text-[14px] text-muted list-decimal pl-5">
-            <li>Réglez <strong class="text-ink" th:text="${#numbers.formatInteger(prixPro,1,'WHITESPACE')} + ' FCFA'">10 000 FCFA</strong> par Mobile Money au <strong class="text-ink" th:text="${mobileMoney} ?: 'numéro communiqué par la plateforme'">+225 …</strong> (Orange / MTN / Moov / Wave).</li>
-            <li>Cliquez sur « Demander l'activation » : on valide votre paiement et on prolonge votre période.</li>
+            <li>Réglez le montant de votre plan
+                (<strong class="text-ink" th:text="'Pro ' + ${prixPro} + ' ' + ${symbole}">Pro</strong>
+                <span th:if="${prixEnterprise > 0}"> ou <strong class="text-ink"
+                      th:text="'Enterprise ' + ${prixEnterprise} + ' ' + ${symbole}">Enterprise</strong></span>
+                par mois) au <strong class="text-ink" th:text="${mobileMoney} ?: 'numéro communiqué par la plateforme'">+225 …</strong>
+                (Orange / MTN / Moov / Wave).</li>
+            <li>Cliquez sur « Demander l'activation » : votre paiement est validé et votre période prolongée.</li>
         </ol>
         <a class="btn btn-ink inline-flex items-center gap-2 h-11 px-5 rounded-xl mt-6 font-medium"
            th:href="'mailto:' + ${ownerEmail} + '?subject=Activation%20abonnement%20SIGEP&body=Etablissement%20:%20' + ${etablissementNom}">
             <span class="material-symbols-rounded text-[18px]">mail</span> Demander l'activation
         </a>
-        <p class="text-[12px] text-muted mt-3">Paiement en ligne (Mobile Money / carte) à venir.</p>
+        <p class="text-[12px] text-muted mt-3">L'encaissement Mobile Money automatique arrive ; en
+            attendant, l'activation est validée manuellement sous 24 h ouvrées.</p>
     </section>
 
 </main>

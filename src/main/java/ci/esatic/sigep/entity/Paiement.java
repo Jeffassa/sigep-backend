@@ -30,9 +30,19 @@ public class Paiement {
     @Column(name = "etablissement_id", nullable = false)
     private Long etablissementId;
 
-    /** Montant reçu, en FCFA (entier). */
+    /** Montant reçu, en unité MAJEURE de la devise du paiement (ex. 20 = 20 €, 10000 = 10 000 FCFA). */
     @Column(nullable = false)
     private long montant;
+
+    /** Devise de CE paiement (code ISO, ex. "EUR"/"XOF"). Historisée : la devise de
+     *  facturation peut changer, l'historique comptable doit rester interprétable. */
+    @Column(length = 8)
+    private String devise;
+
+    /** Plan acheté par ce paiement (PRO / ENTERPRISE). Null pour les saisies héritées. */
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private Plan plan;
 
     /** Nombre de mois crédités par ce paiement. */
     @Column(name = "mois_credites", nullable = false)

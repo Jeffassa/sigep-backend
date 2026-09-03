@@ -1,6 +1,7 @@
 package ci.esatic.sigep.service;
 
 import ci.esatic.sigep.entity.Etablissement;
+import ci.esatic.sigep.entity.Plan;
 import com.stripe.Stripe;
 import com.stripe.exception.StripeException;
 import com.stripe.model.checkout.Session;
@@ -35,7 +36,9 @@ public class StripeService {
     @Value("${app.stripe.secret-key:}")
     private String secretKey;
 
-    @Value("${app.stripe.currency:xof}")
+    /** Devise SOURCE UNIQUE (app.billing.currency) : impossible d'encaisser dans une devise
+     *  différente de celle affichée au client. */
+    @Value("${app.billing.currency:eur}")
     private String currency;
 
     @Value("${app.base-url:https://sigep.store}")
@@ -46,19 +49,24 @@ public class StripeService {
         return enabled && secretKey != null && !secretKey.isBlank();
     }
 
-    /** Convertit un montant FCFA vers l'unité Stripe (plus petite unité de la devise). */
-    public long versUniteStripe(long fcfa) {
-        return ZERO_DECIMAL.contains(currency.toLowerCase()) ? fcfa : fcfa * 100;
+    /**
+     * Convertit un montant exprimé en unité MAJEURE (ex. 20 €) vers l'unité Stripe
+     * (plus petite unité : 2000 centimes en EUR, 20 en XOF qui est sans décimale).
+     */
+    public long versUniteStripe(long montant) {
+        return ZERO_DECIMAL.contains(currency.toLowerCase()) ? montant : montant * 100;
     }
 
     /**
      * Crée une session Stripe Checkout et renvoie l'URL de paiement (redirection).
-     * L'établissement, le nombre de mois et le montant FCFA sont mis en métadonnées :
-     * le webhook s'en sert pour enregistrer le paiement et prolonger l'abonnement.
+     * L'établissement, le PLAN acheté, le nombre de mois, le montant et la devise sont mis en
+     * métadonnées : le webhook et la réconciliation au retour s'en servent pour enregistrer le
+     * paiement, appliquer le bon plan et prolonger l'abonnement.
      */
-    public String creerSessionCheckout(Etablissement etab, int mois, long montantFcfa, String email)
+    public String creerSessionCheckout(Etablissement etab, Plan plan, int mois, long montant, String email)
             throws StripeException {
         Stripe.apiKey = secretKey;
+        String libelle = plan == Plan.ENTERPRISE ? "Enterprise" : "Pro";
         SessionCreateParams params = SessionCreateParams.builder()
                 .setMode(SessionCreateParams.Mode.PAYMENT)
                 // {CHECKOUT_SESSION_ID} est remplacé par Stripe : permet la réconciliation au retour.
@@ -67,14 +75,18 @@ public class StripeService {
                 .setCustomerEmail(email)
                 .putMetadata("etablissementId", String.valueOf(etab.getId()))
                 .putMetadata("mois", String.valueOf(mois))
-                .putMetadata("montantFcfa", String.valueOf(montantFcfa))
+                .putMetadata("montant", String.valueOf(montant))
+                // Alias conservé pour compatibilité avec les livraisons de webhook en vol.
+                .putMetadata("montantFcfa", String.valueOf(montant))
+                .putMetadata("plan", plan == null ? Plan.PRO.name() : plan.name())
+                .putMetadata("devise", currency.toUpperCase())
                 .addLineItem(SessionCreateParams.LineItem.builder()
                         .setQuantity(1L)
                         .setPriceData(SessionCreateParams.LineItem.PriceData.builder()
                                 .setCurrency(currency)
-                                .setUnitAmount(versUniteStripe(montantFcfa))
+                                .setUnitAmount(versUniteStripe(montant))
                                 .setProductData(SessionCreateParams.LineItem.PriceData.ProductData.builder()
-                                        .setName("Abonnement SIGEP Pro — " + mois + " mois")
+                                        .setName("Abonnement SIGEP " + libelle + " — " + mois + " mois")
                                         .build())
                                 .build())
                         .build())
@@ -98,16 +110,31 @@ public class StripeService {
             return Optional.empty();
         }
         try {
+            long montant = Long.parseLong(
+                    md.getOrDefault("montant", md.getOrDefault("montantFcfa", "0")));
+            // SECURITE : le montant réellement encaissé doit correspondre au montant attendu
+            // (même contrôle anti-écart que le webhook). Sinon on NE crédite PAS.
+            Long encaisse = s.getAmountTotal();
+            if (encaisse == null || encaisse.longValue() != versUniteStripe(montant)) {
+                return Optional.empty();
+            }
+            Plan plan = null;
+            try {
+                plan = Plan.valueOf(md.getOrDefault("plan", ""));
+            } catch (IllegalArgumentException ignore) { /* métadonnée absente/ancienne */ }
             return Optional.of(new PaiementStripe(
                     Long.valueOf(md.get("etablissementId")),
                     Integer.parseInt(md.getOrDefault("mois", "1")),
-                    Long.parseLong(md.getOrDefault("montantFcfa", "0")),
-                    "Stripe " + s.getId()));
+                    montant,
+                    "Stripe " + s.getId(),
+                    plan,
+                    md.get("devise")));
         } catch (NumberFormatException e) {
             return Optional.empty();
         }
     }
 
     /** Paiement Stripe confirmé, prêt à être comptabilisé. */
-    public record PaiementStripe(Long etablissementId, int mois, long montant, String reference) {}
+    public record PaiementStripe(Long etablissementId, int mois, long montant, String reference,
+                                 Plan plan, String devise) {}
 }

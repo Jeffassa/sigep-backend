@@ -24,6 +24,29 @@ public class TenantWebModelAdvice {
 
     private final AbonnementService abonnementService;
     private final EtablissementCourantService etablissementCourantService;
+    private final ci.esatic.sigep.tenant.plan.PlanService planService;
+
+    /** Tarifs et devise exposés à TOUTES les vues web (landing, abonnement, plateforme) :
+     *  une seule source de vérité, donc aucun prix codé en dur qui pourrait diverger. */
+    @ModelAttribute("prixPro")
+    public long prixPro() {
+        return planService.prixMensuel(ci.esatic.sigep.entity.Plan.PRO);
+    }
+
+    @ModelAttribute("prixEnterprise")
+    public long prixEnterprise() {
+        return planService.prixMensuel(ci.esatic.sigep.entity.Plan.ENTERPRISE);
+    }
+
+    @ModelAttribute("symbole")
+    public String symbole() {
+        return planService.symbole();
+    }
+
+    @ModelAttribute("devise")
+    public String devise() {
+        return planService.devise().toUpperCase();
+    }
 
     /** Email du propriétaire de la plateforme (identité SUPER ADMIN — détection). */
     @Value("${app.platform.owner-email:assalendahjeanfrancois@gmail.com}")

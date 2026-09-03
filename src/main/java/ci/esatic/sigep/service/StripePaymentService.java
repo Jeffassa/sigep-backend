@@ -25,7 +25,15 @@ public class StripePaymentService {
 
     /** Délègue au chemin unifié et idempotent (M6). Conserve la signature appelée par le webhook. */
     @Transactional
-    public void traiterPaiementReussi(Long etablissementId, int mois, long montantFcfa, String reference) {
-        paiementService.enregistrer(etablissementId, mois, montantFcfa, reference, "Stripe (en ligne)");
+    public void traiterPaiementReussi(Long etablissementId, int mois, long montant, String reference) {
+        traiterPaiementReussi(etablissementId, mois, montant, reference, null, null);
+    }
+
+    /** Variante complète : applique le PLAN réellement acheté et historise la devise. */
+    @Transactional
+    public void traiterPaiementReussi(Long etablissementId, int mois, long montant, String reference,
+                                      Plan plan, String devise) {
+        paiementService.enregistrer(etablissementId, mois, montant, reference,
+                "Stripe (en ligne)", plan, devise);
     }
 }
