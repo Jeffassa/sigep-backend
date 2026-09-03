@@ -65,7 +65,7 @@ public class NovaSendService {
     /** Encaissement Mobile Money utilisable ? (activé + identifiants présents) */
     public boolean isEnabled() {
         return enabled && apiKey != null && !apiKey.isBlank()
-                && secretKey != null && !secretKey.isBlank();
+                && secretKey != null && !secretKey.isBlank();   // isBlank() couvre déjà les espaces seuls
     }
 
     /** Opérateurs supportés par l'API Direct. */
@@ -95,8 +95,17 @@ public class NovaSendService {
         if (local != null) return local;
         synchronized (this) {
             if (client != null) return client;
+            // On NETTOIE les identifiants : un espace ou un retour à la ligne collé par
+            // mégarde dans une variable d'environnement corrompt l'en-tête Basic et produit
+            // un 401 impossible à distinguer d'une mauvaise clé.
+            String cle = apiKey == null ? "" : apiKey.trim();
+            String sec = secretKey == null ? "" : secretKey.trim();
+            if (!cle.equals(apiKey) || !sec.equals(secretKey)) {
+                log.warn("NovaSend : des espaces parasites ont été retirés des identifiants "
+                        + "(vérifiez NOVASEND_API_KEY / NOVASEND_SECRET_KEY dans l'environnement).");
+            }
             String creds = Base64.getEncoder().encodeToString(
-                    (apiKey + ":" + secretKey).getBytes(StandardCharsets.UTF_8));
+                    (cle + ":" + sec).getBytes(StandardCharsets.UTF_8));
             var httpClient = java.net.http.HttpClient.newBuilder()
                     .connectTimeout(java.time.Duration.ofSeconds(3))
                     .build();
