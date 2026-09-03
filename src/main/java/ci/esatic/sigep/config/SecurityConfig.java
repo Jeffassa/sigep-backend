@@ -9,6 +9,7 @@ import org.springframework.core.annotation.Order;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -82,6 +83,7 @@ public class SecurityConfig {
                 .authenticationProvider(authenticationProvider())
                 // Rate-limiting (anti-bruteforce du login admin + filet global) avant l'auth form.
                 .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class);
+        appliquerHeadersSecurite(http);
         if (requireHttps) {
             http.requiresChannel(c -> c.anyRequest().requiresSecure());
         }
@@ -94,6 +96,9 @@ public class SecurityConfig {
     public SecurityFilterChain apiFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
+                // CORS câblé DANS la chaîne (source = CorsConfig) : le preflight est traité
+                // avant l'authentification, contrairement à un CorsFilter autonome.
+                .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
                         // Pages publiques SaaS (accueil + inscription + pages légales) + SEO + statiques
                         .requestMatchers("/", "/inscription", "/error", "/favicon.ico").permitAll()
@@ -112,6 +117,9 @@ public class SecurityConfig {
                         // réservé aux admins — pas exposé aux enseignants authentifiés.
                         .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
                         .requestMatchers("/actuator/**").hasRole("ADMIN")
+                        // Doc OpenAPI/Swagger : réservée ADMIN (désactivée en prod, cf. application-prod.yml).
+                        // Évite qu'un simple compte enseignant énumère toute la surface API.
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").hasRole("ADMIN")
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
@@ -129,10 +137,29 @@ public class SecurityConfig {
                 .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
+        appliquerHeadersSecurite(http);
         if (requireHttps) {
             http.requiresChannel(c -> c.anyRequest().requiresSecure());
         }
         return http.build();
+    }
+
+    /**
+     * En-têtes de sécurité communs aux deux chaînes (défense en profondeur).
+     * CSP volontairement PARTIELLE (pas de {@code default-src}) : on verrouille l'injection
+     * d'objets, la base-uri et le framing sans casser les scripts inline ni les CDN légitimes
+     * (ECharts, Google Fonts) utilisés par l'admin et les pages QR. S'ajoute aux défauts Spring
+     * (X-Frame-Options DENY, X-Content-Type-Options nosniff, HSTS en HTTPS).
+     */
+    private void appliquerHeadersSecurite(HttpSecurity http) throws Exception {
+        http.headers(h -> h
+                .contentSecurityPolicy(csp -> csp.policyDirectives(
+                        "object-src 'none'; base-uri 'self'; frame-ancestors 'none'"))
+                .referrerPolicy(r -> r.policy(
+                        org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
+                .addHeaderWriter(new org.springframework.security.web.header.writers.StaticHeadersWriter(
+                        "Permissions-Policy", "geolocation=(), microphone=(), camera=(), payment=(), usb=()"))
+        );
     }
 
     /** Provider username/password (DAO). Volontairement NON exposé en @Bean : sinon Spring

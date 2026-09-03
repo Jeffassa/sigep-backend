@@ -27,7 +27,7 @@ jobs:
         with:
           scan-type: fs
           scanners: vuln,secret,misconfig
-          severity: CRITICAL,HIGH
+          severity: CRITICAL,HIGH,MEDIUM
           ignore-unfixed: true
           format: sarif
           output: trivy-results.sarif
@@ -39,13 +39,13 @@ jobs:
         with:
           sarif_file: trivy-results.sarif
 
-      # 2) Gate BLOQUANT : échoue la CI en présence d'une vulnérabilité CRITICAL corrigeable.
-      - name: Gate CRITICAL (bloquant)
+      # 2) Gate BLOQUANT : échoue la CI en présence d'une vulnérabilité CRITICAL ou HIGH corrigeable.
+      - name: Gate CRITICAL+HIGH (bloquant)
         uses: aquasecurity/trivy-action@0.24.0
         with:
           scan-type: fs
           scanners: vuln,secret,misconfig
-          severity: CRITICAL
+          severity: CRITICAL,HIGH
           ignore-unfixed: true
           format: table
           exit-code: '1'

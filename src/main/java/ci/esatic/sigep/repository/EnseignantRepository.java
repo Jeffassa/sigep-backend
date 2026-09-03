@@ -13,6 +13,9 @@ import java.util.Optional;
 
 public interface EnseignantRepository extends JpaRepository<Enseignant, Long> {
     Optional<Enseignant> findByMatricule(String matricule);
+    /** Tous les enseignants portant ce matricule (peut valoir >1 depuis V16 : matricule unique PAR
+     *  établissement, pas globalement). Évite le NonUniqueResult de findByMatricule à l'inscription. */
+    List<Enseignant> findAllByMatricule(String matricule);
     Optional<Enseignant> findByUserId(Long userId);
     boolean existsByMatricule(String matricule);
 
@@ -40,14 +43,14 @@ public interface EnseignantRepository extends JpaRepository<Enseignant, Long> {
                    " OR LOWER(e.matricule) LIKE LOWER(CONCAT('%', CAST(:search AS varchar), '%'))) " +
                    "AND (CAST(:departement AS varchar) IS NULL OR e.departement = CAST(:departement AS varchar)) " +
                    // ISOLATION : requête native -> le filtre Hibernate ne s'applique pas, on filtre ici.
-                   "AND (CAST(:tenantId AS bigint) IS NULL OR e.etablissement_id = :tenantId)",
+                   "AND e.etablissement_id = :tenantId",
            countQuery = "SELECT COUNT(*) FROM enseignants e WHERE " +
                         "(CAST(:search AS varchar) IS NULL " +
                         " OR LOWER(e.nom) LIKE LOWER(CONCAT('%', CAST(:search AS varchar), '%')) " +
                         " OR LOWER(e.prenom) LIKE LOWER(CONCAT('%', CAST(:search AS varchar), '%')) " +
                         " OR LOWER(e.matricule) LIKE LOWER(CONCAT('%', CAST(:search AS varchar), '%'))) " +
                         "AND (CAST(:departement AS varchar) IS NULL OR e.departement = CAST(:departement AS varchar)) " +
-                        "AND (CAST(:tenantId AS bigint) IS NULL OR e.etablissement_id = :tenantId)",
+                        "AND e.etablissement_id = :tenantId",
            nativeQuery = true)
     Page<Enseignant> searchEnseignants(@Param("search") String search,
                                         @Param("departement") String departement,
@@ -62,7 +65,7 @@ public interface EnseignantRepository extends JpaRepository<Enseignant, Long> {
                    "AND (CAST(:departement AS varchar) IS NULL OR e.departement = CAST(:departement AS varchar)) " +
                    "AND e.statut = CAST(:statut AS varchar) " +
                    // ISOLATION : requête native -> le filtre Hibernate ne s'applique pas, on filtre ici.
-                   "AND (CAST(:tenantId AS bigint) IS NULL OR e.etablissement_id = :tenantId)",
+                   "AND e.etablissement_id = :tenantId",
            countQuery = "SELECT COUNT(*) FROM enseignants e WHERE " +
                         "(CAST(:search AS varchar) IS NULL " +
                         " OR LOWER(e.nom) LIKE LOWER(CONCAT('%', CAST(:search AS varchar), '%')) " +
@@ -70,7 +73,7 @@ public interface EnseignantRepository extends JpaRepository<Enseignant, Long> {
                         " OR LOWER(e.matricule) LIKE LOWER(CONCAT('%', CAST(:search AS varchar), '%'))) " +
                         "AND (CAST(:departement AS varchar) IS NULL OR e.departement = CAST(:departement AS varchar)) " +
                         "AND e.statut = CAST(:statut AS varchar) " +
-                        "AND (CAST(:tenantId AS bigint) IS NULL OR e.etablissement_id = :tenantId)",
+                        "AND e.etablissement_id = :tenantId",
            nativeQuery = true)
     Page<Enseignant> searchEnseignantsByStatut(@Param("search") String search,
                                                @Param("departement") String departement,

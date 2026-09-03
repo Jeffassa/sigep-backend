@@ -156,8 +156,8 @@
                 <span class="material-symbols-rounded">notifications</span><span>Alertes</span></a>
             <a class="palette-item" th:href="@{/admin/abonnement}" data-key="abonnement plan facturation renouveler paiement expiration">
                 <span class="material-symbols-rounded">card_membership</span><span>Abonnement</span></a>
-            <a th:if="${qrDisplayUrl != null}" class="palette-item" th:href="${qrDisplayUrl}" target="_blank" rel="noopener"
-               data-key="qr code ecran emargement salle affichage scanner presence kiosque">
+            <a th:if="${qrDisplayUrl != null}" class="palette-item" th:href="@{/admin/ecran-emargement}"
+               data-key="qr code ecran emargement salle affichage scanner presence kiosque cle regenerer">
                 <span class="material-symbols-rounded">qr_code_2</span><span>Écran d'émargement (QR de salle)</span></a>
             <button type="button" class="palette-item" onclick="window.__logout&amp;&amp;window.__logout()"
                     data-key="deconnexion logout sortir quitter"

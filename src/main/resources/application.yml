@@ -58,6 +58,20 @@ spring:
           auth: true
           starttls:
             enable: true
+  # Cache applicatif. OPTIONNEL : 'simple' (mémoire locale, défaut) tant que Redis n'est pas
+  # provisionné. Pour activer le cache distribué : CACHE_TYPE=redis + REDIS_URL (voir ci-dessous).
+  cache:
+    type: ${CACHE_TYPE:simple}
+    redis:
+      time-to-live: ${CACHE_TTL_MS:600000}   # 10 min par défaut
+  data:
+    redis:
+      # Redis OPTIONNEL (cache distribué + rate-limit partagé). Par défaut ABSENT → repli mémoire.
+      # Pour l'activer, définir la variable d'env SPRING_DATA_REDIS_URL (Spring la relie tout seul),
+      # ex. rediss://default:<password>@<host>:<port> (Upstash/Render), + CACHE_TYPE=redis et/ou
+      # RATE_LIMIT_REDIS_ENABLED=true. NE PAS déclarer d'url vide ici : Lettuce refuse "" au démarrage.
+      timeout: ${REDIS_TIMEOUT:2s}
+      connect-timeout: ${REDIS_CONNECT_TIMEOUT:2s}
 
 server:
   # ${PORT} : l'hébergeur (Render, etc.) injecte le port à écouter. 8080 en local.
@@ -94,6 +108,11 @@ management:
     # ne doit pas faire passer toute la sonde en DOWN quand aucun SMTP n'est configuré.
     mail:
       enabled: false
+    # Redis est une couche de PERFORMANCE optionnelle (cache + rate-limit distribué) : une
+    # panne Redis ne doit JAMAIS faire échouer /actuator/health (sinon Render coupe le service).
+    # N'activer (=true) que si Redis est provisionné ET considéré critique.
+    redis:
+      enabled: ${REDIS_HEALTH_ENABLED:false}
   info:
     env:
       # SECURITE : ne pas exposer les propriétés d'environnement via /actuator/info (public).
@@ -216,3 +235,11 @@ app:
       max-global: ${RATE_LIMIT_MAX_GLOBAL:300}
       # Plafond de clés en mémoire (garde anti-épuisement du limiteur lui-même).
       max-keys: ${RATE_LIMIT_MAX_KEYS:50000}
+      # Rate-limit DISTRIBUÉ via Redis (partagé entre instances, survit aux redémarrages).
+      # Nécessite REDIS_URL. false = compteurs en mémoire locale (défaut, mono-instance).
+      redis-enabled: ${RATE_LIMIT_REDIS_ENABLED:false}
+      # Budget par UTILISATEUR authentifié (en plus du budget par IP) sur les endpoints coûteux
+      # (génération de rapports, import Excel, analyse IA). Empêche un compte de saturer l'instance.
+      max-heavy-per-user: ${RATE_LIMIT_MAX_HEAVY_PER_USER:20}
+      # Budget strict de l'analyse IA (appels Claude facturés) par IP/min.
+      max-ai: ${RATE_LIMIT_MAX_AI:5}

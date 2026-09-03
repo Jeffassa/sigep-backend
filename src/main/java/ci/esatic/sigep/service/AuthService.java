@@ -185,7 +185,16 @@ public class AuthService {
      */
     @Transactional
     public AuthResponse inscription(InscriptionRequest request) {
-        Enseignant enseignant = enseignantRepository.findByMatricule(request.getMatricule())
+        // Depuis V16, le matricule est unique PAR établissement (pas globalement) : findByMatricule
+        // lèverait NonUniqueResult (HTTP 500) si deux tenants partagent un matricule. On liste et on
+        // tranche proprement.
+        java.util.List<Enseignant> candidats = enseignantRepository.findAllByMatricule(request.getMatricule());
+        if (candidats.size() > 1) {
+            throw new IllegalArgumentException(
+                    "Plusieurs établissements correspondent à ce matricule. Contactez votre administration "
+                  + "pour finaliser votre inscription.");
+        }
+        Enseignant enseignant = candidats.stream().findFirst()
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Matricule introuvable. Vérifiez-le ou contactez l'administration."));
         if (enseignant.getUser() != null) {

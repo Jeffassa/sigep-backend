@@ -28,6 +28,12 @@ public class DataInitializer implements CommandLineRunner {
     private final UserRepository userRepository;
     private final EtablissementRepository etablissementRepository;
     private final PasswordEncoder passwordEncoder;
+    private final org.springframework.core.env.Environment environment;
+
+    /** true si le profil 'prod' est actif : on n'écrit alors JAMAIS un secret en clair dans les logs. */
+    private boolean estProd() {
+        return java.util.Arrays.asList(environment.getActiveProfiles()).contains("prod");
+    }
 
     /** Slug du tenant par défaut (rattache les données du mode mono-établissement actuel). */
     private static final String SLUG_DEFAUT = "default";
@@ -116,10 +122,14 @@ public class DataInitializer implements CommandLineRunner {
 
         if (genere) {
             log.warn("====================================================================");
-            log.warn("  COMPTE ADMIN CREE — mot de passe genere aleatoirement :");
+            log.warn("  COMPTE ADMIN CREE — mot de passe genere aleatoirement.");
             log.warn("  email    : {}", adminEmail);
-            log.warn("  password : {}", motDePasse);
-            log.warn("  >> Notez-le et changez-le. Definissez ADMIN_PASSWORD pour le fixer.");
+            if (estProd()) {
+                log.warn("  >> Definissez ADMIN_PASSWORD (variable d'env) puis reinitialisez ce compte.");
+            } else {
+                log.warn("  password : {}", motDePasse);   // dev uniquement : jamais de secret en clair en prod
+                log.warn("  >> Notez-le et changez-le. Definissez ADMIN_PASSWORD pour le fixer.");
+            }
             log.warn("====================================================================");
         } else {
             log.info("Admin créé → email: {}", adminEmail);
@@ -167,10 +177,14 @@ public class DataInitializer implements CommandLineRunner {
 
         if (genere) {
             log.warn("====================================================================");
-            log.warn("  COMPTE SUPER ADMIN CREE — mot de passe genere aleatoirement :");
+            log.warn("  COMPTE SUPER ADMIN CREE — mot de passe genere aleatoirement.");
             log.warn("  email    : {}", platformAdminEmail);
-            log.warn("  password : {}", motDePasse);
-            log.warn("  >> Notez-le et changez-le. Definissez PLATFORM_ADMIN_PASSWORD pour le fixer.");
+            if (estProd()) {
+                log.warn("  >> Definissez PLATFORM_ADMIN_PASSWORD (variable d'env) puis reinitialisez ce compte.");
+            } else {
+                log.warn("  password : {}", motDePasse);   // dev uniquement : jamais de secret en clair en prod
+                log.warn("  >> Notez-le et changez-le. Definissez PLATFORM_ADMIN_PASSWORD pour le fixer.");
+            }
             log.warn("====================================================================");
         } else {
             log.info("Super admin créé → email: {}", platformAdminEmail);

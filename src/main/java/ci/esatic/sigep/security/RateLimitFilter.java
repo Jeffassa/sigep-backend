@@ -43,7 +43,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private static final String LOGIN_PATH = "/api/auth/login";
     private static final String REFRESH_PATH = "/api/auth/refresh";
     private static final String SIGNUP_PATH = "/api/saas/etablissements";
+    private static final String REGISTER_PATH = "/api/auth/register";      // auto-inscription enseignant
     private static final String ADMIN_LOGIN_PATH = "/admin-login";
+    private static final String ANALYSE_IA_PATH = "/admin/api/stats/analyse"; // appels Claude facturés (GET)
 
     private final ConcurrentHashMap<String, Deque<Long>> hits = new ConcurrentHashMap<>();
 
@@ -78,9 +80,26 @@ public class RateLimitFilter extends OncePerRequestFilter {
     @Value("${app.security.login-rate-limit.max-keys:50000}")
     private int maxKeys;
 
+    /** Budget strict de l'analyse IA (appels Claude facturés) par IP/min. */
+    @Value("${app.security.login-rate-limit.max-ai:5}")
+    private int maxAi;
+
+    /** Budget par UTILISATEUR authentifié (en plus du budget IP) sur les endpoints coûteux
+     *  (génération de rapports, import Excel, analyse IA) — empêche un compte de saturer l'instance. */
+    @Value("${app.security.login-rate-limit.max-heavy-per-user:20}")
+    private int maxHeavyPerUser;
+
+    /** Rate-limit distribué via Redis (partagé/persistant) si activé ET Redis disponible. */
+    @Value("${app.security.login-rate-limit.redis-enabled:false}")
+    private boolean redisEnabled;
+
     // Résolution de l'IP cliente CENTRALISÉE (gestion X-Forwarded-For selon la confiance proxy).
     @org.springframework.beans.factory.annotation.Autowired
     private ClientIpResolver clientIpResolver;
+
+    /** Store Redis optionnel (présent seulement si redis-enabled=true). */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private RedisRateLimitStore redisStore;
 
     @Override
     protected void doFilterInternal(
@@ -99,7 +118,15 @@ public class RateLimitFilter extends OncePerRequestFilter {
                 return;
             }
 
-            // 2) Budget global par IP (filet anti-flood), hors chemins à fort trafic légitime.
+            // 2) Budget par UTILISATEUR authentifié sur les endpoints coûteux (rapports, import, IA) :
+            //    empêche un compte (ou une session détournée) de saturer l'instance, indépendamment de l'IP.
+            if (maxHeavyPerUser > 0 && estCouteux(request)
+                    && estBloque(cleUtilisateurOuIp(ip) + "|heavy", maxHeavyPerUser)) {
+                refuser(request, response, ip);
+                return;
+            }
+
+            // 3) Budget global par IP (filet anti-flood), hors chemins à fort trafic légitime.
             if (maxGlobal > 0 && !estExclu(request) && estBloque(ip + "|*", maxGlobal)) {
                 refuser(request, response, ip);
                 return;
@@ -109,15 +136,41 @@ public class RateLimitFilter extends OncePerRequestFilter {
         chain.doFilter(request, response);
     }
 
-    /** Budget applicable au POST sensible (0 = non concerné). */
+    /** Budget applicable à l'endpoint sensible (0 = non concerné). */
     private int budgetStrict(HttpServletRequest request) {
-        if (!"POST".equalsIgnoreCase(request.getMethod())) return 0;
         String uri = request.getRequestURI();
+        if (uri == null) return 0;
+        // Analyse IA : GET coûteux (appels Claude facturés) → budget strict indépendant de la méthode.
+        if (ANALYSE_IA_PATH.equals(uri)) return maxAi;
+        if (!"POST".equalsIgnoreCase(request.getMethod())) return 0;
         if (LOGIN_PATH.equals(uri)) return maxLogin;
         if (REFRESH_PATH.equals(uri)) return maxRefresh;
         if (SIGNUP_PATH.equals(uri)) return maxSignup;
+        if (REGISTER_PATH.equals(uri)) return maxSignup;   // même budget anti-spam que l'inscription établissement
         if (ADMIN_LOGIN_PATH.equals(uri)) return maxAdminLogin;
         return 0;
+    }
+
+    /** Endpoints COÛTEUX (CPU/mémoire/argent) soumis à un budget par utilisateur. */
+    private boolean estCouteux(HttpServletRequest request) {
+        String uri = request.getRequestURI();
+        if (uri == null) return false;
+        if (ANALYSE_IA_PATH.equals(uri)) return true;                 // analyse IA (GET)
+        if (!"POST".equalsIgnoreCase(request.getMethod())) return false;
+        return "/api/rapports/generer".equals(uri)
+                || "/api/rapports/bulk-download".equals(uri)
+                || uri.startsWith("/api/import/")
+                || uri.startsWith("/api/admin/import/");
+    }
+
+    /** Clé de l'utilisateur authentifié si disponible, sinon repli sur l'IP (NAT partagé). */
+    private String cleUtilisateurOuIp(String ip) {
+        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.isAuthenticated() && auth.getName() != null
+                && !(auth instanceof org.springframework.security.authentication.AnonymousAuthenticationToken)) {
+            return "u:" + auth.getName();
+        }
+        return "ip:" + ip;
     }
 
     /** Chemins exclus du budget global (trafic légitime intense, à ne pas couper). */
@@ -131,8 +184,12 @@ public class RateLimitFilter extends OncePerRequestFilter {
                 || uri.startsWith("/api/stripe/");    // webhook Stripe (ne jamais bloquer/retarder)
     }
 
-    /** Enregistre un hit et indique si la clé dépasse son budget sur la fenêtre glissante. */
+    /** Enregistre un hit et indique si la clé dépasse son budget sur la fenêtre.
+     *  Délègue à Redis (distribué) si activé, sinon compteur mémoire local (fenêtre glissante). */
     private boolean estBloque(String cle, int max) {
+        if (redisEnabled && redisStore != null) {
+            return redisStore.overLimit(cle, max, WINDOW_MS);
+        }
         long now = System.currentTimeMillis();
         // Garde mémoire : au plafond, ne pas créer de nouvelle clé (fail-open borné).
         if (hits.size() >= maxKeys && !hits.containsKey(cle)) return false;

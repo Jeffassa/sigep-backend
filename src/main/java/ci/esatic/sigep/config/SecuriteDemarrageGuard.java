@@ -35,13 +35,16 @@ public class SecuriteDemarrageGuard {
     private final Environment env;
     private final String jwtSecret;
     private final String qrSecret;
+    private final boolean requireHttps;
 
     public SecuriteDemarrageGuard(Environment env,
                                   @Value("${app.jwt.secret:}") String jwtSecret,
-                                  @Value("${app.jwt.qr-secret:}") String qrSecret) {
+                                  @Value("${app.jwt.qr-secret:}") String qrSecret,
+                                  @Value("${app.security.require-https:false}") boolean requireHttps) {
         this.env = env;
         this.jwtSecret = jwtSecret;
         this.qrSecret = qrSecret;
+        this.requireHttps = requireHttps;
     }
 
     @PostConstruct
@@ -49,6 +52,14 @@ public class SecuriteDemarrageGuard {
         boolean profilDev = Arrays.asList(env.getActiveProfiles()).contains("dev");
         if (profilDev) {
             return; // En dev local, les clés de dev sont attendues et sans danger.
+        }
+        // En prod : HTTPS OBLIGATOIRE (les jetons d'accès / cookies de session ne doivent jamais
+        // transiter en clair). Fail-closed contre un override APP_SECURITY_REQUIRE_HTTPS=false
+        // ou un démarrage prod sans le profil. Le défaut prod (application-prod.yml) est déjà true.
+        if (Arrays.asList(env.getActiveProfiles()).contains("prod") && !requireHttps) {
+            throw new IllegalStateException(
+                    "Démarrage refusé (sécurité) : profil 'prod' actif mais app.security.require-https=false. "
+                  + "Activez APP_SECURITY_REQUIRE_HTTPS=true (ne jamais servir de jetons en clair).");
         }
         if (SECRETS_DEV_CONNUS.contains(jwtSecret) || SECRETS_DEV_CONNUS.contains(qrSecret)) {
             throw new IllegalStateException(
