@@ -38,7 +38,7 @@ public class StripeService {
 
     /** Devise SOURCE UNIQUE (app.billing.currency) : impossible d'encaisser dans une devise
      *  différente de celle affichée au client. */
-    @Value("${app.billing.currency:eur}")
+    @Value("${app.billing.currency:xof}")
     private String currency;
 
     @Value("${app.base-url:https://sigep.store}")

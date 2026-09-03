@@ -83,9 +83,9 @@
                 <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-1.5">Plan</label>
                 <select name="plan" id="planSel" class="h-11 px-3 rounded-xl bg-white/60 border border-line text-[14px]">
                     <option value="PRO" th:attr="data-prix=${prixPro}"
-                            th:text="'Pro — ' + ${prixPro} + ' ' + ${symbole} + ' / mois'">Pro</option>
+                            th:text="'Pro — ' + ${#numbers.formatInteger(prixPro,1,'WHITESPACE')} + ' ' + ${symbole} + ' / mois'">Pro</option>
                     <option value="ENTERPRISE" th:if="${prixEnterprise > 0}" th:attr="data-prix=${prixEnterprise}"
-                            th:text="'Enterprise — ' + ${prixEnterprise} + ' ' + ${symbole} + ' / mois'">Enterprise</option>
+                            th:text="'Enterprise — ' + ${#numbers.formatInteger(prixEnterprise,1,'WHITESPACE')} + ' ' + ${symbole} + ' / mois'">Enterprise</option>
                 </select>
             </div>
             <div>
@@ -115,7 +115,9 @@
                 if (!p || !m || !t) return;
                 function maj() {
                     var prix = parseInt(p.options[p.selectedIndex].getAttribute('data-prix') || '0', 10);
-                    t.textContent = (prix * parseInt(m.value, 10)) + ' ' + sym;
+                    var total = prix * parseInt(m.value, 10);
+                    // Séparateur de milliers (insécable) : 96 000 FCFA se lit mieux que 96000.
+                    t.textContent = total.toLocaleString('fr-FR').replace(/ /g, ' ') + ' ' + sym;
                 }
                 p.addEventListener('change', maj);
                 m.addEventListener('change', maj);

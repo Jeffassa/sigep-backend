@@ -18,18 +18,18 @@ import java.util.stream.Stream;
 @Service
 public class PlanService {
 
-    /** Tarifs mensuels en unité MAJEURE de la devise de facturation (ex. 20 = 20 €). */
-    @Value("${app.plans.pro-price:20}")
+    /** Tarifs mensuels en unité MAJEURE de la devise (XOF : pas de décimale). */
+    @Value("${app.plans.pro-price:13000}")
     private long prixPro;
 
-    @Value("${app.plans.enterprise-price:146}")
+    @Value("${app.plans.enterprise-price:96000}")
     private long prixEnterprise;
 
     /** Devise de facturation (source unique, partagée avec Stripe). */
-    @Value("${app.billing.currency:eur}")
+    @Value("${app.billing.currency:xof}")
     private String devise;
 
-    @Value("${app.billing.symbole:€}")
+    @Value("${app.billing.symbole:FCFA}")
     private String symbole;
 
     /** Tarif mensuel facturé pour un plan (0 pour Free). */
