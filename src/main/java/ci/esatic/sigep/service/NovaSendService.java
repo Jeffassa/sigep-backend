@@ -19,11 +19,11 @@ import java.util.Optional;
 /**
  * Client de l'API NovaSend (encaissement Mobile Money : WAVE / ORANGE / MOMO / MOOV).
  *
- * <p><b>Modèle de confirmation.</b> NovaSend n'expose <i>aucun webhook</i> : après l'initiation,
- * le paiement est confirmé par le client sur son téléphone (push/USSD) ou via {@code paymentUrl}.
- * La seule source de vérité est donc {@code GET /v1/payin/{reference}}. Les URLs de redirection
- * {@code successUrl}/{@code failureUrl} ne prouvent RIEN (n'importe qui peut les ouvrir) : elles
- * servent uniquement à ramener l'utilisateur, jamais à créditer un abonnement.
+ * <p><b>Modèle de confirmation.</b> Après l'initiation, le paiement est confirmé par le client
+ * sur son téléphone (push/USSD) ou via {@code paymentUrl}. NovaSend notifie par webhook signé,
+ * mais celui-ci sert d'ACCÉLÉRATEUR : la source de vérité reste {@code GET /v1/payin/{reference}}.
+ * Les URLs {@code successUrl}/{@code failureUrl} ne prouvent RIEN (n'importe qui peut les ouvrir) :
+ * elles ramènent l'utilisateur, jamais elles ne créditent un abonnement.
  *
  * <p>Authentification : {@code Basic base64(api_key:api_client)}. Chaque initiation porte un
  * en-tête {@code X-Idempotency-Key} (la référence marchande, un UUID) afin qu'un rejeu réseau
@@ -153,11 +153,11 @@ public class NovaSendService {
             // On journalise le CODE et la RÉPONSE du fournisseur : sans eux, un refus
             // d'authentification est indiscernable d'un montant invalide, et le diagnostic
             // devient impossible sans redéployer.
-            String corps = e.getResponseBodyAsString();
+            String reponseErreur = e.getResponseBodyAsString();
             log.warn("NovaSend : initiation refusée (ref={}) HTTP {} — réponse: {}",
                     reference, e.getStatusCode().value(),
-                    corps == null ? "" : corps.substring(0, Math.min(corps.length(), 400)));
-            throw new NovaSendException(messageSelonStatut(e.getStatusCode().value(), corps));
+                    reponseErreur == null ? "" : reponseErreur.substring(0, Math.min(reponseErreur.length(), 400)));
+            throw new NovaSendException(messageSelonStatut(e.getStatusCode().value(), reponseErreur));
         } catch (Exception e) {
             log.warn("NovaSend : initiation impossible (ref={}) : {}", reference, e.toString());
             throw new NovaSendException("Le service de paiement est momentanément indisponible.");
