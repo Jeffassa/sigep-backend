@@ -1,309 +1,619 @@
 <!DOCTYPE html>
 <html lang="fr" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{admin/fragments :: head('SIGEP · Gérez les heures de vos enseignants')}"></head>
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title th:text="(${marque} ?: 'SIGEP') + ' · Émargement intelligent pour écoles & universités'">SIGEP · Émargement intelligent</title>
+    <meta name="description" content="SIGEP — suivez les heures réellement effectuées par vos enseignants via un émargement QR sécurisé. Statistiques, alertes et rapports de paie, sans Excel."/>
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="crossorigin"/>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+    <style>
+        :root {
+            /* Palette SOMBRE (défaut) */
+            --bg: #08080a;
+            --bg-2: #0d0d10;
+            --surface: #141418;
+            --surface-2: #1a1a1f;
+            --border: rgba(255,255,255,.08);
+            --border-2: rgba(255,255,255,.14);
+            --text: #f4f4f5;
+            --muted: #a1a1aa;
+            --dim: #71717a;
+            --accent: #34d399;
+            --accent-2: #10b981;
+            --accent-soft: rgba(52,211,153,.12);
+            --accent-ink: #04160e;
+            --nav-bg: #ffffff;
+            --nav-text: #0a0a0b;
+            --nav-muted: #52525b;
+            --nav-border: rgba(0,0,0,.06);
+            --shadow: 0 20px 60px rgba(0,0,0,.45);
+            --radius: 20px;
+            --font-display: 'Space Grotesk', system-ui, sans-serif;
+            --font-body: 'Inter', system-ui, sans-serif;
+        }
+        html.light {
+            --bg: #f6f6f7;
+            --bg-2: #ffffff;
+            --surface: #ffffff;
+            --surface-2: #f4f4f5;
+            --border: rgba(0,0,0,.08);
+            --border-2: rgba(0,0,0,.12);
+            --text: #0a0a0b;
+            --muted: #52525b;
+            --dim: #8a8a94;
+            --accent-soft: rgba(16,185,129,.12);
+            --nav-border: rgba(0,0,0,.08);
+            --shadow: 0 16px 44px rgba(0,0,0,.12);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--font-body);
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+        a { color: inherit; text-decoration: none; }
+        img { max-width: 100%; display: block; }
+        ::selection { background: var(--accent); color: var(--accent-ink); }
+
+        .wrap { max-width: 1160px; margin: 0 auto; padding: 0 20px; }
+        .eyebrow {
+            font-family: var(--font-body); font-size: 12px; font-weight: 600;
+            letter-spacing: .16em; text-transform: uppercase; color: var(--accent);
+        }
+        h1, h2, h3 { font-family: var(--font-display); font-weight: 700; letter-spacing: -.02em; line-height: 1.05; }
+        .muted { color: var(--muted); }
+
+        /* ---------- NAVBAR (pilule blanche flottante) ---------- */
+        .nav-outer { position: sticky; top: 0; z-index: 100; padding: 16px 20px 0; }
+        .nav {
+            max-width: 1120px; margin: 0 auto;
+            background: var(--nav-bg); color: var(--nav-text);
+            border: 1px solid var(--nav-border);
+            border-radius: 999px;
+            box-shadow: var(--shadow);
+            height: 62px; padding: 0 12px 0 22px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .brand { display: flex; align-items: center; gap: 10px; }
+        .brand-mark {
+            width: 30px; height: 30px; border-radius: 9px;
+            background: linear-gradient(140deg, var(--accent), var(--accent-2));
+            display: grid; place-items: center; color: var(--accent-ink);
+            font-weight: 700; font-family: var(--font-display); font-size: 17px; flex: none;
+        }
+        .brand-name { font-family: var(--font-display); font-weight: 700; font-size: 22px; letter-spacing: -.02em; color: var(--nav-text); }
+        .nav-links { display: flex; align-items: center; gap: 4px; }
+        .nav-links a.link {
+            padding: 9px 14px; border-radius: 999px; font-size: 14px; font-weight: 500;
+            color: var(--nav-muted); transition: background .15s, color .15s;
+        }
+        .nav-links a.link:hover { color: var(--nav-text); background: rgba(0,0,0,.05); }
+        .nav-cta { display: flex; align-items: center; gap: 8px; }
+        .icon-btn {
+            width: 40px; height: 40px; border-radius: 999px; border: 1px solid var(--nav-border);
+            background: transparent; color: var(--nav-muted); cursor: pointer;
+            display: grid; place-items: center; transition: background .15s, color .15s;
+        }
+        .icon-btn:hover { background: rgba(0,0,0,.05); color: var(--nav-text); }
+        .icon-btn svg { width: 18px; height: 18px; }
+
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            font-family: var(--font-body); font-weight: 600; font-size: 14px;
+            border-radius: 999px; padding: 0 20px; height: 44px; cursor: pointer;
+            border: 1px solid transparent; transition: transform .12s, background .15s, opacity .15s, border-color .15s;
+            white-space: nowrap;
+        }
+        .btn:active { transform: translateY(1px); }
+        .btn svg { width: 17px; height: 17px; }
+        .btn-accent { background: linear-gradient(140deg, var(--accent), var(--accent-2)); color: var(--accent-ink); }
+        .btn-accent:hover { opacity: .92; }
+        .btn-dark { background: var(--nav-text); color: var(--nav-bg); height: 40px; padding: 0 18px; }
+        .btn-ghost { background: transparent; border-color: var(--border-2); color: var(--text); }
+        .btn-ghost:hover { background: var(--surface-2); }
+        .nav .btn-ghost { color: var(--nav-muted); border-color: var(--nav-border); }
+        .nav .btn-ghost:hover { background: rgba(0,0,0,.05); color: var(--nav-text); }
+
+        .nav-toggle { display: none; }
+
+        /* ---------- HERO ---------- */
+        .hero { text-align: center; padding: 72px 0 20px; }
+        .badge {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: var(--surface); border: 1px solid var(--border-2);
+            color: var(--muted); border-radius: 999px; padding: 7px 15px; font-size: 13px; font-weight: 500;
+        }
+        .badge .dot { width: 7px; height: 7px; border-radius: 999px; background: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+        h1.title { font-size: clamp(40px, 7vw, 76px); max-width: 15ch; margin: 22px auto 0; }
+        h1.title .grad { background: linear-gradient(120deg, var(--accent), #6ee7b7); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .lead { font-size: clamp(16px, 2.2vw, 19px); color: var(--muted); max-width: 620px; margin: 22px auto 0; }
+        .hero-cta { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 32px; }
+        .hero-note { font-size: 12.5px; color: var(--dim); margin-top: 18px; letter-spacing: .01em; }
+        .scroll-hint { margin-top: 40px; font-size: 12px; letter-spacing: .18em; text-transform: uppercase; color: var(--dim); display: inline-flex; align-items: center; gap: 8px; }
+        .scroll-hint .bounce { animation: bounce 1.8s infinite; }
+        @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(4px)} }
+
+        /* ---------- MOCKUP DASHBOARD ---------- */
+        .shot-wrap { max-width: 1040px; margin: 40px auto 0; padding: 0 20px; }
+        .shot {
+            background: var(--surface); border: 1px solid var(--border-2); border-radius: 24px;
+            box-shadow: var(--shadow); overflow: hidden; display: grid; grid-template-columns: 210px 1fr;
+        }
+        .shot-side { background: var(--bg-2); border-right: 1px solid var(--border); padding: 18px 14px; }
+        .shot-side .org { display: flex; align-items: center; gap: 9px; font-weight: 600; font-size: 13px; margin-bottom: 16px; }
+        .shot-side .org .brand-mark { width: 24px; height: 24px; font-size: 13px; border-radius: 7px; }
+        .shot-nav { display: flex; flex-direction: column; gap: 3px; }
+        .shot-nav span { font-size: 12.5px; color: var(--muted); padding: 8px 10px; border-radius: 9px; display: flex; align-items: center; gap: 9px; }
+        .shot-nav span.on { background: var(--surface-2); color: var(--text); font-weight: 600; }
+        .shot-nav .ic { width: 14px; height: 14px; border-radius: 4px; background: var(--border-2); flex: none; }
+        .shot-nav span.on .ic { background: var(--accent); }
+        .shot-main { padding: 20px; }
+        .shot-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+        .shot-head .t { font-family: var(--font-display); font-weight: 600; font-size: 15px; }
+        .shot-head .pill { font-size: 11px; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 4px 10px; }
+        .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+        .kpi { background: var(--bg-2); border: 1px solid var(--border); border-radius: 14px; padding: 13px; }
+        .kpi .lab { font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); }
+        .kpi .val { font-family: var(--font-display); font-weight: 700; font-size: 26px; margin-top: 6px; }
+        .kpi .val small { font-size: 13px; color: var(--muted); font-weight: 500; }
+        .kpi .chg { font-size: 11px; margin-top: 4px; color: var(--accent); font-weight: 600; }
+        .kpi .chg.down { color: #f87171; }
+        .chart { background: var(--bg-2); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px 12px; }
+        .chart .lab { font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); margin-bottom: 12px; }
+        .bars { display: flex; align-items: flex-end; gap: 10px; height: 120px; }
+        .bars .bar { flex: 1; border-radius: 6px 6px 0 0; background: linear-gradient(180deg, var(--accent), var(--accent-2)); opacity: .9; }
+        .bars .bar.mut { background: var(--border-2); }
+
+        /* ---------- SECTIONS ---------- */
+        section.block { padding: 72px 0; }
+        .sec-head { text-align: center; max-width: 640px; margin: 0 auto 44px; }
+        .sec-head h2 { font-size: clamp(28px, 4vw, 42px); margin-top: 12px; }
+        .sec-head p { color: var(--muted); margin-top: 12px; font-size: 16px; }
+
+        .features { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+        .feature { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; transition: border-color .2s, transform .2s; }
+        .feature:hover { border-color: var(--border-2); transform: translateY(-3px); }
+        .feature .fic { width: 42px; height: 42px; border-radius: 12px; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; margin-bottom: 16px; }
+        .feature .fic svg { width: 21px; height: 21px; }
+        .feature h3 { font-size: 18px; }
+        .feature p { color: var(--muted); font-size: 14px; margin-top: 8px; }
+
+        /* ---------- BENTO ---------- */
+        .bento { display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; }
+        .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; }
+        .card .k { font-family: var(--font-display); font-weight: 600; font-size: 16px; }
+        .card .s { color: var(--muted); font-size: 13px; margin-top: 4px; }
+        .b-qr { grid-column: span 2; }
+        .b-stats { grid-column: span 4; }
+        .b-people { grid-column: span 3; }
+        .b-plan { grid-column: span 3; }
+        .qr-box { margin: 16px auto 6px; width: 128px; height: 128px; border-radius: 16px; background:
+            conic-gradient(var(--text) 0 0) 0 0/16px 16px, var(--bg-2);
+            position: relative; display: grid; place-items: center; border: 1px solid var(--border); }
+        .qr-box::after { content:''; position:absolute; inset: 10px; border-radius: 10px;
+            background-image:
+              linear-gradient(90deg, var(--text) 2px, transparent 0),
+              linear-gradient(var(--text) 2px, transparent 0);
+            background-size: 12px 12px; opacity: .85; }
+        .qr-timer { text-align: center; font-size: 12px; color: var(--accent); font-weight: 600; }
+        .mini-metrics { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-top: 16px; }
+        .mini-metrics .m { background: var(--bg-2); border: 1px solid var(--border); border-radius: 12px; padding: 11px; }
+        .mini-metrics .m .l { font-size: 10px; text-transform: uppercase; letter-spacing:.06em; color: var(--dim); }
+        .mini-metrics .m .v { font-family: var(--font-display); font-weight: 700; font-size: 20px; margin-top: 3px; }
+        .mini-metrics .m .c { font-size: 10.5px; color: var(--accent); font-weight: 600; }
+        .spark { display:flex; align-items:flex-end; gap:6px; height:70px; margin-top:14px; }
+        .spark i { flex:1; border-radius:4px 4px 0 0; background: var(--accent-soft); }
+        .spark i.on { background: linear-gradient(180deg, var(--accent), var(--accent-2)); }
+        .row { display:flex; align-items:center; gap:11px; padding:11px 0; border-top:1px solid var(--border); }
+        .row:first-of-type { border-top:0; }
+        .row .av { width:34px; height:34px; border-radius:9px; background: var(--accent-soft); color:var(--accent); display:grid; place-items:center; font-weight:700; font-size:13px; flex:none; }
+        .row .nm { font-weight:600; font-size:13.5px; }
+        .row .sub { font-size:12px; color: var(--muted); }
+        .row .tag { margin-left:auto; font-size:11px; color: var(--accent); font-weight:600; }
+        .row .tag.warn { color:#fbbf24; }
+
+        /* ---------- CTA band ---------- */
+        .cta-band { background: linear-gradient(140deg, var(--surface), var(--bg-2)); border: 1px solid var(--border-2); border-radius: 28px; padding: 48px 28px; text-align: center; }
+        .cta-band h2 { font-size: clamp(26px, 4vw, 38px); }
+        .cta-band p { color: var(--muted); margin: 12px auto 0; max-width: 520px; }
+
+        /* ---------- PRICING ---------- */
+        .prices { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; align-items: stretch; }
+        .price { background: var(--surface); border: 1px solid var(--border); border-radius: 24px; padding: 28px; display: flex; flex-direction: column; }
+        .price.pop { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), var(--shadow); position: relative; }
+        .price .plan { font-family: var(--font-display); font-weight: 700; font-size: 22px; }
+        .price .who { color: var(--muted); font-size: 13px; margin-top: 4px; }
+        .price .amt { font-family: var(--font-display); font-weight: 700; font-size: 40px; margin-top: 20px; line-height: 1; }
+        .price .amt small { font-size: 14px; color: var(--muted); font-weight: 500; }
+        .price ul { list-style: none; margin: 22px 0; display: flex; flex-direction: column; gap: 11px; flex: 1; }
+        .price li { display: flex; gap: 10px; font-size: 14px; color: var(--text); }
+        .price li svg { width: 18px; height: 18px; color: var(--accent); flex: none; margin-top: 1px; }
+        .tag-pop { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--accent); color: var(--accent-ink); font-size: 11px; font-weight: 700; padding: 5px 14px; border-radius: 999px; letter-spacing: .04em; }
+
+        /* ---------- FAQ ---------- */
+        .faq { max-width: 780px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+        details.q { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 18px 20px; }
+        details.q summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 16px; font-weight: 600; font-size: 15px; }
+        details.q summary::-webkit-details-marker { display: none; }
+        details.q summary .chev { transition: transform .2s; color: var(--muted); flex: none; }
+        details.q[open] summary .chev { transform: rotate(180deg); }
+        details.q p { color: var(--muted); font-size: 14px; margin-top: 12px; }
+
+        /* ---------- FOOTER ---------- */
+        footer { border-top: 1px solid var(--border); background: var(--bg-2); margin-top: 40px; }
+        .foot { display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr; gap: 32px; padding: 56px 0 32px; }
+        .foot .col h4 { font-size: 12px; text-transform: uppercase; letter-spacing: .1em; color: var(--dim); margin-bottom: 14px; }
+        .foot .col a { display: block; color: var(--muted); font-size: 14px; padding: 5px 0; }
+        .foot .col a:hover { color: var(--text); }
+        .foot .about p { color: var(--muted); font-size: 14px; margin-top: 12px; max-width: 260px; }
+        .foot-bottom { border-top: 1px solid var(--border); padding: 20px 0; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+        .foot-bottom p { color: var(--dim); font-size: 13px; }
+
+        .reveal { opacity: 0; transform: translateY(18px); transition: opacity .6s ease, transform .6s ease; }
+        .reveal.vis { opacity: 1; transform: none; }
+        @media (prefers-reduced-motion: reduce) { .reveal { opacity: 1; transform: none; transition: none; } .scroll-hint .bounce { animation: none; } html { scroll-behavior: auto; } }
+
+        /* ---------- RESPONSIVE ---------- */
+        @media (max-width: 900px) {
+            .features { grid-template-columns: repeat(2, 1fr); }
+            .prices { grid-template-columns: 1fr; max-width: 440px; margin: 0 auto; }
+            .bento { grid-template-columns: 1fr; }
+            .b-qr, .b-stats, .b-people, .b-plan { grid-column: auto; }
+            .shot { grid-template-columns: 1fr; }
+            .shot-side { display: none; }
+            .kpis { grid-template-columns: repeat(2, 1fr); }
+            .foot { grid-template-columns: 1fr 1fr; gap: 24px; }
+        }
+        @media (max-width: 640px) {
+            .nav-links { display: none; position: absolute; top: 78px; left: 20px; right: 20px;
+                flex-direction: column; align-items: stretch; gap: 4px; background: var(--nav-bg);
+                border: 1px solid var(--nav-border); border-radius: 18px; padding: 12px; box-shadow: var(--shadow); }
+            .nav-links.open { display: flex; }
+            .nav-links a.link { padding: 12px 14px; }
+            .nav-links .btn { width: 100%; margin-top: 4px; }
+            .nav-toggle { display: grid; }
+            .features { grid-template-columns: 1fr; }
+            .foot { grid-template-columns: 1fr; }
+            .hero { padding-top: 48px; }
+        }
+    </style>
+</head>
 <body>
 
-<!-- ===================== TOP BAR ===================== -->
-<header class="glass sticky top-0 z-50 border-x-0 border-t-0" style="border-radius:0;">
-    <div class="max-w-[1180px] mx-auto h-16 px-5 md:px-8 flex items-center justify-between">
-        <a th:href="@{/}" class="flex items-center gap-2.5">
-            <img th:src="@{/images/logo.png}" alt="SIGEP" class="logo-nav h-10 w-auto"/>
-            <span class="hidden sm:inline font-mono text-[10px] uppercase tracking-[0.2em] text-muted">Solutions de Gestion</span>
+<!-- ===================== NAVBAR ===================== -->
+<div class="nav-outer">
+    <nav class="nav">
+        <a th:href="@{/}" href="#" class="brand">
+            <span class="brand-mark">S</span>
+            <span class="brand-name" th:text="${marque} ?: 'SIGEP'">SIGEP</span>
         </a>
-        <nav class="flex items-center gap-2 md:gap-3">
-            <a href="#fonctionnement" class="hidden md:inline px-3 h-10 leading-10 text-[13px] text-muted hover:text-ink">Fonctionnement</a>
-            <a href="#tarifs" class="hidden sm:inline px-3 h-10 leading-10 text-[13px] text-muted hover:text-ink">Tarifs</a>
-            <a href="#faq" class="hidden md:inline px-3 h-10 leading-10 text-[13px] text-muted hover:text-ink">FAQ</a>
-            <a th:href="@{/admin-login}" class="btn glass flex items-center px-4 h-10 rounded-full text-[13px] text-muted hover:text-ink">Connexion</a>
-            <a th:href="@{/inscription}" class="btn btn-ink flex items-center gap-2 px-4 h-10 rounded-full text-[13px] font-medium">Démarrer</a>
-        </nav>
-    </div>
-</header>
+        <div class="nav-links" id="navLinks">
+            <a class="link" href="#fonctionnement">Fonctionnement</a>
+            <a class="link" href="#fonctionnalites">Fonctionnalités</a>
+            <a class="link" href="#tarifs">Tarifs</a>
+            <a class="link" href="#faq">FAQ</a>
+            <a class="btn btn-ghost" style="height:40px" th:href="@{/admin-login}" href="#">Connexion</a>
+            <a class="btn btn-dark" th:href="@{/inscription}" href="#">Démarrer</a>
+        </div>
+        <div class="nav-cta">
+            <button class="icon-btn" id="themeBtn" type="button" aria-label="Basculer le thème" title="Clair / sombre">
+                <svg id="iconMoon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            </button>
+            <button class="icon-btn nav-toggle" id="navToggle" type="button" aria-label="Menu">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            </button>
+        </div>
+    </nav>
+</div>
 
 <main>
 
     <!-- ===================== HERO ===================== -->
-    <section class="max-w-[1180px] mx-auto px-5 md:px-8 pt-16 md:pt-24 pb-10 text-center" data-reveal>
-        <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mb-5">Pour universités privées & grandes écoles</p>
-        <h1 class="font-serif text-[44px] sm:text-[66px] leading-[1.02] tracking-tight max-w-[900px] mx-auto">
-            Gérez les heures de vos enseignants, en toute simplicité.
-        </h1>
-        <p class="text-[16px] md:text-[18px] text-muted max-w-[660px] mx-auto mt-6 leading-relaxed">
-            Suivez les heures réellement effectuées, obtenez des statistiques claires et pilotez votre
-            établissement sans Excel ni ressaisies. SIGEP vous fait gagner du temps au quotidien.
+    <section class="hero wrap reveal">
+        <span class="badge"><span class="dot"></span> Émargement intelligent pour écoles &amp; universités</span>
+        <h1 class="title">Suivez les heures de vos enseignants, <span class="grad">sans effort.</span></h1>
+        <p class="lead">
+            Un émargement par QR sécurisé, des statistiques claires et des rapports prêts pour la paie.
+            Pilotez l'assiduité de votre établissement — sans Excel, sans ressaisie.
         </p>
-        <div class="flex flex-wrap items-center justify-center gap-3 mt-9">
-            <a th:href="@{/inscription}" class="btn btn-ink flex items-center gap-2 px-6 h-12 rounded-full font-medium">
+        <div class="hero-cta">
+            <a class="btn btn-accent" th:href="@{/inscription}" href="#">
                 Démarrer gratuitement
-                <span class="material-symbols-rounded text-[20px]">arrow_forward</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
             </a>
-            <a href="#fonctionnement" class="btn glass flex items-center px-6 h-12 rounded-full text-muted hover:text-ink">Voir comment ça marche</a>
+            <a class="btn btn-ghost" href="#fonctionnalites">Voir les fonctionnalités</a>
         </div>
-        <p class="font-mono text-[11px] text-muted mt-5">Sans carte bancaire · Sans engagement · Mise en route en quelques minutes</p>
+        <p class="hero-note">Sans carte bancaire · Sans engagement · Mise en route en quelques minutes</p>
+        <div><span class="scroll-hint">Défiler pour explorer <span class="bounce">↓</span></span></div>
     </section>
 
-    <!-- ===================== APERÇU PRODUIT (stylisé) ===================== -->
-    <section class="max-w-[980px] mx-auto px-5 md:px-8 pb-14" data-reveal>
-        <div class="glass-strong rounded-3xl p-5 md:p-7">
-            <div class="flex items-center gap-1.5 mb-5">
-                <span class="w-2.5 h-2.5 rounded-full" style="background:var(--c-line)"></span>
-                <span class="w-2.5 h-2.5 rounded-full" style="background:var(--c-line)"></span>
-                <span class="w-2.5 h-2.5 rounded-full" style="background:var(--c-line)"></span>
-                <span class="ml-3 font-mono text-[10px] uppercase tracking-wider text-muted">Tableau de bord · cette semaine</span>
-            </div>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-                <div class="glass-card rounded-2xl p-4">
-                    <p class="font-mono text-[10px] uppercase tracking-wider text-muted">Taux d'émargement</p>
-                    <p class="font-serif text-[34px] leading-none mt-2">92%</p>
+    <!-- ===================== MOCKUP DASHBOARD ===================== -->
+    <div class="shot-wrap reveal">
+        <div class="shot">
+            <aside class="shot-side">
+                <div class="org"><span class="brand-mark">S</span> Groupe ESATIC</div>
+                <div class="shot-nav">
+                    <span class="on"><span class="ic"></span> Tableau de bord</span>
+                    <span><span class="ic"></span> Enseignants</span>
+                    <span><span class="ic"></span> Émargements</span>
+                    <span><span class="ic"></span> Statistiques</span>
+                    <span><span class="ic"></span> Rapports</span>
+                    <span><span class="ic"></span> Alertes</span>
                 </div>
-                <div class="glass-card rounded-2xl p-4">
-                    <p class="font-mono text-[10px] uppercase tracking-wider text-muted">Heures effectuées</p>
-                    <p class="font-serif text-[34px] leading-none mt-2">148<span class="text-[16px] text-muted">h</span></p>
+            </aside>
+            <div class="shot-main">
+                <div class="shot-head">
+                    <span class="t">Tableau de bord</span>
+                    <span class="pill">Cette semaine ▾</span>
                 </div>
-                <div class="glass-card rounded-2xl p-4">
-                    <p class="font-mono text-[10px] uppercase tracking-wider text-muted">Enseignants</p>
-                    <p class="font-serif text-[34px] leading-none mt-2">37</p>
+                <div class="kpis">
+                    <div class="kpi"><div class="lab">Taux d'émargement</div><div class="val">92%</div><div class="chg">▲ 4,5%</div></div>
+                    <div class="kpi"><div class="lab">Heures effectuées</div><div class="val">148<small>h</small></div><div class="chg">▲ 12%</div></div>
+                    <div class="kpi"><div class="lab">Enseignants</div><div class="val">37</div><div class="chg">▲ 2</div></div>
+                    <div class="kpi"><div class="lab">Alertes</div><div class="val">3</div><div class="chg down">▼ oublis</div></div>
                 </div>
-                <div class="glass-card rounded-2xl p-4">
-                    <p class="font-mono text-[10px] uppercase tracking-wider text-muted">Alertes</p>
-                    <p class="font-serif text-[34px] leading-none mt-2">3</p>
-                </div>
-            </div>
-            <div class="glass-card rounded-2xl p-4">
-                <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-3">Émargement par jour</p>
-                <div class="flex items-end gap-2 h-24">
-                    <div class="flex-1 rounded-t" style="height:62%;background:var(--c-ink)"></div>
-                    <div class="flex-1 rounded-t" style="height:80%;background:var(--c-ink)"></div>
-                    <div class="flex-1 rounded-t" style="height:48%;background:var(--c-ink)"></div>
-                    <div class="flex-1 rounded-t" style="height:92%;background:var(--c-ink)"></div>
-                    <div class="flex-1 rounded-t" style="height:70%;background:var(--c-ink)"></div>
-                    <div class="flex-1 rounded-t" style="height:35%;background:var(--c-track)"></div>
+                <div class="chart">
+                    <div class="lab">Émargements par jour</div>
+                    <div class="bars">
+                        <div class="bar" style="height:62%"></div>
+                        <div class="bar" style="height:80%"></div>
+                        <div class="bar" style="height:48%"></div>
+                        <div class="bar" style="height:95%"></div>
+                        <div class="bar" style="height:70%"></div>
+                        <div class="bar mut" style="height:34%"></div>
+                        <div class="bar mut" style="height:22%"></div>
+                    </div>
                 </div>
             </div>
         </div>
-        <p class="text-center font-mono text-[10px] uppercase tracking-[0.2em] text-muted mt-4">Aperçu illustratif de l'interface</p>
-    </section>
+        <p style="text-align:center" class="hero-note">Aperçu illustratif de l'interface d'administration</p>
+    </div>
 
-    <!-- ===================== COMMENT ÇA MARCHE ===================== -->
-    <section id="fonctionnement" class="max-w-[1180px] mx-auto px-5 md:px-8 py-12">
-        <div class="text-center mb-10" data-reveal>
-            <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mb-3">Fonctionnement</p>
-            <h2 class="font-serif text-[36px] sm:text-[44px] tracking-tight">Opérationnel en 3 étapes</h2>
+    <!-- ===================== FONCTIONNEMENT ===================== -->
+    <section id="fonctionnement" class="block wrap">
+        <div class="sec-head reveal">
+            <span class="eyebrow">Fonctionnement</span>
+            <h2>Opérationnel en 3 étapes</h2>
+            <p>De l'emploi du temps au rapport de paie, sans friction.</p>
         </div>
-        <div class="grid md:grid-cols-3 gap-4">
-            <div class="glass-card rounded-2xl p-6" data-reveal>
-                <span class="font-mono text-[12px] text-muted">01</span>
-                <h3 class="font-serif text-[22px] mt-2">Importez l'emploi du temps</h3>
-                <p class="text-[14px] text-muted mt-2 leading-relaxed">Chargez vos séances (Excel) ou laissez chaque enseignant importer le sien. Matières, classes, salles, enseignants.</p>
+        <div class="features">
+            <div class="feature reveal">
+                <div class="fic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+                <h3>1 · Importez le planning</h3>
+                <p>Chargez vos séances via Excel, ou laissez chaque enseignant importer le sien. Matières, classes, salles.</p>
             </div>
-            <div class="glass-card rounded-2xl p-6" data-reveal>
-                <span class="font-mono text-[12px] text-muted">02</span>
-                <h3 class="font-serif text-[22px] mt-2">Affichez le QR en salle</h3>
-                <p class="text-[14px] text-muted mt-2 leading-relaxed">Un écran affiche un QR sécurisé qui se renouvelle en continu. L'enseignant le scanne et signe depuis son mobile.</p>
+            <div class="feature reveal">
+                <div class="fic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg></div>
+                <h3>2 · Affichez le QR en salle</h3>
+                <p>Un écran affiche un QR sécurisé qui se renouvelle en continu. L'enseignant le scanne depuis son mobile.</p>
             </div>
-            <div class="glass-card rounded-2xl p-6" data-reveal>
-                <span class="font-mono text-[12px] text-muted">03</span>
-                <h3 class="font-serif text-[22px] mt-2">Suivez & exportez</h3>
-                <p class="text-[14px] text-muted mt-2 leading-relaxed">Tableau de bord en temps réel, alertes sur les oublis, et rapports PDF prêts pour la paie des vacataires.</p>
+            <div class="feature reveal">
+                <div class="fic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 5-6"/></svg></div>
+                <h3>3 · Suivez &amp; exportez</h3>
+                <p>Tableau de bord temps réel, alertes sur les oublis et rapports PDF prêts pour la paie des vacataires.</p>
             </div>
-        </div>
-    </section>
-
-    <!-- ===================== FEATURES (bénéfices) ===================== -->
-    <section class="max-w-[1180px] mx-auto px-5 md:px-8 py-12">
-        <div class="text-center mb-10" data-reveal>
-            <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mb-3">Ce que vous y gagnez</p>
-            <h2 class="font-serif text-[36px] sm:text-[44px] tracking-tight">Un seul outil pour suivre, analyser et piloter</h2>
-        </div>
-        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div class="glass-card rounded-2xl p-6" data-reveal>
-                <span class="material-symbols-rounded text-[28px]">schedule</span>
-                <h3 class="font-serif text-[22px] mt-3">Suivi des heures</h3>
-                <p class="text-[14px] text-muted mt-2 leading-relaxed">Visualisez les heures réellement effectuées par chaque enseignant, en temps réel — fini les tableurs.</p>
-            </div>
-            <div class="glass-card rounded-2xl p-6" data-reveal>
-                <span class="material-symbols-rounded text-[28px]">monitoring</span>
-                <h3 class="font-serif text-[22px] mt-3">Statistiques & IA</h3>
-                <p class="text-[14px] text-muted mt-2 leading-relaxed">Taux d'assiduité, tendances et synthèses assistées par IA pour décider plus vite.</p>
-            </div>
-            <div class="glass-card rounded-2xl p-6" data-reveal>
-                <span class="material-symbols-rounded text-[28px]">dashboard</span>
-                <h3 class="font-serif text-[22px] mt-3">Tableau de bord</h3>
-                <p class="text-[14px] text-muted mt-2 leading-relaxed">Toute l'activité de l'établissement d'un coup d'œil, avec alertes sur les oublis.</p>
-            </div>
-            <div class="glass-card rounded-2xl p-6" data-reveal>
-                <span class="material-symbols-rounded text-[28px]">description</span>
-                <h3 class="font-serif text-[22px] mt-3">Rapports & paie</h3>
-                <p class="text-[14px] text-muted mt-2 leading-relaxed">Justificatifs PDF par enseignant et par période, fiables pour la paie des vacataires.</p>
+            <div class="feature reveal">
+                <div class="fic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></div>
+                <h3>Anti-fraude par conception</h3>
+                <p>QR à durée de vie courte, preuve de présence physique et données cloisonnées par établissement.</p>
             </div>
         </div>
     </section>
 
-    <!-- ===================== RÉASSURANCE ===================== -->
-    <section class="max-w-[1180px] mx-auto px-5 md:px-8 py-8">
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <div class="glass-card rounded-2xl p-6" data-reveal>
-                <span class="material-symbols-rounded text-[26px]">verified_user</span>
-                <h3 class="font-medium mt-3">Sécurisé & isolé</h3>
-                <p class="text-[13px] text-muted mt-1.5 leading-relaxed">Émargement anti‑fraude et données strictement cloisonnées par établissement.</p>
+    <!-- ===================== FONCTIONNALITÉS ===================== -->
+    <section id="fonctionnalites" class="block wrap" style="padding-top:0;">
+        <div class="sec-head reveal">
+            <span class="eyebrow">La plateforme</span>
+            <h2>Tout pour piloter l'assiduité, au même endroit</h2>
+            <p>Suivre, analyser et décider — depuis un seul tableau de bord.</p>
+        </div>
+        <div class="bento">
+            <!-- QR -->
+            <div class="card b-qr reveal">
+                <div class="k">Émargement QR</div>
+                <div class="s">Scanné en salle, renouvelé en continu</div>
+                <div class="qr-box"></div>
+                <div class="qr-timer">Nouveau code dans 15 s</div>
             </div>
-            <div class="glass-card rounded-2xl p-6" data-reveal>
-                <span class="material-symbols-rounded text-[26px]">bolt</span>
-                <h3 class="font-medium mt-3">Simple & rapide</h3>
-                <p class="text-[13px] text-muted mt-1.5 leading-relaxed">Mise en route en quelques minutes, sans installation côté administration.</p>
+            <!-- Stats -->
+            <div class="card b-stats reveal">
+                <div class="k">Statistiques &amp; tendances</div>
+                <div class="s">Assiduité, heures et évolution en temps réel</div>
+                <div class="mini-metrics">
+                    <div class="m"><div class="l">Assiduité</div><div class="v">92%</div><div class="c">▲ 5,4%</div></div>
+                    <div class="m"><div class="l">Heures</div><div class="v">148h</div><div class="c">▲ 12%</div></div>
+                    <div class="m"><div class="l">Séances</div><div class="v">312</div><div class="c">▲ 8%</div></div>
+                    <div class="m"><div class="l">Retards</div><div class="v">2,1%</div><div class="c">▼ 1%</div></div>
+                </div>
+                <div class="spark">
+                    <i style="height:40%"></i><i class="on" style="height:65%"></i><i style="height:50%"></i>
+                    <i class="on" style="height:82%"></i><i style="height:60%"></i><i class="on" style="height:95%"></i>
+                    <i style="height:70%"></i><i class="on" style="height:88%"></i><i style="height:55%"></i>
+                    <i class="on" style="height:78%"></i><i style="height:48%"></i><i class="on" style="height:90%"></i>
+                </div>
             </div>
-            <div class="glass-card rounded-2xl p-6" data-reveal>
-                <span class="material-symbols-rounded text-[26px]">support_agent</span>
-                <h3 class="font-medium mt-3">Accompagné</h3>
-                <p class="text-[13px] text-muted mt-1.5 leading-relaxed">Un accompagnement au démarrage pour cadrer sereinement votre déploiement.</p>
+            <!-- Enseignants -->
+            <div class="card b-people reveal">
+                <div class="k">Gestion des enseignants</div>
+                <div class="s">37 enseignants · 4 départements</div>
+                <div style="margin-top:8px">
+                    <div class="row"><span class="av">KA</span><div><div class="nm">K. Aké</div><div class="sub">Mathématiques · 32h</div></div><span class="tag">à jour</span></div>
+                    <div class="row"><span class="av">MB</span><div><div class="nm">M. Bamba</div><div class="sub">Réseaux · 28h</div></div><span class="tag">à jour</span></div>
+                    <div class="row"><span class="av">SD</span><div><div class="nm">S. Diallo</div><div class="sub">Anglais · 19h</div></div><span class="tag warn">1 oubli</span></div>
+                </div>
             </div>
-            <div class="glass-card rounded-2xl p-6" data-reveal>
-                <span class="material-symbols-rounded text-[26px]">event_available</span>
-                <h3 class="font-medium mt-3">Sans engagement</h3>
-                <p class="text-[13px] text-muted mt-1.5 leading-relaxed">Abonnement mensuel flexible, résiliable à tout moment.</p>
+            <!-- Planning -->
+            <div class="card b-plan reveal">
+                <div class="k">Planning &amp; rapports</div>
+                <div class="s">Séances du jour · export PDF paie</div>
+                <div style="margin-top:8px">
+                    <div class="row"><span class="av">08</span><div><div class="nm">Algorithmique — L2 INFO</div><div class="sub">Salle B12 · 08:00–10:00</div></div><span class="tag">émargé</span></div>
+                    <div class="row"><span class="av">10</span><div><div class="nm">Bases de données — L3</div><div class="sub">Salle A04 · 10:15–12:15</div></div><span class="tag">émargé</span></div>
+                    <div class="row"><span class="av">14</span><div><div class="nm">Réseaux — M1</div><div class="sub">Amphi C · 14:00–17:00</div></div><span class="tag warn">en cours</span></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===================== CTA BAND ===================== -->
+    <section class="block wrap" style="padding-top:0;">
+        <div class="cta-band reveal">
+            <span class="eyebrow">Gagnez du temps</span>
+            <h2 style="margin-top:12px">Simplifiez la gestion de votre établissement</h2>
+            <p>Rejoignez les établissements qui remplacent les tableurs par un émargement fiable, des statistiques claires et des rapports automatiques.</p>
+            <div class="hero-cta" style="margin-top:26px">
+                <a class="btn btn-accent" th:href="@{/inscription}" href="#">Inscrire mon établissement</a>
+                <a class="btn btn-ghost" href="#tarifs">Voir les tarifs</a>
             </div>
         </div>
     </section>
 
     <!-- ===================== TARIFS ===================== -->
-    <section id="tarifs" class="max-w-[1180px] mx-auto px-5 md:px-8 py-16">
-        <div class="text-center mb-3" data-reveal>
-            <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mb-3">Tarifs</p>
-            <h2 class="font-serif text-[36px] sm:text-[44px] tracking-tight">Un plan pour chaque établissement</h2>
+    <section id="tarifs" class="block wrap">
+        <div class="sec-head reveal">
+            <span class="eyebrow">Tarifs</span>
+            <h2>Un plan pour chaque établissement</h2>
+            <p>Mensuel · sans engagement · résiliable à tout moment.</p>
         </div>
-        <p class="text-center text-[13px] text-muted mb-10" data-reveal>Tarif mensuel · sans engagement · résiliable à tout moment</p>
-
-        <div class="grid md:grid-cols-3 gap-5 items-stretch">
-
-            <!-- FREE -->
-            <div class="glass-strong rounded-3xl p-7 flex flex-col" data-reveal>
-                <h3 class="font-serif text-[26px]">Free</h3>
-                <p class="text-[13px] text-muted mt-1">Pour démarrer et tester</p>
-                <p class="font-serif text-[40px] mt-5 leading-none">0€</p>
-                <ul class="space-y-2.5 mt-6 text-[14px] flex-1">
-                    <li class="flex gap-2"><span class="material-symbols-rounded text-[18px]">check</span> Émargement QR + planning</li>
-                    <li class="flex gap-2"><span class="material-symbols-rounded text-[18px]">check</span> Jusqu'à 10 enseignants</li>
-                    <li class="flex gap-2"><span class="material-symbols-rounded text-[18px]">check</span> 1 campus</li>
-                    <li class="flex gap-2"><span class="material-symbols-rounded text-[18px]">check</span> Rapports de base</li>
+        <div class="prices">
+            <div class="price reveal">
+                <div class="plan">Free</div>
+                <div class="who">Pour démarrer et tester</div>
+                <div class="amt">0€</div>
+                <ul>
+                    <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="20 6 9 17 4 12"/></svg> Émargement QR + planning</li>
+                    <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="20 6 9 17 4 12"/></svg> Jusqu'à 10 enseignants</li>
+                    <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="20 6 9 17 4 12"/></svg> 1 campus</li>
+                    <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="20 6 9 17 4 12"/></svg> Rapports de base</li>
                 </ul>
-                <a th:href="@{/inscription}" class="btn glass flex items-center justify-center h-11 rounded-xl mt-7 text-muted hover:text-ink">Commencer</a>
+                <a class="btn btn-ghost" style="width:100%" th:href="@{/inscription}" href="#">Commencer</a>
             </div>
-
-            <!-- PRO -->
-            <div class="glass-strong rounded-3xl p-7 flex flex-col" data-reveal
-                 style="outline:2px solid var(--c-ink); outline-offset:-2px;">
-                <div class="flex items-center justify-between">
-                    <h3 class="font-serif text-[26px]">Pro</h3>
-                    <span class="font-mono text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-full bg-ink text-white">Populaire</span>
-                </div>
-                <p class="text-[13px] text-muted mt-1">Pour un établissement</p>
-                <p class="font-serif text-[40px] mt-5 leading-none">10 000 <span class="text-[16px] text-muted">FCFA / mois</span></p>
-                <ul class="space-y-2.5 mt-6 text-[14px] flex-1">
-                    <li class="flex gap-2"><span class="material-symbols-rounded text-[18px]">check</span> Enseignants illimités</li>
-                    <li class="flex gap-2"><span class="material-symbols-rounded text-[18px]">check</span> Multi‑campus</li>
-                    <li class="flex gap-2"><span class="material-symbols-rounded text-[18px]">check</span> Analyse par IA</li>
-                    <li class="flex gap-2"><span class="material-symbols-rounded text-[18px]">check</span> Rapports avancés + export</li>
-                    <li class="flex gap-2"><span class="material-symbols-rounded text-[18px]">check</span> Logo de l'établissement</li>
+            <div class="price pop reveal">
+                <span class="tag-pop">Populaire</span>
+                <div class="plan">Pro</div>
+                <div class="who">Pour un établissement</div>
+                <div class="amt">10 000 <small>FCFA / mois</small></div>
+                <ul>
+                    <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="20 6 9 17 4 12"/></svg> Enseignants illimités</li>
+                    <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="20 6 9 17 4 12"/></svg> Multi-campus</li>
+                    <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="20 6 9 17 4 12"/></svg> Analyse par IA</li>
+                    <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="20 6 9 17 4 12"/></svg> Rapports avancés + export</li>
+                    <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="20 6 9 17 4 12"/></svg> Logo de l'établissement</li>
                 </ul>
-                <a th:href="@{/inscription}" class="btn btn-ink flex items-center justify-center h-11 rounded-xl mt-7 font-medium">Essayer Pro</a>
+                <a class="btn btn-accent" style="width:100%" th:href="@{/inscription}" href="#">Essayer Pro</a>
             </div>
-
-            <!-- ENTERPRISE -->
-            <div class="glass-strong rounded-3xl p-7 flex flex-col" data-reveal>
-                <h3 class="font-serif text-[26px]">Enterprise</h3>
-                <p class="text-[13px] text-muted mt-1">Groupes & universités</p>
-                <p class="font-serif text-[40px] mt-5 leading-none">Sur mesure</p>
-                <ul class="space-y-2.5 mt-6 text-[14px] flex-1">
-                    <li class="flex gap-2"><span class="material-symbols-rounded text-[18px]">check</span> Tout le plan Pro</li>
-                    <li class="flex gap-2"><span class="material-symbols-rounded text-[18px]">check</span> Multi‑établissements</li>
-                    <li class="flex gap-2"><span class="material-symbols-rounded text-[18px]">check</span> SSO & API</li>
-                    <li class="flex gap-2"><span class="material-symbols-rounded text-[18px]">check</span> Intégrations paie / ENT</li>
-                    <li class="flex gap-2"><span class="material-symbols-rounded text-[18px]">check</span> Support dédié & SLA</li>
+            <div class="price reveal">
+                <div class="plan">Enterprise</div>
+                <div class="who">Groupes &amp; universités</div>
+                <div class="amt">Sur mesure</div>
+                <ul>
+                    <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="20 6 9 17 4 12"/></svg> Tout le plan Pro</li>
+                    <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="20 6 9 17 4 12"/></svg> Multi-établissements</li>
+                    <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="20 6 9 17 4 12"/></svg> SSO &amp; API</li>
+                    <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="20 6 9 17 4 12"/></svg> Intégrations paie / ENT</li>
+                    <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="20 6 9 17 4 12"/></svg> Support dédié &amp; SLA</li>
                 </ul>
-                <a th:href="'mailto:' + ${contactPlateforme}" href="mailto:contact@sigep.store" class="btn glass flex items-center justify-center h-11 rounded-xl mt-7 text-muted hover:text-ink">Nous contacter</a>
+                <a class="btn btn-ghost" style="width:100%" th:href="'mailto:' + (${contactPlateforme} ?: 'contact@sigep.store')" href="mailto:contact@sigep.store">Nous contacter</a>
             </div>
         </div>
     </section>
 
     <!-- ===================== FAQ ===================== -->
-    <section id="faq" class="max-w-[820px] mx-auto px-5 md:px-8 py-12">
-        <div class="text-center mb-10" data-reveal>
-            <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mb-3">FAQ</p>
-            <h2 class="font-serif text-[36px] sm:text-[44px] tracking-tight">Questions fréquentes</h2>
+    <section id="faq" class="block wrap">
+        <div class="sec-head reveal">
+            <span class="eyebrow">FAQ</span>
+            <h2>Questions fréquentes</h2>
         </div>
-        <div class="space-y-3">
-            <details class="glass-card rounded-2xl p-5" data-reveal>
-                <summary class="font-medium cursor-pointer flex items-center justify-between">L'enseignant doit‑il installer une application ?<span class="material-symbols-rounded text-muted">expand_more</span></summary>
-                <p class="text-[14px] text-muted mt-3 leading-relaxed">Oui, une application mobile dédiée (Android) permet de scanner le QR et de signer. L'administration, elle, travaille depuis le navigateur.</p>
-            </details>
-            <details class="glass-card rounded-2xl p-5" data-reveal>
-                <summary class="font-medium cursor-pointer flex items-center justify-between">Mes données sont‑elles isolées des autres établissements ?<span class="material-symbols-rounded text-muted">expand_more</span></summary>
-                <p class="text-[14px] text-muted mt-3 leading-relaxed">Strictement. Chaque établissement dispose de son propre espace ; les données ne sont jamais partagées ni visibles entre établissements.</p>
-            </details>
-            <details class="glass-card rounded-2xl p-5" data-reveal>
-                <summary class="font-medium cursor-pointer flex items-center justify-between">Peut‑on commencer sans engagement ?<span class="material-symbols-rounded text-muted">expand_more</span></summary>
-                <p class="text-[14px] text-muted mt-3 leading-relaxed">Oui. Le plan Free est gratuit et sans carte bancaire. Vous passez à un plan supérieur uniquement quand vous en avez besoin.</p>
-            </details>
-            <details class="glass-card rounded-2xl p-5" data-reveal>
-                <summary class="font-medium cursor-pointer flex items-center justify-between">Comment se fait l'émargement hors connexion ?<span class="material-symbols-rounded text-muted">expand_more</span></summary>
-                <p class="text-[14px] text-muted mt-3 leading-relaxed">L'application gère le mode hors‑ligne : l'émargement est mis en file d'attente et envoyé automatiquement au retour du réseau.</p>
-            </details>
+        <div class="faq">
+            <details class="q reveal"><summary>L'enseignant doit-il installer une application ?<svg class="chev" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></summary><p>Oui, une application mobile dédiée (Android) permet de scanner le QR et de signer. L'administration, elle, travaille depuis le navigateur.</p></details>
+            <details class="q reveal"><summary>Mes données sont-elles isolées des autres établissements ?<svg class="chev" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></summary><p>Strictement. Chaque établissement dispose de son propre espace ; les données ne sont jamais partagées ni visibles entre établissements.</p></details>
+            <details class="q reveal"><summary>Peut-on commencer sans engagement ?<svg class="chev" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></summary><p>Oui. Le plan Free est gratuit et sans carte bancaire. Vous passez à un plan supérieur uniquement quand vous en avez besoin.</p></details>
+            <details class="q reveal"><summary>Comment se fait l'émargement hors connexion ?<svg class="chev" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></summary><p>L'application gère le mode hors-ligne : l'émargement est mis en file d'attente et envoyé automatiquement au retour du réseau.</p></details>
         </div>
     </section>
 
     <!-- ===================== CTA FINAL ===================== -->
-    <section class="max-w-[1180px] mx-auto px-5 md:px-8 pb-20">
-        <div class="glass-strong rounded-3xl p-10 md:p-14 text-center" data-reveal>
-            <h2 class="font-serif text-[32px] sm:text-[40px] tracking-tight">Passez à une gestion plus simple.</h2>
-            <p class="text-[15px] text-muted mt-3 max-w-[540px] mx-auto">Créez l'espace de votre établissement en quelques minutes — c'est gratuit et sans engagement.</p>
-            <a th:href="@{/inscription}" class="btn btn-ink inline-flex items-center gap-2 px-6 h-12 rounded-full font-medium mt-7">
-                Inscrire mon établissement
-                <span class="material-symbols-rounded text-[20px]">arrow_forward</span>
-            </a>
+    <section class="block wrap" style="padding-top:0;">
+        <div class="cta-band reveal">
+            <h2>Passez à une gestion plus simple.</h2>
+            <p>Créez l'espace de votre établissement en quelques minutes — c'est gratuit et sans engagement.</p>
+            <div class="hero-cta" style="margin-top:26px">
+                <a class="btn btn-accent" th:href="@{/inscription}" href="#">
+                    Inscrire mon établissement
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                </a>
+            </div>
         </div>
     </section>
 </main>
 
 <!-- ===================== FOOTER ===================== -->
-<footer class="border-t border-line">
-    <div class="max-w-[1180px] mx-auto px-5 md:px-8 py-9 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div class="text-center sm:text-left">
-            <p class="font-serif text-[20px] leading-none">SIGEP</p>
-            <p class="font-mono text-[10px] uppercase tracking-[0.2em] text-muted mt-1.5">Système Intelligent de Gestion des Enseignements</p>
+<footer>
+    <div class="wrap">
+        <div class="foot">
+            <div class="col about">
+                <a class="brand" href="#"><span class="brand-mark">S</span><span class="brand-name" style="color:var(--text)" th:text="${marque} ?: 'SIGEP'">SIGEP</span></a>
+                <p>Système Intelligent de Gestion des Enseignements et du Pointage. Émargement fiable pour écoles &amp; universités.</p>
+            </div>
+            <div class="col">
+                <h4>Produit</h4>
+                <a href="#fonctionnalites">Fonctionnalités</a>
+                <a href="#tarifs">Tarifs</a>
+                <a href="#fonctionnement">Fonctionnement</a>
+                <a th:href="@{/admin-login}" href="#">Connexion</a>
+            </div>
+            <div class="col">
+                <h4>Ressources</h4>
+                <a href="#faq">FAQ</a>
+                <a th:href="@{/inscription}" href="#">Inscription</a>
+                <a th:href="'mailto:' + (${contactPlateforme} ?: 'contact@sigep.store')" href="mailto:contact@sigep.store">Contact</a>
+            </div>
+            <div class="col">
+                <h4>Entreprise</h4>
+                <a th:href="@{/mentions-legales}" href="#">Mentions légales</a>
+                <a th:href="@{/confidentialite}" href="#">Confidentialité</a>
+                <a th:href="@{/cgu}" href="#">CGU</a>
+            </div>
         </div>
-        <div class="flex items-center gap-5 font-mono text-[10px] uppercase tracking-[0.2em] text-muted">
-            <a href="#tarifs" class="hover:text-ink">Tarifs</a>
-            <a href="#faq" class="hover:text-ink">FAQ</a>
-            <a th:href="@{/cgu}" class="hover:text-ink">CGU</a>
-            <a th:href="@{/confidentialite}" class="hover:text-ink">Confidentialité</a>
-            <a th:href="@{/mentions-legales}" class="hover:text-ink">Mentions légales</a>
-            <a th:href="'mailto:' + ${contactPlateforme}" href="mailto:contact@sigep.store" class="hover:text-ink">Contact</a>
-            <a th:href="@{/admin-login}" class="hover:text-ink">Connexion</a>
+        <div class="foot-bottom">
+            <p>© 2026 <span th:text="${marque} ?: 'SIGEP'">SIGEP</span>. Tous droits réservés.</p>
+            <p>Fait avec soin pour l'enseignement.</p>
         </div>
     </div>
 </footer>
 
 <script>
-    window.__toggleTheme = function () {
-        var dark = document.documentElement.classList.toggle('dark');
-        try { localStorage.setItem('sigep-theme', dark ? 'dark' : 'light'); } catch (e) {}
-    };
-    /* Fondu au défilement : chaque bloc [data-reveal] apparaît en fondu quand il entre
-       dans le viewport (une seule fois). Sans IntersectionObserver ou avec
-       prefers-reduced-motion, tout reste simplement visible. */
     (function () {
-        var els = Array.prototype.slice.call(document.querySelectorAll('[data-reveal]'));
-        if (!('IntersectionObserver' in window)) return;
-        els.forEach(function (el) { el.classList.add('reveal-scroll'); });
+        var root = document.documentElement;
+        /* Thème : sombre par défaut ; mémorisé. */
+        try {
+            var saved = localStorage.getItem('sigep-theme');
+            if (saved === 'light') root.classList.add('light');
+        } catch (e) {}
+        var btn = document.getElementById('themeBtn');
+        if (btn) btn.addEventListener('click', function () {
+            var light = root.classList.toggle('light');
+            try { localStorage.setItem('sigep-theme', light ? 'light' : 'dark'); } catch (e) {}
+        });
+        /* Menu mobile */
+        var tgl = document.getElementById('navToggle'), links = document.getElementById('navLinks');
+        if (tgl && links) {
+            tgl.addEventListener('click', function () { links.classList.toggle('open'); });
+            links.querySelectorAll('a').forEach(function (a) { a.addEventListener('click', function () { links.classList.remove('open'); }); });
+        }
+        /* Révélation au défilement */
+        var els = Array.prototype.slice.call(document.querySelectorAll('.reveal'));
+        if (!('IntersectionObserver' in window)) { els.forEach(function (el) { el.classList.add('vis'); }); return; }
         var io = new IntersectionObserver(function (entries) {
-            entries.filter(function (e) { return e.isIntersecting; })
-                .forEach(function (e, i) {
-                    // léger décalage entre blocs révélés ensemble (cartes d'une même rangée)
-                    e.target.style.transitionDelay = (i * 80) + 'ms';
-                    e.target.classList.add('is-visible');
-                    io.unobserve(e.target);
-                });
-        }, { threshold: 0.15, rootMargin: '0px 0px -10% 0px' });
+            entries.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('vis'); io.unobserve(e.target); } });
+        }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
         els.forEach(function (el) { io.observe(el); });
     })();
 </script>
