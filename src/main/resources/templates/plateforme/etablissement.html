@@ -33,7 +33,7 @@
             <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Plan</p>
             <p class="font-serif text-[24px]" th:text="${e.plan}">PLAN</p>
             <p class="text-[11px] text-muted" th:if="${prixMensuel > 0}"
-               th:text="${#numbers.formatInteger(prixMensuel,1,'WHITESPACE')} + ' FCFA / mois'">—</p>
+               th:text="${#numbers.formatInteger(prixMensuel,1,'WHITESPACE') + ' ' + symbole + ' / mois'}">—</p>
         </div>
         <div class="glass rounded-2xl p-5">
             <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Statut</p>
@@ -74,7 +74,7 @@
             <span class="material-symbols-rounded">receipt_long</span>
             <h2 class="font-serif text-[20px]">Paiements</h2>
             <span class="ml-auto font-mono text-[12px] text-muted">Total&nbsp;:&nbsp;
-                <strong class="text-ink" th:text="${#numbers.formatInteger(totalPaye,1,'WHITESPACE')} + ' FCFA'">0</strong></span>
+                <strong class="text-ink" th:text="${#numbers.formatInteger(totalPaye,1,'WHITESPACE') + ' ' + symbole}">0</strong></span>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-left text-[13px]" data-mobile-keep="2">
@@ -85,7 +85,7 @@
                 <tbody>
                 <tr th:each="p : ${paiements}" class="border-b border-line">
                     <td class="px-6 py-2.5" th:text="${#temporals.format(p.datePaiement,'dd/MM/yyyy HH:mm')}">--</td>
-                    <td class="px-4 py-2.5 font-mono" th:text="${#numbers.formatInteger(p.montant,1,'WHITESPACE')} + ' FCFA'">0</td>
+                    <td class="px-4 py-2.5 font-mono" th:text="${#numbers.formatInteger(p.montant,1,'WHITESPACE') + ' ' + (p.devise != null ? p.devise : symbole)}">0</td>
                     <td class="px-4 py-2.5" th:text="'+' + ${p.moisCredites}">+1</td>
                     <td class="px-4 py-2.5 font-mono text-[12px] text-muted" th:text="${p.reference} ?: '—'">—</td>
                     <td class="px-4 py-2.5 font-mono text-[11px] text-muted" th:text="${p.enregistrePar} ?: '—'">—</td>

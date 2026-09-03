@@ -97,14 +97,14 @@
             <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">MRR estimé</p>
             <p class="font-serif text-[28px] leading-none mt-1.5">
                 <span th:text="${#numbers.formatInteger(mrr, 1, 'WHITESPACE')}">0</span>
-                <span class="text-[13px] text-muted">FCFA</span>
+                <span class="text-[13px] text-muted" th:text="${symbole}">€</span>
             </p>
         </div>
         <div class="glass rounded-3xl p-6">
             <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Encaissé (total)</p>
             <p class="font-serif text-[28px] leading-none mt-1.5">
                 <span th:text="${#numbers.formatInteger(totalEncaisse, 1, 'WHITESPACE')}">0</span>
-                <span class="text-[13px] text-muted">FCFA</span>
+                <span class="text-[13px] text-muted" th:text="${symbole}">€</span>
             </p>
             <p class="text-[11px] text-muted mt-1" th:text="'dont ' + ${#numbers.formatInteger(encaisseMois,1,'WHITESPACE')} + ' ce mois'">—</p>
         </div>
@@ -134,7 +134,7 @@
             <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">ARPU (mensuel)</p>
             <p class="font-serif text-[26px] leading-none mt-1.5">
                 <span th:text="${#numbers.formatInteger(arpu,1,'WHITESPACE')}">0</span>
-                <span class="text-[12px] text-muted">FCFA</span>
+                <span class="text-[12px] text-muted" th:text="${symbole}">€</span>
             </p>
             <p class="text-[11px] text-muted mt-1">Par client payant</p>
         </div>
@@ -198,7 +198,7 @@
                 <span class="font-medium" th:text="${nomParEtab[p.etablissementId]} ?: ('#' + p.etablissementId)">Établissement</span>
                 <span th:if="${p.reference}" class="font-mono text-[11px] text-muted hidden sm:inline" th:text="${p.reference}">réf</span>
                 <span class="ml-auto font-mono text-accent"
-                      th:text="${#numbers.formatInteger(p.montant,1,'WHITESPACE')} + ' FCFA'">0</span>
+                      th:text="${#numbers.formatInteger(p.montant,1,'WHITESPACE') + ' ' + (p.devise != null ? p.devise : symbole)}">0</span>
             </div>
         </div>
     </section>
@@ -325,7 +325,7 @@
                     axisLabel:{color:p.muted,fontFamily:'JetBrains Mono, monospace',fontSize:11}}
             ],
             series:[
-                {name:'Encaissé (FCFA)',type:'line',smooth:.5,showSymbol:false,z:3,
+                {name:'Encaissé',type:'line',smooth:.5,showSymbol:false,z:3,
                     lineStyle:{color:p.ink,width:2.4},
                     areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:rgba(p.ink,.20)},{offset:1,color:rgba(p.ink,0)}])},
                     markLine:{silent:true,symbol:'none',lineStyle:{color:p.muted,type:'dashed',width:1},
