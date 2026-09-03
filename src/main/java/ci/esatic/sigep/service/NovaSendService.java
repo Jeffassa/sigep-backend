@@ -149,9 +149,18 @@ public class NovaSendService {
                     .retrieve()
                     .body(String.class);
             return lire(json);
+        } catch (org.springframework.web.client.HttpStatusCodeException e) {
+            // On journalise le CODE et la RÉPONSE du fournisseur : sans eux, un refus
+            // d'authentification est indiscernable d'un montant invalide, et le diagnostic
+            // devient impossible sans redéployer.
+            String corps = e.getResponseBodyAsString();
+            log.warn("NovaSend : initiation refusée (ref={}) HTTP {} — réponse: {}",
+                    reference, e.getStatusCode().value(),
+                    corps == null ? "" : corps.substring(0, Math.min(corps.length(), 400)));
+            throw new NovaSendException(messageSelonStatut(e.getStatusCode().value(), corps));
         } catch (Exception e) {
-            log.warn("NovaSend : initiation refusée (ref={}) : {}", reference, e.getMessage());
-            throw new NovaSendException(messageLisible(e));
+            log.warn("NovaSend : initiation impossible (ref={}) : {}", reference, e.toString());
+            throw new NovaSendException("Le service de paiement est momentanément indisponible.");
         }
     }
 
@@ -213,14 +222,37 @@ public class NovaSendService {
         }
     }
 
-    /** Extrait un message d'erreur exploitable sans divulguer d'interne au client final. */
-    private String messageLisible(Exception e) {
-        String m = e.getMessage();
-        if (m == null) return "Le service de paiement est momentanément indisponible.";
-        if (m.contains("401") || m.contains("403")) return "Configuration de paiement invalide.";
-        if (m.contains("400")) return "Paiement refusé : vérifiez le montant et le numéro.";
-        if (m.contains("404")) return "Opérateur ou transaction introuvable.";
-        return "Le service de paiement est momentanément indisponible.";
+    /**
+     * Message destiné à l'ADMINISTRATEUR de l'établissement (jamais au grand public) : il doit
+     * être assez précis pour orienter la correction, sans exposer de secret.
+     */
+    private String messageSelonStatut(int statut, String corps) {
+        String detail = extraireMessage(corps);
+        return switch (statut) {
+            case 401, 403 -> "Identifiants NovaSend refusés (HTTP " + statut + ")"
+                    + (detail.isEmpty() ? "" : " : " + detail)
+                    + ". Vérifiez la clé API et la clé secrète, et que l'environnement "
+                    + "(sandbox/production) correspond bien à ces clés.";
+            case 400 -> "Demande refusée par NovaSend"
+                    + (detail.isEmpty() ? " : vérifiez le montant et le numéro." : " : " + detail);
+            case 404 -> "Ressource introuvable chez NovaSend"
+                    + (detail.isEmpty() ? " (opérateur ou pays non reconnu)." : " : " + detail);
+            case 409 -> "Cette transaction a déjà été traitée par NovaSend.";
+            default -> "Le service de paiement est momentanément indisponible (HTTP " + statut + ").";
+        };
+    }
+
+    /** Récupère le libellé d'erreur renvoyé par le fournisseur, s'il est exploitable. */
+    private String extraireMessage(String corps) {
+        if (corps == null || corps.isBlank()) return "";
+        try {
+            JsonNode n = objectMapper.readTree(corps);
+            for (String cle : new String[]{"message", "error", "code", "detail"}) {
+                String v = n.path(cle).asText("");
+                if (!v.isBlank()) return v;
+            }
+        } catch (Exception ignore) { /* corps non JSON */ }
+        return corps.length() > 160 ? corps.substring(0, 160) : corps;
     }
 
     /** Réponse NovaSend normalisée (champs réellement exploités). */
