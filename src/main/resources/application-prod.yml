@@ -28,11 +28,24 @@ logging:
     org.springframework.security: WARN
     org.hibernate.SQL: WARN
 
+server:
+  servlet:
+    session:
+      cookie:
+        # Cookie de session admin : durci explicitement (ne pas dépendre des défauts).
+        secure: true
+        http-only: true
+        same-site: ${SESSION_COOKIE_SAMESITE:strict}
+        name: SIGEPSESSIONID
+
 app:
   security:
     # En prod : exiger HTTPS et faire confiance au proxy TLS (X-Forwarded-*).
     require-https: ${APP_SECURITY_REQUIRE_HTTPS:true}
     trust-forwarded-for: ${TRUST_FORWARDED_FOR:true}
+    # Épinglé explicitement : nombre de reverse proxys de confiance en amont (Render = 1).
+    # 1 topologie = 1 valeur. Si un CDN/WAF est ajouté devant (ex. Cloudflare), passer à 2.
+    trusted-proxy-count: ${TRUSTED_PROXY_COUNT:1}
   # Dossier des rapports PDF : volume persistant (sinon perdus au redémarrage du conteneur).
   rapports:
     dossier: ${RAPPORTS_DOSSIER:/data/rapports}
@@ -43,7 +56,9 @@ management:
     health:
       show-details: never
 
-# En prod : ne pas servir l'UI Swagger (la spec reste générable, réservée aux admins).
+# En prod : ne servir NI l'UI Swagger NI la spec OpenAPI (surface d'API non exposée).
 springdoc:
   swagger-ui:
+    enabled: false
+  api-docs:
     enabled: false

@@ -312,9 +312,10 @@ public class EmargementService {
         if (signatureBase64.length() > 700_000) {
             throw new MetierException("SIGNATURE_INVALIDE", "Signature invalide (taille hors limites)");
         }
-        // Format Base64 strict (peut contenir le prefixe data:image/png;base64,)
-        String payload = signatureBase64.contains(",") ? signatureBase64.split(",", 2)[1] : signatureBase64;
-        if (!payload.matches("^[A-Za-z0-9+/]+={0,2}$")) {
+        // On valide la chaîne ENTIÈRE (préfixe data-URI COMPRIS) : soit un payload base64 pur,
+        // soit un data-URI image complet. Empêche de stocker un préfixe arbitraire non maîtrisé
+        // (ex. "<img onerror=...>,<payload>") — durcissement défense-en-profondeur (audit).
+        if (!signatureBase64.matches("^(data:image/(png|jpe?g);base64,)?[A-Za-z0-9+/]+={0,2}$")) {
             throw new MetierException("SIGNATURE_INVALIDE", "Signature invalide (format Base64 incorrect)");
         }
     }

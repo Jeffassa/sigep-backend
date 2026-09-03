@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('SIGEP | Écran d''émargement')}"></head>
+<body>
+
+<div th:replace="~{admin/fragments :: topbar('')}"></div>
+
+<main class="max-w-[900px] mx-auto px-5 md:px-8 py-10 pb-36">
+
+    <div class="mb-8" data-reveal>
+        <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mb-2">Émargement</p>
+        <h1 class="font-serif text-[clamp(34px,5vw,52px)] leading-[1.02] tracking-tight">Écran d'émargement</h1>
+        <p class="text-muted text-[14px] mt-2">Affichez le QR de salle sur un écran/vidéoprojecteur ; les enseignants le scannent pour émarger.</p>
+    </div>
+
+    <div th:if="${param.regenere}" class="glass rounded-2xl p-3.5 mb-5 flex items-center gap-2 text-[13px]" data-reveal
+         style="background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.35)">
+        <span class="material-symbols-rounded text-[18px]" style="color:#10b981">check_circle</span>
+        <span>Nouvelle clé générée. L'ancien lien d'écran ne fonctionne plus.</span>
+    </div>
+    <div th:if="${param.indispo}" class="glass rounded-2xl p-3.5 mb-5 flex items-center gap-2 text-[13px]" data-reveal
+         style="background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.35)">
+        <span class="material-symbols-rounded text-[18px]" style="color:#ef4444">error</span>
+        <span>Écran indisponible pour ce compte (aucun établissement rattaché).</span>
+    </div>
+
+    <div class="glass rounded-2xl p-6 flex flex-col gap-5" data-reveal>
+        <div class="flex items-start gap-3">
+            <span class="material-symbols-rounded text-[28px] text-ink">qr_code_2</span>
+            <div>
+                <h2 class="text-[16px] font-medium">Ouvrir l'écran de la salle</h2>
+                <p class="text-muted text-[13px] mt-1">
+                    S'ouvre dans un nouvel onglet, prêt à projeter. Le QR se renouvelle automatiquement.
+                    La clé d'accès reste côté serveur : elle n'apparaît sur aucune page.
+                </p>
+            </div>
+        </div>
+        <a th:href="@{/admin/ecran-emargement/ouvrir}" target="_blank" rel="noopener"
+           class="btn btn-gold h-12 px-6 rounded-2xl flex items-center justify-center gap-2 w-fit text-[14px] font-medium">
+            <span class="material-symbols-rounded text-[20px]">open_in_new</span> Ouvrir l'écran d'émargement
+        </a>
+    </div>
+
+    <div class="glass rounded-2xl p-6 mt-5 flex flex-col gap-4" data-reveal>
+        <div class="flex items-start gap-3">
+            <span class="material-symbols-rounded text-[28px] text-ink">key</span>
+            <div>
+                <h2 class="text-[16px] font-medium">Sécurité de la clé d'écran</h2>
+                <p class="text-muted text-[13px] mt-1">
+                    Si un lien d'écran a pu fuiter (capture, partage), régénérez la clé : tout ancien
+                    lien cessera immédiatement de fonctionner. Il faudra rouvrir l'écran sur chaque salle.
+                </p>
+            </div>
+        </div>
+        <form th:action="@{/admin/ecran-emargement/regenerer-cle}" method="post"
+              onsubmit="return confirm('Régénérer la clé ? Les écrans déjà ouverts devront être rechargés depuis ce panneau.');">
+            <button type="submit" class="btn glass h-11 px-5 rounded-2xl flex items-center gap-2 w-fit text-[13px] font-medium">
+                <span class="material-symbols-rounded text-[18px]">autorenew</span> Régénérer la clé d'écran
+            </button>
+        </form>
+    </div>
+
+</main>
+
+<div th:replace="~{admin/fragments :: dock('')}"></div>
+<div th:replace="~{admin/fragments :: palette}"></div>
+<div th:replace="~{admin/fragments :: scripts}"></div>
+
+</body>
+</html>

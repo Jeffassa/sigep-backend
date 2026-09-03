@@ -28,7 +28,18 @@ class SecuriteDemarrageGuardTest {
     }
 
     private void verifier(Environment env, String jwt, String qr) {
-        new SecuriteDemarrageGuard(env, jwt, qr).verifierSecrets();
+        verifier(env, jwt, qr, true);   // HTTPS supposé activé : on isole les vérifs de secrets
+    }
+
+    private void verifier(Environment env, String jwt, String qr, boolean requireHttps) {
+        new SecuriteDemarrageGuard(env, jwt, qr, requireHttps).verifierSecrets();
+    }
+
+    @Test
+    void prodSansHttps_refuse() {
+        assertThatThrownBy(() -> verifier(env("prod"), SECRET_OK_1, SECRET_OK_2, false))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("require-https");
     }
 
     @Test

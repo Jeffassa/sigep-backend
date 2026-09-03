@@ -6,7 +6,9 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.3.5</version>
+        <!-- SECURITE : 3.3.13 embarque Tomcat >= 10.1.42 (corrige CVE-2025-31650 DoS),
+             Spring Security >= 6.3.10 (CVE-2025-22228 bcrypt) et Logback >= 1.5.13. -->
+        <version>3.3.13</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
 
@@ -55,6 +57,17 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+        <!-- Cache distribué (Redis) + abstraction @Cacheable. Redis est OPTIONNEL :
+             activé uniquement si REDIS_URL/REDIS_HOST est défini (voir CacheConfig +
+             RedisRateLimitStore), sinon repli sur un cache mémoire local. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-cache</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
 
         <!-- Migrations de schéma versionnées -->
@@ -166,11 +179,12 @@
             <version>1.3.30</version>
         </dependency>
 
-        <!-- Import Excel (Apache POI) -->
+        <!-- Import Excel (Apache POI). 5.4.0 corrige CVE-2025-31672 (DoS/OOM .xlsx forgé)
+             et remonte commons-compress (CVE-2024-25710/26308). -->
         <dependency>
             <groupId>org.apache.poi</groupId>
             <artifactId>poi-ooxml</artifactId>
-            <version>5.2.5</version>
+            <version>5.4.0</version>
         </dependency>
 
         <!-- Interface Web Admin (Thymeleaf) -->

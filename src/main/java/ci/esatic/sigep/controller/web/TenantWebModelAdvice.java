@@ -128,22 +128,15 @@ public class TenantWebModelAdvice {
     }
 
     /**
-     * Lien direct vers l'écran d'émargement (QR de salle) du tenant, clé kiosque DÉJÀ injectée
-     * (C4) : l'admin l'ouvre en un clic, sans jamais saisir de clé. null s'il n'y a pas de tenant
-     * (pages publiques) ou tant que la clé kiosque n'existe pas → l'UI masque alors le bouton.
+     * Lien vers l'écran d'émargement (QR de salle) du tenant. SÉCURITÉ (audit C4) : ce lien ne
+     * contient PLUS la clé kiosque — il pointe vers une route admin qui résout la clé côté serveur
+     * et redirige (302). La clé n'apparaît donc jamais dans le HTML des pages admin.
+     * null s'il n'y a pas de tenant (pages publiques) → l'UI masque le bouton.
      */
     @ModelAttribute("qrDisplayUrl")
     public String qrDisplayUrl() {
         Etablissement e = etablissementCourant();
-        if (e == null || e.getSlug() == null
-                || e.getKioskKey() == null || e.getKioskKey().isBlank()) {
-            return null;
-        }
-        return "/api/qr/display?etab=" + encoder(e.getSlug()) + "&key=" + encoder(e.getKioskKey());
-    }
-
-    private String encoder(String v) {
-        return java.net.URLEncoder.encode(v, java.nio.charset.StandardCharsets.UTF_8);
+        return (e != null && e.getSlug() != null) ? "/admin/ecran-emargement/ouvrir" : null;
     }
 
     private Etablissement etablissementCourant() {
