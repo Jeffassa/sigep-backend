@@ -124,12 +124,19 @@
             <h2 class="font-serif text-[24px] leading-none mb-5">Qualité</h2>
             <div class="space-y-4">
                 <div class="flex items-center justify-between">
-                    <span class="flex items-center gap-2 text-[14px]"><span class="w-2.5 h-2.5 rounded-full" style="background:#16a34a"></span>À l'heure</span>
+                    <span class="flex items-center gap-2 text-[14px]"><span class="w-2.5 h-2.5 rounded-full" style="background:#16a34a"></span>À l'heure (QR)</span>
                     <span class="font-mono text-[15px] font-medium" th:text="${emargesALheure}">0</span>
                 </div>
                 <div class="flex items-center justify-between">
                     <span class="flex items-center gap-2 text-[14px]"><span class="w-2.5 h-2.5 rounded-full" style="background:#d97706"></span>En retard</span>
                     <span class="font-mono text-[15px] font-medium" th:text="${emargesEnRetard}">0</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="flex items-center gap-2 text-[14px]">
+                        <span class="w-2.5 h-2.5 rounded-full" style="background:#8b5cf6"></span>
+                        Hors-ligne (à auditer)
+                    </span>
+                    <span class="font-mono text-[15px] font-medium text-purple-600 dark:text-purple-400" th:text="${emargesHorsLigne}">0</span>
                 </div>
                 <div class="flex items-center justify-between">
                     <span class="flex items-center gap-2 text-[14px]"><span class="w-2.5 h-2.5 rounded-full" style="background:#dc2626"></span>Oubliées</span>

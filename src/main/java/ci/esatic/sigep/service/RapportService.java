@@ -170,11 +170,19 @@ public class RapportService {
             addDataCell(table, s.getClasse().getLibelle(), bodyFont, bg);
             addDataCell(table, s.getSalle().getLibelle(), bodyFont, bg);
             addDataCell(table, s.getDate().format(DATE_FMT), bodyFont, bg);
-            addDataCell(table, s.getHeureDebut() + " - " + s.getHeureFin(), bodyFont, bg);
+            String horaire = s.getHeureDebut() + " - " + s.getHeureFin() + (e.isHorsLigne() ? " (HL)" : "");
+            addDataCell(table, horaire, bodyFont, bg);
             addDataCell(table, String.format("%.1fh", heures), bodyFont, bg);
             addSignatureCell(table, e.getSignatureBase64(), bodyFont, bg);
         }
         document.add(table);
+
+        if (emargements.stream().anyMatch(Emargement::isHorsLigne)) {
+            Font hlNoteFont = new Font(Font.HELVETICA, 8, Font.ITALIC, new Color(180, 83, 9));
+            Paragraph hlNote = new Paragraph("* (HL) = Émargement enregistré hors-ligne (sans QR de salle).", hlNoteFont);
+            hlNote.setSpacingBefore(4);
+            document.add(hlNote);
+        }
         document.add(Chunk.NEWLINE);
 
         // Total

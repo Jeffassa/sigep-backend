@@ -88,9 +88,16 @@
             </div>
             <a th:href="@{/admin/alertes}" class="btn glass mt-4 h-11 rounded-2xl flex items-center justify-center gap-2 text-[13px] font-medium hover:bg-ink hover:text-white">
                 Voir les alertes
-                <span id="apercuRattrapagesWrap" th:style="${rattrapagesEnAttente > 0} ? '' : 'display:none'"
-                      class="font-mono text-[11px]">(<span id="apercuRattrapages" th:text="${rattrapagesEnAttente}">0</span>)</span>
+                <span id="apercuRattrapagesWrap" th:style="${alertesCount > 0} ? '' : 'display:none'"
+                      class="font-mono text-[11px]">(<span id="apercuRattrapages" th:text="${alertesCount}">0</span>)</span>
             </a>
+            <div th:if="${emargementsHorsLigneCount > 0}" class="mt-3 p-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 flex items-center justify-between gap-2 text-amber-700 dark:text-amber-300" data-reveal>
+                <div class="flex items-center gap-2 text-[12px]">
+                    <span class="material-symbols-rounded text-[18px]">wifi_off</span>
+                    <span><strong th:text="${emargementsHorsLigneCount}">0</strong> émargement(s) hors-ligne</span>
+                </div>
+                <a th:href="@{/admin/alertes}" class="font-mono text-[10px] uppercase tracking-wider underline hover:opacity-80">Auditer</a>
+            </div>
             <span id="apercuTaux" class="hidden" th:text="${tauxEmargement + '%'}"></span>
         </div>
     </section>

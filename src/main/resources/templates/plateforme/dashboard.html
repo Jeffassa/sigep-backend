@@ -118,6 +118,41 @@
         </div>
     </section>
 
+    <!-- KPIs business complémentaires -->
+    <section class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8" data-reveal>
+        <div class="glass rounded-3xl p-6">
+            <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Conversion</p>
+            <p class="font-serif text-[32px] leading-none text-accent" th:text="${tauxConversion} + '%'">0%</p>
+            <p class="text-[11px] text-muted mt-1">Abonnés / inscrits</p>
+        </div>
+        <div class="glass rounded-3xl p-6">
+            <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Validation</p>
+            <p class="font-serif text-[32px] leading-none" th:text="${tauxValidation} + '%'">0%</p>
+            <p class="text-[11px] text-muted mt-1">Dossiers validés</p>
+        </div>
+        <div class="glass rounded-3xl p-6">
+            <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">ARPU (mensuel)</p>
+            <p class="font-serif text-[26px] leading-none mt-1.5">
+                <span th:text="${#numbers.formatInteger(arpu,1,'WHITESPACE')}">0</span>
+                <span class="text-[12px] text-muted">FCFA</span>
+            </p>
+            <p class="text-[11px] text-muted mt-1">Par client payant</p>
+        </div>
+        <div class="glass rounded-3xl p-6">
+            <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Expire bientôt</p>
+            <p class="font-serif text-[32px] leading-none" th:classappend="${expireBientot > 0} ? ' text-accent'"
+               th:text="${expireBientot}">0</p>
+            <p class="text-[11px] text-muted mt-1">À relancer (J-7)</p>
+        </div>
+        <div class="glass rounded-3xl p-6">
+            <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Dossiers</p>
+            <div class="flex gap-5 mt-2 font-mono text-[12px]">
+                <span>en&nbsp;attente&nbsp;<strong class="font-serif text-[22px]" th:text="${enAttente.size()}">0</strong></span>
+                <span class="text-muted">refusés&nbsp;<strong class="font-serif text-[22px]" th:text="${nbRefuses}">0</strong></span>
+            </div>
+        </div>
+    </section>
+
     <!-- Synthèse graphique (données réelles du système) -->
     <section class="mb-8" data-reveal>
         <div class="glass rounded-3xl overflow-hidden mb-5">
@@ -145,6 +180,25 @@
                     <h2 class="font-serif text-[22px]">Entonnoir d'onboarding</h2>
                 </div>
                 <div class="p-3 pt-4"><div id="chartFunnel" style="height:320px;width:100%"></div></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Derniers paiements (activité récente) -->
+    <section class="glass rounded-3xl overflow-hidden mb-8" data-reveal th:if="${!#lists.isEmpty(derniersPaiements)}">
+        <div class="px-7 py-5 border-b border-line flex items-center gap-2.5">
+            <span class="material-symbols-rounded">receipt_long</span>
+            <h2 class="font-serif text-[22px]">Derniers paiements</h2>
+            <a th:href="@{/plateforme/paiements}" class="ml-auto text-[12px] text-muted hover:text-ink">Tout voir →</a>
+        </div>
+        <div>
+            <div th:each="p : ${derniersPaiements}"
+                 class="px-7 py-3.5 flex items-center gap-4 text-[13px] border-b border-line last:border-0">
+                <span class="font-mono text-[11px] text-muted" th:text="${#temporals.format(p.datePaiement,'dd/MM HH:mm')}">--</span>
+                <span class="font-medium" th:text="${nomParEtab[p.etablissementId]} ?: ('#' + p.etablissementId)">Établissement</span>
+                <span th:if="${p.reference}" class="font-mono text-[11px] text-muted hidden sm:inline" th:text="${p.reference}">réf</span>
+                <span class="ml-auto font-mono text-accent"
+                      th:text="${#numbers.formatInteger(p.montant,1,'WHITESPACE')} + ' FCFA'">0</span>
             </div>
         </div>
     </section>
