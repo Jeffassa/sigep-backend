@@ -20,13 +20,13 @@
             <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Total encaissé</p>
             <p class="font-serif text-[32px] leading-none mt-1.5">
                 <span th:text="${#numbers.formatInteger(totalEncaisse,1,'WHITESPACE')}">0</span>
-                <span class="text-[14px] text-muted">FCFA</span></p>
+                <span class="text-[14px] text-muted" th:text="${symbole}">€</span></p>
         </div>
         <div class="glass rounded-3xl p-6">
             <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Encaissé ce mois</p>
             <p class="font-serif text-[32px] leading-none mt-1.5">
                 <span th:text="${#numbers.formatInteger(encaisseMois,1,'WHITESPACE')}">0</span>
-                <span class="text-[14px] text-muted">FCFA</span></p>
+                <span class="text-[14px] text-muted" th:text="${symbole}">€</span></p>
         </div>
         <div class="glass rounded-3xl p-6">
             <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Paiements</p>
@@ -51,7 +51,7 @@
                 <tr th:each="p : ${paiements}" class="border-b border-line">
                     <td class="px-7 py-3" th:text="${#temporals.format(p.datePaiement,'dd/MM/yyyy HH:mm')}">--</td>
                     <td class="px-4 py-3" th:text="${nomParEtab[p.etablissementId]} ?: ('#' + p.etablissementId)">Établissement</td>
-                    <td class="px-4 py-3 font-mono" th:text="${#numbers.formatInteger(p.montant,1,'WHITESPACE')} + ' FCFA'">0</td>
+                    <td class="px-4 py-3 font-mono" th:text="${#numbers.formatInteger(p.montant,1,'WHITESPACE') + ' ' + (p.devise != null ? p.devise : symbole)}">0</td>
                     <td class="px-4 py-3" th:text="'+' + ${p.moisCredites}">+1</td>
                     <td class="px-4 py-3 font-mono text-[12px] text-muted" th:text="${p.reference} ?: '—'">—</td>
                     <td class="px-4 py-3 font-mono text-[11px] text-muted" th:text="${p.enregistrePar} ?: '—'">—</td>

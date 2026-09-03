@@ -51,7 +51,7 @@
                         <form th:action="@{/plateforme/abonnements/prolonger}" method="post" class="flex items-center justify-end gap-2 flex-wrap">
                             <input type="hidden" name="slug" th:value="${e.slug}"/>
                             <input type="number" name="montant" min="0" step="500" th:value="${tarifParEtab[e.id]}"
-                                   title="Montant reçu (FCFA)" placeholder="FCFA"
+                                   th:title="'Montant reçu (' + ${symbole} + ')'" th:placeholder="${symbole}"
                                    class="h-9 px-2 w-24 rounded-lg bg-white/60 border border-line text-[13px]"/>
                             <input type="text" name="reference" placeholder="Réf. (option)"
                                    class="h-9 px-2 w-28 rounded-lg bg-white/60 border border-line text-[13px]"/>
