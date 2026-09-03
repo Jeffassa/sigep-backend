@@ -95,7 +95,7 @@
         <dependency>
             <groupId>io.sentry</groupId>
             <artifactId>sentry-spring-boot-starter-jakarta</artifactId>
-            <version>7.14.0</version>
+            <version>8.53.0</version>
         </dependency>
         <!-- Documentation API (OpenAPI / Swagger UI) -->
         <dependency>
