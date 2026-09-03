@@ -69,9 +69,11 @@ public class StatistiquesService {
         m.put("profsActifs", enseignantRepository.count());
         m.put("rattrapages", rattrapageRepository.countByStatut(StatutDemande.EN_ATTENTE));
 
-        // Qualité de l'émargement : à l'heure / en retard / oublis
+        // Qualité de l'émargement : à l'heure / en retard / hors-ligne / oublis
         long enRetard = emargementRepository.countEnRetardByPeriode(debut, fin);
+        long horsLigne = emargementRepository.countHorsLigneByPeriode(debut, fin);
         m.put("emargesEnRetard", enRetard);
+        m.put("emargesHorsLigne", horsLigne);
         m.put("emargesALheure", Math.max(0, emargees - enRetard));
 
         // Projection (date, heure début, statut) -> heatmap jour×créneau + oublis
@@ -108,7 +110,7 @@ public class StatistiquesService {
         m.put("tendance", tendance(8));
 
         // Analyse / recommandations (règles)
-        m.put("recommandations", recommandations(seances, taux, delta, oublis, parEnseignant, parClasse));
+        m.put("recommandations", recommandations(seances, taux, delta, oublis, horsLigne, parEnseignant, parClasse));
         return m;
     }
 
@@ -192,6 +194,7 @@ public class StatistiquesService {
     }
 
     private List<Map<String, String>> recommandations(long seances, double taux, double delta, long oublis,
+                                                       long horsLigne,
                                                        List<Map<String, Object>> parEnseignant,
                                                        List<Map<String, Object>> parClasse) {
         List<Map<String, String>> recs = new ArrayList<>();
@@ -202,6 +205,10 @@ public class StatistiquesService {
         if (delta <= -5) recs.add(rec("alerte", "Le taux d'émargement a baissé de " + Math.abs(delta)
                 + " pts par rapport à la période précédente."));
         else if (delta >= 5) recs.add(rec("succes", "Le taux d'émargement progresse de +" + delta + " pts."));
+
+        if (horsLigne > 0) {
+            recs.add(rec("alerte", horsLigne + " émargement(s) enregistré(s) hors-ligne (sans scan QR dynamique) sur la période : vérification recommandée par la scolarité."));
+        }
 
         List<String> faibles = new ArrayList<>();
         for (Map<String, Object> e : parEnseignant) if ((double) e.get("taux") < 50) faibles.add((String) e.get("nom"));

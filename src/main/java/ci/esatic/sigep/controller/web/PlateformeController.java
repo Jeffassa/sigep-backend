@@ -179,6 +179,26 @@ public class PlateformeController {
         model.addAttribute("encaisseParMois", encaisseParMois);
         model.addAttribute("nouveauxParMois", nouveauxParMois);
 
+        // ===== Indicateurs additionnels attendus par un super admin =====
+        // Taux de conversion (Abonnés/Inscrits) et de validation (Validés/Inscrits).
+        model.addAttribute("tauxConversion", fInscrits == 0 ? 0 : Math.round(fAbonnes * 100.0 / fInscrits));
+        model.addAttribute("tauxValidation", fInscrits == 0 ? 0 : Math.round(fValides * 100.0 / fInscrits));
+        // Revenu moyen mensuel par client payant (ARPU estimé).
+        model.addAttribute("arpu", fAbonnes == 0 ? 0L : Math.round(mrr / (double) fAbonnes));
+        // Dossiers refusés (complète en attente/validés).
+        model.addAttribute("nbRefuses", tous.stream()
+                .filter(e -> e.getStatut() == StatutEtablissement.REFUSE).count());
+        // Abonnements qui expirent bientôt (fenêtre de relance J-7) — à relancer avant coupure.
+        model.addAttribute("expireBientot", tous.stream()
+                .filter(e -> e.getStatut() == StatutEtablissement.VALIDE && e.isActif()
+                        && !expires.contains(e.getId()) && abonnementService.doitRappeler(e))
+                .count());
+        // Activité récente : 5 derniers paiements + noms d'établissement pour les afficher.
+        model.addAttribute("nomParEtab", tous.stream()
+                .collect(Collectors.toMap(Etablissement::getId, Etablissement::getNomEffectif, (a, b) -> a)));
+        model.addAttribute("derniersPaiements",
+                paiementRepository.findAllByOrderByDatePaiementDesc().stream().limit(5).toList());
+
         return "plateforme/dashboard";
     }
 

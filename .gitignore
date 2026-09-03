@@ -41,3 +41,9 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Journaux applicatifs runtime (ne jamais versionner : bruit + risque de fuite de secrets)
+logs/
+
+# Lock npm orphelin à la racine (le projet npm vit dans tailwind/)
+/package-lock.json

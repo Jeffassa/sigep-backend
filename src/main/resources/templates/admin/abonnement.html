@@ -13,10 +13,6 @@
     </section>
 
     <!-- Messages -->
-    <div th:if="${okAbo}" class="flex items-center gap-2 p-3 mb-4 rounded-xl text-[13px]"
-         style="background:rgba(10,10,10,.05);border:1px solid var(--c-line)">
-        <span class="material-symbols-rounded text-[18px]">check_circle</span><span th:text="${okAbo}"></span>
-    </div>
     <div th:if="${erreurAbo}" class="flex items-center gap-2 p-3 mb-4 rounded-xl text-[13px]"
          style="background:rgba(186,26,26,.08);color:#7a0010;border:1px solid rgba(186,26,26,.2)">
         <span class="material-symbols-rounded text-[18px]">error</span><span th:text="${erreurAbo}"></span>
@@ -24,9 +20,8 @@
     <div th:if="${param.paye}" class="flex items-start gap-2 p-3 mb-4 rounded-xl text-[13px]"
          style="background:rgba(15,122,61,.10);color:#0f7a3d;border:1px solid rgba(15,122,61,.25)">
         <span class="material-symbols-rounded text-[18px]">verified</span>
-        <span>Paiement reçu, merci ! Votre abonnement est passé au plan <strong>Pro</strong>.
-            <br/>Astuce : <strong>déconnectez-vous puis reconnectez-vous</strong> pour que votre nouveau plan
-            s'affiche partout (l'en-tête garde l'ancien plan en mémoire jusqu'à la reconnexion).</span>
+        <span>Paiement reçu, merci ! Votre abonnement est actif au plan <strong>Pro</strong> —
+            le changement est pris en compte <strong>immédiatement</strong>, aucune reconnexion nécessaire.</span>
     </div>
     <div th:if="${param.annule}" class="flex items-center gap-2 p-3 mb-4 rounded-xl text-[13px]"
          style="background:rgba(10,10,10,.05);border:1px solid var(--line)">
