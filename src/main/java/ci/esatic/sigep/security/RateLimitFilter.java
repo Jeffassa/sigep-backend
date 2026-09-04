@@ -44,6 +44,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private static final String REFRESH_PATH = "/api/auth/refresh";
     private static final String SIGNUP_PATH = "/api/saas/etablissements";
     private static final String REGISTER_PATH = "/api/auth/register";      // auto-inscription enseignant
+    /** Changement de mot de passe : exige l'ancien, donc cible de force brute. */
+    private static final String CHANGE_PWD_PATH = "/api/profil/mot-de-passe";
     private static final String ADMIN_LOGIN_PATH = "/admin-login";
     /** Initiation Mobile Money : chaque appel pousse une demande sur un téléphone réel. */
     private static final String MOMO_INIT_PATH = "/admin/abonnement/momo";
@@ -149,6 +151,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
         if (REFRESH_PATH.equals(uri)) return maxRefresh;
         if (SIGNUP_PATH.equals(uri)) return maxSignup;
         if (REGISTER_PATH.equals(uri)) return maxSignup;   // même budget anti-spam que l'inscription établissement
+        // Même budget que le login : l'ancien mot de passe y est vérifié, un jeton volé
+        // permettrait sinon de deviner le mot de passe de la victime en rafale.
+        if (CHANGE_PWD_PATH.equals(uri)) return maxLogin;
         // Anti-harcèlement : sans borne, on pourrait faire sonner un numéro tiers en rafale.
         if (MOMO_INIT_PATH.equals(uri)) return maxSignup;
         if (ADMIN_LOGIN_PATH.equals(uri)) return maxAdminLogin;

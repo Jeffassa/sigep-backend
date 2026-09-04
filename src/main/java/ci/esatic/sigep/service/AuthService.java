@@ -1,11 +1,13 @@
 package ci.esatic.sigep.service;
 
+import ci.esatic.sigep.dto.request.ChangerMotDePasseRequest;
 import ci.esatic.sigep.dto.request.InscriptionRequest;
 import ci.esatic.sigep.dto.request.LoginRequest;
 import ci.esatic.sigep.dto.request.RegisterEnseignantRequest;
 import ci.esatic.sigep.dto.response.AuthResponse;
 import ci.esatic.sigep.entity.*;
 import ci.esatic.sigep.exception.CompteNonValideException;
+import ci.esatic.sigep.exception.MetierException;
 import ci.esatic.sigep.repository.EnseignantRepository;
 import ci.esatic.sigep.repository.EtablissementRepository;
 import ci.esatic.sigep.repository.RoleRepository;
@@ -133,6 +135,37 @@ public class AuthService {
     @Transactional
     public void logout(String refreshToken) {
         refreshTokenService.revoquer(refreshToken);
+    }
+
+    /**
+     * Changement de mot de passe par l'utilisateur lui-même (espace profil de l'app mobile).
+     *
+     * <p>Trois garde-fous :
+     * <ul>
+     *   <li>l'ancien mot de passe est EXIGÉ — un access token volé ne suffit donc pas à
+     *       verrouiller le compte de sa victime ;</li>
+     *   <li>le nouveau doit différer de l'ancien ;</li>
+     *   <li>tous les refresh tokens sont révoqués : si un tiers avait ouvert une session, elle
+     *       devient inutilisable. C'est l'intérêt principal d'un changement de mot de passe
+     *       après un soupçon de compromission.</li>
+     * </ul>
+     */
+    @Transactional
+    public void changerMotDePasse(String email, ChangerMotDePasseRequest request) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new MetierException("UTILISATEUR_INTROUVABLE", "Compte introuvable"));
+
+        if (!passwordEncoder.matches(request.getAncienMotDePasse(), user.getPassword())) {
+            throw new MetierException("MOT_DE_PASSE_INCORRECT", "Le mot de passe actuel est incorrect");
+        }
+        if (passwordEncoder.matches(request.getNouveauMotDePasse(), user.getPassword())) {
+            throw new MetierException("MOT_DE_PASSE_IDENTIQUE",
+                    "Le nouveau mot de passe doit être différent de l'actuel");
+        }
+
+        user.setPassword(passwordEncoder.encode(request.getNouveauMotDePasse()));
+        userRepository.save(user);
+        refreshTokenService.revoquerTout(user);
     }
 
     /**
