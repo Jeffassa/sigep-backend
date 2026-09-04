@@ -30,7 +30,7 @@
         </div>
     </div>
 
-    <div th:if="${success}" class="glass rounded-2xl p-3.5 mb-5 flex items-center gap-2 text-[13px]" data-reveal
+    <div data-flash th:if="${success}" class="glass rounded-2xl p-3.5 mb-5 flex items-center gap-2 text-[13px]" data-reveal
          style="background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.35)">
         <span class="material-symbols-rounded text-[18px]" style="color:#10b981">check_circle</span><span th:text="${success}">OK</span>
     </div>

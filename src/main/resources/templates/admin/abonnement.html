@@ -13,12 +13,12 @@
     </section>
 
     <!-- Messages -->
-    <div th:if="${erreurAbo}" class="flex items-center gap-2 p-3 mb-4 rounded-xl text-[13px]"
+    <div data-flash th:if="${erreurAbo}" class="flex items-center gap-2 p-3 mb-4 rounded-xl text-[13px]"
          style="background:rgba(186,26,26,.08);color:#7a0010;border:1px solid rgba(186,26,26,.2)">
         <span class="material-symbols-rounded text-[18px]">error</span><span th:text="${erreurAbo}"></span>
     </div>
     <!-- Paiement CONFIRMÉ (réconcilié via l'API Stripe : montant vérifié, plan appliqué). -->
-    <div th:if="${paiementReconcilie}" class="flex items-start gap-2 p-3 mb-4 rounded-xl text-[13px]"
+    <div data-flash th:if="${paiementReconcilie}" class="flex items-start gap-2 p-3 mb-4 rounded-xl text-[13px]"
          style="background:rgba(16,185,129,.12);color:#0f7a3d;border:1px solid rgba(16,185,129,.35)">
         <span class="material-symbols-rounded text-[18px]" style="color:#10b981">verified</span>
         <span>Paiement confirmé, merci ! Votre abonnement est actif au plan
@@ -28,7 +28,7 @@
     <!-- Mobile Money confirmé. Repose sur un attribut FLASH posé par le serveur après
          vérification réelle du paiement — et non sur un paramètre d'URL, qu'il suffirait
          de taper pour faire croire à un paiement réussi. -->
-    <div th:if="${momoConfirme}" class="flex items-start gap-2 p-3 mb-4 rounded-xl text-[13px]"
+    <div data-flash th:if="${momoConfirme}" class="flex items-start gap-2 p-3 mb-4 rounded-xl text-[13px]"
          style="background:rgba(16,185,129,.12);color:#0f7a3d;border:1px solid rgba(16,185,129,.35)">
         <span class="material-symbols-rounded text-[18px]" style="color:#10b981">verified</span>
         <span>Paiement Mobile Money confirmé, merci ! Votre abonnement est actif au plan

@@ -210,6 +210,54 @@ public class NovaSendService {
         }
     }
 
+    /**
+     * Sonde d'authentification EN LECTURE SEULE. On interroge le statut d'une référence
+     * inexistante : si les identifiants sont acceptés, NovaSend répond 404 (introuvable) ;
+     * s'ils sont refusés, 401. Aucun paiement n'est declenché — contrairement à un essai
+     * d'initiation, qui ferait sonner un vrai téléphone.
+     *
+     * @return le code HTTP obtenu, ou -1 si le service est injoignable.
+     */
+    public int sonderAuth(String utilisateur, String motDePasse) {
+        try {
+            String creds = Base64.getEncoder().encodeToString(
+                    (utilisateur + ":" + motDePasse).getBytes(StandardCharsets.UTF_8));
+            var httpClient = java.net.http.HttpClient.newBuilder()
+                    .connectTimeout(java.time.Duration.ofSeconds(3)).build();
+            var factory = new org.springframework.http.client.JdkClientHttpRequestFactory(httpClient);
+            factory.setReadTimeout(java.time.Duration.ofSeconds(8));
+            RestClient c = RestClient.builder().baseUrl(baseUrl).requestFactory(factory)
+                    .defaultHeader(HttpHeaders.AUTHORIZATION, "Basic " + creds).build();
+            c.get().uri("/v1/payin/{r}", "diag-" + java.util.UUID.randomUUID())
+                    .retrieve().body(String.class);
+            return 200;
+        } catch (org.springframework.web.client.HttpStatusCodeException e) {
+            return e.getStatusCode().value();
+        } catch (Exception e) {
+            log.warn("NovaSend : sonde d'authentification impossible : {}", e.toString());
+            return -1;
+        }
+    }
+
+    /**
+     * Diagnostic d'authentification pour l'administrateur. N'expose AUCUN secret : seulement
+     * les codes HTTP obtenus et la LONGUEUR des clés (une longueur anormale trahit une valeur
+     * tronquée au copier-coller).
+     */
+    public Map<String, Object> diagnostic() {
+        String cle = apiKey == null ? "" : apiKey.trim();
+        String sec = secretKey == null ? "" : secretKey.trim();
+        Map<String, Object> d = new LinkedHashMap<>();
+        d.put("urlBase", baseUrl);
+        d.put("environnementDeclare", environment);
+        d.put("longueurCleApi", cle.length());
+        d.put("longueurCleSecrete", sec.length());
+        d.put("ordreActuel_cleApi_puis_secret", sonderAuth(cle, sec));
+        d.put("ordreInverse_secret_puis_cleApi", sonderAuth(sec, cle));
+        d.put("lecture", "404 = identifiants ACCEPTES (reference inexistante) · 401 = REFUSES · -1 = injoignable");
+        return d;
+    }
+
     /** Parsing tolérant : on ne lit que les champs utiles, les ajouts d'API n'ont pas d'impact. */
     private Reponse lire(String json) {
         if (json == null || json.isBlank()) return null;
