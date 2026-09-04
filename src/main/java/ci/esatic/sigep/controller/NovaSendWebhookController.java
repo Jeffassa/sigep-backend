@@ -10,7 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -50,15 +50,23 @@ public class NovaSendWebhookController {
     private final ObjectMapper objectMapper;
 
     @PostMapping("/webhook")
-    public ResponseEntity<String> webhook(@RequestBody String payload,
-                                          @RequestHeader(value = "X-Signature-Value", required = false) String signature) {
+    public ResponseEntity<String> webhook(@RequestBody String payload, HttpServletRequest requete) {
+        String signature = chercherSignature(requete);
         // Fail-closed : sans secret configuré, on refuse plutôt que d'accepter un appel non vérifié.
         if (webhookSecret == null || webhookSecret.isBlank()) {
             log.warn("Webhook NovaSend reçu mais aucun secret n'est configuré — refusé.");
             return ResponseEntity.badRequest().body("webhook non configuré");
         }
         if (signature == null || signature.isBlank()) {
-            log.warn("Webhook NovaSend sans en-tête X-Signature-Value — refusé.");
+            // On journalise les NOMS des en-têtes reçus (jamais leurs valeurs) : sans cela,
+            // impossible de savoir si le fournisseur signe sous un autre nom que celui annoncé.
+            StringBuilder noms = new StringBuilder();
+            for (var e = requete.getHeaderNames(); e != null && e.hasMoreElements(); ) {
+                if (noms.length() > 0) noms.append(", ");
+                noms.append(e.nextElement());
+            }
+            log.warn("Webhook NovaSend SANS signature — refusé. En-têtes reçus : [{}] · évènement : {}",
+                    noms, resumeEvenement(payload));
             return ResponseEntity.badRequest().body("signature absente");
         }
         // Normalisation de casse uniquement (l'hexadécimal n'est pas sensible à la casse) :
@@ -88,6 +96,33 @@ public class NovaSendWebhookController {
             return ResponseEntity.status(500).body("erreur de traitement");
         }
         return ResponseEntity.ok("");
+    }
+
+    /**
+     * Cherche la signature sous les différents noms d'en-tête employés par les fournisseurs.
+     * La doc annonce X-Signature-Value, mais les notifications reçues n'en portent pas :
+     * on tolère les variantes usuelles plutôt que de rejeter une notification légitime.
+     */
+    private String chercherSignature(HttpServletRequest requete) {
+        String[] candidats = {"X-Signature-Value", "X-Signature", "X-Novasend-Signature",
+                              "X-Webhook-Signature", "Signature", "X-Hub-Signature-256"};
+        for (String nom : candidats) {
+            String v = requete.getHeader(nom);
+            if (v != null && !v.isBlank()) return v;
+        }
+        return null;
+    }
+
+    /** Résumé NON personnel de l'évènement (jamais le corps entier : il contient un téléphone). */
+    private String resumeEvenement(String payload) {
+        try {
+            JsonNode n = objectMapper.readTree(payload);
+            return "type=" + n.path("type").asText("?")
+                 + " status=" + n.path("status").asText("?")
+                 + " reference=" + n.path("reference").asText("?");
+        } catch (Exception e) {
+            return "corps non JSON (" + (payload == null ? 0 : payload.length()) + " caractères)";
+        }
     }
 
     /** HMAC-SHA256 du corps BRUT, en hexadécimal minuscule. */
