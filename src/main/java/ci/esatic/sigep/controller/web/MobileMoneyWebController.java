@@ -40,6 +40,7 @@ import java.util.Map;
 public class MobileMoneyWebController {
 
     private final MobileMoneyService mobileMoneyService;
+    private final NovaSendService novaSendService;
     private final PaiementIntentRepository intentRepository;
 
     /** Lance la demande de paiement chez l'opérateur. */
@@ -142,6 +143,17 @@ public class MobileMoneyWebController {
         }
         // Toujours en cours : on renvoie sur la page d'attente plutôt que d'annoncer un succès.
         return "redirect:/admin/abonnement/momo/attente?ref=" + reference;
+    }
+
+    /**
+     * Diagnostic d'authentification NovaSend (ADMIN). Sonde l'API en LECTURE SEULE et renvoie
+     * les codes HTTP obtenus avec l'ordre de clés actuel puis inversé. Aucun paiement n'est
+     * déclenché, aucun secret n'est exposé — seulement les codes et la longueur des clés.
+     */
+    @GetMapping("/admin/abonnement/momo/diagnostic")
+    @ResponseBody
+    public Map<String, Object> diagnostic() {
+        return novaSendService.diagnostic();
     }
 
     /** Intention appartenant bien à l'établissement du compte connecté, sinon null. */

@@ -17,7 +17,7 @@
     </section>
 
     <!-- Message d'erreur (email déjà pris, champ manquant…) -->
-    <div th:if="${erreur}" class="flex items-center gap-2 p-3 mb-5 rounded-xl text-[13px]"
+    <div data-flash th:if="${erreur}" class="flex items-center gap-2 p-3 mb-5 rounded-xl text-[13px]"
          style="background:rgba(186,26,26,.08);color:#7a0010;border:1px solid rgba(186,26,26,.2)">
         <span class="material-symbols-rounded text-[18px]">error</span><span th:text="${erreur}"></span>
     </div>
