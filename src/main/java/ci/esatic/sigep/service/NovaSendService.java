@@ -219,15 +219,20 @@ public class NovaSendService {
      * @return le code HTTP obtenu, ou -1 si le service est injoignable.
      */
     public int sonderAuth(String utilisateur, String motDePasse) {
+        String creds = Base64.getEncoder().encodeToString(
+                (utilisateur + ":" + motDePasse).getBytes(StandardCharsets.UTF_8));
+        return sonderEntete("Basic " + creds);
+    }
+
+    /** Même sonde, avec un en-tête Authorization arbitraire (pour tester un autre schéma). */
+    public int sonderEntete(String entete) {
         try {
-            String creds = Base64.getEncoder().encodeToString(
-                    (utilisateur + ":" + motDePasse).getBytes(StandardCharsets.UTF_8));
             var httpClient = java.net.http.HttpClient.newBuilder()
                     .connectTimeout(java.time.Duration.ofSeconds(3)).build();
             var factory = new org.springframework.http.client.JdkClientHttpRequestFactory(httpClient);
             factory.setReadTimeout(java.time.Duration.ofSeconds(8));
             RestClient c = RestClient.builder().baseUrl(baseUrl).requestFactory(factory)
-                    .defaultHeader(HttpHeaders.AUTHORIZATION, "Basic " + creds).build();
+                    .defaultHeader(HttpHeaders.AUTHORIZATION, entete).build();
             c.get().uri("/v1/payin/{r}", "diag-" + java.util.UUID.randomUUID())
                     .retrieve().body(String.class);
             return 200;
@@ -252,8 +257,15 @@ public class NovaSendService {
         d.put("environnementDeclare", environment);
         d.put("longueurCleApi", cle.length());
         d.put("longueurCleSecrete", sec.length());
-        d.put("ordreActuel_cleApi_puis_secret", sonderAuth(cle, sec));
-        d.put("ordreInverse_secret_puis_cleApi", sonderAuth(sec, cle));
+        // Préfixes MASQUÉS (6 premiers caractères) : suffisant pour vérifier d'un coup d'œil
+        // qu'on a bien collé la bonne valeur depuis le portail, sans divulguer la clé.
+        d.put("debutCleApi", cle.isEmpty() ? "(vide)" : cle.substring(0, Math.min(6, cle.length())) + "…");
+        d.put("debutCleSecrete", sec.isEmpty() ? "(vide)" : sec.substring(0, Math.min(6, sec.length())) + "…");
+        d.put("basic_cleApi_puis_secret", sonderAuth(cle, sec));
+        d.put("basic_secret_puis_cleApi", sonderAuth(sec, cle));
+        // Si le fournisseur attendait en réalité un jeton porteur, ces sondes le révèleraient.
+        d.put("bearer_secret", sonderEntete("Bearer " + sec));
+        d.put("bearer_cleApi", sonderEntete("Bearer " + cle));
         d.put("lecture", "404 = identifiants ACCEPTES (reference inexistante) · 401 = REFUSES · -1 = injoignable");
         return d;
     }
