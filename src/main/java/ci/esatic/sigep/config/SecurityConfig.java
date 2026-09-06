@@ -52,6 +52,11 @@ public class SecurityConfig {
                 // CSRF activé : Thymeleaf injecte automatiquement le token dans th:action
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/admin-login").permitAll()
+                        // Second facteur : commun aux DEUX profils d'administration. Sans cette
+                        // règle, /admin-otp retombe sur anyRequest().hasRole("ADMIN") et le super
+                        // administrateur — qui ne porte que ROLE_SUPER_ADMIN — reçoit un 403 sur la
+                        // page même qui doit le laisser entrer.
+                        .requestMatchers("/admin-otp", "/admin-otp/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
                         // Espace plateforme (super admin) : strictement séparé de l'admin établissement
                         .requestMatchers("/plateforme/**").hasRole("SUPER_ADMIN")
                         .anyRequest().hasRole("ADMIN")

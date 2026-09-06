@@ -112,6 +112,40 @@ class PlateformeIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    // ─── Page du second facteur ─────────────────────────────────────────────
+    // Regression : /admin-otp n'avait aucune regle d'autorisation propre et retombait sur
+    // anyRequest().hasRole("ADMIN"). Le super administrateur, qui ne porte que ROLE_SUPER_ADMIN,
+    // recevait un 403 sur la page meme censee le laisser entrer — il etait enferme dehors.
+    // Ces tests s'executent meme avec le second facteur desactive : c'est la regle d'acces
+    // a la page qui est verifiee, pas le mecanisme du code.
+
+    @Test
+    void pageSecondFacteur_estAccessible_auSuperAdministrateur() throws Exception {
+        mockMvc.perform(get("/admin-otp").with(user(superAdmin)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void pageSecondFacteur_estAccessible_aUnAdminDEtablissement() throws Exception {
+        mockMvc.perform(get("/admin-otp").with(user(adminClient)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void pageSecondFacteur_resteFermee_sansAuthentification() throws Exception {
+        // Le mot de passe reste exige AVANT le second facteur : la page n'est pas publique.
+        mockMvc.perform(get("/admin-otp"))
+                .andExpect(status().is3xxRedirection());
+    }
+
+    @Test
+    void renvoiDeCode_estAccessible_auxDeuxProfils() throws Exception {
+        mockMvc.perform(post("/admin-otp/renvoyer").with(user(superAdmin)).with(csrf()))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/admin-otp/renvoyer").with(user(adminClient)).with(csrf()))
+                .andExpect(status().isOk());
+    }
+
     @Test
     void remediation_renouvelleLaCleEcran_dUnEtablissementCible() throws Exception {
         String cleAvant = clientA.getKioskKey();
