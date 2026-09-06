@@ -42,6 +42,9 @@ public interface EnseignantRepository extends JpaRepository<Enseignant, Long> {
                    " OR LOWER(e.prenom) LIKE LOWER(CONCAT('%', CAST(:search AS varchar), '%')) " +
                    " OR LOWER(e.matricule) LIKE LOWER(CONCAT('%', CAST(:search AS varchar), '%'))) " +
                    "AND (CAST(:departement AS varchar) IS NULL OR e.departement = CAST(:departement AS varchar)) " +
+                   // Archivés masqués par défaut : sans cela, archiver n'allégerait pas la liste
+                   // et n'aurait plus grand intérêt. NULL = tout afficher.
+                   "AND (CAST(:statutExclu AS varchar) IS NULL OR e.statut <> CAST(:statutExclu AS varchar)) " +
                    // ISOLATION : requête native -> le filtre Hibernate ne s'applique pas, on filtre ici.
                    "AND e.etablissement_id = :tenantId",
            countQuery = "SELECT COUNT(*) FROM enseignants e WHERE " +
@@ -50,10 +53,12 @@ public interface EnseignantRepository extends JpaRepository<Enseignant, Long> {
                         " OR LOWER(e.prenom) LIKE LOWER(CONCAT('%', CAST(:search AS varchar), '%')) " +
                         " OR LOWER(e.matricule) LIKE LOWER(CONCAT('%', CAST(:search AS varchar), '%'))) " +
                         "AND (CAST(:departement AS varchar) IS NULL OR e.departement = CAST(:departement AS varchar)) " +
+                        "AND (CAST(:statutExclu AS varchar) IS NULL OR e.statut <> CAST(:statutExclu AS varchar)) " +
                         "AND e.etablissement_id = :tenantId",
            nativeQuery = true)
     Page<Enseignant> searchEnseignants(@Param("search") String search,
                                         @Param("departement") String departement,
+                                        @Param("statutExclu") String statutExclu,
                                         @Param("tenantId") Long tenantId,
                                         Pageable pageable);
 

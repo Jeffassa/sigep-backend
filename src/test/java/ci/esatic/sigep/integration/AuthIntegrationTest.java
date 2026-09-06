@@ -129,6 +129,22 @@ class AuthIntegrationTest {
     }
 
     @Test
+    void login_enseignantArchive_devraitRetourner403() throws Exception {
+        // Archiver doit couper l'acces aussi surement que refuser : un enseignant parti de
+        // l'etablissement ne doit plus pouvoir emarger, meme si son compte existe encore.
+        creerEnseignant("archive@esatic.ci", "ENS-A-1", StatutEnseignant.ARCHIVE);
+
+        String body = objectMapper.writeValueAsString(
+                Map.of("email", "archive@esatic.ci", "password", PASSWORD));
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message", org.hamcrest.Matchers.containsString("archiv")));
+    }
+
+    @Test
     void login_enseignantValide_devraitReussir() throws Exception {
         creerEnseignant("valide@esatic.ci", "ENS-V-1", StatutEnseignant.VALIDATED);
 

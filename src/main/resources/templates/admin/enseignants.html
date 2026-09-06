@@ -51,6 +51,13 @@
             <option value="" th:selected="${departement == ''}">Tous les départements</option>
             <option th:each="dept : ${departements}" th:value="${dept}" th:text="${dept}" th:selected="${dept == departement}">Dépt</option>
         </select>
+        <label class="flex items-center gap-2 px-3 text-[13px] text-muted cursor-pointer select-none whitespace-nowrap"
+               title="Les enseignants archivés sont masqués par défaut">
+            <input type="checkbox" name="archives" value="true" th:checked="${archives}"
+                   onchange="this.form.submit()"
+                   class="w-4 h-4 rounded border-line accent-current cursor-pointer"/>
+            Voir les archivés
+        </label>
         <button type="submit" class="btn btn-ink rounded-xl px-5 h-11 flex items-center justify-center">
             <span class="material-symbols-rounded">search</span>
         </button>
@@ -99,6 +106,10 @@
                         <span th:if="${ens.statut?.name() == 'REJECTED'}"
                               class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-line text-muted font-mono text-[10px] uppercase tracking-wider">
                             <span class="material-symbols-rounded text-[13px]">block</span>Rejeté</span>
+                        <span th:if="${ens.statut?.name() == 'ARCHIVE'}"
+                              class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-line text-muted font-mono text-[10px] uppercase tracking-wider"
+                              title="A quitté l'établissement — aucun accès, historique conservé">
+                            <span class="material-symbols-rounded text-[13px]">inventory_2</span>Archivé</span>
                     </td>
                     <td class="px-6 py-4">
                         <div class="flex items-center justify-end gap-2">
@@ -107,6 +118,7 @@
                                     <option value="VALIDATED" th:selected="${ens.statut?.name() == 'VALIDATED'}">Valider</option>
                                     <option value="PENDING"   th:selected="${ens.statut?.name() == 'PENDING'}">Attente</option>
                                     <option value="REJECTED"  th:selected="${ens.statut?.name() == 'REJECTED'}">Rejeter</option>
+                                    <option value="ARCHIVE"   th:selected="${ens.statut?.name() == 'ARCHIVE'}">Archiver</option>
                                 </select>
                                 <button type="submit" class="btn w-8 h-8 rounded-lg bg-ink text-white flex items-center justify-center" title="Appliquer">
                                     <span class="material-symbols-rounded text-[16px]">check</span>
@@ -137,14 +149,14 @@
                 <span th:text="${enseignants.numberOfElements}">0</span> / <span th:text="${totalElements}">0</span>
             </p>
             <div class="flex gap-1.5">
-                <a th:if="${currentPage > 0}" th:href="@{/admin/enseignants(search=${search}, departement=${departement}, page=${currentPage - 1})}"
+                <a th:if="${currentPage > 0}" th:href="@{/admin/enseignants(search=${search}, departement=${departement}, archives=${archives}, page=${currentPage - 1})}"
                    class="btn glass w-9 h-9 rounded-lg flex items-center justify-center"><span class="material-symbols-rounded text-[18px]">chevron_left</span></a>
                 <th:block th:each="i : ${#numbers.sequence(0, totalPages - 1)}">
-                    <a th:if="${i != currentPage}" th:href="@{/admin/enseignants(search=${search}, departement=${departement}, page=${i})}"
+                    <a th:if="${i != currentPage}" th:href="@{/admin/enseignants(search=${search}, departement=${departement}, archives=${archives}, page=${i})}"
                        class="btn glass w-9 h-9 rounded-lg flex items-center justify-center font-mono text-[12px]" th:text="${i + 1}">1</a>
                     <span th:if="${i == currentPage}" class="w-9 h-9 rounded-lg bg-ink text-white flex items-center justify-center font-mono text-[12px]" th:text="${i + 1}">1</span>
                 </th:block>
-                <a th:if="${currentPage < totalPages - 1}" th:href="@{/admin/enseignants(search=${search}, departement=${departement}, page=${currentPage + 1})}"
+                <a th:if="${currentPage < totalPages - 1}" th:href="@{/admin/enseignants(search=${search}, departement=${departement}, archives=${archives}, page=${currentPage + 1})}"
                    class="btn glass w-9 h-9 rounded-lg flex items-center justify-center"><span class="material-symbols-rounded text-[18px]">chevron_right</span></a>
             </div>
         </div>

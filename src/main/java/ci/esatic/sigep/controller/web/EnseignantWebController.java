@@ -56,14 +56,17 @@ public class EnseignantWebController {
     @GetMapping("/admin/enseignants")
     public String enseignants(@RequestParam(defaultValue = "") String search,
                               @RequestParam(defaultValue = "") String departement,
+                              @RequestParam(defaultValue = "false") boolean archives,
                               @RequestParam(defaultValue = "0") int page,
                               Model model) {
         int size = 10;
         String searchParam = search.isBlank() ? null : search;
         String deptParam = departement.isBlank() ? null : departement;
+        // Les archivés sortent de la liste courante, sauf demande explicite.
+        String statutExclu = archives ? null : StatutEnseignant.ARCHIVE.name();
 
         Page<Enseignant> pageResult = enseignantRepository.searchEnseignants(
-                searchParam, deptParam, TenantContext.get(), PageRequest.of(page, size));
+                searchParam, deptParam, statutExclu, TenantContext.get(), PageRequest.of(page, size));
 
         model.addAttribute("enseignants", pageResult);
         model.addAttribute("currentPage", page);
@@ -71,6 +74,7 @@ public class EnseignantWebController {
         model.addAttribute("totalElements", pageResult.getTotalElements());
         model.addAttribute("search", search);
         model.addAttribute("departement", departement);
+        model.addAttribute("archives", archives);
         model.addAttribute("departements", enseignantRepository.findDistinctDepartements());
 
         return "admin/enseignants";
@@ -290,7 +294,7 @@ public class EnseignantWebController {
             ra.addFlashAttribute("error",
                     "Suppression impossible : " + enseignant.getPrenom() + " " + enseignant.getNom()
                     + " est rattaché à " + String.join(", ", attaches)
-                    + ". Passez plutôt son statut à « Rejeté » : il perd l'accès à l'application,"
+                    + ". Archivez-le plutôt : il perd l'accès à l'application, sort de cette liste,"
                     + " et son historique reste intact.");
             return "redirect:/admin/enseignants";
         }

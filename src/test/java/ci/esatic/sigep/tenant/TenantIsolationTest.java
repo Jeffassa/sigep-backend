@@ -126,6 +126,30 @@ class TenantIsolationTest {
     }
 
     @Test
+    void recherche_des_enseignants_exclut_les_archives_sur_demande() {
+        Long t = etablissementRepository.save(
+                Etablissement.builder().nom("UC").slug("uc-arch").plan(Plan.PRO).build()).getId();
+        enseignantRepository.save(enseignant("ACTIF-1", t));
+        var parti = enseignant("PARTI-1", t);
+        parti.setStatut(ci.esatic.sigep.entity.StatutEnseignant.ARCHIVE);
+        enseignantRepository.save(parti);
+        em.flush();
+        em.clear();
+
+        // La liste courante de l'administration masque les archives : c'est tout l'interet
+        // d'archiver plutot que de laisser un enseignant parti encombrer la page.
+        assertThat(enseignantRepository.searchEnseignants(
+                        null, null, "ARCHIVE", t, PageRequest.of(0, 50)).getContent())
+                .extracting(Enseignant::getMatricule).containsExactly("ACTIF-1");
+
+        // Sans exclusion, il reste consultable : archiver n'est pas effacer.
+        assertThat(enseignantRepository.searchEnseignants(
+                        null, null, null, t, PageRequest.of(0, 50)).getContent())
+                .extracting(Enseignant::getMatricule)
+                .containsExactlyInAnyOrder("ACTIF-1", "PARTI-1");
+    }
+
+    @Test
     void recherche_native_des_enseignants_est_isolee_par_tenant() {
         Long a = etablissementRepository.save(
                 Etablissement.builder().nom("UA").slug("ua-rech").plan(Plan.PRO).build()).getId();
@@ -138,9 +162,9 @@ class TenantIsolationTest {
 
         // La requête est native (le filtre Hibernate ne s'applique pas) : la condition
         // tenant doit être portée par la requête elle-même.
-        assertThat(enseignantRepository.searchEnseignants(null, null, a, PageRequest.of(0, 50)).getContent())
+        assertThat(enseignantRepository.searchEnseignants(null, null, null, a, PageRequest.of(0, 50)).getContent())
                 .extracting(Enseignant::getMatricule).containsExactly("SRCH-A");
-        assertThat(enseignantRepository.searchEnseignants(null, null, b, PageRequest.of(0, 50)).getContent())
+        assertThat(enseignantRepository.searchEnseignants(null, null, null, b, PageRequest.of(0, 50)).getContent())
                 .extracting(Enseignant::getMatricule).containsExactly("SRCH-B");
     }
 
