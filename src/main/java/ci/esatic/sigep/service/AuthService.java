@@ -90,6 +90,7 @@ public class AuthService {
                 .nom(nom)
                 .prenom(prenom)
                 .etablissementNom(user.getEtablissement() != null ? user.getEtablissement().getNomEffectif() : null)
+                .mustChangePassword(user.isMustChangePassword())
                 .build();
     }
 
@@ -128,6 +129,7 @@ public class AuthService {
                 .nom(nom)
                 .prenom(prenom)
                 .etablissementNom(user.getEtablissement() != null ? user.getEtablissement().getNomEffectif() : null)
+                .mustChangePassword(user.isMustChangePassword())
                 .build();
     }
 
@@ -164,6 +166,7 @@ public class AuthService {
         }
 
         user.setPassword(passwordEncoder.encode(request.getNouveauMotDePasse()));
+        user.setMustChangePassword(false);
         userRepository.save(user);
         refreshTokenService.revoquerTout(user);
     }
@@ -262,6 +265,7 @@ public class AuthService {
                 .roles(List.of(ERole.ROLE_ENSEIGNANT.name()))
                 .nom(enseignant.getNom())
                 .prenom(enseignant.getPrenom())
+                .mustChangePassword(user.isMustChangePassword())
                 .build();
     }
 
@@ -289,6 +293,7 @@ public class AuthService {
         User user = User.builder()
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
+                .mustChangePassword(false)
                 .roles(Set.of(role))
                 .etablissement(tenant)   // SECURITE : le nouvel utilisateur appartient au tenant courant
                 .build();

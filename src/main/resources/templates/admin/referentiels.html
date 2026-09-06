@@ -29,6 +29,22 @@
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
+        <section class="glass rounded-3xl p-6 lg:col-span-3">
+            <h2 class="font-serif text-[24px] mb-2">Format d'emploi du temps</h2>
+            <p class="text-[13px] text-muted mb-4">Le modèle téléchargé et les colonnes attendues s'adaptent à votre établissement.</p>
+            <form th:action="@{/admin/planning/format}" method="post" class="flex flex-col md:flex-row gap-3 items-start md:items-end">
+                <div>
+                    <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Type</label>
+                    <select name="format" class="w-full md:w-64 h-11 px-4 rounded-xl bg-white/55 border border-line">
+                        <option value="STANDARD" th:selected="${etablissementCourant != null and etablissementCourant.formatEmploiDuTemps == 'STANDARD'}">Standard</option>
+                        <option value="UNIVERSITAIRE" th:selected="${etablissementCourant != null and etablissementCourant.formatEmploiDuTemps == 'UNIVERSITAIRE'}">Universitaire</option>
+                        <option value="SECONDAIRE" th:selected="${etablissementCourant != null and etablissementCourant.formatEmploiDuTemps == 'SECONDAIRE'}">Secondaire</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-ink h-11 px-5 rounded-xl font-medium">Enregistrer</button>
+            </form>
+        </section>
+
         <!-- ===== MATIÈRES ===== -->
         <section class="glass rounded-3xl p-6">
             <h2 class="font-serif text-[24px] mb-4 flex items-center gap-2">

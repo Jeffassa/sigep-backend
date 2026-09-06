@@ -41,6 +41,8 @@ class EmargementServiceTest {
     @Mock private QrCodeService qrCodeService;
     @Mock private ci.esatic.sigep.security.QrReplayGuard qrReplayGuard;
     @Mock private ci.esatic.sigep.repository.EtablissementRepository etablissementRepository;
+    // Le journal est un temoin : non mocke, son appel ferait echouer le scenario teste.
+    @Mock private JournalSecuriteService journalSecurite;
     // Mapper RÉEL (impl MapStruct générée) pour que les réponses soient effectivement mappées.
     @org.mockito.Spy private ci.esatic.sigep.mapper.EmargementMapper emargementMapper =
             new ci.esatic.sigep.mapper.EmargementMapperImpl();
@@ -106,6 +108,7 @@ class EmargementServiceTest {
                 .id(SEANCE_ID).date(LocalDate.now())
                 .heureDebut(LocalTime.of(9, 0)).heureFin(LocalTime.of(11, 0))
                 .matiere(matiere).classe(classe).salle(salle).enseignant(enseignant)
+            .etablissementId(ETAB_ID)
                 .statut(StatutSeance.A_FAIRE).build();
     }
 
@@ -179,7 +182,8 @@ class EmargementServiceTest {
         Seance seance = Seance.builder()
                 .id(SEANCE_ID).date(LocalDate.now())
                 .heureDebut(LocalTime.of(9, 0)).heureFin(LocalTime.of(11, 0))
-                .enseignant(autreEnseignant).salle(salle).matiere(matiere).classe(classe).build();
+            .enseignant(autreEnseignant).salle(salle).matiere(matiere).classe(classe)
+            .etablissementId(ETAB_ID).build();
 
         when(enseignantRepository.findByUserId(USER_ID)).thenReturn(Optional.of(enseignant));
         when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seance));
@@ -187,6 +191,26 @@ class EmargementServiceTest {
         assertThatThrownBy(() -> emargementService.emarger(USER_ID, buildRequest("t", SIGNATURE_VALIDE)))
                 .isInstanceOf(MetierException.class)
                 .hasMessageContaining("ne vous appartient pas");
+    }
+
+    @Test
+    void emarger_devraitEchouerSiSeanceAppartientAUnAutreEtablissement() {
+        try (MockedStatic<LocalTime> lt = mockStatic(LocalTime.class, CALLS_REAL_METHODS)) {
+            lt.when(LocalTime::now).thenReturn(FIXED_NOW);
+            lt.when(() -> LocalTime.now(any(java.time.ZoneId.class))).thenReturn(FIXED_NOW);
+
+            Seance seance = seanceDansLaFenetre();
+            seance.setEtablissementId(999L);
+            when(enseignantRepository.findByUserId(USER_ID)).thenReturn(Optional.of(enseignant));
+            when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seance));
+
+            assertThatThrownBy(() -> emargementService.emarger(
+                    USER_ID, buildRequest("qr-autre-tenant", SIGNATURE_VALIDE)))
+                    .isInstanceOf(MetierException.class)
+                    .hasMessageContaining("n'appartient pas a votre etablissement");
+
+            verifyNoInteractions(qrCodeService, qrReplayGuard);
+        }
     }
 
     // =========================================================================
@@ -198,7 +222,8 @@ class EmargementServiceTest {
         Seance seance = Seance.builder()
                 .id(SEANCE_ID).date(LocalDate.now().minusDays(1)) // hier
                 .heureDebut(LocalTime.of(9, 0)).heureFin(LocalTime.of(11, 0))
-                .enseignant(enseignant).salle(salle).matiere(matiere).classe(classe).build();
+            .enseignant(enseignant).salle(salle).matiere(matiere).classe(classe)
+            .etablissementId(ETAB_ID).build();
 
         when(enseignantRepository.findByUserId(USER_ID)).thenReturn(Optional.of(enseignant));
         when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seance));
@@ -245,7 +270,8 @@ class EmargementServiceTest {
             Seance seance = Seance.builder()
                     .id(SEANCE_ID).date(LocalDate.now())
                     .heureDebut(LocalTime.of(13, 0)).heureFin(LocalTime.of(15, 0))
-                    .enseignant(enseignant).salle(salle).matiere(matiere).classe(classe).build();
+                    .enseignant(enseignant).salle(salle).matiere(matiere).classe(classe)
+                    .etablissementId(ETAB_ID).build();
 
             when(enseignantRepository.findByUserId(USER_ID)).thenReturn(Optional.of(enseignant));
             when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seance));
@@ -269,6 +295,7 @@ class EmargementServiceTest {
                     .id(SEANCE_ID).date(LocalDate.now())
                     .heureDebut(LocalTime.of(5, 0)).heureFin(LocalTime.of(7, 0))
                     .enseignant(enseignant).salle(salle).matiere(matiere).classe(classe)
+                    .etablissementId(ETAB_ID)
                     .statut(StatutSeance.A_FAIRE).build();
 
             when(enseignantRepository.findByUserId(USER_ID)).thenReturn(Optional.of(enseignant));

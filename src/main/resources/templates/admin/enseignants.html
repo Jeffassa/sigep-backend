@@ -13,10 +13,11 @@
             <h1 class="font-serif text-[clamp(34px,5vw,52px)] leading-[1.02] tracking-tight">Enseignants</h1>
         </div>
         <div class="flex flex-wrap items-center gap-2">
-            <!-- Import en masse (Excel) : colonnes MATRICULE | NOM | PRENOM | DEPARTEMENT | GRADE -->
+            <!-- Import en masse (Excel). EMAIL est facultative mais determinante : renseignee,
+                 elle cree le compte et envoie un mot de passe provisoire a l'enseignant. -->
             <form th:action="@{/admin/enseignants/import}" method="post" enctype="multipart/form-data"
                   class="glass rounded-2xl h-12 px-3 flex items-center gap-2"
-                  title="Colonnes : MATRICULE | NOM | PRENOM | DEPARTEMENT | GRADE">
+                  title="Colonnes : MATRICULE | NOM | PRENOM | DEPARTEMENT | GRADE | EMAIL&#10;EMAIL est facultative : renseignee, le compte est cree et les acces envoyes par courriel.">
                 <input type="file" name="fichier" accept=".xlsx,.xls" required
                        class="text-[12px] max-w-[180px] file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:bg-ink file:text-white file:cursor-pointer"/>
                 <button type="submit" class="btn h-9 px-3 rounded-xl bg-ink text-white flex items-center gap-1 text-[13px]">
@@ -109,6 +110,13 @@
                                 </select>
                                 <button type="submit" class="btn w-8 h-8 rounded-lg bg-ink text-white flex items-center justify-center" title="Appliquer">
                                     <span class="material-symbols-rounded text-[16px]">check</span>
+                                </button>
+                            </form>
+                            <form th:if="${ens.user != null}"
+                                  th:action="@{'/admin/enseignants/' + ${ens.id} + '/renvoyer-acces'}" method="post"
+                                  onsubmit="return confirm('Generer un nouveau mot de passe provisoire et l\'envoyer par e-mail ? L\'ancien cessera de fonctionner.')">
+                                <button type="submit" class="btn w-8 h-8 rounded-lg border border-line flex items-center justify-center hover:bg-ink hover:text-white" title="Renvoyer les acces par e-mail">
+                                    <span class="material-symbols-rounded text-[16px]">forward_to_inbox</span>
                                 </button>
                             </form>
                             <form th:action="@{'/admin/enseignants/' + ${ens.id} + '/supprimer'}" method="post"

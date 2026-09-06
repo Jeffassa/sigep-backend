@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('SIGEP | Vérification')}" />
+<body class="min-h-screen flex items-center justify-center px-5">
+<main class="w-full max-w-[420px]" data-reveal>
+  <div class="text-center mb-8"><span class="font-serif text-[44px] leading-none">SIGEP</span>
+    <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mt-2">Vérification administrateur</p></div>
+  <div class="glass-strong rounded-3xl p-8">
+    <h2 class="font-serif text-[26px] mb-1">Code envoyé</h2>
+    <p class="text-[14px] text-muted mb-6">Saisissez le code reçu par email pour accéder à votre espace.</p>
+    <div th:if="${error}" class="p-3 mb-4 rounded-xl text-[13px]" style="background:rgba(186,26,26,.08);color:#7a0010;border:1px solid rgba(186,26,26,.2)" th:text="${error}">Erreur</div>
+    <div th:if="${info}" class="p-3 mb-4 rounded-xl text-[13px]" style="background:rgba(23,105,63,.08);color:#0d4a2b;border:1px solid rgba(23,105,63,.2)" th:text="${info}">Information</div>
+    <form th:action="@{/admin-otp}" method="post" class="space-y-4">
+      <label for="code" class="block font-mono text-[11px] uppercase tracking-wider text-muted mb-2">Code à 6 chiffres</label>
+      <input id="code" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required class="w-full h-12 px-4 rounded-xl bg-white/60 border border-line text-ink text-center tracking-[.4em] text-xl" />
+      <button type="submit" class="btn btn-ink w-full h-12 rounded-xl font-medium">Vérifier</button>
+    </form>
+    <details class="mt-5">
+      <summary class="text-[13px] text-muted cursor-pointer select-none hover:text-ink">
+        Utiliser mon code de secours
+      </summary>
+      <form th:action="@{/admin-otp}" method="post" class="mt-3 space-y-3">
+        <p class="text-[12px] text-muted leading-relaxed">
+          Le code long conservé hors ligne. À n'employer que si aucun courriel n'arrive.
+        </p>
+        <input name="code" autocomplete="off" spellcheck="false" required
+               placeholder="XXXX-XXXX-XXXX-XXXX-XXXX"
+               class="w-full h-11 px-4 rounded-xl bg-white/60 border border-line text-ink text-center tracking-[.15em] font-mono text-[13px]" />
+        <button type="submit" class="btn w-full h-11 rounded-xl border border-line font-medium hover:bg-ink hover:text-white">
+          Ouvrir avec le code de secours
+        </button>
+      </form>
+    </details>
+
+    <form th:action="@{/admin-otp/renvoyer}" method="post" class="mt-4 text-center">
+      <button type="submit" class="text-[13px] text-muted hover:text-ink underline underline-offset-4">
+        Je n'ai rien reçu — renvoyer un code
+      </button>
+    </form>
+    <p class="text-[12px] text-muted text-center mt-4 leading-relaxed">
+      Le code expire au bout de 5 minutes. Pensez à regarder vos courriers indésirables.
+    </p>
+  </div>
+</main>
+</body>
+</html>

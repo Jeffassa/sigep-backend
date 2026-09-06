@@ -43,7 +43,12 @@ class TenantIsolationGuardTest {
      * (cf. MobileMoneyWebController.intentAutorisee).
      */
     private static final Set<String> ENTITES_GLOBALES =
-            Set.of("User", "Role", "RefreshToken", "Etablissement", "Paiement", "PaiementIntent");
+            Set.of("User", "Role", "RefreshToken", "Etablissement", "Paiement", "PaiementIntent",
+                   // Journal de securite : global A DESSEIN. Une part des evenements survient
+                   // avant toute identification d'etablissement, et ceux qui comptent le plus
+                   // sont les tentatives de FRANCHIR le cloisonnement — les filtrer par tenant
+                   // reviendrait a les cacher au super-administrateur.
+                   "EvenementSecurite");
 
     @Test
     void toutesLesEntitesMetierSontCloisonneesParTenant() throws Exception {

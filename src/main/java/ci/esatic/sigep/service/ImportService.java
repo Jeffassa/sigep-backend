@@ -48,6 +48,10 @@ public class ImportService {
     private final SalleRepository salleRepository;
     private final ci.esatic.sigep.repository.EtablissementRepository etablissementRepository;
     private final ci.esatic.sigep.tenant.plan.PlanService planService;
+    private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+    private final MailService mailService;
 
     // ─────────────────────────────────────────────────────────────────────────
     // Import admin : fichier 7 colonnes avec MATRICULE_ENSEIGNANT
@@ -189,11 +193,16 @@ public class ImportService {
     }
 
     // ─── Import d'annuaire enseignants (inchangé sur le fond) ──────────────────
-    private static final String[] COLONNES_ENSEIGNANTS = {"MATRICULE", "NOM", "PRENOM", "DEPARTEMENT", "GRADE"};
+    // EMAIL est FACULTATIVE et volontairement en dernier : les fichiers déjà en circulation,
+    // qui s'arrêtent à GRADE, restent acceptés tels quels. Renseignée, elle déclenche la création
+    // du compte et l'envoi des accès — sans elle, l'import ne produit qu'un annuaire, et
+    // l'enseignant n'aura aucun moyen de se connecter (l'auto-inscription n'existe plus).
+    private static final String[] COLONNES_ENSEIGNANTS =
+            {"MATRICULE", "NOM", "PRENOM", "DEPARTEMENT", "GRADE", "EMAIL"};
 
     @Transactional
     public Map<String, Object> importerEnseignants(MultipartFile file) throws Exception {
-        int importes = 0, ignores = 0;
+        int importes = 0, ignores = 0, comptesCrees = 0, sansEmail = 0;
         List<Integer> lignesInvalides = new ArrayList<>();
         Workbook workbook;
         try {
@@ -226,24 +235,61 @@ public class ImportService {
                     quotaAtteint = true;
                     break;
                 }
+                // Compte + accès envoyés par courriel dès qu'une adresse est fournie.
+                String email = emptyToNull(getCellValue(row, 5));
+                User compte = null;
+                String secretProvisoire = null;
+                if (email == null) {
+                    sansEmail++;
+                } else if (userRepository.existsByEmail(email)) {
+                    // Adresse déjà rattachée à un compte : on ne l'écrase pas et on n'envoie rien.
+                    sansEmail++;
+                } else {
+                    secretProvisoire = ci.esatic.sigep.security.SecurityUtils.genererMotDePasseProvisoire();
+                    compte = User.builder()
+                            .email(email)
+                            .password(passwordEncoder.encode(secretProvisoire))
+                            .mustChangePassword(true)
+                            .roles(Set.of(roleRepository.findByName(ERole.ROLE_ENSEIGNANT).orElseThrow()))
+                            // Sans rattachement au tenant, la connexion mobile ne poserait aucun
+                            // établissement et désactiverait le cloisonnement des lectures.
+                            .etablissement(tenant)
+                            .build();
+                    userRepository.save(compte);
+                    comptesCrees++;
+                }
+
                 Enseignant e = Enseignant.builder()
                         .matricule(matricule)
                         .nom(nom)
                         .prenom(prenom)
                         .departement(emptyToNull(getCellValue(row, 3)))
                         .grade(emptyToNull(getCellValue(row, 4)))
+                        // Sans compte, le statut reste en attente : rien à valider tant que
+                        // l'enseignant ne peut pas se connecter.
+                        .statut(compte == null ? StatutEnseignant.PENDING : StatutEnseignant.VALIDATED)
+                        .user(compte)
                         .build();
                 enseignantRepository.save(e);
                 importes++;
+
+                if (compte != null) {
+                    // Après la sauvegarde : inutile d'envoyer des accès si la ligne échoue ensuite.
+                    mailService.notifierIdentifiantsProvisoires(
+                            tenant == null ? null : tenant.getEmailFrom(), email, prenom, secretProvisoire);
+                }
             }
         }
-        log.info("Import enseignants : {} créés, {} ignorés (matricule existant), {} ligne(s) invalide(s) {}, quotaAtteint={}",
-                importes, ignores, lignesInvalides.size(), lignesInvalides, quotaAtteint);
+        log.info("Import enseignants : {} créés ({} avec compte, {} sans e-mail exploitable), "
+                        + "{} ignorés (matricule existant), {} ligne(s) invalide(s) {}, quotaAtteint={}",
+                importes, comptesCrees, sansEmail, ignores, lignesInvalides.size(), lignesInvalides, quotaAtteint);
         Map<String, Object> result = new HashMap<>();
         result.put("importes", importes);
         result.put("ignores", ignores);
         result.put("lignesInvalides", lignesInvalides);
         result.put("quotaAtteint", quotaAtteint);
+        result.put("comptesCrees", comptesCrees);
+        result.put("sansEmail", sansEmail);
         return result;
     }
 

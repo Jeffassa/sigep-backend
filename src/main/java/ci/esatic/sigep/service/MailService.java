@@ -137,6 +137,28 @@ public class MailService {
         }
     }
 
+    /** Identifiants créés par l'administration : le secret provisoire n'est envoyé qu'ici. */
+    @Async
+    public void notifierIdentifiantsProvisoires(String expediteur, String email, String prenom,
+                                                String motDePasseProvisoire) {
+        envoyer(expediteur, email, "SIGEP - Vos identifiants enseignant",
+                "Bonjour " + (prenom == null ? "" : prenom) + ",\n\n"
+                + "Votre compte enseignant SIGEP a été créé par votre administration.\n\n"
+                + "Email : " + email + "\n"
+                + "Mot de passe provisoire : " + motDePasseProvisoire + "\n\n"
+                + "Connectez-vous puis modifiez ce mot de passe depuis votre profil.\n\n"
+                + "- SIGEP");
+    }
+
+    @Async
+    public void envoyerCodeOtpAdmin(String email, String code) {
+        envoyer(email, "SIGEP - Code de verification administrateur",
+                "Bonjour,\n\nVotre code de verification SIGEP est : " + code + "\n\n"
+                + "Ce code expire dans 5 minutes et ne peut être utilisé qu'une seule fois.\n\n"
+                + "Si vous n'êtes pas à l'origine de cette connexion, contactez votre support SIGEP.\n\n"
+                + "- SIGEP");
+    }
+
     @Async
     public void notifierDecisionRattrapage(String expediteur, String email, String prenom, String matiere,
                                            String quand, boolean accepte) {

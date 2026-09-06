@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('SIGEP | Plateforme · Sécurité')}"></head>
+<body>
+
+<div th:replace="~{plateforme/fragments :: topbar('securite')}"></div>
+
+<main class="max-w-[1240px] mx-auto px-5 md:px-8 py-10 pb-24">
+
+    <section class="mb-8" data-reveal>
+        <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mb-2">Plateforme · Surveillance</p>
+        <h1 class="font-serif text-[clamp(34px,5vw,52px)] leading-[1.02] tracking-tight">Sécurité</h1>
+        <p class="text-[14px] text-muted mt-3 max-w-[680px]">
+            Ce que le système a refusé, et qui a insisté. Chaque ligne correspond à un contrôle qui a
+            fonctionné : un refus isolé est normal, c'est la répétition qui doit vous alerter.
+        </p>
+    </section>
+
+    <div data-flash th:if="${success}" class="glass rounded-2xl p-3.5 mb-5 flex items-center gap-2 text-[13px]" data-reveal
+         style="background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.35)">
+        <span class="material-symbols-rounded text-[18px]" style="color:#10b981">check_circle</span><span th:text="${success}">OK</span>
+    </div>
+    <div th:if="${error}" class="glass rounded-2xl p-3.5 mb-5 flex items-center gap-2 text-[13px]" data-reveal
+         style="background:rgba(163,40,63,.10);border-color:rgba(163,40,63,.30)">
+        <span class="material-symbols-rounded text-[18px]" style="color:#a3283f">error</span><span th:text="${error}">Erreur</span>
+    </div>
+
+    <!-- Vue restreinte à un établissement -->
+    <div th:if="${etablissementActif != null}" class="glass rounded-2xl p-3.5 mb-5 flex flex-wrap items-center justify-between gap-3 text-[13px]" data-reveal>
+        <span>
+            Vue filtrée sur <strong th:text="${etablissementActif.nomEffectif}">Établissement</strong>
+        </span>
+        <a th:href="@{/plateforme/securite}" class="btn glass px-3.5 h-9 rounded-full text-[13px]">Voir tous les établissements</a>
+    </div>
+
+    <!-- ─── Indicateurs sur 24 heures ─────────────────────────────────── -->
+    <section class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8" data-reveal>
+        <div class="glass rounded-3xl p-6">
+            <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Évènements · 24 h</p>
+            <p class="font-serif text-[32px] leading-none mt-1.5" th:text="${total24h}">0</p>
+        </div>
+        <div class="glass rounded-3xl p-6">
+            <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Critiques · 24 h</p>
+            <p class="font-serif text-[32px] leading-none mt-1.5"
+               th:style="${critiques24h > 0} ? 'color:#a3283f' : ''" th:text="${critiques24h}">0</p>
+            <p class="text-[12px] text-muted mt-2" th:if="${critiques24h > 0}">À examiner sans attendre.</p>
+            <p class="text-[12px] text-muted mt-2" th:if="${critiques24h == 0}">Rien à signaler.</p>
+        </div>
+        <div class="glass rounded-3xl p-6">
+            <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Connexions refusées</p>
+            <p class="font-serif text-[32px] leading-none mt-1.5" th:text="${connexionsRefusees24h}">0</p>
+            <p class="text-[12px] text-muted mt-2">Mots de passe administrateur.</p>
+        </div>
+        <div class="glass rounded-3xl p-6">
+            <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Débits dépassés</p>
+            <p class="font-serif text-[32px] leading-none mt-1.5" th:text="${debitsDepasses24h}">0</p>
+            <p class="text-[12px] text-muted mt-2">Requêtes bloquées par le limiteur.</p>
+        </div>
+    </section>
+
+    <!-- ─── Trafic de la dernière heure ───────────────────────────────── -->
+    <section class="glass rounded-3xl p-6 mb-8" data-reveal>
+        <div class="flex flex-wrap items-end justify-between gap-4 mb-5">
+            <div>
+                <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Trafic · dernière heure</p>
+                <p class="font-serif text-[28px] leading-none mt-1.5">
+                    <span th:text="${traficTotal}">0</span>
+                    <span class="text-[13px] text-muted">requêtes</span>
+                </p>
+            </div>
+            <div class="flex items-center gap-6">
+                <div>
+                    <p class="font-mono text-[10px] uppercase tracking-wider text-muted">Pic / minute</p>
+                    <p class="text-[18px] mt-1" th:text="${traficPic}">0</p>
+                </div>
+                <div>
+                    <p class="font-mono text-[10px] uppercase tracking-wider text-muted">Refusées</p>
+                    <p class="text-[18px] mt-1" th:text="${traficRefus}">0</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-end gap-[2px] h-[90px]" role="img"
+             aria-label="Requêtes par minute sur la dernière heure">
+            <div th:each="m : ${trafic}" class="flex-1 rounded-t-sm"
+                 th:style="'height:' + ${m.requetes * 100 / traficMax} + '%; min-height:2px; background:' + (${m.refus} > 0 ? '#a3283f' : 'rgba(31,79,196,.55)')"
+                 th:title="${m.requetes} + ' requête(s), ' + ${m.refus} + ' refusée(s) · il y a ' + ${m.ilYA} + ' min'"></div>
+        </div>
+        <p class="text-[12px] text-muted mt-3">
+            Compteur tenu en mémoire : il repart de zéro à chaque redémarrage et ne reflète que
+            l'instance qui vous répond. Il montre ce qui se passe maintenant, il ne tient pas de
+            comptabilité. Les barres rouges signalent des requêtes bloquées.
+        </p>
+    </section>
+
+    <!-- ─── Audit par établissement ───────────────────────────────────── -->
+    <section class="mb-8" data-reveal>
+        <h2 class="font-serif text-[26px] mb-1">Par établissement</h2>
+        <p class="text-[14px] text-muted mb-4 max-w-[680px]">
+            Sur les 7 derniers jours, classés par gravité. C'est ici qu'on agit : les deux boutons
+            traitent les deux incidents les plus courants — des identifiants qui ont fuité, et un
+            QR de salle qui circule.
+        </p>
+
+        <div class="glass rounded-3xl p-6" th:if="${bilanEtablissements.isEmpty()}">
+            <p class="text-[14px] text-muted">
+                Aucun évènement rattaché à un établissement sur la période. Les faits sans
+                établissement identifié — connexions refusées, débits dépassés sur une adresse
+                anonyme — restent visibles dans le journal ci-dessous.
+            </p>
+        </div>
+
+        <div class="glass rounded-3xl overflow-hidden" th:unless="${bilanEtablissements.isEmpty()}">
+            <div class="overflow-x-auto">
+                <table class="w-full text-[13px]">
+                    <thead>
+                    <tr class="text-left">
+                        <th class="font-mono text-[10px] uppercase tracking-wider text-muted font-medium px-5 py-3">Établissement</th>
+                        <th class="font-mono text-[10px] uppercase tracking-wider text-muted font-medium px-5 py-3">Critiques</th>
+                        <th class="font-mono text-[10px] uppercase tracking-wider text-muted font-medium px-5 py-3">Total</th>
+                        <th class="font-mono text-[10px] uppercase tracking-wider text-muted font-medium px-5 py-3">Dernier fait</th>
+                        <th class="font-mono text-[10px] uppercase tracking-wider text-muted font-medium px-5 py-3">Agir</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="b : ${bilanEtablissements}" class="border-t border-line">
+                        <td class="px-5 py-3">
+                            <a th:href="@{/plateforme/securite(etablissement=${b.id})}"
+                               class="underline underline-offset-4" th:text="${b.nom}">Établissement</a>
+                            <a th:if="${b.slug != null}" th:href="@{'/plateforme/etablissements/' + ${b.slug}}"
+                               class="text-muted text-[12px] ml-2 hover:text-ink">fiche</a>
+                        </td>
+                        <td class="px-5 py-3">
+                            <span th:style="${b.critiques > 0} ? 'color:#a3283f;font-weight:600' : 'color:var(--muted)'"
+                                  th:text="${b.critiques}">0</span>
+                        </td>
+                        <td class="px-5 py-3" th:text="${b.total}">0</td>
+                        <td class="px-5 py-3 font-mono text-[12px] text-muted whitespace-nowrap"
+                            th:text="${#temporals.format(b.dernier, 'dd/MM HH:mm')}">01/01 00:00</td>
+                        <td class="px-5 py-3">
+                            <div class="flex items-center gap-2">
+                                <form th:action="@{'/plateforme/securite/etablissements/' + ${b.id} + '/sessions'}" method="post"
+                                      onsubmit="return confirm('Couper toutes les sessions de cet etablissement ? Chacun devra se reconnecter.')">
+                                    <button type="submit" title="Couper toutes les sessions ouvertes"
+                                            class="btn glass px-3 h-9 rounded-full text-[12px] flex items-center gap-1.5">
+                                        <span class="material-symbols-rounded text-[16px]">logout</span>
+                                        <span class="hidden md:inline">Sessions</span>
+                                    </button>
+                                </form>
+                                <form th:action="@{'/plateforme/securite/etablissements/' + ${b.id} + '/cle-kiosque'}" method="post"
+                                      onsubmit="return confirm('Renouveler la cle de l ecran de salle ? Les ecrans ouverts devront etre relances.')">
+                                    <button type="submit" title="Renouveler la clé de l'écran de salle"
+                                            class="btn glass px-3 h-9 rounded-full text-[12px] flex items-center gap-1.5">
+                                        <span class="material-symbols-rounded text-[16px]">key</span>
+                                        <span class="hidden md:inline">Clé écran</span>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <p class="text-[12px] text-muted mt-3 max-w-[720px]">
+            <strong>Couper les sessions</strong> ferme toutes les connexions ouvertes de
+            l'établissement : à employer quand un mot de passe a fuité, après l'avoir changé.
+            <strong>Renouveler la clé écran</strong> invalide le QR affiché en salle : à employer
+            quand une capture circule. Les écrans devront être rouverts.
+        </p>
+    </section>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+
+        <!-- ─── Sources les plus insistantes ─────────────────────────── -->
+        <section class="glass rounded-3xl p-6" data-reveal>
+            <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-4">Sources insistantes · 7 jours</p>
+            <p class="text-[13px] text-muted mb-4" th:if="${sourcesInsistantes.isEmpty()}">
+                Aucune adresse ne s'est fait remarquer.
+            </p>
+            <div th:each="src : ${sourcesInsistantes}"
+                 class="flex items-center justify-between gap-3 py-2 border-b border-line last:border-0">
+                <span class="font-mono text-[12px] truncate" th:text="${src.ip}">0.0.0.0</span>
+                <span class="text-[13px] shrink-0"
+                      th:style="${src.total >= 20} ? 'color:#a3283f;font-weight:600' : ''"
+                      th:text="${src.total}">0</span>
+            </div>
+            <p class="text-[12px] text-muted mt-4">
+                Une personne qui se trompe produit deux ou trois lignes. Un robot en produit des
+                centaines depuis la même adresse.
+            </p>
+        </section>
+
+        <!-- ─── Répartition ──────────────────────────────────────────── -->
+        <section class="glass rounded-3xl p-6 lg:col-span-2" data-reveal>
+            <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-4">Nature des évènements · 7 jours</p>
+            <p class="text-[13px] text-muted" th:if="${repartition.isEmpty()}">
+                Rien n'a encore été enregistré.
+            </p>
+            <div th:each="r : ${repartition}"
+                 class="flex items-center justify-between gap-3 py-2 border-b border-line last:border-0">
+                <span class="text-[13px]" th:text="${r.type.libelle}">Type</span>
+                <span class="font-mono text-[13px] shrink-0" th:text="${r.total}">0</span>
+            </div>
+        </section>
+    </div>
+
+    <!-- ─── Journal ───────────────────────────────────────────────────── -->
+    <section data-reveal>
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <h2 class="font-serif text-[26px]">Journal</h2>
+            <div class="flex items-center gap-2">
+                <a th:href="@{/plateforme/securite}"
+                   th:classappend="${severiteActive == null and typeActif == null} ? ' bg-ink text-white' : ' glass text-muted hover:text-ink'"
+                   class="btn px-3.5 h-9 rounded-full text-[13px] font-medium">Tout</a>
+                <a th:each="s : ${severites}"
+                   th:href="@{/plateforme/securite(severite=${s})}"
+                   th:classappend="${severiteActive != null and severiteActive.name() == s.name()} ? ' bg-ink text-white' : ' glass text-muted hover:text-ink'"
+                   class="btn px-3.5 h-9 rounded-full text-[13px] font-medium"
+                   th:text="${s.name() == 'INFO'} ? 'Activité' : (${s.name() == 'ALERTE'} ? 'Alertes' : 'Critiques')">Filtre</a>
+            </div>
+        </div>
+
+        <div class="glass rounded-3xl overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-[13px]">
+                    <thead>
+                    <tr class="text-left">
+                        <th class="font-mono text-[10px] uppercase tracking-wider text-muted font-medium px-5 py-3">Quand</th>
+                        <th class="font-mono text-[10px] uppercase tracking-wider text-muted font-medium px-5 py-3">Évènement</th>
+                        <th class="font-mono text-[10px] uppercase tracking-wider text-muted font-medium px-5 py-3">Source</th>
+                        <th class="font-mono text-[10px] uppercase tracking-wider text-muted font-medium px-5 py-3">Identifiant</th>
+                        <th class="font-mono text-[10px] uppercase tracking-wider text-muted font-medium px-5 py-3">Détail</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:if="${evenements.isEmpty()}">
+                        <td colspan="5" class="px-5 py-10 text-center text-muted text-[14px]">
+                            Aucun évènement enregistré. C'est une bonne nouvelle — ou le journal vient
+                            d'être mis en service.
+                        </td>
+                    </tr>
+                    <tr th:each="e : ${evenements.content}" class="border-t border-line">
+                        <td class="px-5 py-3 font-mono text-[12px] text-muted whitespace-nowrap"
+                            th:text="${#temporals.format(e.dateHeure, 'dd/MM HH:mm:ss')}">01/01 00:00:00</td>
+                        <td class="px-5 py-3">
+                            <span class="inline-flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full shrink-0"
+                                      th:style="'background:' + (${e.severite.name() == 'CRITIQUE'} ? '#a3283f' : (${e.severite.name() == 'ALERTE'} ? '#8a5a1f' : '#5a6678'))"></span>
+                                <span th:text="${e.type.libelle}">Évènement</span>
+                            </span>
+                        </td>
+                        <td class="px-5 py-3 font-mono text-[12px]" th:text="${e.ip} ?: '—'">—</td>
+                        <td class="px-5 py-3 truncate max-w-[200px]" th:text="${e.identifiant} ?: '—'"
+                            th:title="${e.identifiant}">—</td>
+                        <td class="px-5 py-3 text-muted" th:text="${e.details} ?: '—'">—</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="flex items-center justify-between mt-4" th:if="${evenements.totalPages > 1}">
+            <span class="text-[13px] text-muted">
+                Page <span th:text="${evenements.number + 1}">1</span> sur
+                <span th:text="${evenements.totalPages}">1</span>
+            </span>
+            <div class="flex items-center gap-2">
+                <a th:if="${evenements.hasPrevious()}"
+                   th:href="@{/plateforme/securite(page=${evenements.number - 1}, severite=${severiteActive})}"
+                   class="btn glass px-3.5 h-9 rounded-full text-[13px]">Précédent</a>
+                <a th:if="${evenements.hasNext()}"
+                   th:href="@{/plateforme/securite(page=${evenements.number + 1}, severite=${severiteActive})}"
+                   class="btn glass px-3.5 h-9 rounded-full text-[13px]">Suivant</a>
+            </div>
+        </div>
+
+        <p class="text-[12px] text-muted mt-5 max-w-[720px]">
+            Ce journal est en lecture seule et se purge automatiquement au-delà de 60 jours. Ni mot de
+            passe, ni jeton, ni code à usage unique n'y figure : un journal qui recopierait les secrets
+            qu'il surveille deviendrait la première cible d'un intrus.
+        </p>
+    </section>
+
+</main>
+
+<div th:replace="~{admin/fragments :: palette}"></div>
+<div th:replace="~{admin/fragments :: scripts}"></div>
+
+</body>
+</html>

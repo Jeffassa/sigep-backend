@@ -36,6 +36,10 @@ import org.springframework.web.servlet.HandlerInterceptor;
 public class TenantInterceptor implements HandlerInterceptor {
 
     private final EntityManagerFactory entityManagerFactory;
+    // @Lazy : ce service depend du contexte JPA que cet intercepteur configure. Sans cela,
+    // les deux beans se reclameraient mutuellement au demarrage.
+    @org.springframework.context.annotation.Lazy
+    private final ci.esatic.sigep.service.JournalSecuriteService journalSecurite;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
@@ -62,6 +66,13 @@ public class TenantInterceptor implements HandlerInterceptor {
         if (user.getEtablissement() == null) {
             log.warn("Acces refuse : utilisateur {} authentifie sans etablissement (non super-admin).",
                     user.getId());
+            // Anomalie d'isolation : un compte valide qui ne mene a aucun etablissement ne devrait
+            // pas exister. Soit une creation incomplete, soit une manipulation.
+            journalSecurite.enregistrer(
+                    ci.esatic.sigep.entity.TypeEvenement.ACCES_SANS_ETABLISSEMENT,
+                    ci.esatic.sigep.entity.SeveriteEvenement.CRITIQUE,
+                    null, user.getEmail(), request.getRequestURI(),
+                    "Compte authentifie sans etablissement rattache");
             response.sendError(HttpServletResponse.SC_FORBIDDEN, "Compte non rattache a un etablissement.");
             return false;
         }

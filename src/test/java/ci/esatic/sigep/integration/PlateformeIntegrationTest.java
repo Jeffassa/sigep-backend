@@ -101,6 +101,77 @@ class PlateformeIntegrationTest {
     }
 
     @Test
+    void consoleSecurite_seRend_etResteReserveeAuSuperAdmin() throws Exception {
+        // Le rendu Thymeleaf ne se verifie qu'a l'execution : une expression fautive dans la page
+        // ne casse ni la compilation ni les autres tests, elle n'apparait qu'en production.
+        mockMvc.perform(get("/plateforme/securite").with(user(superAdmin)))
+                .andExpect(status().isOk());
+
+        // Ces evenements traversent tous les etablissements : un admin d'etablissement n'y voit rien.
+        mockMvc.perform(get("/plateforme/securite").with(user(adminClient)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void remediation_renouvelleLaCleEcran_dUnEtablissementCible() throws Exception {
+        String cleAvant = clientA.getKioskKey();
+
+        mockMvc.perform(post("/plateforme/securite/etablissements/" + clientA.getId() + "/cle-kiosque")
+                        .with(user(superAdmin)).with(csrf()))
+                .andExpect(status().is3xxRedirection());
+
+        Etablissement apres = etablissementRepository.findById(clientA.getId()).orElseThrow();
+        assertThat(apres.getKioskKey()).isNotNull();
+        // Toute la valeur de l'action tient dans ce changement : l'ancienne cle cesse d'ouvrir.
+        assertThat(apres.getKioskKey()).isNotEqualTo(cleAvant);
+    }
+
+    @Test
+    void remediation_couperLesSessions_repondSansErreur() throws Exception {
+        mockMvc.perform(post("/plateforme/securite/etablissements/" + clientA.getId() + "/sessions")
+                        .with(user(superAdmin)).with(csrf()))
+                .andExpect(status().is3xxRedirection());
+    }
+
+    @Test
+    void remediation_estRefusee_aUnAdminDEtablissement() throws Exception {
+        String cleAvant = clientA.getKioskKey();
+
+        // Un administrateur d'etablissement ne doit pas pouvoir agir sur SON etablissement par
+        // cette porte, ni a plus forte raison sur celui d'un autre : la remediation est un
+        // pouvoir de plateforme.
+        mockMvc.perform(post("/plateforme/securite/etablissements/" + clientA.getId() + "/cle-kiosque")
+                        .with(user(adminClient)).with(csrf()))
+                .andExpect(status().isForbidden());
+
+        assertThat(etablissementRepository.findById(clientA.getId()).orElseThrow().getKioskKey())
+                .isEqualTo(cleAvant);
+    }
+
+    @Test
+    void remediation_surUnEtablissementInconnu_neCassePas() throws Exception {
+        mockMvc.perform(post("/plateforme/securite/etablissements/999999/sessions")
+                        .with(user(superAdmin)).with(csrf()))
+                .andExpect(status().is3xxRedirection());
+    }
+
+    @Test
+    void consoleSecurite_filtreParEtablissement_seRend() throws Exception {
+        mockMvc.perform(get("/plateforme/securite").param("etablissement", String.valueOf(clientA.getId()))
+                        .with(user(superAdmin)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void consoleSecurite_filtreParGravite_seRendAussi() throws Exception {
+        mockMvc.perform(get("/plateforme/securite").param("severite", "CRITIQUE").with(user(superAdmin)))
+                .andExpect(status().isOk());
+        // Un filtre inconnu ne doit pas provoquer d'erreur, seulement retomber sur « tout ».
+        mockMvc.perform(get("/plateforme/securite").param("severite", "N-IMPORTE-QUOI").with(user(superAdmin)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     void superAdmin_voitTousLesEtablissementsClients_maisPasLaPlateforme() throws Exception {
         mockMvc.perform(get("/plateforme").with(user(superAdmin)))
                 .andExpect(status().isOk())

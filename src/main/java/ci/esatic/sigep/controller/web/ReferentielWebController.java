@@ -6,6 +6,8 @@ import ci.esatic.sigep.entity.Salle;
 import ci.esatic.sigep.repository.ClasseRepository;
 import ci.esatic.sigep.repository.MatiereRepository;
 import ci.esatic.sigep.repository.SalleRepository;
+import ci.esatic.sigep.repository.EtablissementRepository;
+import ci.esatic.sigep.service.EtablissementCourantService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -30,13 +32,31 @@ public class ReferentielWebController {
     private final MatiereRepository matiereRepository;
     private final ClasseRepository classeRepository;
     private final SalleRepository salleRepository;
+    private final EtablissementCourantService etablissementCourantService;
+    private final EtablissementRepository etablissementRepository;
 
     @GetMapping("/admin/referentiels")
     public String referentiels(Model model) {
         model.addAttribute("matieres", matiereRepository.findAll());
         model.addAttribute("classes", classeRepository.findAll());
         model.addAttribute("salles", salleRepository.findAll());
+        model.addAttribute("etablissementCourant", etablissementCourantService.courant());
         return "admin/referentiels";
+    }
+
+    @PostMapping("/admin/planning/format")
+    public String modifierFormatPlanning(@RequestParam String format, RedirectAttributes ra) {
+        var etab = etablissementCourantService.courant();
+        String valeur = format == null ? "STANDARD" : format.trim().toUpperCase();
+        if (etab == null || !java.util.Set.of("STANDARD", "UNIVERSITAIRE", "SECONDAIRE").contains(valeur)) {
+            ra.addFlashAttribute("error", "Format d'emploi du temps invalide.");
+        } else {
+            etab.setFormatEmploiDuTemps(valeur);
+            // Le tenant est relu et géré par le contexte admin ; save explicite pour persister la préférence.
+            etablissementRepository.save(etab);
+            ra.addFlashAttribute("success", "Format d'emploi du temps mis à jour.");
+        }
+        return "redirect:/admin/referentiels";
     }
 
     // --- Matières ---
@@ -136,9 +156,26 @@ public class ReferentielWebController {
         String today = LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
 
         StringBuilder sb = new StringBuilder();
-        sb.append("DATE;HEURE_DEBUT;HEURE_FIN;MATIERE;CLASSE;SALLE\r\n");
-        sb.append(today).append(";08:00;10:00;").append(m).append(';').append(cl).append(';').append(sa).append("\r\n");
-        sb.append(today).append(";10:15;12:15;").append(m).append(';').append(cl).append(';').append(sa).append("\r\n");
+        String format = etablissementCourantService.courant() == null ? "STANDARD"
+            : etablissementCourantService.courant().getFormatEmploiDuTemps();
+        String enseignant = "MATRICULE_ENSEIGNANT";
+        String matiere = "MATIERE";
+        String classe = "CLASSE";
+        String salle = "SALLE";
+        if ("UNIVERSITAIRE".equals(format)) {
+            matiere = "UNITE_ENSEIGNEMENT";
+            classe = "NIVEAU_GROUPE";
+            salle = "AMPHITHEATRE_SALLE";
+        } else if ("SECONDAIRE".equals(format)) {
+            enseignant = "PROFESSEUR_MATRICULE";
+            matiere = "DISCIPLINE";
+            classe = "CLASSE_NIVEAU";
+            salle = "SALLE";
+        }
+        sb.append("DATE;HEURE_DEBUT;HEURE_FIN;").append(enseignant).append(';')
+            .append(matiere).append(';').append(classe).append(';').append(salle).append("\r\n");
+        sb.append(today).append(";08:00;10:00;MATRICULE;").append(m).append(';').append(cl).append(';').append(sa).append("\r\n");
+        sb.append(today).append(";10:15;12:15;MATRICULE;").append(m).append(';').append(cl).append(';').append(sa).append("\r\n");
 
         // BOM UTF-8 pour qu'Excel ouvre correctement les accents
         byte[] bytes = ("﻿" + sb).getBytes(StandardCharsets.UTF_8);

@@ -82,6 +82,11 @@ public class Etablissement {
     @Builder.Default
     private String typeEtablissement = "SUPERIEUR";
 
+    /** Profil de colonnes attendu par l'import planning de ce tenant. */
+    @Column(name = "format_emploi_du_temps", nullable = false, length = 30)
+    @Builder.Default
+    private String formatEmploiDuTemps = "STANDARD";
+
     /** Tolérance d'émargement AVANT le début de séance, en minutes (E7). */
     @Column(name = "tolerance_avant_minutes", nullable = false)
     @Builder.Default

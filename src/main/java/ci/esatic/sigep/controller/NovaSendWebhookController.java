@@ -47,6 +47,7 @@ public class NovaSendWebhookController {
     private String webhookSecret;
 
     private final MobileMoneyService mobileMoneyService;
+    private final ci.esatic.sigep.service.JournalSecuriteService journalSecurite;
     private final ObjectMapper objectMapper;
 
     @PostMapping("/webhook")
@@ -67,6 +68,11 @@ public class NovaSendWebhookController {
             }
             log.warn("Webhook NovaSend SANS signature — refusé. En-têtes reçus : [{}] · évènement : {}",
                     noms, resumeEvenement(payload));
+            journalSecurite.enregistrer(
+                    ci.esatic.sigep.entity.TypeEvenement.WEBHOOK_SIGNATURE_INVALIDE,
+                    ci.esatic.sigep.entity.SeveriteEvenement.ALERTE,
+                    requete.getRemoteAddr(), null, requete.getRequestURI(),
+                    "Notification sans en-tete de signature");
             return ResponseEntity.badRequest().body("signature absente");
         }
         // Normalisation de casse uniquement (l'hexadécimal n'est pas sensible à la casse) :
@@ -75,6 +81,13 @@ public class NovaSendWebhookController {
         String attendue = hmacHex(payload, webhookSecret);
         if (attendue == null || !SecurityUtils.constantTimeEquals(attendue, recue)) {
             log.warn("Webhook NovaSend : signature invalide — refusé.");
+            // Soit un appel forgé, soit un secret désaligné entre NovaSend et la configuration.
+            // Les deux méritent un œil : le premier est une attaque, le second casse les paiements.
+            journalSecurite.enregistrer(
+                    ci.esatic.sigep.entity.TypeEvenement.WEBHOOK_SIGNATURE_INVALIDE,
+                    ci.esatic.sigep.entity.SeveriteEvenement.CRITIQUE,
+                    requete.getRemoteAddr(), null, requete.getRequestURI(),
+                    "Signature HMAC non conforme au corps recu");
             return ResponseEntity.badRequest().body("signature invalide");
         }
 

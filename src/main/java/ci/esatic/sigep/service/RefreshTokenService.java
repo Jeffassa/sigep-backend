@@ -32,6 +32,7 @@ import java.util.HexFormat;
 public class RefreshTokenService {
 
     private final RefreshTokenRepository repository;
+    private final ci.esatic.sigep.repository.UserRepository userRepository;
     private final SecureRandom secureRandom = new SecureRandom();
 
     @Value("${app.jwt.refresh-expiration}")
@@ -74,6 +75,21 @@ public class RefreshTokenService {
     @Transactional
     public void revoquer(String rawToken) {
         repository.findByTokenHash(hacher(rawToken)).ifPresent(repository::delete);
+    }
+
+    /**
+     * Révoque les sessions de TOUS les comptes d'un établissement.
+     *
+     * <p>Levier de remédiation : après une fuite d'identifiants ou un poste compromis, couper une
+     * session à la fois ne sert à rien — il faut fermer la maison. Chacun devra se reconnecter.
+     *
+     * @return nombre de comptes dont les sessions ont été coupées
+     */
+    @Transactional
+    public int revoquerToutEtablissement(Long etablissementId) {
+        var comptes = userRepository.findByEtablissementIdOrderByIdAsc(etablissementId);
+        comptes.forEach(repository::deleteByUser);
+        return comptes.size();
     }
 
     /** Révoque toutes les sessions d'un utilisateur. */
