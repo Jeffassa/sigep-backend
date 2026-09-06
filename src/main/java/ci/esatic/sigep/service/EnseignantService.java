@@ -26,7 +26,9 @@ public class EnseignantService {
                                                        StatutEnseignant statut, Pageable pageable) {
         Long tenantId = TenantContext.get();
         Page<Enseignant> page = statut == null
-                ? enseignantRepository.searchEnseignants(search, departement, tenantId, pageable)
+                // null : aucune exclusion. L'API conserve son contrat — elle liste tous les
+                // statuts, archives compris ; c'est le parametre `statut` qui sert a filtrer.
+                ? enseignantRepository.searchEnseignants(search, departement, null, tenantId, pageable)
                 : enseignantRepository.searchEnseignantsByStatut(search, departement, statut.name(), tenantId, pageable);
         return page.map(this::toResponse);
     }

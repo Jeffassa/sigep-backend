@@ -59,6 +59,10 @@ public class AuthService {
                 throw new CompteNonValideException(
                         "Votre compte est en attente de validation par l'administration.");
             }
+            if (ens.getStatut() == StatutEnseignant.ARCHIVE) {
+                throw new CompteNonValideException(
+                        "Votre compte a été archivé. Veuillez contacter l'administration.");
+            }
             if (ens.getStatut() == StatutEnseignant.REJECTED) {
                 throw new CompteNonValideException(
                         "Votre compte a été refusé. Veuillez contacter l'administration.");
@@ -187,6 +191,10 @@ public class AuthService {
             if (enseignant.getStatut() == StatutEnseignant.PENDING) {
                 throw new CompteNonValideException(
                         "Votre compte est en attente de validation par l'administration.");
+            }
+            if (enseignant.getStatut() == StatutEnseignant.ARCHIVE) {
+                throw new CompteNonValideException(
+                        "Votre compte a été archivé. Veuillez contacter l'administration.");
             }
             if (enseignant.getStatut() == StatutEnseignant.REJECTED) {
                 throw new CompteNonValideException(
