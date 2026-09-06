@@ -16,6 +16,9 @@ public interface EmargementRepository extends JpaRepository<Emargement, Long> {
 
     List<Emargement> findByEnseignantId(Long enseignantId);
 
+    /** Sert à refuser la suppression d'un enseignant dont la présence a déjà été enregistrée. */
+    long countByEnseignantId(Long enseignantId);
+
     @Query("SELECT e FROM Emargement e WHERE e.enseignant.id = :enseignantId " +
            "AND e.dateHeure BETWEEN :debut AND :fin")
     List<Emargement> findByEnseignantIdAndPeriode(@Param("enseignantId") Long enseignantId,

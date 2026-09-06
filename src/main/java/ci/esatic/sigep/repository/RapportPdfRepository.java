@@ -13,6 +13,9 @@ public interface RapportPdfRepository extends JpaRepository<RapportPdf, Long> {
 
     List<RapportPdf> findByEnseignantIdOrderByDateGenerationDesc(Long enseignantId);
 
+    /** Sert à refuser la suppression d'un enseignant dont des rapports signés existent. */
+    long countByEnseignantId(Long enseignantId);
+
     List<RapportPdf> findAllByOrderByDateGenerationDesc();
 
     @Query("SELECT r FROM RapportPdf r WHERE r.periodeDebut >= :debut AND r.periodeFin <= :fin ORDER BY r.dateGeneration DESC")

@@ -41,6 +41,7 @@ class AdminWebIntegrationTest {
     @Autowired private RoleRepository roleRepository;
     @Autowired private UserRepository userRepository;
     @Autowired private EnseignantRepository enseignantRepository;
+    @Autowired private ci.esatic.sigep.repository.RapportPdfRepository rapportPdfRepository;
 
     @BeforeEach
     void setUp() {
@@ -53,6 +54,64 @@ class AdminWebIntegrationTest {
                 .matricule("ENS-WEB-1").nom("Traore").prenom("Sira")
                 .departement("Informatique").grade("Assistant")
                 .statut(StatutEnseignant.PENDING).user(u).build());
+    }
+
+    // ─── Suppression d'un enseignant ──────────────────────────────────────────
+    // Incident de production : la suppression etait tentee a l'aveugle et la contrainte de cle
+    // etrangere (rapports_pdf) remontait en erreur 500, sans rien expliquer a l'utilisateur.
+
+    @Test
+    @WithMockUser(username = "admin@esatic.ci", roles = "ADMIN")
+    void suppression_estRefusee_quandDesRapportsExistent_etNeProduitPasUne500() throws Exception {
+        var prof = enseignantRepository.findByMatricule("ENS-WEB-1").orElseThrow();
+        rapportPdfRepository.save(ci.esatic.sigep.entity.RapportPdf.builder()
+                .enseignant(prof)
+                .periodeDebut(java.time.LocalDate.now().minusDays(7))
+                .periodeFin(java.time.LocalDate.now())
+                .nomFichier("rapport-test.pdf")
+                .cheminFichier("target/test-rapports/rapport-test.pdf")
+                .dateGeneration(java.time.LocalDateTime.now())
+                .build());
+
+        mockMvc.perform(post("/admin/enseignants/" + prof.getId() + "/supprimer").with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attribute("error",
+                        org.hamcrest.Matchers.containsString("Suppression impossible")))
+                // Le message doit NOMMER ce qui bloque, sinon l'utilisateur reste sans recours.
+                .andExpect(flash().attribute("error",
+                        org.hamcrest.Matchers.containsString("rapport")));
+
+        // L'enseignant et son rapport sont toujours la : rien n'a ete detruit au passage.
+        assertThat(enseignantRepository.findById(prof.getId())).isPresent();
+        assertThat(rapportPdfRepository.countByEnseignantId(prof.getId())).isEqualTo(1);
+    }
+
+    @Test
+    @WithMockUser(username = "admin@esatic.ci", roles = "ADMIN")
+    void suppression_reussit_quandRienNeDependDeLEnseignant() throws Exception {
+        var prof = enseignantRepository.findByMatricule("ENS-WEB-1").orElseThrow();
+        Long idCompte = prof.getUser() != null ? prof.getUser().getId() : null;
+
+        mockMvc.perform(post("/admin/enseignants/" + prof.getId() + "/supprimer").with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attribute("success",
+                        org.hamcrest.Matchers.containsString("supprimé")));
+
+        assertThat(enseignantRepository.findById(prof.getId())).isEmpty();
+        // Le compte de connexion doit partir avec lui : un compte orphelin resterait capable
+        // de se connecter a l'application mobile.
+        if (idCompte != null) {
+            assertThat(userRepository.findById(idCompte)).isEmpty();
+        }
+    }
+
+    @Test
+    @WithMockUser(username = "admin@esatic.ci", roles = "ADMIN")
+    void suppression_dUnIdentifiantInconnu_neCassePas() throws Exception {
+        mockMvc.perform(post("/admin/enseignants/999999/supprimer").with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attribute("error",
+                        org.hamcrest.Matchers.containsString("introuvable")));
     }
 
     // ─── Routage / sécurité ───────────────────────────────────────────────────
@@ -111,6 +170,22 @@ class AdminWebIntegrationTest {
         mockMvc.perform(get("/admin/enseignants"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Enseignants")));
+    }
+
+    @Test
+    @WithMockUser(username = "admin@esatic.ci", roles = "ADMIN")
+    void navigationInstantanee_estServieSurLesPagesAdmin() throws Exception {
+        // Le script vit dans un fragment partage : une erreur d'inclusion le ferait disparaitre
+        // silencieusement, et la navigation redeviendrait un rechargement complet sans que rien
+        // ne signale la regression.
+        mockMvc.perform(get("/admin/enseignants"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("navigationInstantanee")))
+                // th:inline="none" protege le script : sans lui, une sequence de deux crochets
+                // ouvrants en JavaScript est lue comme une expression Thymeleaf et casse le rendu
+                // de TOUTES les pages d'administration. C'est deja arrive.
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("th:inline"))));
     }
 
     @Test

@@ -48,6 +48,10 @@ public class EnseignantWebController {
     private final MailService mailService;
     private final PlanService planService;
     private final EtablissementCourantService etablissementCourantService;
+    private final ci.esatic.sigep.repository.SeanceRepository seanceRepository;
+    private final ci.esatic.sigep.repository.EmargementRepository emargementRepository;
+    private final ci.esatic.sigep.repository.RapportPdfRepository rapportPdfRepository;
+    private final ci.esatic.sigep.repository.DemandeRattrapageRepository demandeRattrapageRepository;
 
     @GetMapping("/admin/enseignants")
     public String enseignants(@RequestParam(defaultValue = "") String search,
@@ -249,10 +253,64 @@ public class EnseignantWebController {
         return "redirect:/admin/enseignants";
     }
 
+    /**
+     * Supprime un enseignant — uniquement s'il ne laisse aucune trace.
+     *
+     * <p>Un enseignant qui a enseigné est référencé par ses séances, ses émargements, ses rapports
+     * signés et ses demandes de rattrapage. Ces données SONT le produit : elles attestent d'heures
+     * réellement faites et n'ont pas à disparaître parce qu'une personne quitte l'établissement.
+     * Les effacer en cascade détruirait un historique que l'établissement doit conserver, et
+     * fausserait rétroactivement ses statistiques.
+     *
+     * <p>On refuse donc, en NOMMANT ce qui bloque et en indiquant la sortie : retirer l'accès sans
+     * effacer l'historique. Auparavant la suppression était tentée à l'aveugle et la contrainte de
+     * clé étrangère remontait jusqu'à l'utilisateur sous forme d'erreur 500, sans rien expliquer.
+     *
+     * <p>Quand rien ne dépend de lui — compte créé par erreur, doublon — la suppression a lieu,
+     * et emporte son compte de connexion (cascade sur la relation user).
+     */
     @PostMapping("/admin/enseignants/{id}/supprimer")
     public String supprimerEnseignant(@PathVariable Long id, RedirectAttributes ra) {
-        enseignantRepository.findById(id).ifPresent(enseignantRepository::delete);
-        ra.addFlashAttribute("success", "Enseignant supprime.");
+        Enseignant enseignant = enseignantRepository.findById(id).orElse(null);
+        if (enseignant == null) {
+            // findById est filtré par établissement : un enseignant d'un autre tenant est
+            // introuvable ici, et c'est le comportement voulu.
+            ra.addFlashAttribute("error", "Enseignant introuvable.");
+            return "redirect:/admin/enseignants";
+        }
+
+        List<String> attaches = new java.util.ArrayList<>();
+        ajouterSiPresent(attaches, seanceRepository.countByEnseignantId(id), "séance", "séances");
+        ajouterSiPresent(attaches, emargementRepository.countByEnseignantId(id), "émargement", "émargements");
+        ajouterSiPresent(attaches, rapportPdfRepository.countByEnseignantId(id), "rapport", "rapports");
+        ajouterSiPresent(attaches, demandeRattrapageRepository.countByEnseignantId(id),
+                "demande de rattrapage", "demandes de rattrapage");
+
+        if (!attaches.isEmpty()) {
+            ra.addFlashAttribute("error",
+                    "Suppression impossible : " + enseignant.getPrenom() + " " + enseignant.getNom()
+                    + " est rattaché à " + String.join(", ", attaches)
+                    + ". Passez plutôt son statut à « Rejeté » : il perd l'accès à l'application,"
+                    + " et son historique reste intact.");
+            return "redirect:/admin/enseignants";
+        }
+
+        try {
+            enseignantRepository.delete(enseignant);   // emporte le compte de connexion (cascade)
+            ra.addFlashAttribute("success",
+                    "Enseignant " + enseignant.getPrenom() + " " + enseignant.getNom()
+                    + " supprimé, ainsi que son compte de connexion.");
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            // Filet : une dépendance ajoutée plus tard et non comptée ci-dessus ne doit jamais
+            // ressortir en erreur 500. Le comptage reste la voie normale, ceci est la ceinture.
+            ra.addFlashAttribute("error",
+                    "Suppression impossible : des données dépendent encore de cet enseignant.");
+        }
         return "redirect:/admin/enseignants";
+    }
+
+    /** Compose « 3 séances » ou « 1 rapport », et n'ajoute rien quand le compteur est nul. */
+    private void ajouterSiPresent(List<String> cible, long nombre, String singulier, String pluriel) {
+        if (nombre > 0) cible.add(nombre + " " + (nombre > 1 ? pluriel : singulier));
     }
 }

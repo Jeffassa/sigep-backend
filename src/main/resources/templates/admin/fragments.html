@@ -171,7 +171,11 @@
 
 <!-- ============================ SCRIPTS ============================ -->
 <th:block th:fragment="scripts">
-<script>
+<!-- L'attribut d'inline pose sur la balise ci-dessous vaut none : ce script est du
+     JavaScript pur, sans aucune expression Thymeleaf. Sans lui, un double crochet ouvrant
+     (tableau de tableaux) serait lu comme une expression a evaluer et ferait echouer le
+     rendu de TOUTES les pages d'administration. C'est deja arrive. -->
+<script th:inline="none">
 (function () {
     /* ----- Déconnexion via POST (CSRF) ----- */
     window.__logout = function () { var f = document.getElementById('logoutForm'); if (f) f.submit(); };
@@ -182,13 +186,18 @@
         try { localStorage.setItem('sigep-theme', dark ? 'dark' : 'light'); } catch (e) {}
     };
 
-    /* ----- Dock : magnification façon macOS ----- */
-    const dock = document.getElementById('dock');
-    if (dock) {
-        const items = Array.from(dock.querySelectorAll('.dock-item'));
+    /* ----- Dock : magnification façon macOS -----
+       Fonction rejouable : la navigation instantanée remplace le contenu du dock pour mettre à
+       jour l'onglet actif, ce qui rendrait caduques des références capturées une seule fois. ----- */
+    function setupDock() {
+        const dock = document.getElementById('dock');
+        if (!dock || dock.dataset.ready === '1') return;
+        dock.dataset.ready = '1';
         const BASE = 46, MAX = 24, RANGE = 90;
+        // Les éléments sont relus à chaque mouvement : le dock peut avoir été réécrit entre-temps.
+        const items = () => Array.from(dock.querySelectorAll('.dock-item'));
         dock.addEventListener('mousemove', (e) => {
-            items.forEach(it => {
+            items().forEach(it => {
                 const r = it.getBoundingClientRect();
                 const c = r.left + r.width / 2;
                 const d = Math.abs(e.clientX - c);
@@ -199,9 +208,10 @@
             });
         });
         dock.addEventListener('mouseleave', () => {
-            items.forEach(it => { it.style.width = BASE+'px'; it.style.height = BASE+'px'; it.style.marginBottom='0'; });
+            items().forEach(it => { it.style.width = BASE+'px'; it.style.height = BASE+'px'; it.style.marginBottom='0'; });
         });
     }
+    setupDock();
 
     /* ----- Palette ⌘K ----- */
     const overlay = document.getElementById('paletteOverlay');
@@ -236,11 +246,14 @@
         });
     }
 
-    /* ----- Révélation progressive au chargement ----- */
-    document.querySelectorAll('[data-reveal]').forEach((el, i) => {
-        el.classList.add('reveal');
-        el.style.animationDelay = (i * 60) + 'ms';
-    });
+    /* ----- Révélation progressive à l'arrivée sur une page ----- */
+    function setupReveal() {
+        document.querySelectorAll('main [data-reveal]').forEach((el, i) => {
+            el.classList.add('reveal');
+            el.style.animationDelay = (i * 60) + 'ms';
+        });
+    }
+    setupReveal();
 
     /* ----- Tableaux : lignes dépliables sur mobile (le CSS desktop reste intact) -----
        Fonction réutilisable : rejouée après chaque actualisation du contenu. ----- */
@@ -282,25 +295,34 @@
     /* ----- Messages flash : laisser le temps de les lire -----
        L'auto-actualisation remplace le <main> : sans ce délai, un message de confirmation
        ou d'erreur disparaîtrait en une seconde. On le protège 20 s, puis on le libère. ----- */
-    setTimeout(function () {
-        document.querySelectorAll('main [data-flash]').forEach(function (el) {
-            el.removeAttribute('data-flash');
-            el.style.transition = 'opacity .6s';
-            el.style.opacity = '.55';
-        });
-    }, 20000);
+    function armerFlash() {
+        setTimeout(function () {
+            document.querySelectorAll('main [data-flash]').forEach(function (el) {
+                el.removeAttribute('data-flash');
+                el.style.transition = 'opacity .6s';
+                el.style.opacity = '.55';
+            });
+        }, 20000);
+    }
+    armerFlash();
 
     /* ----- Auto-actualisation "live" du contenu admin (sauf dashboard, qui a son propre
        AJAX) : on récupère la page en arrière-plan et on remplace SEULEMENT le <main>, sans
        recharger — aucun clignotement, défilement conservé, en-tête/dock intacts. ----- */
-    var __p = location.pathname;
-    // Exclues : dashboard (a son propre live AJAX), rapports & messages (boutons JS / saisie),
-    // formulaires enseignant (saisie longue) — un remplacement du contenu y casserait l'UX.
-    var __noLive = __p.indexOf('/admin/dashboard') !== -1 || __p.indexOf('/admin/rapports') !== -1
-        || __p.indexOf('/admin/messages') !== -1 || __p.indexOf('/admin/statistiques') !== -1
-        || __p.indexOf('/admin/abonnement') !== -1   // paiement : formulaire + messages flash
-        || /\/admin\/enseignants\/.+/.test(__p);
-    if (__p.indexOf('/admin/') === 0 && !__noLive) {
+    // La décision est RECALCULÉE à chaque tour : avec la navigation instantanée, la page
+    // change sans rechargement. Figée au chargement, l'auto-actualisation continuerait de
+    // tourner sur une page qui l'exclut — par exemple en écrasant un formulaire en cours.
+    function __liveAutorise() {
+        var p = location.pathname;
+        if (p.indexOf('/admin/') !== 0) return false;
+        // Exclues : dashboard (a son propre live AJAX), rapports & messages (boutons JS / saisie),
+        // formulaires enseignant (saisie longue) — un remplacement du contenu y casserait l'UX.
+        return !(p.indexOf('/admin/dashboard') !== -1 || p.indexOf('/admin/rapports') !== -1
+            || p.indexOf('/admin/messages') !== -1 || p.indexOf('/admin/statistiques') !== -1
+            || p.indexOf('/admin/abonnement') !== -1
+            || /\/admin\/enseignants\/.+/.test(p));
+    }
+    {
         var __busy = function () {                  // ne pas rafraîchir pendant une interaction
             var el = document.activeElement;
             if (el && (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) || el.isContentEditable)) return true;
@@ -311,7 +333,7 @@
         };
         var __live = false;
         setInterval(function () {
-            if (__busy() || __live) return;
+            if (!__liveAutorise() || __busy() || __live) return;
             __live = true;
             fetch(location.href, { credentials: 'same-origin', headers: { 'X-Requested-With': 'fetch' } })
                 .then(function (r) { return r.ok ? r.text() : null; })
@@ -328,6 +350,192 @@
                 .finally(function () { __live = false; });
         }, 1000);                                   // intervalle (augmenter si trop fréquent)
     }
+
+    /* ================= NAVIGATION INSTANTANÉE =================================
+       Les espaces d'administration sont rendus côté serveur : chaque clic provoquait un
+       rechargement complet — écran blanc, en-tête redessiné, et retour en HAUT de page.
+       Le dernier point était le plus pénible : valider un enseignant en bas d'une longue
+       liste renvoyait au sommet, obligeant à retrouver sa place à chaque action.
+
+       On récupère donc la page en arrière-plan et on remplace l'en-tête, le dock et le
+       <main>, sans rechargement. La règle de défilement traduit l'intention :
+         · clic sur un LIEN            → nouvelle page, on remonte en haut (comportement normal) ;
+         · action d'un FORMULAIRE      → on RESTE exactement où l'on était ;
+         · retour arrière du navigateur → on rend la position qu'on avait quittée.
+       ========================================================================= */
+    (function navigationInstantanee() {
+        if (!window.fetch || !window.history.pushState) return;   // navigateur ancien : on ne touche à rien
+        var racines = ['/admin/', '/plateforme'];
+        var dansPerimetre = function (chemin) {
+            return racines.some(function (r) { return chemin.indexOf(r) === 0; });
+        };
+        if (!dansPerimetre(location.pathname)) return;
+
+        // On gère nous-mêmes la position : sinon le navigateur la restaure par-dessus la nôtre.
+        if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+
+        /* --- Fine barre de progression : sans elle, une page lente semble ne rien faire --- */
+        var barre = document.createElement('div');
+        barre.style.cssText = 'position:fixed;top:0;left:0;height:2px;width:0;z-index:9999;' +
+            'background:linear-gradient(90deg,#34d399,#10b981);transition:width .2s ease,opacity .3s;' +
+            'opacity:0;pointer-events:none';
+        document.body.appendChild(barre);
+        var progression = function (etat) {
+            if (etat === 'debut') { barre.style.opacity = '1'; barre.style.width = '70%'; }
+            else { barre.style.width = '100%'; setTimeout(function () {
+                barre.style.opacity = '0'; setTimeout(function () { barre.style.width = '0'; }, 300);
+            }, 150); }
+        };
+
+        var enCours = false;
+
+        /* --- Remplace le contenu de la page à partir du HTML reçu --- */
+        function appliquer(html, urlFinale, options) {
+            var doc = new DOMParser().parseFromString(html, 'text/html');
+            var neufMain = doc.querySelector('main');
+            if (!neufMain) return false;                 // réponse inattendue : on laisse le navigateur faire
+
+            var actuelMain = document.querySelector('main');
+            if (!actuelMain) return false;
+            actuelMain.innerHTML = neufMain.innerHTML;
+
+            // En-tête et dock vivent HORS du <main> : sans cela, l'onglet actif resterait
+            // sur la page précédente.
+            ['header', '#dock'].forEach(function (sel) {
+                var neuf = doc.querySelector(sel), actuel = document.querySelector(sel);
+                if (neuf && actuel) {
+                    actuel.innerHTML = neuf.innerHTML;
+                    actuel.className = neuf.className;
+                }
+            });
+            var dock = document.getElementById('dock');
+            if (dock) { dock.dataset.ready = ''; setupDock(); }
+
+            var titre = doc.querySelector('title');
+            if (titre) document.title = titre.textContent;
+
+            setupMobileTables();
+            armerFlash();
+            if (options && options.animer) setupReveal();
+
+            if (urlFinale) history.replaceState({ y: window.scrollY }, '', urlFinale);
+            return true;
+        }
+
+        /* --- Suit un lien --- */
+        function aller(url, poussee) {
+            if (enCours) return;
+            enCours = true;
+            progression('debut');
+            // On mémorise la position AVANT de partir : c'est elle que le retour arrière rendra.
+            if (poussee) history.replaceState({ y: window.scrollY }, '', location.href);
+
+            fetch(url, { credentials: 'same-origin', headers: { 'X-Requested-With': 'fetch' } })
+                .then(function (r) {
+                    if (!r.ok) throw new Error('statut ' + r.status);
+                    return r.text().then(function (t) { return { html: t, url: r.url || url }; });
+                })
+                .then(function (res) {
+                    if (poussee) history.pushState({ y: 0 }, '', res.url);
+                    if (!appliquer(res.html, null, { animer: true })) { location.href = url; return; }
+                    window.scrollTo(0, 0);               // nouvelle page : on repart du haut
+                })
+                .catch(function () { location.href = url; })   // repli : navigation classique
+                .finally(function () { enCours = false; progression('fin'); });
+        }
+
+        /* --- Soumet un formulaire SANS perdre la position --- */
+        function soumettre(form) {
+            if (enCours) return;
+            var y = window.scrollY;                      // ce qu'on veut retrouver après l'action
+            enCours = true;
+            progression('debut');
+
+            var methode = (form.method || 'get').toUpperCase();
+            var action = form.action || location.href;
+            var donnees = new FormData(form);
+            var options = { credentials: 'same-origin', headers: { 'X-Requested-With': 'fetch' },
+                            method: methode };
+            if (methode === 'POST') options.body = donnees;
+            else action += (action.indexOf('?') === -1 ? '?' : '&') + new URLSearchParams(donnees).toString();
+
+            fetch(action, options)
+                .then(function (r) {
+                    if (!r.ok) throw new Error('statut ' + r.status);
+                    return r.text().then(function (t) { return { html: t, url: r.url || action }; });
+                })
+                .then(function (res) {
+                    if (!appliquer(res.html, res.url, {})) { echec(); return; }
+                    history.replaceState({ y: y }, '', res.url);
+                    window.scrollTo(0, y);               // action en place : on ne bouge pas
+                })
+                .catch(echec)
+                .finally(function () { enCours = false; progression('fin'); });
+
+            // Repli. Pour un POST on NE REJOUE PAS la requete : l'action a pu s'executer avant
+            // l'erreur, et la rejouer supprimerait deux fois, paierait deux fois, validerait deux
+            // fois. On recharge la page : l'utilisateur voit l'etat reel du systeme.
+            function echec() {
+                if (methode === 'POST') location.reload();
+                else form.submit();                      // GET (filtre, recherche) : sans effet de bord
+            }
+        }
+
+        /* --- Interception des clics --- */
+        document.addEventListener('click', function (e) {
+            if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+            var a = e.target.closest ? e.target.closest('a') : null;
+            if (!a) return;
+            var href = a.getAttribute('href');
+            if (!href || href.charAt(0) === '#' || a.target || a.hasAttribute('download')) return;
+            if (a.hasAttribute('data-no-boost')) return;         // échappatoire explicite
+            var url;
+            try { url = new URL(a.href, location.href); } catch (err) { return; }
+            if (url.origin !== location.origin) return;          // lien externe
+            if (!dansPerimetre(url.pathname)) return;            // hors administration
+            // Les téléchargements (rapports, modèles, exports) doivent rester des vraies
+            // navigations : un fetch les récupérerait en mémoire au lieu de les enregistrer.
+            if (/\.(pdf|csv|xlsx?|zip|png|jpe?g)$/i.test(url.pathname)
+                || /telecharger|modele|export/i.test(url.pathname)) return;
+            e.preventDefault();
+            aller(url.href, true);
+        });
+
+        /* --- Interception des formulaires --- */
+        document.addEventListener('submit', function (e) {
+            // Un onsubmit="return confirm(...)" refusé a déjà annulé l'évènement : on n'insiste pas.
+            if (e.defaultPrevented) return;
+            var form = e.target;
+            if (!form || form.hasAttribute('data-no-boost')) return;
+            if ((form.enctype || '').indexOf('multipart') !== -1) return;   // envoi de fichier : natif
+            var action;
+            try { action = new URL(form.action || location.href, location.href); } catch (err) { return; }
+            if (action.origin !== location.origin || !dansPerimetre(action.pathname)) return;
+            // Les actions qui produisent un fichier restent natives, comme les liens.
+            if (/telecharger|modele|export/i.test(action.pathname)) return;
+            e.preventDefault();
+            soumettre(form);
+        });
+
+        /* --- Retour et suivant du navigateur --- */
+        window.addEventListener('popstate', function (e) {
+            var y = (e.state && typeof e.state.y === 'number') ? e.state.y : 0;
+            if (!dansPerimetre(location.pathname)) { location.reload(); return; }
+            enCours = true;
+            progression('debut');
+            fetch(location.href, { credentials: 'same-origin', headers: { 'X-Requested-With': 'fetch' } })
+                .then(function (r) { return r.ok ? r.text() : null; })
+                .then(function (html) {
+                    if (!html || !appliquer(html, null, { animer: true })) { location.reload(); return; }
+                    window.scrollTo(0, y);               // on rend la position quittée
+                })
+                .catch(function () { location.reload(); })
+                .finally(function () { enCours = false; progression('fin'); });
+        });
+
+        // Position de départ, pour que le tout premier retour arrière retombe juste.
+        history.replaceState({ y: window.scrollY }, '', location.href);
+    })();
 })();
 </script>
 <div th:replace="~{admin/fragments :: cookieConsent}"></div>
