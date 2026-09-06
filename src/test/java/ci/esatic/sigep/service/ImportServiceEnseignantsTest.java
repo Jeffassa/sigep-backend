@@ -32,6 +32,8 @@ import static org.mockito.Mockito.when;
 class ImportServiceEnseignantsTest {
 
     private EnseignantRepository enseignantRepository;
+    private ci.esatic.sigep.repository.UserRepository userRepository;
+    private MailService mailService;
     private ImportService importService;
 
     @BeforeEach
@@ -39,6 +41,23 @@ class ImportServiceEnseignantsTest {
         enseignantRepository = Mockito.mock(EnseignantRepository.class);
         when(enseignantRepository.existsByMatricule(anyString())).thenReturn(false);
         when(enseignantRepository.save(any(Enseignant.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        userRepository = Mockito.mock(ci.esatic.sigep.repository.UserRepository.class);
+        when(userRepository.existsByEmail(anyString())).thenReturn(false);
+        when(userRepository.save(any(ci.esatic.sigep.entity.User.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+
+        var roleRepository = Mockito.mock(ci.esatic.sigep.repository.RoleRepository.class);
+        var roleEnseignant = new ci.esatic.sigep.entity.Role();
+        roleEnseignant.setName(ci.esatic.sigep.entity.ERole.ROLE_ENSEIGNANT);
+        when(roleRepository.findByName(any())).thenReturn(java.util.Optional.of(roleEnseignant));
+
+        var passwordEncoder = Mockito.mock(
+                org.springframework.security.crypto.password.PasswordEncoder.class);
+        when(passwordEncoder.encode(any())).thenReturn("$2a$hash");
+
+        mailService = Mockito.mock(MailService.class);
+
         importService = new ImportService(
                 Mockito.mock(SeanceRepository.class),
                 enseignantRepository,
@@ -46,7 +65,54 @@ class ImportServiceEnseignantsTest {
                 Mockito.mock(ClasseRepository.class),
                 Mockito.mock(SalleRepository.class),
                 Mockito.mock(ci.esatic.sigep.repository.EtablissementRepository.class),
-                Mockito.mock(ci.esatic.sigep.tenant.plan.PlanService.class));
+                Mockito.mock(ci.esatic.sigep.tenant.plan.PlanService.class),
+                userRepository,
+                roleRepository,
+                passwordEncoder,
+                mailService);
+    }
+
+    @Test
+    void colonneEmailRenseignee_creeLeCompteEtEnvoieLesAcces() throws Exception {
+        MockMultipartFile fichier = xlsx(new String[][]{
+                {"MATRICULE", "NOM", "PRENOM", "DEPARTEMENT", "GRADE", "EMAIL"},
+                {"M001", "Kouassi", "Awa", "Info", "MCF", "awa.kouassi@ecole.ci"}
+        });
+
+        Map<String, Object> res = importService.importerEnseignants(fichier);
+
+        assertThat(res.get("importes")).isEqualTo(1);
+        assertThat(res.get("comptesCrees")).isEqualTo(1);
+
+        var compte = org.mockito.ArgumentCaptor.forClass(ci.esatic.sigep.entity.User.class);
+        Mockito.verify(userRepository).save(compte.capture());
+        assertThat(compte.getValue().getEmail()).isEqualTo("awa.kouassi@ecole.ci");
+        // Le secret transite par courriel : il DOIT être remplacé à la première connexion.
+        assertThat(compte.getValue().isMustChangePassword()).isTrue();
+
+        // Les accès partent, sans quoi l'enseignant ne pourrait jamais se connecter.
+        Mockito.verify(mailService).notifierIdentifiantsProvisoires(
+                any(), org.mockito.ArgumentMatchers.eq("awa.kouassi@ecole.ci"),
+                org.mockito.ArgumentMatchers.eq("Awa"), anyString());
+    }
+
+    @Test
+    void colonneEmailAbsente_nCreeAucunCompte() throws Exception {
+        // Fichier historique, sans colonne EMAIL : toujours accepté, mais l'enseignant reste
+        // sans compte — c'est ce que compte « sansEmail », pour que l'admin le sache.
+        MockMultipartFile fichier = xlsx(new String[][]{
+                {"MATRICULE", "NOM", "PRENOM", "DEPARTEMENT", "GRADE"},
+                {"M002", "Traore", "Ibrahim", "Maths", "PR"}
+        });
+
+        Map<String, Object> res = importService.importerEnseignants(fichier);
+
+        assertThat(res.get("importes")).isEqualTo(1);
+        assertThat(res.get("comptesCrees")).isEqualTo(0);
+        assertThat(res.get("sansEmail")).isEqualTo(1);
+        Mockito.verifyNoInteractions(mailService);
+        Mockito.verify(userRepository, Mockito.never())
+                .save(any(ci.esatic.sigep.entity.User.class));
     }
 
     @Test

@@ -37,6 +37,7 @@ public class EmargementService {
     private final QrCodeService qrCodeService;
     private final QrReplayGuard qrReplayGuard;
     private final ci.esatic.sigep.mapper.EmargementMapper emargementMapper;
+    private final JournalSecuriteService journalSecurite;
 
     // C2 : plafond mensuel d'émargements hors-ligne par enseignant + ancienneté max d'une séance
     // synchronisable. Valeurs par défaut inline (utilisées aussi par les tests unitaires sans Spring).
@@ -118,12 +119,18 @@ public class EmargementService {
         }
         // Règle 5bis (C3) : le QR doit être celui de l'établissement de l'enseignant.
         if (qr.etablissementId() == null || !qr.etablissementId().equals(enseignant.getEtablissementId())) {
+            journaliserRefus(ci.esatic.sigep.entity.TypeEvenement.QR_AUTRE_ETABLISSEMENT,
+                    ci.esatic.sigep.entity.SeveriteEvenement.CRITIQUE, enseignant,
+                    "QR presente par un enseignant d'un autre etablissement");
             throw new MetierException("QR_AUTRE_ETABLISSEMENT", "Ce QR n'appartient pas a votre etablissement.");
         }
         // Le QR doit avoir été émis PENDANT la fenêtre de la séance (preuve de présence différée).
         boolean enRetard = verifierFenetreScan(seance, etab, qr.emisLe(), zone);
         // Règle 6 : anti-rejeu — un même QR ne sert qu'une fois par enseignant.
         if (!qrReplayGuard.tryConsume(enseignant.getId(), qr.jti())) {
+            journaliserRefus(ci.esatic.sigep.entity.TypeEvenement.QR_REJOUE,
+                    ci.esatic.sigep.entity.SeveriteEvenement.ALERTE, enseignant,
+                    "QR deja consomme, presente une seconde fois");
             throw new MetierException("QR_DEJA_UTILISE", "Ce QR a deja ete utilise. Rescannez le code affiche.");
         }
         // Plafond par enseignant sur le mois de la séance (+ alerte au dépassement).
@@ -179,6 +186,11 @@ public class EmargementService {
         if (deja >= horsLigneMaxParMois) {
             log.warn("PLAFOND hors-ligne atteint - Enseignant {} : {} sur le mois de {}",
                     enseignant.getId(), deja, d);
+            // Le mode hors-ligne contourne la verification immediate : un enseignant qui l'atteint
+            // chaque mois merite un regard, meme si chaque emargement pris isolement est legitime.
+            journaliserRefus(ci.esatic.sigep.entity.TypeEvenement.PLAFOND_HORS_LIGNE,
+                    ci.esatic.sigep.entity.SeveriteEvenement.ALERTE, enseignant,
+                    deja + " emargements hors-ligne sur le mois de " + d);
             throw new MetierException("HORS_LIGNE_PLAFOND",
                     "Plafond d'emargements hors-ligne atteint ce mois-ci (" + horsLigneMaxParMois
                             + "). Contactez la scolarite.");
@@ -243,6 +255,21 @@ public class EmargementService {
 
     /** Règles communes (appartenance, jour, unicité, fenêtre horaire). Renvoie true si tardif. */
     private boolean validerReglesCommunes(Enseignant enseignant, Seance seance, Etablissement etab) {
+        // Défense en profondeur : le filtre tenant protège les lectures, mais une séance
+        // mal rattachée ne doit jamais pouvoir être émargée par un enseignant d'un autre tenant.
+        if (enseignant.getEtablissementId() == null
+                || seance.getEtablissementId() == null
+                || !enseignant.getEtablissementId().equals(seance.getEtablissementId())) {
+            journalSecurite.enregistrer(
+                    ci.esatic.sigep.entity.TypeEvenement.SEANCE_AUTRE_ETABLISSEMENT,
+                    ci.esatic.sigep.entity.SeveriteEvenement.CRITIQUE,
+                    null, enseignant.getMatricule(), "/api/emargements",
+                    "Seance " + seance.getId() + " rattachee a un autre etablissement",
+                    enseignant.getEtablissementId());
+            throw new MetierException("SEANCE_AUTRE_ETABLISSEMENT",
+                    "Cette seance n'appartient pas a votre etablissement");
+        }
+
         // Regle 1 : La seance appartient bien a cet enseignant
         if (!seance.getEnseignant().getId().equals(enseignant.getId())) {
             throw new MetierException("SEANCE_NON_ATTRIBUEE", "Cette seance ne vous appartient pas");
@@ -292,15 +319,37 @@ public class EmargementService {
 
         // Regle 5bis (C3) : le QR doit être celui de l'établissement de l'enseignant.
         if (qr.etablissementId() == null || !qr.etablissementId().equals(enseignant.getEtablissementId())) {
+            journaliserRefus(ci.esatic.sigep.entity.TypeEvenement.QR_AUTRE_ETABLISSEMENT,
+                    ci.esatic.sigep.entity.SeveriteEvenement.CRITIQUE, enseignant,
+                    "QR presente par un enseignant d'un autre etablissement");
             throw new MetierException("QR_AUTRE_ETABLISSEMENT", "Ce QR n'appartient pas a votre etablissement.");
         }
 
         // Regle 6 : anti-rejeu — un meme token ne peut servir qu'une fois par enseignant
         if (!qrReplayGuard.tryConsume(enseignant.getId(), qr.jti())) {
+            journaliserRefus(ci.esatic.sigep.entity.TypeEvenement.QR_REJOUE,
+                    ci.esatic.sigep.entity.SeveriteEvenement.ALERTE, enseignant,
+                    "QR deja consomme, presente une seconde fois");
             throw new MetierException("QR_DEJA_UTILISE", "Ce QR a deja ete utilise. Rescannez le code affiche.");
         }
 
         return enRetard;
+    }
+
+    /**
+     * Consigne un refus dans le journal de sécurité.
+     *
+     * <p>L'IP n'est pas disponible ici — un service métier ne connaît pas la requête HTTP — mais
+     * le matricule suffit à identifier qui insiste, et c'est ce que le super-administrateur lit.
+     * Le jeton QR n'est JAMAIS consigné : il resterait exploitable tant qu'il n'a pas expiré.
+     */
+    private void journaliserRefus(ci.esatic.sigep.entity.TypeEvenement type,
+                                  ci.esatic.sigep.entity.SeveriteEvenement severite,
+                                  Enseignant enseignant, String details) {
+        journalSecurite.enregistrer(type, severite, null,
+                enseignant == null ? null : enseignant.getMatricule(),
+                "/api/emargements", details,
+                enseignant == null ? null : enseignant.getEtablissementId());
     }
 
     private void validerSignature(String signatureBase64) {

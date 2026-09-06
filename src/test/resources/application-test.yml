@@ -32,3 +32,9 @@ app:
     # (même contexte Spring) et déclencherait des 429 parasites sur les logins MockMvc.
     login-rate-limit:
       enabled: false
+    # Desactive en test : les tests d'integration MockMvc s'authentifient directement,
+    # sans passer par la page de second facteur. Actif, l'interceptor renverrait un 302
+    # vers /admin-otp sur chaque page d'administration. Le second facteur lui-meme est
+    # couvert par AdminOtpControllerTest.
+    admin-otp:
+      enabled: false

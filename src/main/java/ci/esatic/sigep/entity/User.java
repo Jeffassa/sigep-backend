@@ -33,6 +33,10 @@ public class User implements UserDetails {
     @Builder.Default
     private boolean enabled = true;
 
+    /** Un compte créé par l'administration doit remplacer son secret provisoire. */
+    @Builder.Default
+    private boolean mustChangePassword = false;
+
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name = "user_roles",
             joinColumns = @JoinColumn(name = "user_id"),

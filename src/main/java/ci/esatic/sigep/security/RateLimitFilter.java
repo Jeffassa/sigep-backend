@@ -101,6 +101,14 @@ public class RateLimitFilter extends OncePerRequestFilter {
     @org.springframework.beans.factory.annotation.Autowired
     private ClientIpResolver clientIpResolver;
 
+    // Ce filtre voit passer CHAQUE requete : c'est le seul endroit ou compter le trafic
+    // sans ajouter un filtre supplementaire dans la chaine.
+    @org.springframework.beans.factory.annotation.Autowired
+    private CompteurTrafic compteurTrafic;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private ci.esatic.sigep.service.JournalSecuriteService journalSecurite;
+
     /** Store Redis optionnel (présent seulement si redis-enabled=true). */
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private RedisRateLimitStore redisStore;
@@ -111,6 +119,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
             @NonNull HttpServletResponse response,
             @NonNull FilterChain chain
     ) throws ServletException, IOException {
+
+        compteurTrafic.compterRequete();
 
         if (enabled) {
             String ip = clientIpResolver.resolve(request);
@@ -217,6 +227,12 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     private void refuser(HttpServletRequest request, HttpServletResponse response, String ip) throws IOException {
         log.warn("Rate limit atteint IP={} {} {}", ip, request.getMethod(), request.getRequestURI());
+        compteurTrafic.compterRefus();
+        journalSecurite.enregistrer(
+                ci.esatic.sigep.entity.TypeEvenement.DEBIT_DEPASSE,
+                ci.esatic.sigep.entity.SeveriteEvenement.ALERTE,
+                ip, null, request.getRequestURI(),
+                request.getMethod() + " refuse : plafond de requetes atteint");
         response.setStatus(429);
         response.setHeader("Retry-After", "60");
         String uri = request.getRequestURI();

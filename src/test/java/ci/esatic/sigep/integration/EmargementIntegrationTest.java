@@ -98,6 +98,9 @@ class EmargementIntegrationTest {
                 .heureDebut(now)
                 .heureFin(now.plusMinutes(1))
                 .matiere(matiere).classe(classe).salle(salle).enseignant(enseignant)
+                // Toute seance reelle porte son etablissement : colonne remplie par la migration V8
+                // et par le TenantListener a la creation. Sans lui, on testait un cas impossible.
+                .etablissementId(etablissementId)
                 .type(TypeSeance.NORMALE).statut(StatutSeance.A_FAIRE)
                 .build());
         seanceId = seance.getId();

@@ -1,0 +1,2 @@
+ALTER TABLE etablissements
+    ADD COLUMN IF NOT EXISTS format_emploi_du_temps VARCHAR(30) NOT NULL DEFAULT 'STANDARD';

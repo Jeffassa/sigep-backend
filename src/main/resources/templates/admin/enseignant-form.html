@@ -46,19 +46,8 @@
                 <input type="email" name="email" required placeholder="enseignant@votre-etablissement.com"
                        class="w-full h-11 px-4 rounded-xl bg-white/55 border border-line focus:ring-0 focus:border-ink transition"/>
             </div>
-            <div>
-                <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Mot de passe *</label>
-                <div class="relative">
-                    <input type="password" name="password" id="passwordField" required minlength="8"
-                           pattern="^(?=.*[A-Za-z])(?=.*\d).+$"
-                           title="Au moins 8 caractères, avec une lettre et un chiffre"
-                           class="w-full h-11 px-4 pr-11 rounded-xl bg-white/55 border border-line focus:ring-0 focus:border-ink transition"
-                           placeholder="Min. 8 · 1 lettre + 1 chiffre"/>
-                    <button type="button" onclick="togglePassword()"
-                            class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink transition">
-                        <span class="material-symbols-rounded text-[20px]" id="eyeIcon">visibility</span>
-                    </button>
-                </div>
+            <div class="rounded-xl border border-line bg-white/40 p-4 text-[13px] text-muted">
+                Un mot de passe provisoire sécurisé sera généré automatiquement et envoyé à l'enseignant par email.
             </div>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -93,14 +82,6 @@
 <div th:replace="~{admin/fragments :: dock('enseignants')}"></div>
 <div th:replace="~{admin/fragments :: palette}"></div>
 <div th:replace="~{admin/fragments :: scripts}"></div>
-
-<script>
-    function togglePassword() {
-        const f = document.getElementById('passwordField'), i = document.getElementById('eyeIcon');
-        if (f.type === 'password') { f.type = 'text'; i.textContent = 'visibility_off'; }
-        else { f.type = 'password'; i.textContent = 'visibility'; }
-    }
-</script>
 
 </body>
 </html>

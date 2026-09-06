@@ -30,6 +30,13 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final UserDetailsServiceImpl userDetailsService;
     private final ci.esatic.sigep.security.RateLimitFilter rateLimitFilter;
+    private final ci.esatic.sigep.service.MailService mailService;
+    private final ci.esatic.sigep.service.JournalSecuriteService journalSecurite;
+    private final ci.esatic.sigep.security.ClientIpResolver clientIpResolver;
+
+    /** Voir {@link AdminOtpInterceptor} : interrupteur de secours du second facteur. */
+    @org.springframework.beans.factory.annotation.Value("${app.security.admin-otp.enabled:true}")
+    private boolean adminOtpActif;
 
     /** SECURITE : en production, exiger HTTPS (rejette/redirige le trafic non sécurisé).
      *  Désactivé par défaut pour ne pas casser le dev en HTTP local. */
@@ -41,7 +48,7 @@ public class SecurityConfig {
     @Order(1)
     public SecurityFilterChain adminWebFilterChain(HttpSecurity http) throws Exception {
         http
-                .securityMatcher("/admin/**", "/admin-login", "/plateforme/**")
+                .securityMatcher("/admin/**", "/admin-login", "/admin-otp", "/plateforme/**")
                 // CSRF activé : Thymeleaf injecte automatiquement le token dans th:action
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/admin-login").permitAll()
@@ -68,11 +75,35 @@ public class SecurityConfig {
                                                                 : "/admin-login?rejected=1");
                                 return;
                             }
-                            boolean superAdmin = authentication.getAuthorities().stream()
-                                    .anyMatch(a -> "ROLE_SUPER_ADMIN".equals(a.getAuthority()));
-                            response.sendRedirect(superAdmin ? "/plateforme" : "/admin/dashboard");
+                            if (authentication.getPrincipal() instanceof ci.esatic.sigep.entity.User u) {
+                                ci.esatic.sigep.controller.web.AdminOtpController.preparer(
+                                        request.getSession(true), u.getEmail(), mailService,
+                                        authentication.getAuthorities().stream().anyMatch(a ->
+                                                "ROLE_SUPER_ADMIN".equals(a.getAuthority())));
+                            }
+                            if (!adminOtpActif) {
+                                boolean superAdmin = authentication.getAuthorities().stream()
+                                        .anyMatch(a -> "ROLE_SUPER_ADMIN".equals(a.getAuthority()));
+                                response.sendRedirect(superAdmin ? "/plateforme" : "/admin/dashboard");
+                                return;
+                            }
+                            // Second facteur : la destination réelle (/plateforme ou /admin/dashboard)
+                            // est mémorisée par preparer() et rejointe une fois le code validé.
+                            // L'interceptor bloque tout accès d'ici là.
+                            response.sendRedirect("/admin-otp");
                         })
-                        .failureUrl("/admin-login?error=true")
+                        .failureHandler((request, response, exception) -> {
+                            // Repete depuis une meme IP, c'est une attaque par dictionnaire ;
+                            // isole, une simple faute de frappe. Le journal permet de trancher.
+                            journalSecurite.enregistrer(
+                                    ci.esatic.sigep.entity.TypeEvenement.CONNEXION_ADMIN_ECHOUEE,
+                                    ci.esatic.sigep.entity.SeveriteEvenement.ALERTE,
+                                    clientIpResolver.resolve(request),
+                                    request.getParameter("username"),
+                                    "/admin-login",
+                                    "Identifiants refuses");
+                            response.sendRedirect("/admin-login?error=true");
+                        })
                 )
                 .logout(logout -> logout
                         .logoutUrl("/admin/logout")
