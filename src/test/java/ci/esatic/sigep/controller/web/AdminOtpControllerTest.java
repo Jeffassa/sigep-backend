@@ -257,6 +257,37 @@ class AdminOtpControllerTest {
     }
 
     @Test
+    void saisirLEmpreinteAuLieuDuCode_estNomme() {
+        // Confusion vecue : le code de secours voyage avec l'empreinte a installer sur le
+        // serveur. Saisir l'une pour l'autre est l'erreur naturelle, et « code invalide » ne
+        // donnait aucune chance de s'en rendre compte.
+        String empreinte = sha256(CODE_SECOURS);
+        org.springframework.test.util.ReflectionTestUtils.setField(
+                controller, "empreinteCodeSecours", empreinte);
+        Model model = new ExtendedModelMap();
+
+        controller.verifier(empreinte, session, model, authAdmin(false), null);
+
+        assertThat(accesOuvert()).isFalse();
+        assertThat(model.getAttribute("error")).asString()
+                .contains("empreinte")
+                .contains("5 groupes de 4");
+    }
+
+    @Test
+    void saisirUneSuiteHexadecimale_estSignaleeCommeTelle() {
+        configurerCodeSecours(CODE_SECOURS);
+        Model model = new ExtendedModelMap();
+
+        // 64 caracteres hexadecimaux, mais pas l'empreinte configuree : la forme suffit a
+        // diagnostiquer la confusion.
+        controller.verifier("a".repeat(64), session, model, authAdmin(false), null);
+
+        assertThat(accesOuvert()).isFalse();
+        assertThat(model.getAttribute("error")).asString().contains("forme d'une empreinte");
+    }
+
+    @Test
     void codeDeSecours_uneSaisieVideNOuvreRien() {
         configurerCodeSecours(CODE_SECOURS);
 

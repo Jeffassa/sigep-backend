@@ -112,7 +112,7 @@ public class AdminOtpController {
         model.addAttribute("secoursConfigure", secoursConfigure());
         model.addAttribute("error", attempts + 1 >= MAX_ATTEMPTS
                 ? "Trop de tentatives. Reconnectez-vous pour demander un nouveau code."
-                : "Code invalide ou expiré.");
+                : messageEchec(code));
         return "admin/otp";
     }
 
@@ -158,6 +158,32 @@ public class AdminOtpController {
         session.setAttribute(TARGET, superAdmin ? "/plateforme" : "/admin/dashboard");
         session.setAttribute(RESENDS, 0);
         mailService.envoyerCodeOtpAdmin(email, code);
+    }
+
+    /**
+     * Message d'échec, aussi précis que la saisie le permet.
+     *
+     * <p>« Code invalide » est un mur : il ne dit pas s'il faut corriger une lettre, attendre un
+     * nouveau courriel, ou chercher ailleurs. Or une confusion est prévisible — le code de secours
+     * s'accompagne d'une EMPREINTE à installer sur le serveur, et les deux valeurs voyagent
+     * ensemble. Saisir l'empreinte à la place du code est l'erreur naturelle ; autant la nommer.
+     *
+     * <p>Aucune information exploitable n'est divulguée : on confirme seulement à quelqu'un qui
+     * possède déjà l'empreinte qu'il détient bien l'empreinte.
+     */
+    private String messageEchec(String code) {
+        String saisi = code == null ? "" : code.trim();
+        String attendu = empreinteEpuree();
+        if (attendu != null && attendu.equals(saisi.toLowerCase())) {
+            return "Vous avez saisi l'empreinte — la valeur installée sur le serveur — et non le "
+                 + "code de secours. Le code se présente en 5 groupes de 4 caractères séparés "
+                 + "par des tirets.";
+        }
+        if (saisi.matches("(?i)[0-9a-f]{64}")) {
+            return "Cette valeur a la forme d'une empreinte, pas d'un code de secours. Le code se "
+                 + "présente en 5 groupes de 4 caractères séparés par des tirets.";
+        }
+        return "Code invalide ou expiré.";
     }
 
     /** Un code de secours est-il configuré sur ce serveur ? */
