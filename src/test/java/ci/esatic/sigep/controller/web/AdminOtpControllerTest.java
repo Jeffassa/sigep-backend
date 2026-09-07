@@ -205,6 +205,66 @@ class AdminOtpControllerTest {
         assertThat(accesOuvert()).isFalse();
     }
 
+    // Ces cas viennent d'un incident reel : le code etait bon, l'empreinte correcte, et
+    // pourtant « code invalide ». Un code long se retape un jour de panne, souvent sur un
+    // telephone — la casse et les separateurs ne doivent pas transformer le filet en piege.
+
+    @Test
+    void codeDeSecours_accepteLaCasseEtLesSeparateurs() {
+        // L'empreinte configuree est celle de la forme CANONIQUE (majuscules, sans tiret).
+        org.springframework.test.util.ReflectionTestUtils.setField(controller, "empreinteCodeSecours",
+                sha256(CODE_SECOURS.replace("-", "")));
+        session.setAttribute("SIGEP_ADMIN_OTP_TARGET", "/admin/dashboard");
+
+        for (String saisie : new String[] {
+                CODE_SECOURS,                          // tel qu'imprime
+                CODE_SECOURS.toLowerCase(),            // tout en minuscules
+                CODE_SECOURS.replace("-", " "),        // tirets remplaces par des espaces
+                CODE_SECOURS.replace("-", ""),         // colle
+                "  " + CODE_SECOURS + "  ",            // espaces autour
+        }) {
+            session.removeAttribute(AdminOtpController.VERIFIED);
+            session.removeAttribute("SIGEP_ADMIN_OTP_ATTEMPTS");
+            session.setAttribute("SIGEP_ADMIN_OTP_TARGET", "/admin/dashboard");
+
+            controller.verifier(saisie, session, new ExtendedModelMap(), authAdmin(false), null);
+            assertThat(accesOuvert()).as("saisie refusee : %s", saisie).isTrue();
+        }
+    }
+
+    @Test
+    void codeDeSecours_accepteAussiLEmpreinteDeLaChaineExacte() {
+        // Compatibilite : une empreinte deja en place, calculee sur la chaine exacte, doit
+        // continuer de fonctionner sans qu'on ait a la regenerer.
+        configurerCodeSecours(CODE_SECOURS);
+        session.setAttribute("SIGEP_ADMIN_OTP_TARGET", "/admin/dashboard");
+
+        controller.verifier(CODE_SECOURS, session, new ExtendedModelMap(), authAdmin(false), null);
+
+        assertThat(accesOuvert()).isTrue();
+    }
+
+    @Test
+    void codeDeSecours_toleLesGuillemetsAutourDeLEmpreinte() {
+        // Les interfaces d'hebergeur invitent a coller la valeur entre guillemets.
+        org.springframework.test.util.ReflectionTestUtils.setField(controller, "empreinteCodeSecours",
+                "\"" + sha256(CODE_SECOURS) + "\"");
+        session.setAttribute("SIGEP_ADMIN_OTP_TARGET", "/admin/dashboard");
+
+        controller.verifier(CODE_SECOURS, session, new ExtendedModelMap(), authAdmin(false), null);
+
+        assertThat(accesOuvert()).isTrue();
+    }
+
+    @Test
+    void codeDeSecours_uneSaisieVideNOuvreRien() {
+        configurerCodeSecours(CODE_SECOURS);
+
+        controller.verifier("   ", session, new ExtendedModelMap(), authAdmin(false), null);
+
+        assertThat(accesOuvert()).isFalse();
+    }
+
     @Test
     void codeDeSecours_erroneEstRefuse() {
         configurerCodeSecours(CODE_SECOURS);

@@ -57,6 +57,10 @@ public class AdminOtpController {
     @GetMapping("/admin-otp")
     public String page(HttpSession session, Model model) {
         if (Boolean.TRUE.equals(session.getAttribute(VERIFIED))) return redirectAfterOtp(session);
+        // Sans cette information, une variable d'environnement absente et un code erroné
+        // produisaient le MÊME message : impossible de savoir lequel des deux on affronte.
+        // Savoir qu'un filet existe n'aide personne à le franchir.
+        model.addAttribute("secoursConfigure", secoursConfigure());
         return "admin/otp";
     }
 
@@ -75,8 +79,7 @@ public class AdminOtpController {
                 && constantTimeEquals(expected, hash(code));
         // Volontairement indépendant de la session : le cas d'usage est précisément celui où
         // aucun code n'a pu être préparé ni expédié.
-        boolean codeDeSecours = empreinteCodeSecours != null && !empreinteCodeSecours.isBlank()
-                && constantTimeEquals(empreinteCodeSecours.trim().toLowerCase(), hash(code));
+        boolean codeDeSecours = secoursConfigure() && correspondAuSecours(code);
         boolean valide = quotaOuvert && (codeRecuParMail || codeDeSecours);
         if (valide) {
             if (codeDeSecours) {
@@ -106,6 +109,7 @@ public class AdminOtpController {
                         ? ci.esatic.sigep.entity.SeveriteEvenement.CRITIQUE
                         : ci.esatic.sigep.entity.SeveriteEvenement.ALERTE,
                 authentication, "Tentative " + (attempts + 1) + " sur " + MAX_ATTEMPTS);
+        model.addAttribute("secoursConfigure", secoursConfigure());
         model.addAttribute("error", attempts + 1 >= MAX_ATTEMPTS
                 ? "Trop de tentatives. Reconnectez-vous pour demander un nouveau code."
                 : "Code invalide ou expiré.");
@@ -127,6 +131,7 @@ public class AdminOtpController {
 
         Integer envois = (Integer) session.getAttribute(RESENDS);
         if (envois == null) envois = 0;
+        model.addAttribute("secoursConfigure", secoursConfigure());
         if (envois >= MAX_RESENDS) {
             model.addAttribute("error",
                     "Trop de renvois pour cette session. Reconnectez-vous pour repartir de zéro.");
@@ -153,6 +158,48 @@ public class AdminOtpController {
         session.setAttribute(TARGET, superAdmin ? "/plateforme" : "/admin/dashboard");
         session.setAttribute(RESENDS, 0);
         mailService.envoyerCodeOtpAdmin(email, code);
+    }
+
+    /** Un code de secours est-il configuré sur ce serveur ? */
+    private boolean secoursConfigure() {
+        return empreinteEpuree() != null;
+    }
+
+    /**
+     * Empreinte configurée, débarrassée du bruit de saisie.
+     *
+     * <p>Les interfaces d'hébergeur invitent à coller la valeur entre guillemets, et un
+     * copier-coller emporte volontiers un espace ou un retour à la ligne. Aucun de ces accidents
+     * ne doit faire échouer silencieusement un filet de sécurité.
+     */
+    private String empreinteEpuree() {
+        if (empreinteCodeSecours == null) return null;
+        String v = empreinteCodeSecours.trim().replaceAll("^[\"']|[\"']$", "").trim().toLowerCase();
+        return v.isEmpty() ? null : v;
+    }
+
+    /**
+     * Le code saisi correspond-il au code de secours ?
+     *
+     * <p>Deux formes sont acceptées, et c'est délibéré : la chaîne EXACTE, et sa forme canonique
+     * — majuscules, sans tiret ni espace. Un code long se retape un jour d'incident, souvent sur
+     * un téléphone : refuser {@code a7k2 9qmr…} pour une question de casse ou d'espacement
+     * transformerait le filet en piège, sans rien gagner en sécurité (l'entropie tient aux
+     * caractères, pas à leur casse).
+     *
+     * <p>Les deux formes sont comparées à l'empreinte configurée, ce qui laisse le choix de
+     * l'empreinte : celle de la chaîne exacte reste valable, celle de la forme canonique rend la
+     * saisie tolérante.
+     */
+    private boolean correspondAuSecours(String code) {
+        String attendu = empreinteEpuree();
+        if (attendu == null) return false;
+        String saisi = code == null ? "" : code.trim();
+        if (saisi.isEmpty()) return false;
+        String canonique = saisi.toUpperCase().replaceAll("[^A-Z0-9]", "");
+        // Les deux comparaisons sont à temps constant ; l'opérateur | évite le court-circuit,
+        // qui rendrait le temps de réponse dépendant de la forme saisie.
+        return constantTimeEquals(attendu, hash(saisi)) | constantTimeEquals(attendu, hash(canonique));
     }
 
     /** Le code lui-meme n'est JAMAIS journalise : seul l'echec l'est. */
