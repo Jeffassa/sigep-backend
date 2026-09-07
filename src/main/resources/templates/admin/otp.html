@@ -19,11 +19,21 @@
       <summary class="text-[13px] text-muted cursor-pointer select-none hover:text-ink">
         Utiliser mon code de secours
       </summary>
-      <form th:action="@{/admin-otp}" method="post" class="mt-3 space-y-3">
+      <!-- Aucun code configuré : on le dit, plutôt que de proposer un champ qui ne peut
+           qu'échouer. C'est ce silence qui rendait le diagnostic impossible. -->
+      <p th:unless="${secoursConfigure}" class="mt-3 text-[12px] leading-relaxed"
+         style="color:#7a0010">
+        Aucun code de secours n'est configuré sur ce serveur. La variable
+        <code>APP_SECURITY_ADMIN_OTP_RECOVERY_HASH</code> est absente ou vide — vérifiez-la dans
+        la configuration de l'hébergeur, puis redéployez.
+      </p>
+      <form th:if="${secoursConfigure}" th:action="@{/admin-otp}" method="post" class="mt-3 space-y-3">
         <p class="text-[12px] text-muted leading-relaxed">
           Le code long conservé hors ligne. À n'employer que si aucun courriel n'arrive.
+          La casse, les tirets et les espaces n'ont pas d'importance.
         </p>
-        <input name="code" autocomplete="off" spellcheck="false" required
+        <input name="code" autocomplete="off" spellcheck="false" autocapitalize="characters"
+               autocorrect="off" required
                placeholder="XXXX-XXXX-XXXX-XXXX-XXXX"
                class="w-full h-11 px-4 rounded-xl bg-white/60 border border-line text-ink text-center tracking-[.15em] font-mono text-[13px]" />
         <button type="submit" class="btn w-full h-11 rounded-xl border border-line font-medium hover:bg-ink hover:text-white">
