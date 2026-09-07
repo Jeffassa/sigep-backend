@@ -27,6 +27,9 @@ public class ImportService {
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
+    /** Cellule Excel portant DATE et HEURE : on rend les deux, chaque analyseur prend sa part. */
+    private static final DateTimeFormatter DATE_TIME_FMT =
+            DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
     // E5 : plusieurs formats acceptés en entrée (l'établissement produit son propre EDT).
     private static final List<DateTimeFormatter> DATE_FMTS = List.of(
@@ -369,18 +372,44 @@ public class ImportService {
 
     private LocalDate parseDate(String s) {
         String v = s.trim();
-        for (DateTimeFormatter f : DATE_FMTS) {
-            try { return LocalDate.parse(v, f); } catch (Exception ignore) { /* format suivant */ }
+        // Une cellule « date + heure » arrive sous la forme « jj/mm/aaaa HH:mm » : seule la
+        // partie date nous concerne ici, et la refuser perdrait une ligne parfaitement valable.
+        int espace = v.indexOf(' ');
+        if (espace > 0) {
+            LocalDate partie = essayerDate(v.substring(0, espace));
+            if (partie != null) return partie;
         }
+        LocalDate d = essayerDate(v);
+        if (d != null) return d;
         throw new IllegalArgumentException("date invalide « " + v + " » (attendu jj/mm/aaaa)");
     }
 
-    private LocalTime parseTime(String s) {
-        String v = s.trim().replace(" ", "");
-        for (DateTimeFormatter f : TIME_FMTS) {
-            try { return LocalTime.parse(v, f); } catch (Exception ignore) { /* format suivant */ }
+    private LocalDate essayerDate(String v) {
+        for (DateTimeFormatter f : DATE_FMTS) {
+            try { return LocalDate.parse(v, f); } catch (Exception ignore) { /* format suivant */ }
         }
-        throw new IllegalArgumentException("heure invalide « " + v + " » (attendu HH:mm)");
+        return null;
+    }
+
+    private LocalTime parseTime(String s) {
+        String brut = s.trim();
+        // Symétrique de parseDate : d'une cellule « date + heure », c'est l'heure qu'on veut.
+        int espace = brut.lastIndexOf(' ');
+        if (espace > 0) {
+            LocalTime partie = essayerHeure(brut.substring(espace + 1));
+            if (partie != null) return partie;
+        }
+        LocalTime h = essayerHeure(brut.replace(" ", ""));
+        if (h != null) return h;
+        throw new IllegalArgumentException("heure invalide « " + brut + " » (attendu HH:mm)");
+    }
+
+    private LocalTime essayerHeure(String v) {
+        String x = v.trim().replace(" ", "");
+        for (DateTimeFormatter f : TIME_FMTS) {
+            try { return LocalTime.parse(x, f); } catch (Exception ignore) { /* format suivant */ }
+        }
+        return null;
     }
 
     /** Clé de rapprochement tolérante (E4) : sans accents, espaces compactés, minuscule. */
@@ -397,7 +426,21 @@ public class ImportService {
             case STRING -> cell.getStringCellValue().trim();
             case NUMERIC -> {
                 if (DateUtil.isCellDateFormatted(cell)) {
-                    yield cell.getLocalDateTimeCellValue().toLocalDate().format(DATE_FMT);
+                    java.time.LocalDateTime dt = cell.getLocalDateTimeCellValue();
+                    // Excel n'a pas de type « heure » : une heure seule est une FRACTION de
+                    // journée posée sur son époque, le 31/12/1899. Prendre la partie date d'une
+                    // telle cellule rendait « 31/12/1899 », que parseTime refusait — et la ligne
+                    // entière était alors écartée en silence. C'est ainsi qu'un emploi du temps
+                    // arrivait troué, seules passant les lignes dont les heures étaient du texte.
+                    if (dt.getYear() <= 1900) {
+                        yield dt.toLocalTime().format(TIME_FMT);
+                    }
+                    // Date à minuit : le cas courant de la colonne DATE.
+                    if (dt.toLocalTime().equals(java.time.LocalTime.MIDNIGHT)) {
+                        yield dt.toLocalDate().format(DATE_FMT);
+                    }
+                    // Date ET heure : on rend les deux plutôt que d'en sacrifier une.
+                    yield dt.format(DATE_TIME_FMT);
                 }
                 yield String.valueOf((long) cell.getNumericCellValue());
             }
