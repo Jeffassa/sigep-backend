@@ -1,12 +1,27 @@
+# Deux mécanismes, deux rôles, qu'il ne faut pas confondre : ce fichier règle l'EXPLORATION,
+# la balise « robots » de chaque page règle l'INDEXATION. Interdire ici une page qu'on veut
+# désindexer est contre-productif — le robot n'y vient plus, ne lit donc jamais son « noindex »,
+# et peut continuer d'afficher l'URL seule, sans titre ni description.
+#
+# D'où le partage retenu :
+#   - /admin-login et /admin-otp restent EXPLORABLES : liés depuis l'accueil, ils doivent être
+#     visités pour que leur « noindex » soit lu et qu'ils quittent l'index.
+#   - /api et /actuator ne servent pas de HTML : rien à indexer, autant épargner l'exploration.
+#   - /admin et /plateforme renvoient un visiteur anonyme vers la connexion : sans intérêt.
+#
+# Les paramètres de campagne (?utm_...) ne sont volontairement PAS bloqués : c'est la balise
+# canonique de chaque page qui ramène vers l'adresse de référence, et elle ne peut le faire que
+# si la page reste accessible au robot.
+#
+# Les règles « Allow » explicites ont été retirées : « Allow: / » les couvre déjà toutes, et une
+# liste à maintenir finit par diverger des pages réellement publiées.
+
 User-agent: *
 Allow: /
-Allow: /inscription
-Allow: /mentions-legales
-Allow: /confidentialite
-Allow: /cgu
-Disallow: /admin
-Disallow: /admin-login
+
+Disallow: /admin/
 Disallow: /plateforme
 Disallow: /api
+Disallow: /actuator
 
 Sitemap: https://sigep.store/sitemap.xml

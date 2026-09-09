@@ -24,7 +24,10 @@
             <a href="javascript:history.back()" class="btn glass h-11 px-5 rounded-xl text-[14px] font-medium flex items-center gap-2">
                 <span class="material-symbols-rounded text-[18px]">arrow_back</span> Retour
             </a>
-            <a th:href="@{/admin/dashboard}" class="btn btn-ink h-11 px-5 rounded-xl text-[14px] font-medium flex items-center gap-2">
+            <!-- L'accueil du SITE, pas celui de l'administration : cette page s'affiche aussi
+                 pour un visiteur non connecté, qu'un lien vers /admin/dashboard renvoyait vers
+                 une page de connexion — un cul-de-sac au lieu d'un retour. -->
+            <a th:href="@{/}" class="btn btn-ink h-11 px-5 rounded-xl text-[14px] font-medium flex items-center gap-2">
                 <span class="material-symbols-rounded text-[18px]">home</span> Accueil
             </a>
         </div>

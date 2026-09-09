@@ -7,6 +7,29 @@
     <meta name="description" content="SIGEP — suivez les heures réellement effectuées par vos enseignants via un émargement QR sécurisé. Statistiques, alertes et rapports de paie, sans Excel."/>
     <link rel="icon" th:href="@{/favicon.ico}" href="/favicon.ico" sizes="any"/>
     <link rel="apple-touch-icon" th:href="@{/images/logo_sigep.png}" href="/images/logo_sigep.png"/>
+    <meta name="theme-color" content="#08080a"/>
+
+    <!-- Une seule adresse fait autorité. Le lien de ce produit circule par messagerie et revient
+         chargé des paramètres de campagne ; sans canonique, chaque partage fabrique une page
+         concurrente qui se partage les signaux au lieu de les additionner. -->
+    <meta name="robots" content="index,follow,max-image-preview:large"/>
+    <link rel="canonical" th:href="${canonicalUrl}" href="https://sigep.store/"/>
+
+    <!-- Carte de partage : sans elle, un lien collé dans WhatsApp arrive en URL nue. -->
+    <meta property="og:type" content="website"/>
+    <meta property="og:site_name" th:content="${marque} ?: 'SIGEP'"/>
+    <meta property="og:title" th:content="(${marque} ?: 'SIGEP') + ' · Émargement des enseignants par QR code'"/>
+    <meta property="og:description" content="Suivez les heures réellement effectuées par vos enseignants : émargement par QR code, planning, alertes et rapports de paie. Pour écoles et universités."/>
+    <meta property="og:url" th:content="${canonicalUrl}"/>
+    <meta property="og:locale" content="fr_FR"/>
+    <meta property="og:image" th:content="${baseUrl} + '/images/og-sigep.png'" content="https://sigep.store/images/og-sigep.png"/>
+    <meta property="og:image:width" content="1200"/>
+    <meta property="og:image:height" content="630"/>
+    <meta property="og:image:alt" content="SIGEP — émargement des enseignants par QR code"/>
+    <meta name="twitter:card" content="summary_large_image"/>
+    <meta name="twitter:title" th:content="(${marque} ?: 'SIGEP') + ' · Émargement des enseignants par QR code'"/>
+    <meta name="twitter:description" content="Émargement par QR code, planning et rapports d'heures pour écoles et universités."/>
+    <meta name="twitter:image" th:content="${baseUrl} + '/images/og-sigep.png'"/>
     <link rel="preconnect" href="https://fonts.googleapis.com"/>
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="crossorigin"/>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
@@ -261,8 +284,13 @@
         .foot-bottom { border-top: 1px solid var(--border); padding: 20px 0; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
         .foot-bottom p { color: var(--dim); font-size: 13px; }
 
-        .reveal { opacity: 0; transform: translateY(18px); transition: opacity .6s ease, transform .6s ease; }
-        .reveal.vis { opacity: 1; transform: none; }
+        /* Le contenu est VISIBLE par défaut ; c'est le script qui demande à l'animer, et non
+           l'inverse. Posé à opacity:0 dans la feuille de style, tout ce qui suit l'accroche —
+           soit vingt-trois blocs, la quasi-totalité de la page — disparaissait dès que le script
+           ne s'exécutait pas : rendu partiel, erreur en amont, budget d'exploration écourté.
+           Un moteur n'avait alors qu'une page d'accueil vide à indexer. */
+        html.anim-reveal .reveal { opacity: 0; transform: translateY(18px); transition: opacity .6s ease, transform .6s ease; }
+        html.anim-reveal .reveal.vis { opacity: 1; transform: none; }
         @media (prefers-reduced-motion: reduce) { .reveal { opacity: 1; transform: none; transition: none; } .scroll-hint .bounce { animation: none; } html { scroll-behavior: auto; } }
 
         /* ---------- RESPONSIVE ---------- */
@@ -289,6 +317,19 @@
             .hero { padding-top: 48px; }
         }
     </style>
+    <script>
+        /* L'animation d'apparition est un CONFORT : on ne l'arme que si le navigateur exécute
+           bien ce script, et un filet la désarme si la révélation n'a pas eu lieu. Le contenu
+           reste ainsi lisible dans tous les cas où le JavaScript manque à l'appel. */
+        (function () {
+            var racine = document.documentElement;
+            racine.classList.add('anim-reveal');
+            setTimeout(function () {
+                if (!document.querySelector('.reveal.vis')) racine.classList.remove('anim-reveal');
+            }, 2500);
+        })();
+    </script>
+    <noscript><style>.reveal { opacity: 1 !important; transform: none !important; }</style></noscript>
 </head>
 <body>
 
@@ -624,6 +665,8 @@
 </script>
 
 <div th:replace="~{admin/fragments :: cookieConsent}"></div>
+
+<th:block th:replace="~{public/fragments :: donneesStructurees}"></th:block>
 
 </body>
 </html>
