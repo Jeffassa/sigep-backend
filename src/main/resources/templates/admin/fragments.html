@@ -10,7 +10,13 @@
     <link rel="apple-touch-icon" th:href="@{/images/logo_sigep.png}"/>
     <!-- SEO -->
     <meta name="description" th:content="${pageDescription} ?: 'SIGEP — logiciel de gestion des émargements et du temps d’enseignement pour établissements du supérieur.'"/>
-    <meta name="robots" content="index,follow"/>
+    <!-- Ce fragment ne sert plus que des pages PRIVÉES (administration, plateforme) et la page
+         d'erreur : aucune n'a vocation à figurer dans un moteur de recherche. Le « Disallow »
+         du robots.txt ne suffit pas — il empêche la visite, pas l'inscription à l'index d'une
+         URL découverte par un lien, et l'accueil pointe vers /admin-login. Une page « Erreur »
+         ou « Connexion » occupait ainsi la place de l'accueil sur une recherche de marque.
+         Les pages publiques ont désormais leur propre en-tête, public/fragments :: head. -->
+    <meta name="robots" content="noindex,nofollow"/>
     <meta property="og:type" content="website"/>
     <meta property="og:title" th:content="${pageTitle}"/>
     <meta property="og:site_name" th:content="${marque} ?: 'SIGEP'"/>

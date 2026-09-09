@@ -204,7 +204,72 @@ public class SecurityConfig {
                         org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
                 .addHeaderWriter(new org.springframework.security.web.header.writers.StaticHeadersWriter(
                         "Permissions-Policy", "geolocation=(), microphone=(), camera=(), payment=(), usb=()"))
+                // Le cache par défaut de Spring Security posait « no-store » sur TOUT — feuilles
+                // de style, images et jusqu'au robots.txt étaient retéléchargés à chaque page.
+                // Sur les connexions mobiles de nos utilisateurs, c'est un coût réel, et « no-store »
+                // prive en plus le navigateur de son cache de retour arrière. On reprend donc la
+                // main : le refus de cache reste le DÉFAUT, et seules les ressources publiques
+                // énumérées ci-dessous y échappent.
+                .cacheControl(cache -> cache.disable())
+                .addHeaderWriter(SecurityConfig::ecrireCacheControl)
         );
+    }
+
+    /** Chemins publics par nature : aucun ne dépend de l'utilisateur connecté. */
+    private static final String[] STATIQUES_PUBLICS =
+            {"/css/", "/js/", "/images/", "/webjars/"};
+
+    private static final java.util.Set<String> FICHIERS_PUBLICS =
+            java.util.Set.of("/favicon.ico", "/robots.txt", "/sitemap.xml");
+
+    private static final java.util.Set<String> PAGES_PUBLIQUES =
+            java.util.Set.of("/", "/inscription", "/mentions-legales", "/confidentialite", "/cgu");
+
+    /**
+     * Politique de cache, décidée sur le seul chemin demandé.
+     *
+     * <p>Le défaut refuse toute conservation : une réponse d'administration ou d'API ne doit
+     * jamais être retenue par un navigateur ni par un intermédiaire. L'exception est étroite et
+     * ne porte que sur ce qui est identique pour tout le monde.
+     *
+     * <p>Les pages publiques reçoivent {@code max-age=0, must-revalidate} plutôt que
+     * {@code no-store} : le contenu reste revalidé à chaque visite — il ne se périme donc pas —
+     * mais le navigateur retrouve le droit de restituer instantanément la page lors d'un retour
+     * arrière, ce que {@code no-store} lui interdisait.
+     */
+    private static void ecrireCacheControl(jakarta.servlet.http.HttpServletRequest requete,
+                                           jakarta.servlet.http.HttpServletResponse reponse) {
+        String chemin = requete.getRequestURI();
+        if (chemin == null) {
+            chemin = "";
+        }
+
+        boolean statique = FICHIERS_PUBLICS.contains(chemin);
+        if (!statique) {
+            for (String prefixe : STATIQUES_PUBLICS) {
+                if (chemin.startsWith(prefixe)) {
+                    statique = true;
+                    break;
+                }
+            }
+        }
+
+        if (statique) {
+            // Une heure : assez pour épargner les rechargements d'une même visite, assez court
+            // pour qu'une correction de style parvienne aux visiteurs sans purge manuelle —
+            // ces fichiers ne portent pas d'empreinte de version dans leur nom.
+            reponse.setHeader("Cache-Control", "public, max-age=3600");
+            return;
+        }
+
+        if (PAGES_PUBLIQUES.contains(chemin)) {
+            reponse.setHeader("Cache-Control", "public, max-age=0, must-revalidate");
+            return;
+        }
+
+        reponse.setHeader("Cache-Control", "no-cache, no-store, max-age=0, must-revalidate");
+        reponse.setHeader("Pragma", "no-cache");
+        reponse.setHeader("Expires", "0");
     }
 
     /** Provider username/password (DAO). Volontairement NON exposé en @Bean : sinon Spring

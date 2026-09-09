@@ -162,6 +162,42 @@ public class TenantWebModelAdvice {
         return (e != null && e.getSlug() != null) ? "/admin/ecran-emargement/ouvrir" : null;
     }
 
+    /** URL publique du site, sans barre finale — socle des URL absolues du référencement. */
+    @Value("${app.base-url:https://sigep.store}")
+    private String baseUrl;
+
+    @ModelAttribute("baseUrl")
+    public String baseUrl() {
+        if (baseUrl == null || baseUrl.isBlank()) {
+            return "https://sigep.store";
+        }
+        return baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
+    }
+
+    /**
+     * URL canonique de la page courante : le CHEMIN seul, jamais la chaîne de requête.
+     *
+     * <p>Sans elle, chaque lien de campagne fabrique une URL concurrente — un lien collé dans
+     * WhatsApp ou LinkedIn revient avec ses propres paramètres, et le moteur voit autant de pages
+     * distinctes que de partages, chacune ne recevant qu'une fraction des signaux. Reprendre la
+     * requête dans le canonique reproduirait exactement le défaut qu'il corrige.
+     *
+     * <p>Elle est bâtie sur {@code app.base-url} et non sur l'hôte reçu : l'application répond
+     * aussi sur son adresse d'hébergement, et un canonique qui recopierait cet hôte désignerait
+     * une seconde version du site au lieu de la seule qui compte.
+     */
+    @ModelAttribute("canonicalUrl")
+    public String canonicalUrl(jakarta.servlet.http.HttpServletRequest requete) {
+        String chemin = requete != null ? requete.getRequestURI() : "/";
+        if (chemin == null || chemin.isBlank()) {
+            chemin = "/";
+        }
+        if (chemin.length() > 1 && chemin.endsWith("/")) {
+            chemin = chemin.substring(0, chemin.length() - 1);
+        }
+        return baseUrl() + chemin;
+    }
+
     private Etablissement etablissementCourant() {
         // Relu en base : plan, expiration et rappels reflètent un paiement récent sans reconnexion.
         return etablissementCourantService.courant();

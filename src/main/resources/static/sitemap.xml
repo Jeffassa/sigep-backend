@@ -1,8 +1,30 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Plan du site. Ne contient que les URL publiques répondant 200 à un visiteur anonyme.
+
+  « changefreq » et « priority » ont été retirés : les moteurs les ignorent depuis des années,
+  et les laisser donnait l'illusion de piloter quelque chose. Seul « lastmod » est lu — à
+  condition d'être exact, faute de quoi il est ignoré à son tour.
+-->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-    <url><loc>https://sigep.store/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
-    <url><loc>https://sigep.store/inscription</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
-    <url><loc>https://sigep.store/mentions-legales</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
-    <url><loc>https://sigep.store/confidentialite</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
-    <url><loc>https://sigep.store/cgu</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+    <url>
+        <loc>https://sigep.store/</loc>
+        <lastmod>2026-09-09</lastmod>
+    </url>
+    <url>
+        <loc>https://sigep.store/inscription</loc>
+        <lastmod>2026-09-09</lastmod>
+    </url>
+    <url>
+        <loc>https://sigep.store/mentions-legales</loc>
+        <lastmod>2026-09-09</lastmod>
+    </url>
+    <url>
+        <loc>https://sigep.store/confidentialite</loc>
+        <lastmod>2026-09-09</lastmod>
+    </url>
+    <url>
+        <loc>https://sigep.store/cgu</loc>
+        <lastmod>2026-09-09</lastmod>
+    </url>
 </urlset>
