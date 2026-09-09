@@ -48,7 +48,14 @@ public class SecurityConfig {
     @Order(1)
     public SecurityFilterChain adminWebFilterChain(HttpSecurity http) throws Exception {
         http
-                .securityMatcher("/admin/**", "/admin-login", "/admin-otp", "/plateforme/**")
+                // « /admin-otp » seul ne capte PAS « /admin-otp/renvoyer » : cette URL retombait
+                // sur la chaîne API, qui est STATELESS et ignore donc le cookie de session. Le
+                // bouton « Je n'ai rien reçu — renvoyer un code » recevait un 401 JSON, alors que
+                // c'est l'un des trois filets qui empêchent un administrateur d'être enfermé
+                // dehors. La règle .requestMatchers plus bas ne pouvait rien y faire : une chaîne
+                // n'arbitre que les URL qu'elle capte.
+                .securityMatcher("/admin/**", "/admin-login", "/admin-otp", "/admin-otp/**",
+                        "/plateforme/**")
                 // CSRF activé : Thymeleaf injecte automatiquement le token dans th:action
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/admin-login").permitAll()
