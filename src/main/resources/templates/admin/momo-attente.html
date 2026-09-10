@@ -68,7 +68,7 @@
 <div th:replace="~{admin/fragments :: palette}"></div>
 <div th:replace="~{admin/fragments :: scripts}"></div>
 
-<script th:inline="javascript">
+<script data-page-script th:inline="javascript">
     (function () {
         var ref = /*[[${intent.reference}]]*/ '';
         var boite = document.getElementById('etat');
@@ -84,6 +84,14 @@
         // Recul progressif : chaque sondage déclenche un appel réel au fournisseur. Marteler
         // toutes les 4 s indéfiniment le surchargerait et n'apporterait rien.
         var essais = 0, delai = 4000, MAX_ESSAIS = 90, timer = null;
+
+        // Cette page est remplacée sans rechargement quand l'administrateur s'en va. Sans ce
+        // démontage, le sondage continuait depuis la page suivante et, à la confirmation du
+        // paiement, la rechargeait — arrachant l'administrateur à l'écran où il travaillait.
+        if (window.__surDemontage) window.__surDemontage(function () {
+            fini = true;
+            if (timer) clearTimeout(timer);
+        });
 
         function planifier() {
             if (fini) return;

@@ -261,7 +261,7 @@
 <div th:replace="~{admin/fragments :: palette}"></div>
 <div th:replace="~{admin/fragments :: scripts}"></div>
 
-<script th:inline="none">
+<script data-page-script th:inline="none">
 (function () {
     var btn = document.getElementById('btnAnalyseIa');
     if (!btn) return;                                  // IA désactivée → bloc « règles » conservé

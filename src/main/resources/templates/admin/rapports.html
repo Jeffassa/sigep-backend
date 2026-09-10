@@ -17,7 +17,7 @@
          style="background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.35)">
         <span class="material-symbols-rounded text-[18px]" style="color:#10b981">check_circle</span><span th:text="${success}">OK</span>
     </div>
-    <div th:if="${error}" class="glass rounded-2xl p-3.5 mb-5 flex items-center gap-2 text-[13px]" data-reveal
+    <div data-flash th:if="${error}" class="glass rounded-2xl p-3.5 mb-5 flex items-center gap-2 text-[13px]" data-reveal
          style="border-color:rgba(186,26,26,.3)">
         <span class="material-symbols-rounded text-[18px]">error</span><span th:text="${error}">Erreur</span>
     </div>
@@ -154,7 +154,7 @@
 <div th:replace="~{admin/fragments :: palette}"></div>
 <div th:replace="~{admin/fragments :: scripts}"></div>
 
-<script>
+<script data-page-script>
     (function () {
         const d = document.getElementById('dateDebut'), f = document.getElementById('dateFin'), fg = document.getElementById('formGenerer');
         if (d && f && fg) {

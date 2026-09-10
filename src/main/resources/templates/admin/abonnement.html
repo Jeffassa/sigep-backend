@@ -124,7 +124,7 @@
             est appliqué dès la confirmation du paiement.
         </p>
 
-        <script th:inline="javascript">
+        <script data-page-script th:inline="javascript">
             (function () {
                 var sym = /*[[${symbole}]]*/ '€';
                 var p = document.getElementById('planSel'),
@@ -200,7 +200,7 @@
             Orange Money : obtenez d'abord votre code OTP en composant <strong class="text-ink">#144*82#</strong>.
         </p>
 
-        <script th:inline="javascript">
+        <script data-page-script th:inline="javascript">
             (function () {
                 var sym = /*[[${symbole}]]*/ 'FCFA';
                 var p = document.getElementById('momoPlan'), m = document.getElementById('momoMois'),

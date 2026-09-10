@@ -273,8 +273,8 @@
 <div th:replace="~{admin/fragments :: scripts}"></div>
 
 <!-- ECharts (data-viz de la vue d'ensemble) — chargé uniquement ici -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.6.0/echarts.min.js"></script>
-<script th:inline="javascript">
+<script data-page-script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.6.0/echarts.min.js"></script>
+<script data-page-script th:inline="javascript">
 /*<![CDATA[*/
 (function () {
     if (!window.echarts) return;
@@ -385,9 +385,19 @@
     }
     function buildAll() { buildLine(); buildDonut(); buildFunnel(); }
     buildAll();
-    window.addEventListener('resize', function(){ line.resize(); donut.resize(); funnel.resize(); });
+    var surRedimensionnement = function(){ line.resize(); donut.resize(); funnel.resize(); };
+    window.addEventListener('resize', surRedimensionnement);
     // Suivre le thème clair/sombre de l'app (bascule via la classe .dark sur <html>).
-    new MutationObserver(buildAll).observe(root, {attributes:true, attributeFilter:['class']});
+    var observateurTheme = new MutationObserver(buildAll);
+    observateurTheme.observe(root, {attributes:true, attributeFilter:['class']});
+
+    // Meme raison que sur le tableau de bord d'etablissement : la page est remplacee sans
+    // rechargement, ce qu'elle met en route doit savoir s'arreter.
+    if (window.__surDemontage) window.__surDemontage(function () {
+        window.removeEventListener('resize', surRedimensionnement);
+        observateurTheme.disconnect();
+        [line, donut, funnel].forEach(function (g) { if (g && g.dispose) g.dispose(); });
+    });
 })();
 /*]]>*/
 </script>
