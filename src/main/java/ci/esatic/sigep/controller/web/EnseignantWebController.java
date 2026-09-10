@@ -30,6 +30,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -65,11 +67,24 @@ public class EnseignantWebController {
         // Les archivés sortent de la liste courante, sauf demande explicite.
         String statutExclu = archives ? null : StatutEnseignant.ARCHIVE.name();
 
+        int pageDemandee = Math.max(page, 0);
         Page<Enseignant> pageResult = enseignantRepository.searchEnseignants(
-                searchParam, deptParam, statutExclu, TenantContext.get(), PageRequest.of(page, size));
+                searchParam, deptParam, statutExclu, TenantContext.get(),
+                PageRequest.of(pageDemandee, size));
+
+        // Une page peut disparaître sous les pieds de l'administrateur : archiver le dernier
+        // enseignant d'une deuxième page ramenait sur cette page devenue vide, avec le message
+        // « Statut mis a jour. » et « Aucun enseignant trouvé » côte à côte — alors que les dix
+        // autres étaient bien là, une page plus tôt. On se rabat sur la dernière page existante.
+        if (pageDemandee > 0 && pageDemandee >= pageResult.getTotalPages()) {
+            pageDemandee = Math.max(pageResult.getTotalPages() - 1, 0);
+            pageResult = enseignantRepository.searchEnseignants(
+                    searchParam, deptParam, statutExclu, TenantContext.get(),
+                    PageRequest.of(pageDemandee, size));
+        }
 
         model.addAttribute("enseignants", pageResult);
-        model.addAttribute("currentPage", page);
+        model.addAttribute("currentPage", pageDemandee);
         model.addAttribute("totalPages", pageResult.getTotalPages());
         model.addAttribute("totalElements", pageResult.getTotalElements());
         model.addAttribute("search", search);
@@ -211,9 +226,45 @@ public class EnseignantWebController {
         return "redirect:/admin/messages";
     }
 
+    /**
+     * Reconstruit l'adresse de la liste telle que l'administrateur l'avait sous les yeux.
+     *
+     * <p>Les actions de ligne renvoyaient toutes vers « /admin/enseignants » nu. Recherche,
+     * département, page et affichage des archivés étaient perdus : après avoir archivé un
+     * enseignant trouvé en page 3 d'une recherche, on se retrouvait au début d'une liste
+     * complète, sans le filtre qui avait permis de le trouver — et sans l'enseignant, qui
+     * venait précisément de sortir de la liste par défaut.
+     */
+    private String retourListe(String search, String departement, boolean archives, int page) {
+        StringBuilder url = new StringBuilder("redirect:/admin/enseignants");
+        char separateur = '?';
+        if (search != null && !search.isBlank()) {
+            url.append(separateur).append("search=")
+               .append(URLEncoder.encode(search, StandardCharsets.UTF_8));
+            separateur = '&';
+        }
+        if (departement != null && !departement.isBlank()) {
+            url.append(separateur).append("departement=")
+               .append(URLEncoder.encode(departement, StandardCharsets.UTF_8));
+            separateur = '&';
+        }
+        if (archives) {
+            url.append(separateur).append("archives=true");
+            separateur = '&';
+        }
+        if (page > 0) {
+            url.append(separateur).append("page=").append(page);
+        }
+        return url.toString();
+    }
+
     @PostMapping("/admin/enseignants/{id}/statut")
     public String updateStatut(@PathVariable Long id,
                                @RequestParam StatutEnseignant statut,
+                               @RequestParam(defaultValue = "") String search,
+                               @RequestParam(defaultValue = "") String departement,
+                               @RequestParam(defaultValue = "false") boolean archives,
+                               @RequestParam(defaultValue = "0") int page,
                                RedirectAttributes ra) {
         try {
             enseignantService.updateStatut(id, statut);
@@ -221,7 +272,7 @@ public class EnseignantWebController {
         } catch (Exception e) {
             ra.addFlashAttribute("error", "Mise à jour impossible.");
         }
-        return "redirect:/admin/enseignants";
+        return retourListe(search, departement, archives, page);
     }
 
     /**
@@ -233,12 +284,17 @@ public class EnseignantWebController {
      * le compte, ce qui emportait son historique.
      */
     @PostMapping("/admin/enseignants/{id}/renvoyer-acces")
-    public String renvoyerAcces(@PathVariable Long id, RedirectAttributes ra) {
+    public String renvoyerAcces(@PathVariable Long id,
+                                @RequestParam(defaultValue = "") String search,
+                                @RequestParam(defaultValue = "") String departement,
+                                @RequestParam(defaultValue = "false") boolean archives,
+                                @RequestParam(defaultValue = "0") int page,
+                                RedirectAttributes ra) {
         var enseignant = enseignantRepository.findById(id).orElse(null);
         if (enseignant == null || enseignant.getUser() == null) {
             ra.addFlashAttribute("error",
                     "Cet enseignant n'a pas de compte : renseignez son e-mail en le recreant.");
-            return "redirect:/admin/enseignants";
+            return retourListe(search, departement, archives, page);
         }
         String secret = ci.esatic.sigep.security.SecurityUtils.genererMotDePasseProvisoire();
         var compte = enseignant.getUser();
@@ -254,7 +310,7 @@ public class EnseignantWebController {
 
         ra.addFlashAttribute("success",
                 "Nouveaux acces envoyes a " + compte.getEmail() + ".");
-        return "redirect:/admin/enseignants";
+        return retourListe(search, departement, archives, page);
     }
 
     /**
@@ -274,13 +330,18 @@ public class EnseignantWebController {
      * et emporte son compte de connexion (cascade sur la relation user).
      */
     @PostMapping("/admin/enseignants/{id}/supprimer")
-    public String supprimerEnseignant(@PathVariable Long id, RedirectAttributes ra) {
+    public String supprimerEnseignant(@PathVariable Long id,
+                                      @RequestParam(defaultValue = "") String search,
+                                      @RequestParam(defaultValue = "") String departement,
+                                      @RequestParam(defaultValue = "false") boolean archives,
+                                      @RequestParam(defaultValue = "0") int page,
+                                      RedirectAttributes ra) {
         Enseignant enseignant = enseignantRepository.findById(id).orElse(null);
         if (enseignant == null) {
             // findById est filtré par établissement : un enseignant d'un autre tenant est
             // introuvable ici, et c'est le comportement voulu.
             ra.addFlashAttribute("error", "Enseignant introuvable.");
-            return "redirect:/admin/enseignants";
+            return retourListe(search, departement, archives, page);
         }
 
         List<String> attaches = new java.util.ArrayList<>();
@@ -296,7 +357,7 @@ public class EnseignantWebController {
                     + " est rattaché à " + String.join(", ", attaches)
                     + ". Archivez-le plutôt : il perd l'accès à l'application, sort de cette liste,"
                     + " et son historique reste intact.");
-            return "redirect:/admin/enseignants";
+            return retourListe(search, departement, archives, page);
         }
 
         try {
@@ -310,7 +371,7 @@ public class EnseignantWebController {
             ra.addFlashAttribute("error",
                     "Suppression impossible : des données dépendent encore de cet enseignant.");
         }
-        return "redirect:/admin/enseignants";
+        return retourListe(search, departement, archives, page);
     }
 
     /** Compose « 3 séances » ou « 1 rapport », et n'ajoute rien quand le compteur est nul. */

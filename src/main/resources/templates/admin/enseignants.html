@@ -35,7 +35,7 @@
          style="background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.35)">
         <span class="material-symbols-rounded text-[18px]" style="color:#10b981">check_circle</span><span th:text="${success}">OK</span>
     </div>
-    <div th:if="${error}" class="glass rounded-2xl p-3.5 mb-5 flex items-center gap-2 text-[13px]" data-reveal>
+    <div data-flash th:if="${error}" class="glass rounded-2xl p-3.5 mb-5 flex items-center gap-2 text-[13px]" data-reveal>
         <span class="material-symbols-rounded text-[18px]">error</span><span th:text="${error}">Erreur</span>
     </div>
 
@@ -54,7 +54,7 @@
         <label class="flex items-center gap-2 px-3 text-[13px] text-muted cursor-pointer select-none whitespace-nowrap"
                title="Les enseignants archivés sont masqués par défaut">
             <input type="checkbox" name="archives" value="true" th:checked="${archives}"
-                   onchange="this.form.submit()"
+                   onchange="if(this.form.requestSubmit)this.form.requestSubmit();else this.form.submit()"
                    class="w-4 h-4 rounded border-line accent-current cursor-pointer"/>
             Voir les archivés
         </label>
@@ -114,6 +114,14 @@
                     <td class="px-6 py-4">
                         <div class="flex items-center justify-end gap-2">
                             <form th:action="@{'/admin/enseignants/' + ${ens.id} + '/statut'}" method="post" class="flex items-center gap-1">
+                                <!-- La liste que l'administrateur a sous les yeux : recherche, département,
+                                     page et affichage des archivés. Sans eux, l'action le renvoyait au début
+                                     d'une liste complète, sans le filtre qui lui avait permis de trouver
+                                     l'enseignant — et sans l'enseignant, qui venait d'en sortir. -->
+                                <input type="hidden" name="search" th:value="${search}"/>
+                                <input type="hidden" name="departement" th:value="${departement}"/>
+                                <input type="hidden" name="archives" th:value="${archives}"/>
+                                <input type="hidden" name="page" th:value="${currentPage}"/>
                                 <select name="statut" class="bg-white/50 border border-line rounded-lg px-2 py-1 text-[12px] focus:ring-0 focus:border-ink">
                                     <option value="VALIDATED" th:selected="${ens.statut?.name() == 'VALIDATED'}">Valider</option>
                                     <option value="PENDING"   th:selected="${ens.statut?.name() == 'PENDING'}">Attente</option>
@@ -127,12 +135,20 @@
                             <form th:if="${ens.user != null}"
                                   th:action="@{'/admin/enseignants/' + ${ens.id} + '/renvoyer-acces'}" method="post"
                                   onsubmit="return confirm('Generer un nouveau mot de passe provisoire et l\'envoyer par e-mail ? L\'ancien cessera de fonctionner.')">
+                                <input type="hidden" name="search" th:value="${search}"/>
+                                <input type="hidden" name="departement" th:value="${departement}"/>
+                                <input type="hidden" name="archives" th:value="${archives}"/>
+                                <input type="hidden" name="page" th:value="${currentPage}"/>
                                 <button type="submit" class="btn w-8 h-8 rounded-lg border border-line flex items-center justify-center hover:bg-ink hover:text-white" title="Renvoyer les acces par e-mail">
                                     <span class="material-symbols-rounded text-[16px]">forward_to_inbox</span>
                                 </button>
                             </form>
                             <form th:action="@{'/admin/enseignants/' + ${ens.id} + '/supprimer'}" method="post"
                                   onsubmit="return confirm('Supprimer cet enseignant ?')">
+                                <input type="hidden" name="search" th:value="${search}"/>
+                                <input type="hidden" name="departement" th:value="${departement}"/>
+                                <input type="hidden" name="archives" th:value="${archives}"/>
+                                <input type="hidden" name="page" th:value="${currentPage}"/>
                                 <button type="submit" class="btn w-8 h-8 rounded-lg border border-line flex items-center justify-center hover:bg-ink hover:text-white" title="Supprimer">
                                     <span class="material-symbols-rounded text-[16px]">delete</span>
                                 </button>
@@ -151,10 +167,18 @@
             <div class="flex gap-1.5">
                 <a th:if="${currentPage > 0}" th:href="@{/admin/enseignants(search=${search}, departement=${departement}, archives=${archives}, page=${currentPage - 1})}"
                    class="btn glass w-9 h-9 rounded-lg flex items-center justify-center"><span class="material-symbols-rounded text-[18px]">chevron_left</span></a>
-                <th:block th:each="i : ${#numbers.sequence(0, totalPages - 1)}">
-                    <a th:if="${i != currentPage}" th:href="@{/admin/enseignants(search=${search}, departement=${departement}, archives=${archives}, page=${i})}"
-                       class="btn glass w-9 h-9 rounded-lg flex items-center justify-center font-mono text-[12px]" th:text="${i + 1}">1</a>
-                    <span th:if="${i == currentPage}" class="w-9 h-9 rounded-lg bg-ink text-white flex items-center justify-center font-mono text-[12px]" th:text="${i + 1}">1</span>
+                <!-- Le th:if est porté par un bloc EXTÉRIEUR : th:each s'évalue avant th:if sur
+                     une même balise, et la séquence serait construite malgré tout. Quand la liste
+                     est vide, totalPages vaut 0 et sequence(0, -1) ne rend pas une liste vide mais
+                     [0, -1] — d'où deux pastilles « 1 » et « 0 » menant à une page négative que le
+                     serveur refuse. C'est ce qui arrivait après avoir archivé le dernier résultat
+                     d'une recherche. -->
+                <th:block th:if="${totalPages > 0}">
+                    <th:block th:each="i : ${#numbers.sequence(0, totalPages - 1)}">
+                        <a th:if="${i != currentPage}" th:href="@{/admin/enseignants(search=${search}, departement=${departement}, archives=${archives}, page=${i})}"
+                           class="btn glass w-9 h-9 rounded-lg flex items-center justify-center font-mono text-[12px]" th:text="${i + 1}">1</a>
+                        <span th:if="${i == currentPage}" class="w-9 h-9 rounded-lg bg-ink text-white flex items-center justify-center font-mono text-[12px]" th:text="${i + 1}">1</span>
+                    </th:block>
                 </th:block>
                 <a th:if="${currentPage < totalPages - 1}" th:href="@{/admin/enseignants(search=${search}, departement=${departement}, archives=${archives}, page=${currentPage + 1})}"
                    class="btn glass w-9 h-9 rounded-lg flex items-center justify-center"><span class="material-symbols-rounded text-[18px]">chevron_right</span></a>

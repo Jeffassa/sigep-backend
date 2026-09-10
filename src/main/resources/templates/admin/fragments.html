@@ -136,7 +136,11 @@
     <button type="button" onclick="window.__logout&amp;&amp;window.__logout()" class="dock-item" data-label="Déconnexion">
         <span class="material-symbols-rounded">logout</span><span class="dock-tip">Déconnexion</span>
     </button>
-    <form id="logoutForm" th:action="@{/admin/logout}" method="post" class="hidden"></form>
+    <!-- data-no-boost : la déconnexion doit rester une VRAIE navigation. Elle aboutit à
+         /admin-login, hors du périmètre de l'administration ; interceptée, elle poserait la page
+         de connexion à l'intérieur du cadre admin, dock et en-tête toujours présents. Un
+         rechargement complet est ici la bonne réponse : il purge tout l'état de la page. -->
+    <form id="logoutForm" th:action="@{/admin/logout}" method="post" class="hidden" data-no-boost></form>
 </nav>
 
 <!-- ============================ PALETTE ⌘K ============================ -->
@@ -183,6 +187,16 @@
      rendu de TOUTES les pages d'administration. C'est deja arrive. -->
 <script th:inline="none">
 (function () {
+    /* ----- Démontage des scripts de page -----------------------------------------------
+       Les pages sont remplacées sans rechargement : ce que leur script met en route leur
+       survivrait. Un script de page déclare ici comment se défaire — minuterie, écouteur sur
+       window, observateur — et la navigation l'appelle avant de le rejouer. Hors navigation
+       instantanée, la fonction existe quand même et ne sert simplement à rien : le rechargement
+       fait déjà le ménage. */
+    window.__surDemontage = function (nettoyer) {
+        (window.__demontagesDePage || (window.__demontagesDePage = [])).push(nettoyer);
+    };
+
     /* ----- Déconnexion via POST (CSRF) ----- */
     window.__logout = function () { var f = document.getElementById('logoutForm'); if (f) f.submit(); };
 
@@ -395,6 +409,71 @@
 
         var enCours = false;
 
+        /* --- Rejoue les scripts propres à la page qui vient d'arriver ---------------------
+           Un contenu posé par innerHTML n'exécute AUCUN script : le navigateur les recopie
+           inertes. Les pages dont les commandes vivent dans un script — le calculateur de
+           l'abonnement, les graphiques, la synthèse des rapports — arrivaient donc complètes
+           à l'œil et mortes au clic. Pire pour celles dont le script est écrit HORS du <main> :
+           il n'était même pas recopié.
+
+           Seuls les scripts marqués « data-page-script » sont rejoués. Le script commun de ce
+           fragment, lui, ne doit surtout pas l'être : le réexécuter réarmerait une seconde fois
+           la navigation, la palette et le reste, et chaque clic partirait en double. */
+        function rejouerScriptsDePage(doc) {
+            // Retirer la balise d'un script n'annule RIEN de ce qu'il a mis en route : ni une
+            // minuterie, ni un écouteur sur window, ni un observateur. Rejoué à chaque passage,
+            // le tableau de bord empilait ainsi une interrogation du serveur toutes les cinq
+            // secondes par visite — une matinée de navigation suffisait à en faire une dizaine
+            // en parallèle. Chaque script de page annonce donc ici de quoi se démonter.
+            var aDemonter = window.__demontagesDePage || [];
+            window.__demontagesDePage = [];
+            aDemonter.forEach(function (nettoyer) {
+                try { nettoyer(); } catch (e) { /* un nettoyage fautif ne doit pas bloquer les autres */ }
+            });
+
+            // On retire ceux de la page qu'on quitte : sans cela, ils s'accumuleraient.
+            document.querySelectorAll('script[data-page-script]').forEach(function (vieux) {
+                vieux.parentNode.removeChild(vieux);
+            });
+
+            // Le retrait ci-dessus efface la trace des bibliothèques déjà exécutées, mais pas
+            // leurs effets : on la garde donc HORS du DOM. Relevée après coup dans le document,
+            // elle serait toujours vide, et ECharts — la seule bibliothèque partagée — serait
+            // retéléchargé puis réévalué à chaque entrée sur un tableau de bord, écrasant
+            // « window.echarts » sous les graphiques qu'on vient d'y construire.
+            var dejaCharges = window.__bibliothequesDePage || (window.__bibliothequesDePage = {});
+            document.querySelectorAll('script[src]').forEach(function (s) { dejaCharges[s.src] = true; });
+
+            // Les scripts sont posés UN PAR UN, chacun attendant le précédent. Les enchaîner est
+            // indispensable : « async = false » n'ordonne que les scripts EXTERNES entre eux,
+            // tandis qu'un script EN LIGNE inséré par script s'exécute immédiatement. Posés d'un
+            // bloc, le code d'une page partait donc avant que sa bibliothèque soit arrivée — et
+            // le tableau de bord, qui abandonne sur « if (!window.echarts) return », affichait
+            // trois cadres vides à la première visite, puis fonctionnait au passage suivant.
+            var restants = Array.prototype.slice.call(doc.querySelectorAll('script[data-page-script]'));
+            (function suivant() {
+                if (!restants.length) return;
+                var ancien = restants.shift();
+                if (ancien.src && dejaCharges[ancien.src]) { suivant(); return; }
+
+                var neuf = document.createElement('script');
+                for (var i = 0; i < ancien.attributes.length; i++) {
+                    neuf.setAttribute(ancien.attributes[i].name, ancien.attributes[i].value);
+                }
+                if (ancien.src) {
+                    dejaCharges[ancien.src] = true;
+                    // On reprend à la fin du chargement — y compris en cas d'échec, sans quoi une
+                    // bibliothèque injoignable figerait tout le reste de la page.
+                    neuf.onload = neuf.onerror = suivant;
+                    document.body.appendChild(neuf);
+                } else {
+                    neuf.textContent = ancien.textContent;
+                    document.body.appendChild(neuf);
+                    suivant();
+                }
+            })();
+        }
+
         /* --- Remplace le contenu de la page à partir du HTML reçu --- */
         function appliquer(html, urlFinale, options) {
             var doc = new DOMParser().parseFromString(html, 'text/html');
@@ -414,12 +493,15 @@
                     actuel.className = neuf.className;
                 }
             });
-            var dock = document.getElementById('dock');
-            if (dock) { dock.dataset.ready = ''; setupDock(); }
+            // Le dock n'est PAS réarmé : ses écouteurs sont posés sur l'élément lui-même, que
+            // l'on conserve, et setupDock relit ses éléments à chaque mouvement. Le réarmer
+            // empilait deux écouteurs de plus à chaque navigation — après vingt pages, quarante
+            // gestionnaires exécutaient le même calcul à chaque déplacement de souris.
 
             var titre = doc.querySelector('title');
             if (titre) document.title = titre.textContent;
 
+            rejouerScriptsDePage(doc);
             setupMobileTables();
             armerFlash();
             if (options && options.animer) setupReveal();
@@ -431,6 +513,9 @@
         /* --- Suit un lien --- */
         function aller(url, poussee) {
             if (enCours) return;
+            // La palette se refermait autrefois d'elle-même : le rechargement de page l'emportait.
+            // Sans rechargement, elle restait affichée par-dessus la page qu'elle venait d'ouvrir.
+            if (window.__closePalette) window.__closePalette();
             enCours = true;
             progression('debut');
             // On mémorise la position AVANT de partir : c'est elle que le retour arrière rendra.
