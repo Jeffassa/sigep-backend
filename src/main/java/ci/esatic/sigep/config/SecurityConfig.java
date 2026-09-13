@@ -174,6 +174,15 @@ public class SecurityConfig {
                 // Requête API non authentifiée (token absent/expiré/invalide) → 401 (et non 403),
                 // ce qui permet au client mobile de déclencher le rafraîchissement du token.
                 .exceptionHandling(ex -> ex.authenticationEntryPoint((request, response, authEx) -> {
+                    // Une adresse qui n'existe pas tombe ici, faute d'être servie par une route :
+                    // « anyRequest().authenticated() » la bloque avant même le contrôleur. Un
+                    // visiteur qui suivait un lien mort recevait donc du JSON brut, et un moteur
+                    // de recherche un 401 là où un 404 lui aurait permis de retirer l'adresse de
+                    // son index — un 401 partout peut même passer pour un site fermé.
+                    if (estNavigation(request)) {
+                        response.sendError(jakarta.servlet.http.HttpServletResponse.SC_NOT_FOUND);
+                        return;
+                    }
                     response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED);
                     response.setContentType("application/json;charset=UTF-8");
                     response.getWriter().write("{\"success\":false,\"message\":\"Authentification requise\"}");
@@ -213,6 +222,31 @@ public class SecurityConfig {
                 .cacheControl(cache -> cache.disable())
                 .addHeaderWriter(SecurityConfig::ecrireCacheControl)
         );
+    }
+
+    /**
+     * Cette requête est-elle une navigation dans un navigateur, plutôt qu'un appel programmatique ?
+     *
+     * <p>La distinction commande la réponse à donner à un accès refusé. Le client mobile a besoin
+     * d'un <b>401</b> sur les routes d'API : c'est ce code qui déclenche chez lui le
+     * rafraîchissement du jeton, et le lui retirer casserait le renouvellement silencieux des
+     * sessions. Les espaces techniques — supervision, documentation OpenAPI — gardent eux aussi
+     * leur 401, plus juste pour un outil ou un administrateur qui s'est trompé d'adresse.
+     *
+     * <p>Tout le reste, demandé en HTML, ne peut être qu'une adresse qui n'existe pas : les pages
+     * publiques sont explicitement autorisées, et l'administration relève de l'autre chaîne.
+     */
+    private static boolean estNavigation(jakarta.servlet.http.HttpServletRequest requete) {
+        String chemin = requete.getRequestURI();
+        if (chemin == null) {
+            return false;
+        }
+        if (chemin.startsWith("/api/") || chemin.startsWith("/actuator")
+                || chemin.startsWith("/v3/api-docs") || chemin.startsWith("/swagger-ui")) {
+            return false;
+        }
+        String accept = requete.getHeader("Accept");
+        return accept != null && accept.contains("text/html");
     }
 
     /** Chemins publics par nature : aucun ne dépend de l'utilisateur connecté. */

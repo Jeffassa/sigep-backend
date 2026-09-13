@@ -151,6 +151,32 @@ class ReferencementPagesPubliquesTest {
     }
 
     @Test
+    void uneAdresseInexistante_repond404AuNavigateur_etNonDuJsonBrut() throws Exception {
+        // Un 401 sur toute adresse inconnue empêche un moteur de retirer de son index les pages
+        // supprimées, et affichait du JSON brut au visiteur venu d'un lien mort.
+        int statut = mockMvc.perform(get("/page-qui-nexiste-pas")
+                        .header("Accept", "text/html,application/xhtml+xml"))
+                .andReturn().getResponse().getStatus();
+        assertThat(statut).isEqualTo(404);
+    }
+
+    @Test
+    void lesRoutesDApi_gardentLeur401_dontDependLeMobile() throws Exception {
+        // Non-négociable : c'est ce code qui déclenche le rafraîchissement du jeton côté mobile.
+        // Le lui retirer casserait le renouvellement silencieux des sessions.
+        for (String url : new String[] {"/api/seances/a-emarger", "/api/profil"}) {
+            assertThat(mockMvc.perform(get(url).header("Accept", "application/json"))
+                            .andReturn().getResponse().getStatus())
+                    .as("statut de " + url).isEqualTo(401);
+        }
+
+        // Même une requête d'API émise par un navigateur doit garder son 401.
+        assertThat(mockMvc.perform(get("/api/seances/a-emarger").header("Accept", "text/html"))
+                        .andReturn().getResponse().getStatus())
+                .isEqualTo(401);
+    }
+
+    @Test
     void lesPagesPrivees_seDeclarentNonIndexables() throws Exception {
         // /admin-login reste explorable exprès : liée depuis l'accueil, elle doit être visitée
         // pour que son « noindex » soit lu et qu'elle quitte l'index.

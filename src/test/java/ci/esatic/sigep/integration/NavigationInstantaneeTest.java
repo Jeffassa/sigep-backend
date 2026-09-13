@@ -226,6 +226,50 @@ class NavigationInstantaneeTest {
         }
     }
 
+    @Test
+    void uneSessionExpiree_rendLaMainAuNavigateur() throws Exception {
+        String fragments = gabarit("admin/fragments.html");
+
+        // Le serveur redirige vers la connexion, fetch suit la redirection en silence, et la
+        // page de connexion — qui possède elle aussi un <main> — était posée DANS le cadre :
+        // formulaire de connexion sous un dock actif, en-tête d'un établissement dont la
+        // session n'existe plus. Le critère est l'ADRESSE d'arrivée, et non l'absence de dock :
+        // /plateforme n'en a pas, et resterait sans protection.
+        assertThat(fragments).contains("options.urlReponse");
+        assertThat(fragments).as("les trois chemins doivent fournir l'adresse d'arrivee")
+                .satisfies(f -> assertThat(compter(f, "urlReponse: res.url")).isEqualTo(3));
+    }
+
+    @Test
+    void laPalette_seFermeMemeQuandLaNavigationEstRefusee() throws Exception {
+        String fragments = gabarit("admin/fragments.html");
+
+        // Le chemin où l'on REFUSE de naviguer est justement celui où la palette resterait
+        // ouverte pour rien : une navigation déjà en cours avalait le clic en silence.
+        int debut = fragments.indexOf("function aller(");
+        int fermeture = fragments.indexOf("__closePalette", debut);
+        int garde = fragments.indexOf("if (enCours) return;", debut);
+        assertThat(fermeture).as("la fermeture doit preceder le garde").isLessThan(garde);
+    }
+
+    @Test
+    void laPalette_seFermeAussiAuRetourArriere() throws Exception {
+        // Les trois chemins — lien, formulaire, retour arrière — passent par appliquer().
+        String fragments = gabarit("admin/fragments.html");
+        int appliquer = fragments.indexOf("function appliquer(");
+        int fin = fragments.indexOf("function aller(", appliquer);
+        assertThat(fragments.substring(appliquer, fin))
+                .as("la fermeture centralisee couvre le retour arriere et les formulaires")
+                .contains("__closePalette");
+    }
+
+    @Test
+    void leDefilementDuDock_estPreserveSurTelephone() throws Exception {
+        // Le dock déborde sur petit écran ; remplacer son contenu le ramenait à gauche, et
+        // l'icône active sortait de l'écran à chaque page.
+        assertThat(gabarit("admin/fragments.html")).contains("actuel.scrollLeft = glissement");
+    }
+
     private static int compter(String texte, String motif) {
         int n = 0;
         for (int i = texte.indexOf(motif); i >= 0; i = texte.indexOf(motif, i + motif.length())) {
