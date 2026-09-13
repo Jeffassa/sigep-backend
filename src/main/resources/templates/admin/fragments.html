@@ -476,6 +476,27 @@
 
         /* --- Remplace le contenu de la page à partir du HTML reçu --- */
         function appliquer(html, urlFinale, options) {
+            options = options || {};
+
+            /* Session expirée : la réponse n'est plus une page d'administration.
+               Le serveur redirige vers la connexion, fetch suit la redirection en silence, et
+               la page de connexion — qui possède elle aussi un <main> — était posée DANS le
+               cadre : formulaire de connexion sous un dock actif, palette toujours ouvrable,
+               en-tête d'un établissement dont la session n'existe plus. On reconnaît le cas à
+               l'ADRESSE d'arrivée, seul critère qui vaille aussi pour /plateforme, lequel n'a
+               pas de dock. Rendre « false » fait retomber les appelants sur une vraie
+               navigation : page de connexion propre, et tout l'état de la page purgé. */
+            if (options.urlReponse) {
+                var arrivee = null;
+                try { arrivee = new URL(options.urlReponse, location.href); } catch (e) { arrivee = null; }
+                if (arrivee && !dansPerimetre(arrivee.pathname)) return false;
+            }
+
+            // La palette survivrait au changement de page : elle resterait affichée par-dessus
+            // celle qui vient d'arriver. Ici plutôt que dans chaque appelant, car les trois
+            // chemins — lien, formulaire, retour arrière — passent tous par cette fonction.
+            if (window.__closePalette) window.__closePalette();
+
             var doc = new DOMParser().parseFromString(html, 'text/html');
             var neufMain = doc.querySelector('main');
             if (!neufMain) return false;                 // réponse inattendue : on laisse le navigateur faire
@@ -489,8 +510,12 @@
             ['header', '#dock'].forEach(function (sel) {
                 var neuf = doc.querySelector(sel), actuel = document.querySelector(sel);
                 if (neuf && actuel) {
+                    // Sur téléphone le dock déborde et se fait défiler : remplacer son contenu
+                    // remet le défilement à gauche, et l'icône active sortait de l'écran.
+                    var glissement = actuel.scrollLeft;
                     actuel.innerHTML = neuf.innerHTML;
                     actuel.className = neuf.className;
+                    actuel.scrollLeft = glissement;
                 }
             });
             // Le dock n'est PAS réarmé : ses écouteurs sont posés sur l'élément lui-même, que
@@ -512,10 +537,12 @@
 
         /* --- Suit un lien --- */
         function aller(url, poussee) {
-            if (enCours) return;
-            // La palette se refermait autrefois d'elle-même : le rechargement de page l'emportait.
-            // Sans rechargement, elle restait affichée par-dessus la page qu'elle venait d'ouvrir.
+            // Fermée AVANT le garde, et non après : le chemin où l'on REFUSE de naviguer est
+            // justement celui où la palette resterait ouverte pour rien. Une navigation déjà en
+            // cours — un POST lent — avalait le clic en silence, laissant l'administrateur
+            // devant une palette qui ne répondait plus.
             if (window.__closePalette) window.__closePalette();
+            if (enCours) return;
             enCours = true;
             progression('debut');
             // On mémorise la position AVANT de partir : c'est elle que le retour arrière rendra.
@@ -528,7 +555,9 @@
                 })
                 .then(function (res) {
                     if (poussee) history.pushState({ y: 0 }, '', res.url);
-                    if (!appliquer(res.html, null, { animer: true })) { location.href = url; return; }
+                    if (!appliquer(res.html, null, { animer: true, urlReponse: res.url })) {
+                        location.href = url; return;
+                    }
                     window.scrollTo(0, 0);               // nouvelle page : on repart du haut
                 })
                 .catch(function () { location.href = url; })   // repli : navigation classique
@@ -556,7 +585,7 @@
                     return r.text().then(function (t) { return { html: t, url: r.url || action }; });
                 })
                 .then(function (res) {
-                    if (!appliquer(res.html, res.url, {})) { echec(); return; }
+                    if (!appliquer(res.html, res.url, { urlReponse: res.url })) { echec(); return; }
                     history.replaceState({ y: y }, '', res.url);
                     window.scrollTo(0, y);               // action en place : on ne bouge pas
                 })
@@ -615,9 +644,14 @@
             enCours = true;
             progression('debut');
             fetch(location.href, { credentials: 'same-origin', headers: { 'X-Requested-With': 'fetch' } })
-                .then(function (r) { return r.ok ? r.text() : null; })
-                .then(function (html) {
-                    if (!html || !appliquer(html, null, { animer: true })) { location.reload(); return; }
+                .then(function (r) {
+                    if (!r.ok) return null;
+                    return r.text().then(function (t) { return { html: t, url: r.url }; });
+                })
+                .then(function (res) {
+                    if (!res || !appliquer(res.html, null, { animer: true, urlReponse: res.url })) {
+                        location.reload(); return;
+                    }
                     window.scrollTo(0, y);               // on rend la position quittée
                 })
                 .catch(function () { location.reload(); })
