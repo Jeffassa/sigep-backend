@@ -222,14 +222,15 @@
         .b-stats { grid-column: span 4; }
         .b-people { grid-column: span 3; }
         .b-plan { grid-column: span 3; }
-        .qr-box { margin: 16px auto 6px; width: 128px; height: 128px; border-radius: 16px; background:
-            conic-gradient(var(--text) 0 0) 0 0/16px 16px, var(--bg-2);
-            position: relative; display: grid; place-items: center; border: 1px solid var(--border); }
-        .qr-box::after { content:''; position:absolute; inset: 10px; border-radius: 10px;
-            background-image:
-              linear-gradient(90deg, var(--text) 2px, transparent 0),
-              linear-gradient(var(--text) 2px, transparent 0);
-            background-size: 12px 12px; opacity: .85; }
+        /* Le motif est un SVG, et non plus un fond CSS. Le dégradé conique employé ici ne
+           produisait pas le damier attendu mais un aplat de la couleur du texte, et la grille
+           superposée se dessinait dans cette même couleur : du clair sur du clair. La carte
+           qui illustre la fonction principale du produit n'affichait donc qu'un carré vide.
+           Un code reste sombre sur fond clair, même en thème sombre : c'est ainsi qu'on le
+           reconnaît, et qu'un téléphone saurait le lire. */
+        .qr-box { display: block; margin: 16px auto 6px; width: 128px; height: 128px;
+            border-radius: 16px; border: 1px solid var(--border); padding: 9px;
+            background: #f8f8f8; }
         .qr-timer { text-align: center; font-size: 12px; color: var(--accent); font-weight: 600; }
         .mini-metrics { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-top: 16px; }
         .mini-metrics .m { background: var(--bg-2); border: 1px solid var(--border); border-radius: 12px; padding: 11px; }
@@ -465,7 +466,7 @@
             <div class="card b-qr reveal">
                 <div class="k">Émargement QR</div>
                 <div class="s">Scanné en salle, renouvelé en continu</div>
-                <div class="qr-box"></div>
+                <svg class="qr-box" viewBox="0 0 25 25" role="img" aria-label="Exemple de QR code d'émargement" shape-rendering="crispEdges"><rect width="25" height="25" rx="1.6" fill="#f8f8f8"/><path d="M0 0h7v1h-7zM12 0h2v1h-2zM18 0h7v1h-7zM0 1h1v1h-1zM6 1h1v1h-1zM8 1h3v1h-3zM12 1h1v1h-1zM14 1h3v1h-3zM18 1h1v1h-1zM24 1h1v1h-1zM0 2h1v1h-1zM2 2h3v1h-3zM6 2h1v1h-1zM9 2h1v1h-1zM12 2h1v1h-1zM14 2h1v1h-1zM18 2h1v1h-1zM20 2h3v1h-3zM24 2h1v1h-1zM0 3h1v1h-1zM2 3h3v1h-3zM6 3h1v1h-1zM8 3h1v1h-1zM13 3h1v1h-1zM18 3h1v1h-1zM20 3h3v1h-3zM24 3h1v1h-1zM0 4h1v1h-1zM2 4h3v1h-3zM6 4h1v1h-1zM8 4h1v1h-1zM11 4h1v1h-1zM15 4h1v1h-1zM18 4h1v1h-1zM20 4h3v1h-3zM24 4h1v1h-1zM0 5h1v1h-1zM6 5h1v1h-1zM9 5h1v1h-1zM11 5h1v1h-1zM15 5h2v1h-2zM18 5h1v1h-1zM24 5h1v1h-1zM0 6h7v1h-7zM8 6h1v1h-1zM10 6h3v1h-3zM14 6h1v1h-1zM18 6h7v1h-7zM12 7h1v1h-1zM15 7h1v1h-1zM0 8h2v1h-2zM3 8h1v1h-1zM5 8h1v1h-1zM8 8h1v1h-1zM11 8h1v1h-1zM13 8h2v1h-2zM19 8h2v1h-2zM23 8h1v1h-1zM0 9h2v1h-2zM6 9h1v1h-1zM8 9h3v1h-3zM12 9h1v1h-1zM16 9h2v1h-2zM19 9h1v1h-1zM0 10h3v1h-3zM5 10h1v1h-1zM8 10h1v1h-1zM10 10h2v1h-2zM16 10h3v1h-3zM20 10h2v1h-2zM1 11h1v1h-1zM3 11h2v1h-2zM6 11h1v1h-1zM8 11h2v1h-2zM17 11h1v1h-1zM19 11h2v1h-2zM4 12h1v1h-1zM6 12h2v1h-2zM12 12h2v1h-2zM16 12h2v1h-2zM20 12h1v1h-1zM22 12h2v1h-2zM0 13h1v1h-1zM3 13h3v1h-3zM7 13h3v1h-3zM11 13h2v1h-2zM14 13h1v1h-1zM18 13h1v1h-1zM20 13h1v1h-1zM23 13h1v1h-1zM0 14h1v1h-1zM12 14h1v1h-1zM14 14h1v1h-1zM17 14h3v1h-3zM24 14h1v1h-1zM1 15h1v1h-1zM3 15h1v1h-1zM5 15h1v1h-1zM7 15h2v1h-2zM11 15h2v1h-2zM17 15h5v1h-5zM23 15h2v1h-2zM2 16h1v1h-1zM6 16h2v1h-2zM11 16h5v1h-5zM20 16h1v1h-1zM22 16h1v1h-1zM24 16h1v1h-1zM8 17h2v1h-2zM11 17h1v1h-1zM13 17h2v1h-2zM17 17h2v1h-2zM22 17h1v1h-1zM0 18h7v1h-7zM8 18h3v1h-3zM14 18h5v1h-5zM20 18h2v1h-2zM0 19h1v1h-1zM6 19h1v1h-1zM9 19h1v1h-1zM11 19h1v1h-1zM13 19h3v1h-3zM18 19h1v1h-1zM20 19h1v1h-1zM22 19h1v1h-1zM0 20h1v1h-1zM2 20h3v1h-3zM6 20h1v1h-1zM11 20h1v1h-1zM13 20h6v1h-6zM21 20h2v1h-2zM24 20h1v1h-1zM0 21h1v1h-1zM2 21h3v1h-3zM6 21h1v1h-1zM8 21h1v1h-1zM10 21h4v1h-4zM20 21h1v1h-1zM23 21h1v1h-1zM0 22h1v1h-1zM2 22h3v1h-3zM6 22h1v1h-1zM9 22h1v1h-1zM11 22h1v1h-1zM13 22h2v1h-2zM16 22h2v1h-2zM19 22h1v1h-1zM21 22h1v1h-1zM23 22h2v1h-2zM0 23h1v1h-1zM6 23h1v1h-1zM10 23h2v1h-2zM13 23h1v1h-1zM15 23h1v1h-1zM19 23h1v1h-1zM21 23h2v1h-2zM0 24h7v1h-7zM8 24h2v1h-2zM11 24h1v1h-1zM13 24h1v1h-1zM15 24h7v1h-7zM23 24h1v1h-1z" fill="#0a0a0b"/></svg>
                 <div class="qr-timer">Nouveau code dans 15 s</div>
             </div>
             <!-- Stats -->
