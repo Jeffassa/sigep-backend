@@ -50,6 +50,23 @@ class TenantIsolationGuardTest {
                    // reviendrait a les cacher au super-administrateur.
                    "EvenementSecurite");
 
+    /**
+     * Requêtes natives autorisées à ne pas filtrer par établissement.
+     *
+     * <p>La liste doit rester courte et chaque entrée porter sa raison : une requête native
+     * échappe au filtre Hibernate, et l'y soustraire sans justification ouvrirait une lecture
+     * entre établissements. On inscrit donc l'exception ici, là où elle se relit, plutôt que
+     * d'assouplir la règle.
+     *
+     * <p><b>CleApiRepository.chercherActiveParEmpreinte</b> : c'est la requête
+     * d'authentification de l'API. Au moment où elle s'exécute, l'établissement n'est pas encore
+     * connu — c'est précisément la clé qui va le désigner. Le filtrer par un établissement qu'on
+     * ignore encore n'aurait aucun sens. L'établissement lu devient ensuite le seul périmètre de
+     * la requête, posé par TenantInterceptor à partir de CleApiPrincipal.
+     */
+    private static final Set<String> REQUETES_SANS_TENANT_JUSTIFIEES =
+            Set.of("CleApiRepository.chercherActiveParEmpreinte");
+
     @Test
     void toutesLesEntitesMetierSontCloisonneesParTenant() throws Exception {
         var provider = new ClassPathScanningCandidateComponentProvider(false);
@@ -95,8 +112,10 @@ class TenantIsolationGuardTest {
                 Query q = m.getAnnotation(Query.class);
                 if (q == null || !q.nativeQuery()) continue;
                 String sql = (q.value() + " " + q.countQuery()).toLowerCase();
-                if (!sql.contains("etablissement_id")) {
-                    fautives.add(repo.getSimpleName() + "." + m.getName());
+                String signature = repo.getSimpleName() + "." + m.getName();
+                if (!sql.contains("etablissement_id")
+                        && !REQUETES_SANS_TENANT_JUSTIFIEES.contains(signature)) {
+                    fautives.add(signature);
                 }
             }
         }

@@ -33,6 +33,7 @@ public class SecurityConfig {
     private final ci.esatic.sigep.service.MailService mailService;
     private final ci.esatic.sigep.service.JournalSecuriteService journalSecurite;
     private final ci.esatic.sigep.security.ClientIpResolver clientIpResolver;
+    private final ci.esatic.sigep.security.CleApiAuthFilter cleApiAuthFilter;
 
     /** Voir {@link AdminOtpInterceptor} : interrupteur de secours du second facteur. */
     @org.springframework.beans.factory.annotation.Value("${app.security.admin-otp.enabled:true}")
@@ -133,9 +134,44 @@ public class SecurityConfig {
         return http.build();
     }
 
-    /** Chaîne 2 : API REST — JWT stateless */
+    /**
+     * Chaîne 2 : API publique des établissements — authentifiée par clé.
+     *
+     * <p>Déclarée AVANT la chaîne JWT : sans cela, « /api/public/** » retomberait sur
+     * « anyRequest().authenticated() », qui attend un jeton d'enseignant et refuserait toute
+     * clé. Ordonner les chaînes est ici une question de fonctionnement, pas de style.
+     *
+     * <p>Sans état et sans CSRF : ce sont des appels de serveur à serveur, sans navigateur ni
+     * session. L'authentification est entièrement portée par le filtre de clé.
+     */
     @Bean
     @Order(2)
+    public SecurityFilterChain apiPubliqueFilterChain(HttpSecurity http) throws Exception {
+        http
+                .securityMatcher("/api/public/**")
+                .csrf(AbstractHttpConfigurer::disable)
+                .cors(Customizer.withDefaults())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth.anyRequest().hasRole("API"))
+                // Le filtre pose l'identité : il doit donc passer avant l'autorisation.
+                .addFilterBefore(cleApiAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
+                .exceptionHandling(ex -> ex.authenticationEntryPoint((requete, reponse, e) -> {
+                    reponse.setStatus(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED);
+                    reponse.setContentType("application/json;charset=UTF-8");
+                    reponse.getWriter().write(
+                            "{\"success\":false,\"message\":\"Clé d'API requise.\"}");
+                }));
+        appliquerHeadersSecurite(http);
+        if (requireHttps) {
+            http.requiresChannel(c -> c.anyRequest().requiresSecure());
+        }
+        return http.build();
+    }
+
+    /** Chaîne 3 : API REST — JWT stateless */
+    @Bean
+    @Order(3)
     public SecurityFilterChain apiFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)

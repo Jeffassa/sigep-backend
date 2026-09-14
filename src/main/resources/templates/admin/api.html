@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('SIGEP | API')}"></head>
+<body>
+
+<div th:replace="~{admin/fragments :: topbar('api')}"></div>
+
+<main class="max-w-[1000px] mx-auto px-5 md:px-8 py-10 pb-36">
+
+    <div class="mb-8" data-reveal>
+        <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mb-2">Intégration</p>
+        <h1 class="font-serif text-[clamp(34px,5vw,52px)] leading-[1.02] tracking-tight">API</h1>
+        <p class="text-[14px] text-muted mt-3">Lisez vos séances, vos enseignants et vos émargements depuis vos propres outils.</p>
+    </div>
+
+    <div data-flash th:if="${success}" class="glass rounded-2xl p-3.5 mb-5 flex items-center gap-2 text-[13px]" data-reveal
+         style="background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.35)">
+        <span class="material-symbols-rounded text-[18px]" style="color:#10b981">check_circle</span><span th:text="${success}">OK</span>
+    </div>
+    <div data-flash th:if="${error}" class="glass rounded-2xl p-3.5 mb-5 flex items-center gap-2 text-[13px]" data-reveal>
+        <span class="material-symbols-rounded text-[18px]">error</span><span th:text="${error}">Erreur</span>
+    </div>
+
+    <!-- La clé n'est montrée qu'ici, et une seule fois : elle n'est conservée nulle part en
+         clair, pas même par nous. Un rechargement ne la fera pas réapparaître. -->
+    <div th:if="${cleEnClair}" class="glass-strong rounded-3xl p-6 mb-6" data-reveal
+         style="border-color:rgba(16,185,129,.45)">
+        <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Votre clé</p>
+        <p class="font-mono text-[15px] break-all mb-3" th:text="${cleEnClair}">sigep_…</p>
+        <p class="text-[13px] text-muted">Copiez-la maintenant et conservez-la en lieu sûr. Elle ne sera plus jamais affichée : si vous la perdez, il faudra en créer une autre.</p>
+    </div>
+
+    <div th:if="${!apiDisponible}" class="glass rounded-3xl p-6 mb-6" data-reveal>
+        <p class="text-[14px]">L'API fait partie du plan Enterprise.
+            <a th:href="@{/admin/abonnement}" class="underline">Voir les plans</a></p>
+    </div>
+
+    <section th:if="${apiDisponible}" class="glass rounded-3xl p-6 mb-6" data-reveal>
+        <h2 class="font-serif text-[22px] mb-4">Créer une clé</h2>
+        <form th:action="@{/admin/api/cles}" method="post" class="flex flex-col sm:flex-row gap-3 items-start sm:items-end">
+            <div class="flex-grow">
+                <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-2">À quoi sert-elle ?</label>
+                <input type="text" name="libelle" maxlength="120" placeholder="Export vers le logiciel de paie"
+                       class="w-full h-11 px-4 rounded-xl bg-white/55 border border-line"/>
+            </div>
+            <button type="submit" class="btn btn-ink h-11 px-5 rounded-xl font-medium whitespace-nowrap">Créer</button>
+        </form>
+    </section>
+
+    <section th:if="${apiDisponible}" class="glass rounded-3xl overflow-hidden mb-6" data-reveal>
+        <div class="p-6 pb-0"><h2 class="font-serif text-[22px]">Vos clés</h2></div>
+        <div class="overflow-x-auto mt-4">
+            <table class="w-full text-left">
+                <thead>
+                <tr class="border-b border-line">
+                    <th class="px-6 py-4 font-mono text-[10px] uppercase tracking-wider text-muted">Nom</th>
+                    <th class="px-6 py-4 font-mono text-[10px] uppercase tracking-wider text-muted">Début</th>
+                    <th class="px-6 py-4 font-mono text-[10px] uppercase tracking-wider text-muted">Dernier appel</th>
+                    <th class="px-6 py-4 font-mono text-[10px] uppercase tracking-wider text-muted">État</th>
+                    <th class="px-6 py-4 font-mono text-[10px] uppercase tracking-wider text-muted text-right">Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:if="${cles.isEmpty()}">
+                    <td colspan="5" class="px-6 py-12 text-center text-muted">Aucune clé pour le moment.</td>
+                </tr>
+                <tr th:each="c : ${cles}" class="zebra border-b border-line/60">
+                    <td class="px-6 py-4 text-[14px]" th:text="${c.libelle}">Nom</td>
+                    <td class="px-6 py-4 font-mono text-[12px] text-muted" th:text="${c.prefixe} + '…'">sigep_…</td>
+                    <td class="px-6 py-4 text-[13px] text-muted"
+                        th:text="${c.derniereUtilisation != null} ? ${#temporals.format(c.derniereUtilisation, 'dd/MM/yyyy HH:mm')} : 'Jamais'">—</td>
+                    <td class="px-6 py-4">
+                        <span th:if="${c.estActive()}" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-ink text-white font-mono text-[10px] uppercase tracking-wider">Active</span>
+                        <span th:unless="${c.estActive()}" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-line text-muted font-mono text-[10px] uppercase tracking-wider">Révoquée</span>
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        <form th:if="${c.estActive()}" th:action="@{'/admin/api/cles/' + ${c.id} + '/revoquer'}" method="post"
+                              onsubmit="return confirm('Révoquer cette clé ? Les appels qui l\'utilisent cesseront aussitôt de fonctionner.')">
+                            <button type="submit" class="btn glass h-9 px-4 rounded-lg text-[13px]">Révoquer</button>
+                        </form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section th:if="${apiDisponible}" class="glass rounded-3xl p-6" data-reveal>
+        <h2 class="font-serif text-[22px] mb-4">Comment s'en servir</h2>
+        <p class="text-[14px] text-muted mb-4">Envoyez votre clé dans l'en-tête <code>X-API-Key</code>. L'API est en lecture seule.</p>
+        <pre class="rounded-2xl p-4 text-[12px] overflow-x-auto" style="background:#17212b;color:#eef5f7">curl -H "X-API-Key: VOTRE_CLE" \
+     https://sigep.store/api/public/seances?debut=2026-09-01&amp;fin=2026-09-30</pre>
+        <table class="w-full text-left mt-5">
+            <thead>
+            <tr class="border-b border-line">
+                <th class="py-3 font-mono text-[10px] uppercase tracking-wider text-muted">Adresse</th>
+                <th class="py-3 font-mono text-[10px] uppercase tracking-wider text-muted">Ce qu'elle rend</th>
+            </tr>
+            </thead>
+            <tbody class="text-[13px]">
+            <tr class="border-b border-line/60"><td class="py-3 font-mono text-[12px]">/api/public/ping</td><td class="py-3 text-muted">Vérifie que la clé est acceptée</td></tr>
+            <tr class="border-b border-line/60"><td class="py-3 font-mono text-[12px]">/api/public/enseignants</td><td class="py-3 text-muted">Votre corps enseignant</td></tr>
+            <tr class="border-b border-line/60"><td class="py-3 font-mono text-[12px]">/api/public/seances?debut=&amp;fin=</td><td class="py-3 text-muted">Les séances d'une période, 92 jours au plus</td></tr>
+            <tr><td class="py-3 font-mono text-[12px]">/api/public/emargements/total</td><td class="py-3 text-muted">Le nombre d'émargements enregistrés</td></tr>
+            </tbody>
+        </table>
+    </section>
+
+</main>
+
+<div th:replace="~{admin/fragments :: dock('api')}"></div>
+<div th:replace="~{admin/fragments :: palette}"></div>
+<div th:replace="~{admin/fragments :: scripts}"></div>
+
+</body>
+</html>

@@ -46,6 +46,16 @@ public class TenantInterceptor implements HandlerInterceptor {
             throws Exception {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 
+        // Appel de l'API publique : c'est la CLÉ qui désigne l'établissement, et elle n'en
+        // désigne qu'un. Ce cas doit être traité AVANT le retour ci-dessous : une identité que
+        // cet intercepteur ne reconnaît pas passerait sans filtre, et l'appel lirait alors les
+        // données de tous les établissements. C'est la raison d'être de ce branchement.
+        if (auth != null
+                && auth.getPrincipal() instanceof ci.esatic.sigep.security.CleApiPrincipal cleApi) {
+            appliquerTenant(cleApi.etablissementId(), request);
+            return true;
+        }
+
         // Non authentifié, ou principal non applicatif (endpoints publics, @WithMockUser de test) :
         // pas de filtre tenant (ces requêtes n'accèdent pas aux données d'un établissement précis).
         if (auth == null || !(auth.getPrincipal() instanceof User user)) {
@@ -77,7 +87,18 @@ public class TenantInterceptor implements HandlerInterceptor {
             return false;
         }
 
-        Long tenant = user.getEtablissement().getId();
+        appliquerTenant(user.getEtablissement().getId(), request);
+        return true;
+    }
+
+    /**
+     * Enferme la requête dans un établissement : contexte courant + filtre Hibernate.
+     *
+     * <p>Extrait pour être partagé par les deux identités qui mènent à des données d'un tenant —
+     * un utilisateur connecté, et une clé d'API. Deux chemins, une seule mise en place : c'est
+     * ce qui évite qu'un des deux oublie le filtre.
+     */
+    private void appliquerTenant(Long tenant, HttpServletRequest request) {
         TenantContext.set(tenant);
         EntityManager em = EntityManagerFactoryUtils.getTransactionalEntityManager(entityManagerFactory);
         if (em != null) {
@@ -90,7 +111,6 @@ public class TenantInterceptor implements HandlerInterceptor {
                     + "(le garde-fou @PostLoad reste actif). Vérifier l'ordre des intercepteurs / OSIV.",
                     request.getRequestURI());
         }
-        return true;
     }
 
     @Override
