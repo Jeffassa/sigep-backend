@@ -97,14 +97,14 @@
             <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">MRR estimé</p>
             <p class="font-serif text-[28px] leading-none mt-1.5">
                 <span th:text="${#numbers.formatInteger(mrr, 1, 'WHITESPACE')}">0</span>
-                <span class="text-[13px] text-muted" th:text="${symbole}">€</span>
+                <span class="text-[13px] text-muted" th:text="${symbole}">FCFA</span>
             </p>
         </div>
         <div class="glass rounded-3xl p-6">
             <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Encaissé (total)</p>
             <p class="font-serif text-[28px] leading-none mt-1.5">
                 <span th:text="${#numbers.formatInteger(totalEncaisse, 1, 'WHITESPACE')}">0</span>
-                <span class="text-[13px] text-muted" th:text="${symbole}">€</span>
+                <span class="text-[13px] text-muted" th:text="${symbole}">FCFA</span>
             </p>
             <p class="text-[11px] text-muted mt-1" th:text="'dont ' + ${#numbers.formatInteger(encaisseMois,1,'WHITESPACE')} + ' ce mois'">—</p>
         </div>
@@ -134,7 +134,7 @@
             <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">ARPU (mensuel)</p>
             <p class="font-serif text-[26px] leading-none mt-1.5">
                 <span th:text="${#numbers.formatInteger(arpu,1,'WHITESPACE')}">0</span>
-                <span class="text-[12px] text-muted" th:text="${symbole}">€</span>
+                <span class="text-[12px] text-muted" th:text="${symbole}">FCFA</span>
             </p>
             <p class="text-[11px] text-muted mt-1">Par client payant</p>
         </div>
