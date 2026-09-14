@@ -105,6 +105,25 @@ public class Etablissement {
     @Column(name = "logo_url", length = 512)
     private String logoUrl;
 
+    /**
+     * Image du logo, stockée en base.
+     *
+     * <p>En base et non sur le disque : l'hébergement recrée son système de fichiers à chaque
+     * déploiement, si bien qu'un fichier déposé disparaîtrait au premier redémarrage — et
+     * l'établissement verrait son logo s'effacer sans comprendre pourquoi.
+     *
+     * <p>{@code LAZY} parce que ce champ est lu à chaque page via le contexte du tenant : le
+     * charger systématiquement ferait transiter l'image entière pour l'afficher en 32 pixels.
+     */
+    @lombok.ToString.Exclude
+    @Basic(fetch = jakarta.persistence.FetchType.LAZY)
+    @Column(name = "logo_donnees")
+    private byte[] logoDonnees;
+
+    /** Type MIME de l'image ci-dessus, restitué tel quel à la réponse HTTP. */
+    @Column(name = "logo_type", length = 64)
+    private String logoType;
+
     /** Couleur principale hex (ex. "#000666") ; null = couleur plateforme (E13). */
     @Column(name = "couleur_principale", length = 9)
     private String couleurPrincipale;

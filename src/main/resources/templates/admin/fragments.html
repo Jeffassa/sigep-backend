@@ -54,7 +54,11 @@
         class="glass sticky top-0 z-50 border-x-0 border-t-0" style="border-radius:0;">
     <div class="max-w-[1240px] mx-auto h-16 px-5 md:px-8 flex items-center justify-between">
         <a th:href="@{/admin/dashboard}" class="flex items-center gap-2.5 group">
-            <img th:src="@{/images/logo_sigep.png}" alt="" style="width:32px;height:32px;border-radius:9px;flex:none;display:block"/><span class="font-serif text-[30px] leading-none tracking-tight" th:text="${marque} ?: 'SIGEP'">SIGEP</span>
+            <!-- Le logo déposé par l'établissement prend la place de celui de la plateforme.
+                 C'est précisément ce que l'offre Pro vend sous « logo de l'établissement ». -->
+            <img th:src="${etablissementLogo} ?: @{/images/logo_sigep.png}"
+                 th:alt="${etablissementLogo != null} ? ${etablissementNom} : ''" alt=""
+                 style="width:32px;height:32px;border-radius:9px;flex:none;display:block;object-fit:contain"/><span class="font-serif text-[30px] leading-none tracking-tight" th:text="${marque} ?: 'SIGEP'">SIGEP</span>
             <span class="hidden sm:inline font-mono text-[10px] uppercase tracking-[0.2em] text-muted mb-[2px]">Solutions de Gestion</span>
         </a>
 
