@@ -532,7 +532,10 @@
             <div class="price reveal">
                 <div class="plan">Free</div>
                 <div class="who">Pour démarrer et tester</div>
-                <div class="amt">0€</div>
+                <!-- Le symbole vient de la configuration de facturation, comme les deux autres
+                     plans : une devise écrite en dur ici avait fini par afficher un montant en
+                     euros au-dessus de deux prix en francs. -->
+                <div class="amt">0 <small th:text="${symbole}">FCFA</small></div>
                 <ul>
                     <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="20 6 9 17 4 12"/></svg> Émargement QR + planning</li>
                     <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="20 6 9 17 4 12"/></svg> Jusqu'à 10 enseignants</li>
