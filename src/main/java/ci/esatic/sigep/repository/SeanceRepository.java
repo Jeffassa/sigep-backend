@@ -14,6 +14,9 @@ public interface SeanceRepository extends JpaRepository<Seance, Long> {
 
     List<Seance> findByEnseignantIdAndDateOrderByHeureDebutAsc(Long enseignantId, LocalDate date);
 
+    /** Séances d'une période, pour l'API publique. Bornée à l'établissement par le filtre tenant. */
+    List<Seance> findByDateBetweenOrderByDateAscHeureDebutAsc(LocalDate debut, LocalDate fin);
+
     @Query("SELECT s FROM Seance s WHERE s.enseignant.id = :enseignantId " +
            "AND s.date BETWEEN :debut AND :fin ORDER BY s.date ASC, s.heureDebut ASC")
     List<Seance> findByEnseignantIdAndDateBetween(@Param("enseignantId") Long enseignantId,
