@@ -279,3 +279,93 @@ html.dark .heat-strong { color: #0d0d11 !important; }
 .theme-toggle .icon-sun { display: none; }
 html.dark .theme-toggle .icon-moon { display: none; }
 html.dark .theme-toggle .icon-sun { display: inline-flex; }
+
+/* =========================================================================
+   FINITION — ce qui sépare une interface correcte d'une interface soignée
+
+   Rien ici n'ajoute de bibliothèque : ces réglages sont ceux qu'on remarque
+   sans pouvoir les nommer, et qu'une page de travail mérite autant qu'une
+   vitrine. Ils portent sur toutes les pages d'administration à la fois.
+   ========================================================================= */
+
+/* ---- Les chiffres doivent s'aligner ----------------------------------------
+   Des heures, des taux, des montants empilés dans un tableau : sans chasse
+   fixe, les colonnes ondulent et l'oeil ne peut plus comparer deux lignes
+   d'un coup. C'est le défaut le plus visible d'un tableau de gestion. */
+table td, table th,
+.font-mono, .kbd,
+[class*="text-["][class*="px]"] { font-variant-numeric: tabular-nums; }
+
+/* ---- Les lignes d'un tableau répondent au survol ---------------------------
+   Sur une liste de cinquante enseignants, c'est ce qui permet de suivre une
+   ligne du regard jusqu'au bout sans se tromper de rangée. */
+tbody tr { transition: background .18s var(--ease); }
+tbody tr:hover { background: var(--c-accent-soft); }
+html.dark tbody tr:hover { background: rgba(255,255,255,.04); }
+
+/* ---- Le clavier doit se voir --------------------------------------------
+   Un anneau net, de la couleur de la marque, et jamais sur un simple clic de
+   souris : « focus-visible » réserve la marque à qui navigue au clavier. */
+a:focus-visible, button:focus-visible, input:focus-visible,
+select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible {
+    outline: 2px solid var(--c-accent);
+    outline-offset: 2px;
+    border-radius: 8px;
+}
+
+/* ---- La profondeur se construit en couches -------------------------------
+   Une ombre unique et large fait « autocollant ». Deux ombres — un contact
+   court et net, une diffusion longue et douce — imitent la lumière réelle. */
+.glass-card:hover,
+.glass-strong:hover {
+    box-shadow:
+        0 1px 2px rgba(10,10,10,.06),
+        0 12px 28px -8px rgba(10,10,10,.14);
+}
+html.dark .glass-card:hover,
+html.dark .glass-strong:hover {
+    box-shadow:
+        0 1px 2px rgba(0,0,0,.4),
+        0 16px 36px -10px rgba(0,0,0,.55);
+}
+
+/* ---- Un bouton désactivé doit le dire ------------------------------------
+   Sans cela, l'utilisateur clique, rien ne se passe, et il croit l'outil cassé. */
+button:disabled, .btn:disabled, [aria-disabled="true"] {
+    opacity: .45;
+    cursor: not-allowed;
+    filter: saturate(.6);
+}
+button:disabled:active, .btn:disabled:active { transform: none; }
+
+/* ---- L'attente doit être lisible -----------------------------------------
+   Appliqué à un bouton pendant un envoi : il garde sa place et son texte,
+   mais montre qu'il travaille. Un bouton qui ne réagit pas invite au double
+   clic, et un double clic sur « supprimer » coûte cher. */
+.en-cours { position: relative; pointer-events: none; color: transparent !important; }
+.en-cours::after {
+    content: ''; position: absolute; inset: 0; margin: auto;
+    width: 16px; height: 16px; border-radius: 50%;
+    border: 2px solid currentColor; border-top-color: transparent;
+    color: var(--c-ink); animation: tourne .7s linear infinite;
+}
+.btn-ink.en-cours::after { color: var(--c-accent-ink); }
+@keyframes tourne { to { transform: rotate(360deg); } }
+
+/* ---- Les titres respirent -------------------------------------------------
+   « text-wrap: balance » répartit un titre sur ses lignes au lieu de laisser
+   un mot seul en bas. Ignoré par les navigateurs anciens, sans dommage. */
+h1, h2, h3 { text-wrap: balance; }
+p, li { text-wrap: pretty; }
+
+/* ---- Les champs réagissent avant d'être remplis --------------------------- */
+input, select, textarea { transition: border-color .18s var(--ease), background .18s var(--ease); }
+input:hover:not(:focus), select:hover:not(:focus), textarea:hover:not(:focus) {
+    border-color: var(--c-muted);
+}
+
+/* ---- Rien de tout cela ne s'impose à qui n'en veut pas -------------------- */
+@media (prefers-reduced-motion: reduce) {
+    tbody tr, input, select, textarea, .glass-card, .btn { transition: none; }
+    .en-cours::after { animation: none; }
+}
