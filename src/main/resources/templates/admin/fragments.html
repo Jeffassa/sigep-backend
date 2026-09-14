@@ -9,7 +9,7 @@
     <link rel="icon" th:href="@{/favicon.ico}" sizes="any"/>
     <link rel="apple-touch-icon" th:href="@{/images/logo_sigep.png}"/>
     <!-- SEO -->
-    <meta name="description" th:content="${pageDescription} ?: 'SIGEP — logiciel de gestion des émargements et du temps d’enseignement pour établissements du supérieur.'"/>
+    <meta name="description" th:content="${pageDescription} ?: 'SIGEP : suivi des heures d’enseignement et émargement par QR code.'"/>
     <!-- Ce fragment ne sert plus que des pages PRIVÉES (administration, plateforme) et la page
          d'erreur : aucune n'a vocation à figurer dans un moteur de recherche. Le « Disallow »
          du robots.txt ne suffit pas — il empêche la visite, pas l'inscription à l'index d'une
@@ -73,7 +73,7 @@
             <!-- Écran d'émargement (QR de salle) : lien tout prêt, clé kiosque déjà injectée (C4).
                  S'ouvre dans un nouvel onglet → à projeter/afficher sur l'écran de la salle. -->
             <a th:if="${qrDisplayUrl != null}" th:href="${qrDisplayUrl}" target="_blank" rel="noopener"
-               title="Ouvrir l'écran d'émargement (QR de salle) — aucune clé à saisir"
+               title="Ouvrir l'écran d'émargement (QR de salle)"
                class="btn btn-gold flex items-center gap-2 px-3.5 h-10 rounded-full text-[13px] font-medium">
                 <span class="material-symbols-rounded text-[18px]">qr_code_2</span>
                 <span class="hidden sm:inline">Écran d'émargement</span>
@@ -673,8 +673,8 @@
     <div class="sigep-cookie__card">
         <div class="sigep-cookie__txt">
             <strong>Cookies &amp; confidentialité</strong>
-            Nous n'utilisons que des cookies <b>essentiels</b> (session, préférence d'affichage) ;
-            notre mesure d'audience est <b>sans cookie</b>.
+            Nous n'utilisons que des cookies essentiels (session, préférence d'affichage) ;
+            notre mesure d'audience est sans cookie.
             <a th:href="@{/confidentialite}" href="/confidentialite">En savoir plus</a>.
         </div>
         <div class="sigep-cookie__btns">

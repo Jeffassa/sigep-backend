@@ -44,26 +44,24 @@ public class MailService {
     @Async
     public void notifierInscriptionEtablissementRecue(String email, String prenom, String nomEtablissement) {
         String bonjour = (prenom == null || prenom.isBlank()) ? "Bonjour," : "Bonjour " + prenom + ",";
-        envoyer(email, "SIGEP — Votre dossier d'inscription est bien reçu",
+        envoyer(email, "SIGEP - Votre dossier d'inscription est bien reçu",
                 bonjour + "\n\n"
-                + "Merci d'avoir inscrit « " + nomEtablissement + " » sur SIGEP !\n\n"
-                + "Votre dossier est en cours d'analyse par notre équipe. Cette vérification est "
-                + "généralement rapide : vous recevrez un e-mail dès que votre espace sera activé.\n\n"
-                + "Merci de patienter — nous revenons vers vous très vite.\n\n"
-                + "— L'équipe SIGEP · Solutions de Gestion");
+                + "Nous avons bien reçu l'inscription de « " + nomEtablissement + " ».\n\n"
+                + "Votre dossier est en cours d'examen. Vous recevrez un e-mail dès que votre "
+                + "espace sera activé.\n\n"
+                + "L'équipe SIGEP");
     }
 
     /** Le super admin a validé le dossier : l'espace est actif. */
     @Async
     public void notifierEtablissementValide(String email, String nomEtablissement) {
-        envoyer(email, "SIGEP — Votre espace est activé !",
+        envoyer(email, "SIGEP - Votre espace est activé",
                 "Bonjour,\n\n"
-                + "Bonne nouvelle : le dossier de « " + nomEtablissement + " » a été validé.\n\n"
-                + "Votre espace SIGEP est maintenant actif. Connectez-vous avec votre e-mail et "
-                + "votre mot de passe :\n"
+                + "Le dossier de « " + nomEtablissement + " » a été validé : votre espace SIGEP "
+                + "est actif.\n\n"
+                + "Connectez-vous avec votre e-mail et votre mot de passe :\n"
                 + baseUrl + "/admin-login\n\n"
-                + "Bienvenue, et bonne gestion !\n\n"
-                + "— L'équipe SIGEP · Solutions de Gestion");
+                + "L'équipe SIGEP");
     }
 
     /** Reçu après un paiement en ligne (Stripe) réussi. */
@@ -73,13 +71,13 @@ public class MailService {
         String jusqua = dateExpiration != null
                 ? dateExpiration.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"))
                 : "—";
-        envoyer(email, "SIGEP — Paiement reçu, merci !",
+        envoyer(email, "SIGEP - Paiement reçu",
                 "Bonjour,\n\n"
-                + "Nous confirmons la réception de votre paiement de " + montant + " FCFA pour « "
+                + "Nous avons reçu votre paiement de " + montant + " FCFA pour « "
                 + nomEtablissement + " ».\n\n"
                 + "Votre abonnement Pro est actif jusqu'au " + jusqua + ".\n\n"
-                + "Merci de votre confiance !\n\n"
-                + "— L'équipe SIGEP · Solutions de Gestion");
+                + "Merci de votre confiance.\n\n"
+                + "L'équipe SIGEP");
     }
 
     /** Relance d'expiration d'abonnement (dunning E15). jours > 0 : à venir ; jours <= 0 : expiré. */
@@ -91,29 +89,29 @@ public class MailService {
         String sujet;
         String intro;
         if (jours <= 0) {
-            sujet = "SIGEP — Votre abonnement a expiré";
+            sujet = "SIGEP - Votre abonnement a expiré";
             intro = "L'abonnement de « " + nomEtablissement + " » a expiré (" + quand + ").";
         } else {
-            sujet = "SIGEP — Votre abonnement expire bientôt (J-" + jours + ")";
+            sujet = "SIGEP - Votre abonnement expire bientôt (J-" + jours + ")";
             intro = "L'abonnement de « " + nomEtablissement + " » expire le " + quand
                     + " (dans " + jours + " jour(s)).";
         }
         envoyer(email, sujet,
                 "Bonjour,\n\n" + intro + "\n\n"
-                + "Pour éviter toute interruption d'accès, renouvelez depuis votre espace :\n"
+                + "Pour éviter toute coupure d'accès, renouvelez-le depuis votre espace :\n"
                 + baseUrl + "/admin/abonnement\n\n"
-                + "— L'équipe SIGEP · Solutions de Gestion");
+                + "L'équipe SIGEP");
     }
 
     /** Le super admin a refusé le dossier. */
     @Async
     public void notifierEtablissementRefuse(String email, String nomEtablissement) {
-        envoyer(email, "SIGEP — Suite de votre dossier d'inscription",
+        envoyer(email, "SIGEP - Suite de votre dossier d'inscription",
                 "Bonjour,\n\n"
                 + "Après examen, nous ne pouvons pas activer l'espace « " + nomEtablissement
                 + " » pour le moment.\n\n"
                 + "Pour en discuter ou compléter votre dossier, écrivez-nous : " + contactPlateforme + "\n\n"
-                + "— L'équipe SIGEP · Solutions de Gestion");
+                + "L'équipe SIGEP");
     }
 
     /** Message libre envoyé par l'administration à un enseignant. */
@@ -127,13 +125,13 @@ public class MailService {
     @Async
     public void notifierStatutCompte(String expediteur, String email, String prenom, boolean valide) {
         if (valide) {
-            envoyer(expediteur, email, "SIGEP — Votre compte est validé",
-                    "Bonjour " + prenom + ",\n\nVotre compte enseignant SIGEP a été validé par l'administration. "
-                    + "Vous pouvez désormais vous connecter à l'application.\n\n— SIGEP");
+            envoyer(expediteur, email, "SIGEP - Votre compte est validé",
+                    "Bonjour " + prenom + ",\n\nVotre compte enseignant a été validé par l'administration. "
+                    + "Vous pouvez maintenant vous connecter à l'application.\n\nSIGEP");
         } else {
-            envoyer(expediteur, email, "SIGEP — Votre compte a été refusé",
-                    "Bonjour " + prenom + ",\n\nVotre demande de compte enseignant SIGEP a été refusée. "
-                    + "Veuillez contacter l'administration.\n\n— SIGEP");
+            envoyer(expediteur, email, "SIGEP - Votre compte a été refusé",
+                    "Bonjour " + prenom + ",\n\nVotre demande de compte enseignant a été refusée. "
+                    + "Rapprochez-vous de l'administration.\n\nSIGEP");
         }
     }
 
@@ -143,32 +141,32 @@ public class MailService {
                                                 String motDePasseProvisoire) {
         envoyer(expediteur, email, "SIGEP - Vos identifiants enseignant",
                 "Bonjour " + (prenom == null ? "" : prenom) + ",\n\n"
-                + "Votre compte enseignant SIGEP a été créé par votre administration.\n\n"
+                + "Votre compte enseignant a été créé par l'administration de votre établissement.\n\n"
                 + "Email : " + email + "\n"
                 + "Mot de passe provisoire : " + motDePasseProvisoire + "\n\n"
-                + "Connectez-vous puis modifiez ce mot de passe depuis votre profil.\n\n"
-                + "- SIGEP");
+                + "Connectez-vous, puis changez ce mot de passe depuis votre profil.\n\n"
+                + "SIGEP");
     }
 
     @Async
     public void envoyerCodeOtpAdmin(String email, String code) {
-        envoyer(email, "SIGEP - Code de verification administrateur",
-                "Bonjour,\n\nVotre code de verification SIGEP est : " + code + "\n\n"
+        envoyer(email, "SIGEP - Code de vérification",
+                "Bonjour,\n\nVotre code de vérification est : " + code + "\n\n"
                 + "Ce code expire dans 5 minutes et ne peut être utilisé qu'une seule fois.\n\n"
-                + "Si vous n'êtes pas à l'origine de cette connexion, contactez votre support SIGEP.\n\n"
-                + "- SIGEP");
+                + "Si vous n'êtes pas à l'origine de cette connexion, prévenez le support SIGEP.\n\n"
+                + "SIGEP");
     }
 
     @Async
     public void notifierDecisionRattrapage(String expediteur, String email, String prenom, String matiere,
                                            String quand, boolean accepte) {
         if (accepte) {
-            envoyer(expediteur, email, "SIGEP — Rattrapage accepté",
-                    "Bonjour " + prenom + ",\n\nVotre demande de rattrapage (" + matiere + ") a été ACCEPTÉE "
-                    + "pour le " + quand + ".\n\n— SIGEP");
+            envoyer(expediteur, email, "SIGEP - Rattrapage accepté",
+                    "Bonjour " + prenom + ",\n\nVotre demande de rattrapage (" + matiere + ") a été acceptée "
+                    + "pour le " + quand + ".\n\nSIGEP");
         } else {
-            envoyer(expediteur, email, "SIGEP — Rattrapage refusé",
-                    "Bonjour " + prenom + ",\n\nVotre demande de rattrapage (" + matiere + ") a été refusée.\n\n— SIGEP");
+            envoyer(expediteur, email, "SIGEP - Rattrapage refusé",
+                    "Bonjour " + prenom + ",\n\nVotre demande de rattrapage (" + matiere + ") a été refusée.\n\nSIGEP");
         }
     }
 
@@ -178,8 +176,8 @@ public class MailService {
         String corps = "Bonjour " + prenom + ",\n\nVous avez " + lignes.size()
                 + " séance(s) non émargée(s) aujourd'hui :\n"
                 + String.join("\n", lignes)
-                + "\n\nPensez à régulariser votre émargement.\n\n— SIGEP";
-        envoyer(expediteur, email, "SIGEP — Séances non émargées", corps);
+                + "\n\nPensez à régulariser votre émargement.\n\nSIGEP";
+        envoyer(expediteur, email, "SIGEP - Séances non émargées", corps);
     }
 
     /** Envoi depuis l'expéditeur plateforme (e-mails de niveau plateforme). */

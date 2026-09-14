@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title th:text="(${marque} ?: 'SIGEP') + ' · Émargement intelligent pour écoles & universités'">SIGEP · Émargement intelligent</title>
-    <meta name="description" content="SIGEP — suivez les heures réellement effectuées par vos enseignants via un émargement QR sécurisé. Statistiques, alertes et rapports de paie, sans Excel."/>
+    <title th:text="(${marque} ?: 'SIGEP') + ' · Émargement des enseignants par QR code'">SIGEP · Émargement des enseignants par QR code</title>
+    <meta name="description" content="Vos enseignants émargent en scannant un QR code affiché dans la salle. Vous voyez les heures faites séance par séance et vous sortez les états pour la paie."/>
     <link rel="icon" th:href="@{/favicon.ico}" href="/favicon.ico" sizes="any"/>
     <link rel="apple-touch-icon" th:href="@{/images/logo_sigep.png}" href="/images/logo_sigep.png"/>
     <meta name="theme-color" content="#08080a"/>
@@ -25,7 +25,7 @@
     <meta property="og:image" th:content="${baseUrl} + '/images/og-sigep.png'" content="https://sigep.store/images/og-sigep.png"/>
     <meta property="og:image:width" content="1200"/>
     <meta property="og:image:height" content="630"/>
-    <meta property="og:image:alt" content="SIGEP — émargement des enseignants par QR code"/>
+    <meta property="og:image:alt" content="SIGEP, émargement des enseignants par QR code"/>
     <meta name="twitter:card" content="summary_large_image"/>
     <meta name="twitter:title" th:content="(${marque} ?: 'SIGEP') + ' · Émargement des enseignants par QR code'"/>
     <meta name="twitter:description" content="Émargement par QR code, planning et rapports d'heures pour écoles et universités."/>
@@ -364,10 +364,10 @@
     <!-- ===================== HERO ===================== -->
     <section class="hero wrap reveal">
         
-        <h1 class="title">Suivez les heures de vos enseignants, <span class="grad">sans effort.</span></h1>
+        <h1 class="title">Suivez les heures de vos enseignants, <span class="grad">séance par séance.</span></h1>
         <p class="lead">
-            Un émargement par QR sécurisé, des statistiques claires et des rapports prêts pour la paie.
-            Pilotez l'assiduité de votre établissement sans Excel, sans ressaisie.
+            L'enseignant scanne le QR code affiché dans la salle. Vous voyez aussitôt qui a fait cours,
+            combien d'heures, et vous sortez l'état pour la paie sans rien ressaisir.
         </p>
         <div class="hero-cta">
             <a class="btn btn-accent" th:href="@{/inscription}" href="#">
@@ -427,7 +427,7 @@
         <div class="sec-head reveal">
             <span class="eyebrow">Fonctionnement</span>
             <h2>Opérationnel en 3 étapes</h2>
-            <p>De l'emploi du temps au rapport de paie, sans friction.</p>
+            <p>De l'emploi du temps au rapport de paie.</p>
         </div>
         <div class="features">
             <div class="feature reveal">
@@ -447,8 +447,8 @@
             </div>
             <div class="feature reveal">
                 <div class="fic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></div>
-                <h3>Anti-fraude par conception</h3>
-                <p>QR à durée de vie courte, preuve de présence physique et données cloisonnées par établissement.</p>
+                <h3>Difficile à truquer</h3>
+                <p>Le code change en continu : il faut être dans la salle au bon moment pour le scanner. Chaque établissement garde ses données à part.</p>
             </div>
         </div>
     </section>
@@ -458,7 +458,7 @@
         <div class="sec-head reveal">
             <span class="eyebrow">La plateforme</span>
             <h2>Tout pour piloter l'assiduité, au même endroit</h2>
-            <p>Suivre, analyser et décider, depuis un seul tableau de bord.</p>
+            <p>Les émargements du jour, les heures par enseignant, le planning et les rapports.</p>
         </div>
         <div class="bento">
             <!-- QR -->
@@ -512,8 +512,8 @@
     <section class="block wrap" style="padding-top:0;">
         <div class="cta-band reveal">
             <span class="eyebrow">Gagnez du temps</span>
-            <h2 style="margin-top:12px">Simplifiez la gestion de votre établissement</h2>
-            <p>Rejoignez les établissements qui remplacent les tableurs par un émargement fiable, des statistiques claires et des rapports automatiques.</p>
+            <h2 style="margin-top:12px">Arrêtez de recompter les heures à la main</h2>
+            <p>Plus de fiches de présence à ressaisir dans un tableur : les heures se totalisent au fil des séances.</p>
             <div class="hero-cta" style="margin-top:26px">
                 <a class="btn btn-accent" th:href="@{/inscription}" href="#">Inscrire mon établissement</a>
                 <a class="btn btn-ghost" href="#tarifs">Voir les tarifs</a>
@@ -526,7 +526,7 @@
         <div class="sec-head reveal">
             <span class="eyebrow">Tarifs</span>
             <h2>Un plan pour chaque établissement</h2>
-            <p>Mensuel · sans engagement · résiliable à tout moment.</p>
+            <p>Abonnement mensuel, sans engagement, résiliable à tout moment.</p>
         </div>
         <div class="prices">
             <div class="price reveal">
@@ -578,7 +578,7 @@
             <h2>Questions fréquentes</h2>
         </div>
         <div class="faq">
-            <details class="q reveal"><summary>L'enseignant doit-il installer une application ?<svg class="chev" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></summary><p>Oui, une application mobile dédiée (Android) permet de scanner le QR et de signer. L'administration, elle, travaille depuis le navigateur.</p></details>
+            <details class="q reveal"><summary>L'enseignant doit-il installer une application ?<svg class="chev" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></summary><p>Oui. L'enseignant installe l'application Android pour scanner le QR et signer. Côté scolarité, tout se fait depuis le navigateur.</p></details>
             <details class="q reveal"><summary>Mes données sont-elles isolées des autres établissements ?<svg class="chev" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></summary><p>Strictement. Chaque établissement dispose de son propre espace ; les données ne sont jamais partagées ni visibles entre établissements.</p></details>
             <details class="q reveal"><summary>Peut-on commencer sans engagement ?<svg class="chev" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></summary><p>Oui. Le plan Free est gratuit et sans carte bancaire. Vous passez à un plan supérieur uniquement quand vous en avez besoin.</p></details>
             <details class="q reveal"><summary>Comment se fait l'émargement hors connexion ?<svg class="chev" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></summary><p>L'application gère le mode hors-ligne : l'émargement est mis en file d'attente et envoyé automatiquement au retour du réseau.</p></details>
@@ -588,8 +588,8 @@
     <!-- ===================== CTA FINAL ===================== -->
     <section class="block wrap" style="padding-top:0;">
         <div class="cta-band reveal">
-            <h2>Passez à une gestion plus simple.</h2>
-            <p>Créez l'espace de votre établissement en quelques minutes — c'est gratuit et sans engagement.</p>
+            <h2>Passez à l'émargement par QR code</h2>
+            <p>Créez l'espace de votre établissement en quelques minutes. C'est gratuit et sans engagement.</p>
             <div class="hero-cta" style="margin-top:26px">
                 <a class="btn btn-accent" th:href="@{/inscription}" href="#">
                     Inscrire mon établissement

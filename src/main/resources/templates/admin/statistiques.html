@@ -29,11 +29,11 @@
                        class="h-10 px-3 rounded-xl bg-white/55 border border-line text-[13px]"/>
                 <input type="date" name="fin" th:value="${fin}"
                        class="h-10 px-3 rounded-xl bg-white/55 border border-line text-[13px]"/>
-                <button type="submit" class="btn btn-ink h-10 px-4 rounded-xl text-[13px] font-medium">OK</button>
+                <button type="submit" class="btn btn-ink h-10 px-4 rounded-xl text-[13px] font-medium">Afficher</button>
             </form>
             <a th:href="@{/admin/rapports/synthese(debut=${debut}, fin=${fin})}"
                class="btn glass h-10 px-4 rounded-xl text-[13px] font-medium flex items-center gap-1.5">
-                <span class="material-symbols-rounded text-[18px]">table_view</span> Export
+                <span class="material-symbols-rounded text-[18px]">table_view</span> Exporter
             </a>
         </div>
     </div>
@@ -53,7 +53,7 @@
             </button>
             <a th:if="${etablissementPlan == 'FREE'}"
                th:href="@{/admin/abonnement}"
-               title="Disponible avec le plan Pro — voir l'abonnement"
+               title="Disponible avec le plan Pro : voir l'abonnement"
                class="btn btn-gold h-10 px-4 rounded-xl text-[13px] font-medium inline-flex items-center gap-1.5">
                 <span class="material-symbols-rounded text-[18px]">lock</span> Analyser avec l'IA
                 <span class="font-mono text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-ink text-white">Pro</span>
@@ -149,7 +149,7 @@
     <!-- Heatmap jour × créneau -->
     <section class="glass rounded-3xl p-7 mb-6 overflow-x-auto" data-reveal>
         <h2 class="font-serif text-[24px] leading-none mb-1">Assiduité par jour &amp; créneau</h2>
-        <p class="text-[13px] text-muted mb-6">Taux d'émargement — plus c'est foncé, mieux c'est</p>
+        <p class="text-[13px] text-muted mb-6">Taux d'émargement : plus la case est foncée, plus le taux est élevé</p>
         <table class="w-full text-center border-separate" style="border-spacing:4px">
             <thead>
                 <tr>

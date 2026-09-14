@@ -17,7 +17,7 @@
                  elle cree le compte et envoie un mot de passe provisoire a l'enseignant. -->
             <form th:action="@{/admin/enseignants/import}" method="post" enctype="multipart/form-data"
                   class="glass rounded-2xl h-12 px-3 flex items-center gap-2"
-                  title="Colonnes : MATRICULE | NOM | PRENOM | DEPARTEMENT | GRADE | EMAIL&#10;EMAIL est facultative : renseignee, le compte est cree et les acces envoyes par courriel.">
+                  title="Colonnes : MATRICULE | NOM | PRENOM | DEPARTEMENT | GRADE | EMAIL&#10;La colonne EMAIL est facultative. Si vous la remplissez, le compte est créé et les accès partent par courriel.">
                 <input type="file" name="fichier" accept=".xlsx,.xls" required
                        class="text-[12px] max-w-[180px] file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:bg-ink file:text-white file:cursor-pointer"/>
                 <button type="submit" class="btn h-9 px-3 rounded-xl bg-ink text-white flex items-center gap-1 text-[13px]">
@@ -80,7 +80,7 @@
                 <tr th:if="${enseignants.isEmpty()}">
                     <td colspan="5" class="px-6 py-16 text-center text-muted">
                         <span class="material-symbols-rounded text-[40px] block mb-2 opacity-40">search_off</span>
-                        Aucun enseignant trouvé.
+                        Aucun enseignant dans cette liste.
                     </td>
                 </tr>
                 <tr th:each="ens : ${enseignants.content}" class="zebra border-b border-line/60">
@@ -108,7 +108,7 @@
                             <span class="material-symbols-rounded text-[13px]">block</span>Rejeté</span>
                         <span th:if="${ens.statut?.name() == 'ARCHIVE'}"
                               class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-line text-muted font-mono text-[10px] uppercase tracking-wider"
-                              title="A quitté l'établissement — aucun accès, historique conservé">
+                              title="A quitté l'établissement. Aucun accès, historique conservé.">
                             <span class="material-symbols-rounded text-[13px]">inventory_2</span>Archivé</span>
                     </td>
                     <td class="px-6 py-4">
@@ -124,7 +124,7 @@
                                 <input type="hidden" name="page" th:value="${currentPage}"/>
                                 <select name="statut" class="bg-white/50 border border-line rounded-lg px-2 py-1 text-[12px] focus:ring-0 focus:border-ink">
                                     <option value="VALIDATED" th:selected="${ens.statut?.name() == 'VALIDATED'}">Valider</option>
-                                    <option value="PENDING"   th:selected="${ens.statut?.name() == 'PENDING'}">Attente</option>
+                                    <option value="PENDING"   th:selected="${ens.statut?.name() == 'PENDING'}">Mettre en attente</option>
                                     <option value="REJECTED"  th:selected="${ens.statut?.name() == 'REJECTED'}">Rejeter</option>
                                     <option value="ARCHIVE"   th:selected="${ens.statut?.name() == 'ARCHIVE'}">Archiver</option>
                                 </select>
@@ -134,12 +134,12 @@
                             </form>
                             <form th:if="${ens.user != null}"
                                   th:action="@{'/admin/enseignants/' + ${ens.id} + '/renvoyer-acces'}" method="post"
-                                  onsubmit="return confirm('Generer un nouveau mot de passe provisoire et l\'envoyer par e-mail ? L\'ancien cessera de fonctionner.')">
+                                  onsubmit="return confirm('Générer un nouveau mot de passe provisoire et l\'envoyer par e-mail ? L\'ancien cessera de fonctionner.')">
                                 <input type="hidden" name="search" th:value="${search}"/>
                                 <input type="hidden" name="departement" th:value="${departement}"/>
                                 <input type="hidden" name="archives" th:value="${archives}"/>
                                 <input type="hidden" name="page" th:value="${currentPage}"/>
-                                <button type="submit" class="btn w-8 h-8 rounded-lg border border-line flex items-center justify-center hover:bg-ink hover:text-white" title="Renvoyer les acces par e-mail">
+                                <button type="submit" class="btn w-8 h-8 rounded-lg border border-line flex items-center justify-center hover:bg-ink hover:text-white" title="Renvoyer les accès par e-mail">
                                     <span class="material-symbols-rounded text-[16px]">forward_to_inbox</span>
                                 </button>
                             </form>
