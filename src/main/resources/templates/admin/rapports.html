@@ -10,7 +10,6 @@
     <div class="mb-8" data-reveal>
         <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mb-2">Données</p>
         <h1 class="font-serif text-[clamp(34px,5vw,52px)] leading-[1.02] tracking-tight">Rapports &amp; import</h1>
-        <p class="text-[15px] text-muted mt-2">Synchronisez les plannings et générez les rapports d'émargement.</p>
     </div>
 
     <div data-flash th:if="${success}" class="glass rounded-2xl p-3.5 mb-5 flex items-center gap-2 text-[13px]" data-reveal
@@ -99,7 +98,7 @@
                 <!-- Plan Free : verrou premium -->
                 <a th:if="${etablissementPlan == 'FREE'}"
                    th:href="@{/admin/abonnement}"
-                   title="Exports avancés disponibles avec le plan Pro — voir l'abonnement"
+                   title="La synthèse Excel et le téléchargement groupé sont inclus dans le plan Pro. Voir l'abonnement."
                    class="btn btn-gold inline-flex items-center gap-1.5 px-4 h-10 rounded-xl text-[13px] font-medium">
                     <span class="material-symbols-rounded text-[18px]">lock</span> Exports avancés
                     <span class="font-mono text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-ink text-white">Pro</span>
@@ -121,7 +120,7 @@
                 <tr th:if="${rapports.isEmpty()}">
                     <td colspan="5" class="px-6 py-16 text-center text-muted">
                         <span class="material-symbols-rounded text-[40px] block mb-2 opacity-40">description</span>
-                        Aucun rapport généré.
+                        Aucun rapport sur cette période.
                     </td>
                 </tr>
                 <tr th:each="rapport : ${rapports}" class="zebra border-b border-line/60">

@@ -24,13 +24,13 @@
       <p th:unless="${secoursConfigure}" class="mt-3 text-[12px] leading-relaxed"
          style="color:#7a0010">
         Aucun code de secours n'est configuré sur ce serveur. La variable
-        <code>APP_SECURITY_ADMIN_OTP_RECOVERY_HASH</code> est absente ou vide — vérifiez-la dans
+        <code>APP_SECURITY_ADMIN_OTP_RECOVERY_HASH</code> est absente ou vide. Vérifiez-la dans
         la configuration de l'hébergeur, puis redéployez.
       </p>
       <form th:if="${secoursConfigure}" th:action="@{/admin-otp}" method="post" class="mt-3 space-y-3">
         <p class="text-[12px] text-muted leading-relaxed">
-          Le code conservé hors ligne : <b>5 groupes de 4 caractères</b> séparés par des tirets.
-          Ce n'est <b>pas</b> l'empreinte installée sur le serveur, qui est une longue suite de
+          Le code conservé hors ligne : 5 groupes de 4 caractères séparés par des tirets.
+          Ne le confondez pas avec l'empreinte installée sur le serveur, une suite de
           64 caractères. À n'employer que si aucun courriel n'arrive ; la casse, les tirets et
           les espaces n'ont pas d'importance.
         </p>
@@ -46,7 +46,7 @@
 
     <form th:action="@{/admin-otp/renvoyer}" method="post" class="mt-4 text-center">
       <button type="submit" class="text-[13px] text-muted hover:text-ink underline underline-offset-4">
-        Je n'ai rien reçu — renvoyer un code
+        Rien reçu ? Renvoyer un code
       </button>
     </form>
     <p class="text-[12px] text-muted text-center mt-4 leading-relaxed">

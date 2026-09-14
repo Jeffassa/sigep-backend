@@ -78,7 +78,7 @@
                 <span class="material-symbols-rounded text-amber-600 dark:text-amber-400">wifi_off</span>
                 <div>
                     <h2 class="font-serif text-[22px]">Émargements hors-ligne (à valider)</h2>
-                    <p class="text-[12px] text-muted mt-0.5">Présence prouvée par QR scanné hors-réseau · À confirmer par la scolarité avant comptage</p>
+                    <p class="text-[12px] text-muted mt-0.5">Le QR a bien été scanné, mais sans réseau. La scolarité confirme avant que la séance soit comptée.</p>
                 </div>
             </div>
             <span th:if="${!emargementsHorsLigne.isEmpty()}"
@@ -88,8 +88,8 @@
         <div class="overflow-x-auto">
             <table class="w-full text-left">
                 <thead><tr class="border-b border-line">
-                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Date Séance</th>
-                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Horodatage Envoi</th>
+                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Date de la séance</th>
+                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Reçu le</th>
                     <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Enseignant</th>
                     <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Matière</th>
                     <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Classe</th>
@@ -177,7 +177,7 @@
                                   class="flex items-center gap-1.5">
                                 <select name="salleId" required
                                         class="h-9 px-2 rounded-lg bg-white/55 border border-line text-[12px]">
-                                    <option value="" disabled selected>Salle…</option>
+                                    <option value="" disabled selected>Choisir la salle</option>
                                     <option th:each="s : ${salles}" th:value="${s.id}" th:text="${s.libelle}">A1</option>
                                 </select>
                                 <button type="submit"
@@ -187,7 +187,7 @@
                             </form>
                             <!-- Refuser : statut REFUSE + email auto à l'enseignant -->
                             <form th:action="@{'/admin/rattrapages/' + ${d.id} + '/refuser'}" method="post"
-                                  onsubmit="return confirm('Refuser cette demande de rattrapage ?');">
+                                  onsubmit="return confirm('Refuser cette demande de rattrapage ? L\'enseignant en sera informé par e-mail.');">
                                 <button type="submit"
                                         class="h-9 px-3 rounded-lg border border-line text-[12px] font-medium inline-flex items-center gap-1 hover:bg-ink hover:text-white transition">
                                     <span class="material-symbols-rounded text-[16px]">close</span> Refuser

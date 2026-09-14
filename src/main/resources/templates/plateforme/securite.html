@@ -88,8 +88,7 @@
         </div>
         <p class="text-[12px] text-muted mt-3">
             Compteur tenu en mémoire : il repart de zéro à chaque redémarrage et ne reflète que
-            l'instance qui vous répond. Il montre ce qui se passe maintenant, il ne tient pas de
-            comptabilité. Les barres rouges signalent des requêtes bloquées.
+            l'instance qui vous répond. Les barres rouges signalent des requêtes bloquées.
         </p>
     </section>
 
@@ -97,16 +96,16 @@
     <section class="mb-8" data-reveal>
         <h2 class="font-serif text-[26px] mb-1">Par établissement</h2>
         <p class="text-[14px] text-muted mb-4 max-w-[680px]">
-            Sur les 7 derniers jours, classés par gravité. C'est ici qu'on agit : les deux boutons
-            traitent les deux incidents les plus courants — des identifiants qui ont fuité, et un
-            QR de salle qui circule.
+            Sur les 7 derniers jours, classés par gravité. Les deux boutons traitent les deux
+            incidents les plus courants : des identifiants qui ont fuité, et un QR de salle qui
+            circule.
         </p>
 
         <div class="glass rounded-3xl p-6" th:if="${bilanEtablissements.isEmpty()}">
             <p class="text-[14px] text-muted">
                 Aucun évènement rattaché à un établissement sur la période. Les faits sans
-                établissement identifié — connexions refusées, débits dépassés sur une adresse
-                anonyme — restent visibles dans le journal ci-dessous.
+                établissement identifié (connexions refusées, débits dépassés sur une adresse
+                anonyme) restent visibles dans le journal ci-dessous.
             </p>
         </div>
 
@@ -237,8 +236,8 @@
                     <tbody>
                     <tr th:if="${evenements.isEmpty()}">
                         <td colspan="5" class="px-5 py-10 text-center text-muted text-[14px]">
-                            Aucun évènement enregistré. C'est une bonne nouvelle — ou le journal vient
-                            d'être mis en service.
+                            Aucun évènement enregistré. C'est une bonne nouvelle, ou bien le journal
+                            vient d'être mis en service.
                         </td>
                     </tr>
                     <tr th:each="e : ${evenements.content}" class="border-t border-line">

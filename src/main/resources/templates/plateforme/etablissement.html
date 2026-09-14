@@ -127,7 +127,7 @@
                     <input type="number" name="maxEnseignants" min="0" th:value="${e.maxEnseignants}"
                            class="w-full h-10 px-3 rounded-lg bg-white/60 border border-line text-[13px]"/>
                 </div>
-                <button type="submit" class="btn btn-ink h-10 px-4 rounded-lg text-[12px] font-medium">Régler</button>
+                <button type="submit" class="btn btn-ink h-10 px-4 rounded-lg text-[12px] font-medium">Enregistrer</button>
             </form>
 
             <!-- Suspendre / réactiver -->
@@ -166,10 +166,10 @@
             <span class="material-symbols-rounded" style="color:#7a0010">warning</span>
             <h2 class="font-serif text-[20px]">Zone dangereuse</h2>
         </div>
-        <p class="text-[13px] text-muted mb-4">Supprime définitivement l'établissement et <strong>toutes</strong> ses données
-            (comptes, enseignants, séances, émargements, rapports). Cette action est irréversible.</p>
+        <p class="text-[13px] text-muted mb-4">Supprime définitivement l'établissement et tout ce qu'il contient :
+            comptes, enseignants, séances, émargements, rapports. Cette action est irréversible.</p>
         <form th:action="@{/plateforme/etablissements/supprimer}" method="post"
-              onsubmit="return confirm('Supprimer définitivement cet établissement et TOUTES ses données ? Cette action est irréversible.');">
+              onsubmit="return confirm('Supprimer définitivement cet établissement et tout ce qu il contient : comptes, enseignants, séances, émargements, paiements, rapports ? Cette action est irréversible.');">
             <input type="hidden" name="slug" th:value="${e.slug}"/>
             <button type="submit" class="h-10 px-4 rounded-lg text-[13px] font-medium inline-flex items-center gap-1.5"
                     style="background:#7a0010;color:#fff">

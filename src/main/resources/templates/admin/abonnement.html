@@ -21,9 +21,9 @@
     <div data-flash th:if="${paiementReconcilie}" class="flex items-start gap-2 p-3 mb-4 rounded-xl text-[13px]"
          style="background:rgba(16,185,129,.12);color:#0f7a3d;border:1px solid rgba(16,185,129,.35)">
         <span class="material-symbols-rounded text-[18px]" style="color:#10b981">verified</span>
-        <span>Paiement confirmé, merci ! Votre abonnement est actif au plan
-            <strong th:text="${etablissementPlan} ?: 'Pro'">Pro</strong> —
-            pris en compte <strong>immédiatement</strong>, aucune reconnexion nécessaire.</span>
+        <span>Paiement confirmé. Votre abonnement est actif au plan
+            <strong th:text="${etablissementPlan} ?: 'Pro'">Pro</strong>.
+            Aucune reconnexion nécessaire.</span>
     </div>
     <!-- Mobile Money confirmé. Repose sur un attribut FLASH posé par le serveur après
          vérification réelle du paiement — et non sur un paramètre d'URL, qu'il suffirait
@@ -31,7 +31,7 @@
     <div data-flash th:if="${momoConfirme}" class="flex items-start gap-2 p-3 mb-4 rounded-xl text-[13px]"
          style="background:rgba(16,185,129,.12);color:#0f7a3d;border:1px solid rgba(16,185,129,.35)">
         <span class="material-symbols-rounded text-[18px]" style="color:#10b981">verified</span>
-        <span>Paiement Mobile Money confirmé, merci ! Votre abonnement est actif au plan
+        <span>Paiement Mobile Money confirmé. Votre abonnement est actif au plan
             <strong th:text="${etablissementPlan} ?: 'Pro'">Pro</strong>.</span>
     </div>
     <!-- Avertissement MODE TEST : l'argent est fictif chez le fournisseur, mais l'abonnement
@@ -40,15 +40,15 @@
     <div th:if="${momoSandbox}" class="flex items-start gap-2 p-3 mb-4 rounded-xl text-[13px]"
          style="background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.45)">
         <span class="material-symbols-rounded text-[18px]" style="color:#d97706">science</span>
-        <span><strong>Mode test (sandbox)</strong> les paiements Mobile Money sont simulés et
-            aucun argent réel n'est débité, alors que l'abonnement est réellement prolongé.</span>
+        <span><strong>Mode test (sandbox)</strong> : les paiements Mobile Money sont simulés,
+            aucun argent n'est débité. L'abonnement, lui, est bien prolongé.</span>
     </div>
     <!-- Retour de Stripe sans confirmation encore obtenue : le webhook finalisera. -->
     <div th:if="${param.paye != null and !paiementReconcilie}" class="flex items-start gap-2 p-3 mb-4 rounded-xl text-[13px]"
          style="background:rgba(10,10,10,.05);border:1px solid var(--c-line)">
         <span class="material-symbols-rounded text-[18px]">hourglass_top</span>
-        <span>Paiement reçu — <strong>confirmation en cours</strong>. Votre plan sera activé dès
-            validation par notre système (quelques secondes). Actualisez cette page si besoin.</span>
+        <span>Paiement reçu, confirmation en cours. Votre plan sera actif dès que le paiement
+            est validé, en général en quelques secondes. Actualisez la page si rien ne change.</span>
     </div>
     <div th:if="${param.annule}" class="flex items-center gap-2 p-3 mb-4 rounded-xl text-[13px]"
          style="background:rgba(10,10,10,.05);border:1px solid var(--line)">
@@ -93,17 +93,17 @@
             <span class="material-symbols-rounded">credit_card</span>
             <h2 class="font-serif text-[22px]">Choisir un plan &amp; payer</h2>
         </div>
-        <p class="text-[14px] text-muted mb-5">Paiement sécurisé par carte bancaire. Activation
-            <strong class="text-ink">immédiate</strong> dès confirmation, aucune reconnexion nécessaire.</p>
+        <p class="text-[14px] text-muted mb-5">Paiement par carte bancaire. Votre plan est actif
+            dès la confirmation.</p>
 
         <form th:action="@{/admin/abonnement/payer}" method="post" class="flex flex-wrap items-end gap-3">
             <div>
                 <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-1.5">Plan</label>
                 <select name="plan" id="planSel" class="h-11 px-3 rounded-xl bg-white/60 border border-line text-[14px]">
                     <option value="PRO" th:attr="data-prix=${prixPro}"
-                            th:text="'Pro — ' + ${#numbers.formatInteger(prixPro,1,'WHITESPACE')} + ' ' + ${symbole} + ' / mois'">Pro</option>
+                            th:text="'Pro : ' + ${#numbers.formatInteger(prixPro,1,'WHITESPACE')} + ' ' + ${symbole} + ' / mois'">Pro</option>
                     <option value="ENTERPRISE" th:if="${prixEnterprise > 0}" th:attr="data-prix=${prixEnterprise}"
-                            th:text="'Enterprise — ' + ${#numbers.formatInteger(prixEnterprise,1,'WHITESPACE')} + ' ' + ${symbole} + ' / mois'">Enterprise</option>
+                            th:text="'Enterprise : ' + ${#numbers.formatInteger(prixEnterprise,1,'WHITESPACE')} + ' ' + ${symbole} + ' / mois'">Enterprise</option>
                 </select>
             </div>
             <div>
@@ -120,8 +120,7 @@
             </button>
         </form>
         <p class="text-[12px] text-muted mt-3">
-            Le montant est <strong class="text-ink">recalculé côté serveur</strong> et le plan choisi
-            est appliqué dès la confirmation du paiement.
+            Le montant total est recalculé par le serveur avant le paiement.
         </p>
 
         <script data-page-script th:inline="javascript">
@@ -151,17 +150,17 @@
             <h2 class="font-serif text-[22px]">Payer par Mobile Money</h2>
         </div>
         <p class="text-[14px] text-muted mb-5">Wave, Orange Money, MTN MoMo ou Moov. Vous recevez une
-            demande de validation sur votre téléphone ; l'abonnement est prolongé
-            <strong class="text-ink">automatiquement</strong> dès confirmation.</p>
+            demande de validation sur votre téléphone. Une fois acceptée, l'abonnement est prolongé
+            automatiquement.</p>
 
         <form th:action="@{/admin/abonnement/momo}" method="post" class="flex flex-wrap items-end gap-3">
             <div>
                 <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-1.5">Plan</label>
                 <select name="plan" id="momoPlan" class="h-11 px-3 rounded-xl bg-white/60 border border-line text-[14px]">
                     <option value="PRO" th:attr="data-prix=${prixPro}"
-                            th:text="'Pro — ' + ${#numbers.formatInteger(prixPro,1,'WHITESPACE')} + ' ' + ${symbole}">Pro</option>
+                            th:text="'Pro : ' + ${#numbers.formatInteger(prixPro,1,'WHITESPACE')} + ' ' + ${symbole}">Pro</option>
                     <option value="ENTERPRISE" th:if="${prixEnterprise > 0}" th:attr="data-prix=${prixEnterprise}"
-                            th:text="'Enterprise — ' + ${#numbers.formatInteger(prixEnterprise,1,'WHITESPACE')} + ' ' + ${symbole}">Enterprise</option>
+                            th:text="'Enterprise : ' + ${#numbers.formatInteger(prixEnterprise,1,'WHITESPACE')} + ' ' + ${symbole}">Enterprise</option>
                 </select>
             </div>
             <div>
@@ -233,14 +232,14 @@
                       th:text="'Enterprise ' + ${prixEnterprise} + ' ' + ${symbole}">Enterprise</strong></span>
                 par mois) au <strong class="text-ink" th:text="${mobileMoney} ?: 'numéro communiqué par la plateforme'">+225 …</strong>
                 (Orange / MTN / Moov / Wave).</li>
-            <li>Cliquez sur « Demander l'activation » : votre paiement est validé et votre période prolongée.</li>
+            <li>Cliquez sur « Demander l'activation » : nous vérifions le versement et prolongeons votre période.</li>
         </ol>
         <a class="btn btn-ink inline-flex items-center gap-2 h-11 px-5 rounded-xl mt-6 font-medium"
            th:href="'mailto:' + ${ownerEmail} + '?subject=Activation%20abonnement%20SIGEP&body=Etablissement%20:%20' + ${etablissementNom}">
             <span class="material-symbols-rounded text-[18px]">mail</span> Demander l'activation
         </a>
-        <p class="text-[12px] text-muted mt-3">L'encaissement Mobile Money automatique arrive ; en
-            attendant, l'activation est validée manuellement sous 24 h ouvrées.</p>
+        <p class="text-[12px] text-muted mt-3">L'encaissement Mobile Money automatique n'est pas
+            encore ouvert. En attendant, l'activation est validée manuellement sous 24 h ouvrées.</p>
     </section>
 
 </main>
