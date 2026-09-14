@@ -45,6 +45,42 @@
             </form>
         </section>
 
+        <!-- ===== LOGO DE L'ÉTABLISSEMENT ===== -->
+        <section class="glass rounded-3xl p-6 lg:col-span-3">
+            <h2 class="font-serif text-[24px] mb-2">Logo de l'établissement</h2>
+            <p class="text-[13px] text-muted mb-4">Il remplace le logo SIGEP en haut de chaque page de votre espace.</p>
+
+            <!-- Réservé aux plans qui comprennent la marque : on le dit avant que l'envoi
+                 échoue, plutôt que d'afficher un formulaire qui finira en refus. -->
+            <div th:if="${!brandingDisponible}" class="rounded-2xl p-4 text-[13px]"
+                 style="background:rgba(10,10,10,.05);border:1px solid var(--c-line)">
+                Le logo personnalisé fait partie du plan Pro.
+                <a th:href="@{/admin/abonnement}" class="underline">Voir les plans</a>
+            </div>
+
+            <div th:if="${brandingDisponible}" class="flex flex-col md:flex-row gap-5 md:items-end">
+                <div th:if="${etablissementLogo != null}" class="shrink-0">
+                    <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Logo actuel</p>
+                    <img th:src="${etablissementLogo}" alt="Logo de l'établissement"
+                         style="width:72px;height:72px;border-radius:14px;object-fit:contain;background:#fff;padding:6px;border:1px solid var(--c-line)"/>
+                </div>
+                <form th:action="@{/admin/etablissement/logo}" method="post" enctype="multipart/form-data"
+                      class="flex flex-col sm:flex-row gap-3 items-start sm:items-end flex-grow">
+                    <div class="flex-grow">
+                        <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Image</label>
+                        <input type="file" name="fichier" accept="image/png,image/jpeg,image/webp" required
+                               class="text-[13px] file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:bg-ink file:text-white file:cursor-pointer"/>
+                        <p class="text-[12px] text-muted mt-2">PNG, JPEG ou WebP, 512 Ko au plus. Une image carrée s'affiche le mieux.</p>
+                    </div>
+                    <button type="submit" class="btn btn-ink h-11 px-5 rounded-xl font-medium whitespace-nowrap">Envoyer</button>
+                </form>
+                <form th:if="${etablissementLogo != null}" th:action="@{/admin/etablissement/logo/retirer}" method="post"
+                      onsubmit="return confirm('Retirer le logo ? Le logo SIGEP reprendra sa place.')">
+                    <button type="submit" class="btn glass h-11 px-5 rounded-xl text-[14px] whitespace-nowrap">Retirer</button>
+                </form>
+            </div>
+        </section>
+
         <!-- ===== MATIÈRES ===== -->
         <section class="glass rounded-3xl p-6">
             <h2 class="font-serif text-[24px] mb-4 flex items-center gap-2">

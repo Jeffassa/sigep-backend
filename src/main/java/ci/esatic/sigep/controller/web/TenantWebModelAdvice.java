@@ -99,10 +99,36 @@ public class TenantWebModelAdvice {
         return e != null ? e.getNomEffectif() : null;
     }
 
+    /**
+     * L'établissement a-t-il droit à sa propre marque ?
+     *
+     * <p>Sert à proposer le dépôt d'un logo plutôt qu'à le refuser après coup : un formulaire
+     * qu'on remplit pour se voir opposer un 403 est une perte de temps doublée d'une vexation.
+     * Le verrou réel reste posé côté serveur, au moment de l'envoi.
+     */
+    @ModelAttribute("brandingDisponible")
+    public boolean brandingDisponible() {
+        return planService.estDisponible(etablissementCourant(),
+                ci.esatic.sigep.tenant.plan.Feature.BRANDING);
+    }
+
+    /**
+     * Adresse du logo de l'établissement, ou null s'il n'en a pas déposé.
+     *
+     * <p>C'est le TYPE de l'image qui sert d'indicateur de présence, jamais l'image elle-même :
+     * celle-ci est chargée paresseusement, et la toucher ici ferait transiter tout le fichier à
+     * chaque page rendue, pour un affichage de trente-deux pixels.
+     */
     @ModelAttribute("etablissementLogo")
     public String etablissementLogo() {
         Etablissement e = etablissementCourant();
-        return e != null ? e.getLogoUrl() : null;
+        if (e == null) {
+            return null;
+        }
+        if (e.getLogoType() != null) {
+            return "/admin/etablissement/logo";
+        }
+        return e.getLogoUrl();   // ancienne colonne, conservée pour les tenants déjà configurés
     }
 
     @ModelAttribute("etablissementCouleur")
