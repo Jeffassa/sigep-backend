@@ -100,7 +100,7 @@ public class PlanService {
         int max = campusAutorises(etablissement);
         if (nbActuel >= max) {
             throw new PlanLimiteException("Votre plan autorise " + max
-                    + (max > 1 ? " campus." : " seul campus.")
+                    + (max > 1 ? " établissements." : " seul établissement.")
                     + " Passez à un plan supérieur pour en gérer plusieurs.");
         }
     }

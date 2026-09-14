@@ -129,11 +129,11 @@ public class ReferentielWebController {
                               RedirectAttributes ra) {
         String n = nom == null ? "" : nom.trim();
         if (n.isEmpty()) {
-            ra.addFlashAttribute("error", "Le nom du campus est obligatoire.");
+            ra.addFlashAttribute("error", "Le nom de l'établissement est obligatoire.");
             return "redirect:/admin/referentiels";
         }
         if (campusRepository.existsByNomIgnoreCase(n)) {
-            ra.addFlashAttribute("error", "Ce campus existe déjà : " + n);
+            ra.addFlashAttribute("error", "Cet établissement existe déjà : " + n);
             return "redirect:/admin/referentiels";
         }
         try {
@@ -148,7 +148,7 @@ public class ReferentielWebController {
                 .nom(n)
                 .adresse(adresse != null && !adresse.isBlank() ? adresse.trim() : null)
                 .build());
-        ra.addFlashAttribute("success", "Campus « " + n + " » ajouté.");
+        ra.addFlashAttribute("success", "Établissement « " + n + " » ajouté.");
         return "redirect:/admin/referentiels";
     }
 
@@ -159,12 +159,12 @@ public class ReferentielWebController {
             // Refuser plutôt que détacher en silence : l'administrateur doit savoir que des
             // salles perdraient leur site, et décider lui-même où les remettre.
             ra.addFlashAttribute("error", "Suppression impossible : " + sallesRattachees
-                    + " salle(s) sont rattachées à ce campus. Déplacez-les d'abord.");
+                    + " salle(s) sont rattachées à cet établissement. Déplacez-les d'abord.");
             return "redirect:/admin/referentiels";
         }
         try {
             campusRepository.deleteById(id);
-            ra.addFlashAttribute("success", "Campus supprimé.");
+            ra.addFlashAttribute("success", "Établissement supprimé.");
         } catch (Exception e) {
             ra.addFlashAttribute("error", "Suppression impossible.");
         }

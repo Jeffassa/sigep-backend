@@ -47,19 +47,19 @@
 
         <!-- ===== CAMPUS ===== -->
         <section class="glass rounded-3xl p-6 lg:col-span-3">
-            <h2 class="font-serif text-[24px] mb-2">Campus</h2>
-            <p class="text-[13px] text-muted mb-4">Les sites de votre établissement. Chaque salle peut être rattachée à l'un d'eux.</p>
+            <h2 class="font-serif text-[24px] mb-2">Établissements</h2>
+            <p class="text-[13px] text-muted mb-4">Les établissements que vous gérez. Chaque salle peut être rattachée à l'un d'eux.</p>
 
             <div th:if="${!multiCampus}" class="rounded-2xl p-4 mb-4 text-[13px]"
                  style="background:rgba(10,10,10,.05);border:1px solid var(--c-line)">
-                Votre plan autorise un seul campus. Le plan Pro permet d'en gérer plusieurs.
+                Votre plan autorise un seul établissement. Le plan Pro permet d'en gérer plusieurs.
                 <a th:href="@{/admin/abonnement}" class="underline">Voir les plans</a>
             </div>
 
             <form th:action="@{/admin/campus}" method="post" class="flex flex-col sm:flex-row gap-3 items-start sm:items-end mb-5">
                 <div class="flex-grow">
                     <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Nom</label>
-                    <input type="text" name="nom" required maxlength="150" placeholder="Campus principal"
+                    <input type="text" name="nom" required maxlength="150" placeholder="Établissement principal"
                            class="w-full h-11 px-4 rounded-xl bg-white/55 border border-line"/>
                 </div>
                 <div class="flex-grow">
@@ -70,16 +70,16 @@
                 <button type="submit" class="btn btn-ink h-11 px-5 rounded-xl font-medium whitespace-nowrap">Ajouter</button>
             </form>
 
-            <p th:if="${campusListe.isEmpty()}" class="text-[13px] text-muted">Aucun campus enregistré.</p>
+            <p th:if="${campusListe.isEmpty()}" class="text-[13px] text-muted">Aucun établissement enregistré.</p>
             <div th:unless="${campusListe.isEmpty()}" class="flex flex-wrap gap-2">
                 <div th:each="c : ${campusListe}"
                      class="glass rounded-2xl px-4 py-3 flex items-center gap-3">
                     <div>
-                        <p class="text-[14px] font-medium" th:text="${c.nom}">Campus</p>
+                        <p class="text-[14px] font-medium" th:text="${c.nom}">Établissement</p>
                         <p class="text-[12px] text-muted" th:text="${c.adresse} ?: '—'">Adresse</p>
                     </div>
                     <form th:action="@{'/admin/campus/' + ${c.id} + '/supprimer'}" method="post"
-                          onsubmit="return confirm('Supprimer ce campus ?')">
+                          onsubmit="return confirm('Supprimer cet établissement ?')">
                         <button type="submit" class="btn w-8 h-8 rounded-lg border border-line flex items-center justify-center hover:bg-ink hover:text-white" title="Supprimer">
                             <span class="material-symbols-rounded text-[16px]">delete</span>
                         </button>
@@ -192,7 +192,7 @@
                 <!-- Proposé seulement s'il existe des campus : une liste vide n'apprendrait rien. -->
                 <select th:if="${!campusListe.isEmpty()}" name="campusId"
                         class="w-full h-11 px-4 rounded-xl bg-white/55 border border-line focus:ring-0 focus:border-ink transition">
-                    <option value="">Aucun campus</option>
+                    <option value="">Aucun établissement</option>
                     <option th:each="c : ${campusListe}" th:value="${c.id}" th:text="${c.nom}">Campus</option>
                 </select>
                 <button type="submit" class="btn btn-ink w-full h-11 rounded-xl font-medium flex items-center justify-center gap-2">
