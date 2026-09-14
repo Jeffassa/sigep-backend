@@ -164,6 +164,13 @@
         .lead { font-size: clamp(16px, 2.2vw, 19px); color: var(--muted); max-width: 620px; margin: 22px auto 0; }
         .hero-cta { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 32px; }
         .hero-note { font-size: 12.5px; color: var(--dim); margin-top: 18px; letter-spacing: .01em; }
+        /* Derrière tout le contenu, et jamais cliquable. L'opacité monte une fois la trame
+           prête : elle apparaît alors sans à-coup plutôt que de surgir d'un bloc. */
+        #trame { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0;
+                 pointer-events: none; opacity: 0; transition: opacity 1.2s ease; }
+        #trame.visible { opacity: 1; }
+        .nav-outer, main, .foot { position: relative; z-index: 1; }
+
         .scroll-hint { margin-top: 40px; font-size: 12px; letter-spacing: .18em; text-transform: uppercase; color: var(--dim); display: inline-flex; align-items: center; gap: 8px; }
         .scroll-hint .bounce { animation: bounce 1.8s infinite; }
         @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(4px)} }
@@ -363,6 +370,10 @@
 <main>
 
     <!-- ===================== HERO ===================== -->
+    <!-- Trame de fond : une grille de points qu'une onde traverse, en écho au geste du
+         produit. Purement décorative, donc masquée aux lecteurs d'écran, et absente tant que
+         le script ne l'a pas jugée opportune (voir plus bas : réseau, écran, préférences). -->
+    <canvas id="trame" aria-hidden="true"></canvas>
     <section class="hero wrap reveal">
         
         <h1 class="title">Suivez les heures de vos enseignants, <span class="grad">séance par séance.</span></h1>
@@ -666,6 +677,197 @@
         }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
         els.forEach(function (el) { io.observe(el); });
     })();
+</script>
+
+<!-- ===================== PARURE ANIMEE =====================
+     Chargée APRÈS le rendu, et seulement quand elle ne coûte rien au visiteur.
+
+     Ces bibliothèques pèsent plusieurs centaines de kilo-octets. Nos utilisateurs se
+     connectent souvent en 3G depuis un téléphone : les imposer à tous reviendrait à faire
+     payer la décoration par ceux qui ont le moins de débit. On les écarte donc dès qu'un
+     signal dit que le moment est mal choisi — économiseur de données, connexion lente, écran
+     étroit, animations réduites — et la page reste entière sans elles.
+     -->
+<script>
+(function () {
+    var racine = document.documentElement;
+
+    function inopportun() {
+        try {
+            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return true;
+            if (window.innerWidth < 900) return true;              // téléphone : batterie et débit
+            var c = navigator.connection;
+            if (c && (c.saveData || /2g|slow-2g|3g/.test(c.effectiveType || ''))) return true;
+            if (navigator.deviceMemory && navigator.deviceMemory < 4) return true;
+        } catch (e) { /* un navigateur sans ces API n'est pas une raison de renoncer */ }
+        return false;
+    }
+
+    function charger(url) {
+        return new Promise(function (ok, ko) {
+            var el = document.createElement('script');
+            el.src = url; el.async = true; el.onload = ok; el.onerror = ko;
+            document.head.appendChild(el);
+        });
+    }
+
+    /* ---- La trame : une grille de points qu'une onde traverse ----------------
+       Le produit tient dans un geste, un code scanné en salle. La page d'accueil le
+       raconte en fond, sans l'illustrer lourdement. */
+    function trame() {
+        var canvas = document.getElementById('trame');
+        if (!canvas || !window.THREE) return;
+
+        var renderer;
+        try {
+            renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+        } catch (e) {
+            return;   // pas de WebGL : la page se passe très bien de cette parure
+        }
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.6));
+        renderer.setSize(window.innerWidth, window.innerHeight, false);
+
+        var scene = new THREE.Scene();
+        var camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(0, 0, 14);
+
+        var COLONNES = 64, LIGNES = 34, PAS = 0.62;
+        var total = COLONNES * LIGNES;
+        var positions = new Float32Array(total * 3);
+        var i = 0;
+        for (var y = 0; y < LIGNES; y++) {
+            for (var x = 0; x < COLONNES; x++) {
+                positions[i++] = (x - COLONNES / 2) * PAS;
+                positions[i++] = (y - LIGNES / 2) * PAS;
+                positions[i++] = 0;
+            }
+        }
+        var geometrie = new THREE.BufferGeometry();
+        geometrie.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+        var clair = racine.classList.contains('light');
+        var matiere = new THREE.PointsMaterial({
+            size: 0.055,
+            color: new THREE.Color(clair ? 0x10b981 : 0x34d399),
+            transparent: true,
+            opacity: clair ? 0.5 : 0.62,
+            sizeAttenuation: true
+        });
+        var points = new THREE.Points(geometrie, matiere);
+        scene.add(points);
+
+        var souris = { x: 0, y: 0 };
+        window.addEventListener('pointermove', function (e) {
+            souris.x = (e.clientX / window.innerWidth) * 2 - 1;
+            souris.y = -(e.clientY / window.innerHeight) * 2 + 1;
+        }, { passive: true });
+
+        var attribut = geometrie.getAttribute('position');
+        var depart = performance.now();
+        var enCours = true;
+
+        // Une page qu'on ne regarde pas ne doit rien consommer.
+        document.addEventListener('visibilitychange', function () {
+            var reprend = !document.hidden && !enCours;
+            enCours = !document.hidden;
+            if (reprend) boucle();
+        });
+
+        function boucle() {
+            if (!enCours) return;
+            requestAnimationFrame(boucle);
+            var t = (performance.now() - depart) / 1000;
+
+            // L'onde balaie la grille de bas en haut, comme le faisceau d'un scanner.
+            var front = ((t * 0.42) % 2.6) * 14 - 12;
+            for (var k = 0; k < total; k++) {
+                var py = attribut.getY(k);
+                var d = Math.abs(py - front);
+                var relief = d < 2.2 ? Math.cos((d / 2.2) * Math.PI * 0.5) * 1.15 : 0;
+                var houle = Math.sin(t * 0.5 + attribut.getX(k) * 0.22) * 0.18;
+                attribut.setZ(k, relief + houle);
+            }
+            attribut.needsUpdate = true;
+
+            // La trame suit le regard, de très loin : un mouvement qu'on devine sans le voir.
+            points.rotation.y += ((souris.x * 0.16) - points.rotation.y) * 0.03;
+            points.rotation.x += ((souris.y * 0.10) - points.rotation.x) * 0.03;
+
+            renderer.render(scene, camera);
+        }
+        boucle();
+        canvas.classList.add('visible');
+
+        window.addEventListener('resize', function () {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight, false);
+        }, { passive: true });
+
+        // La bascule de thème change la couleur des points, sinon ils jurent sur fond clair.
+        new MutationObserver(function () {
+            var c = racine.classList.contains('light');
+            matiere.color.set(c ? 0x10b981 : 0x34d399);
+            matiere.opacity = c ? 0.5 : 0.62;
+        }).observe(racine, { attributes: true, attributeFilter: ['class'] });
+    }
+
+    /* ---- Le mouvement : entrées séquencées et parallaxe ---------------------- */
+    function mouvement() {
+        if (!window.gsap || !window.ScrollTrigger) return;
+        gsap.registerPlugin(ScrollTrigger);
+
+        // Le hero s'installe en trois temps plutôt que d'apparaître d'un bloc : l'oeil suit
+        // le titre, puis la promesse, puis l'action.
+        gsap.timeline({ defaults: { ease: 'power3.out' } })
+            .from('.hero .title', { y: 26, opacity: 0, duration: 0.9 })
+            .from('.hero .lead', { y: 18, opacity: 0, duration: 0.7 }, '-=0.55')
+            .from('.hero-cta > *', { y: 14, opacity: 0, duration: 0.6, stagger: 0.09 }, '-=0.4')
+            .from('.hero-note, .scroll-hint', { opacity: 0, duration: 0.6, stagger: 0.08 }, '-=0.3');
+
+        // L'aperçu de l'interface s'élève doucement pendant qu'on descend vers lui.
+        var shot = document.querySelector('.shot-wrap');
+        if (shot) {
+            gsap.to(shot, {
+                yPercent: -6,
+                ease: 'none',
+                scrollTrigger: { trigger: shot, start: 'top bottom', end: 'bottom top', scrub: 0.6 }
+            });
+        }
+
+        // Les chiffres se comptent au lieu de s'afficher : on croit davantage ce qu'on voit
+        // se construire.
+        document.querySelectorAll('[data-compteur]').forEach(function (el) {
+            var cible = parseFloat(el.getAttribute('data-compteur'));
+            var suffixe = el.getAttribute('data-suffixe') || '';
+            var etat = { v: 0 };
+            gsap.to(etat, {
+                v: cible, duration: 1.4, ease: 'power2.out',
+                scrollTrigger: { trigger: el, start: 'top 85%', once: true },
+                onUpdate: function () { el.textContent = Math.round(etat.v) + suffixe; }
+            });
+        });
+    }
+
+    function demarrer() {
+        if (inopportun()) return;
+        charger('https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js')
+            .then(function () { return charger('https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js'); })
+            .then(mouvement)
+            .catch(function () { /* la page vit sans : rien a rattraper */ });
+
+        charger('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js')
+            .then(trame)
+            .catch(function () {});
+    }
+
+    // Après le chargement complet : la parure ne doit jamais retarder le premier affichage.
+    if (document.readyState === 'complete') {
+        setTimeout(demarrer, 200);
+    } else {
+        window.addEventListener('load', function () { setTimeout(demarrer, 200); });
+    }
+})();
 </script>
 
 <div th:replace="~{admin/fragments :: cookieConsent}"></div>
