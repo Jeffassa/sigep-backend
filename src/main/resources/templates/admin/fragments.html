@@ -575,6 +575,17 @@
             enCours = true;
             progression('debut');
 
+            // Le bouton montre qu'il travaille. Sans ce signe, une action lente passe pour une
+            // action ignorée : l'utilisateur reclique, et un second clic sur « supprimer » ou
+            // « payer » ne se rattrape pas. La classe le rend aussi inerte le temps de l'envoi.
+            var bouton = form.querySelector('button[type="submit"], input[type="submit"]');
+            if (bouton) {
+                bouton.classList.add('en-cours');
+                // Rétabli quoi qu'il arrive : en cas d'échec, la page est rechargée et le bouton
+                // repart neuf, mais un repli qui laisserait un bouton mort serait pire que tout.
+                setTimeout(function () { bouton.classList.remove('en-cours'); }, 8000);
+            }
+
             var methode = (form.method || 'get').toUpperCase();
             var action = form.action || location.href;
             var donnees = new FormData(form);
@@ -594,7 +605,10 @@
                     window.scrollTo(0, y);               // action en place : on ne bouge pas
                 })
                 .catch(echec)
-                .finally(function () { enCours = false; progression('fin'); });
+                .finally(function () {
+                    enCours = false; progression('fin');
+                    if (bouton) bouton.classList.remove('en-cours');
+                });
 
             // Repli. Pour un POST on NE REJOUE PAS la requete : l'action a pu s'executer avant
             // l'erreur, et la rejouer supprimerait deux fois, paierait deux fois, validerait deux
