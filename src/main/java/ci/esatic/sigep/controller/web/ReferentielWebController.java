@@ -32,6 +32,8 @@ public class ReferentielWebController {
     private final MatiereRepository matiereRepository;
     private final ClasseRepository classeRepository;
     private final SalleRepository salleRepository;
+    private final ci.esatic.sigep.repository.CampusRepository campusRepository;
+    private final ci.esatic.sigep.tenant.plan.PlanService planService;
     private final EtablissementCourantService etablissementCourantService;
     private final EtablissementRepository etablissementRepository;
 
@@ -41,6 +43,10 @@ public class ReferentielWebController {
         model.addAttribute("classes", classeRepository.findAll());
         model.addAttribute("salles", salleRepository.findAll());
         model.addAttribute("etablissementCourant", etablissementCourantService.courant());
+        model.addAttribute("campusListe", campusRepository.findAllByOrderByNomAsc());
+        model.addAttribute("multiCampus", planService.estDisponible(
+                etablissementCourantService.courant(),
+                ci.esatic.sigep.tenant.plan.Feature.MULTI_CAMPUS));
         return "admin/referentiels";
     }
 
@@ -116,10 +122,60 @@ public class ReferentielWebController {
         return "redirect:/admin/referentiels";
     }
 
+    // --- Campus ---
+    @PostMapping("/admin/campus")
+    public String creerCampus(@RequestParam String nom,
+                              @RequestParam(required = false) String adresse,
+                              RedirectAttributes ra) {
+        String n = nom == null ? "" : nom.trim();
+        if (n.isEmpty()) {
+            ra.addFlashAttribute("error", "Le nom du campus est obligatoire.");
+            return "redirect:/admin/referentiels";
+        }
+        if (campusRepository.existsByNomIgnoreCase(n)) {
+            ra.addFlashAttribute("error", "Ce campus existe déjà : " + n);
+            return "redirect:/admin/referentiels";
+        }
+        try {
+            // Le quota se compte AVANT l'ajout : le plan gratuit n'en autorise qu'un.
+            planService.verifierQuotaCampus(etablissementCourantService.courant(),
+                    campusRepository.count());
+        } catch (ci.esatic.sigep.tenant.plan.PlanLimiteException e) {
+            ra.addFlashAttribute("error", e.getMessage());
+            return "redirect:/admin/referentiels";
+        }
+        campusRepository.save(ci.esatic.sigep.entity.Campus.builder()
+                .nom(n)
+                .adresse(adresse != null && !adresse.isBlank() ? adresse.trim() : null)
+                .build());
+        ra.addFlashAttribute("success", "Campus « " + n + " » ajouté.");
+        return "redirect:/admin/referentiels";
+    }
+
+    @PostMapping("/admin/campus/{id}/supprimer")
+    public String supprimerCampus(@PathVariable Long id, RedirectAttributes ra) {
+        long sallesRattachees = salleRepository.countByCampusId(id);
+        if (sallesRattachees > 0) {
+            // Refuser plutôt que détacher en silence : l'administrateur doit savoir que des
+            // salles perdraient leur site, et décider lui-même où les remettre.
+            ra.addFlashAttribute("error", "Suppression impossible : " + sallesRattachees
+                    + " salle(s) sont rattachées à ce campus. Déplacez-les d'abord.");
+            return "redirect:/admin/referentiels";
+        }
+        try {
+            campusRepository.deleteById(id);
+            ra.addFlashAttribute("success", "Campus supprimé.");
+        } catch (Exception e) {
+            ra.addFlashAttribute("error", "Suppression impossible.");
+        }
+        return "redirect:/admin/referentiels";
+    }
+
     // --- Salles ---
     @PostMapping("/admin/salles")
     public String creerSalle(@RequestParam String libelle, @RequestParam(required = false) String batiment,
-                             @RequestParam(required = false) Integer capacite, RedirectAttributes ra) {
+                             @RequestParam(required = false) Integer capacite,
+                             @RequestParam(required = false) Long campusId, RedirectAttributes ra) {
         String lib = libelle == null ? "" : libelle.trim().toUpperCase();
         if (lib.isEmpty()) {
             ra.addFlashAttribute("error", "Le nom de la salle est obligatoire.");
@@ -129,8 +185,12 @@ public class ReferentielWebController {
         } else if (salleRepository.existsByLibelleIgnoreCase(lib)) {
             ra.addFlashAttribute("error", "Cette salle existe déjà : " + lib);
         } else {
+            // Le campus n'est retenu que s'il appartient bien à cet établissement : le filtre
+            // multi-tenant rend introuvable celui d'un autre, et l'identifiant est alors ignoré.
+            Long campus = (campusId != null && campusRepository.existsById(campusId)) ? campusId : null;
             salleRepository.save(Salle.builder().libelle(lib)
-                    .batiment(batiment != null ? batiment.trim() : null).capacite(capacite).build());
+                    .batiment(batiment != null ? batiment.trim() : null).capacite(capacite)
+                    .campusId(campus).build());
             ra.addFlashAttribute("success", "Salle « " + lib + " » ajoutée.");
         }
         return "redirect:/admin/referentiels";

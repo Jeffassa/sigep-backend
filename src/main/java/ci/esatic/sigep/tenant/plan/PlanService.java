@@ -80,6 +80,31 @@ public class PlanService {
         }
     }
 
+    /**
+     * Combien de campus ce plan autorise-t-il ?
+     *
+     * <p>Un seul sans {@link Feature#MULTI_CAMPUS} : c'est exactement ce que la grille annonce
+     * sous « 1 campus » pour l'offre gratuite. Le chiffre est ici plutôt que dans la base parce
+     * qu'il découpe l'offre, au même titre que la table des fonctionnalités.
+     */
+    public int campusAutorises(Etablissement etablissement) {
+        return estDisponible(etablissement, Feature.MULTI_CAMPUS) ? Integer.MAX_VALUE : 1;
+    }
+
+    /**
+     * Vérifie qu'un campus de plus reste permis, sinon refuse en nommant la limite.
+     *
+     * @param nbActuel nombre de campus déjà enregistrés pour cet établissement
+     */
+    public void verifierQuotaCampus(Etablissement etablissement, long nbActuel) {
+        int max = campusAutorises(etablissement);
+        if (nbActuel >= max) {
+            throw new PlanLimiteException("Votre plan autorise " + max
+                    + (max > 1 ? " campus." : " seul campus.")
+                    + " Passez à un plan supérieur pour en gérer plusieurs.");
+        }
+    }
+
     /** Quota d'enseignants atteint ? (maxEnseignants = 0 → illimité) */
     public boolean quotaEnseignantsAtteint(Etablissement etablissement, long nbActuel) {
         if (etablissement == null) return false;

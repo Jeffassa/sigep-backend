@@ -28,6 +28,12 @@ public class Salle implements TenantScoped {
     private String libelle;
 
     private String batiment;
+    /**
+     * Campus de rattachement. NULL pour les salles saisies avant la notion de campus : exiger
+     * un rattachement rétroactif aurait bloqué tous les établissements déjà en service.
+     */
+    @Column(name = "campus_id")
+    private Long campusId;
 
     private Integer capacite;
 
