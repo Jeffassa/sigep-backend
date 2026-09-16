@@ -124,6 +124,9 @@
     <a th:href="@{/admin/rapports}" class="dock-item" th:classappend="${active=='rapports'}?'active':''" data-label="Rapports">
         <span class="material-symbols-rounded">description</span><span class="dock-tip">Rapports</span>
     </a>
+    <a th:href="@{/admin/paie}" class="dock-item" th:classappend="${active=='paie'}?'active':''" data-label="Paie">
+        <span class="material-symbols-rounded">payments</span><span class="dock-tip">Paie</span>
+    </a>
     <a th:href="@{/admin/referentiels}" class="dock-item" th:classappend="${active=='referentiels'}?'active':''" data-label="Référentiels">
         <span class="material-symbols-rounded">library_books</span><span class="dock-tip">Référentiels</span>
     </a>
@@ -164,6 +167,8 @@
                 <span class="material-symbols-rounded">person_add</span><span>Nouvel enseignant</span></a>
             <a class="palette-item" th:href="@{/admin/rapports}" data-key="rapports pdf import generer">
                 <span class="material-symbols-rounded">description</span><span>Rapports &amp; import</span></a>
+            <a class="palette-item" th:href="@{/admin/paie}" data-key="paie heures export salaire remuneration vacataire csv excel">
+                <span class="material-symbols-rounded">payments</span><span>Paie (export des heures)</span></a>
             <a class="palette-item" th:href="@{/admin/referentiels}" data-key="referentiels matieres classes salles modele emploi du temps">
                 <span class="material-symbols-rounded">library_books</span><span>Référentiels (matières · classes · salles)</span></a>
             <a class="palette-item" th:href="@{/admin/statistiques}" data-key="statistiques stats analyse tendances kpi recommandations heatmap">

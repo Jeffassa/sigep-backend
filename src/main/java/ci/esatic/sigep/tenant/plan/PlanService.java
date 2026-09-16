@@ -62,7 +62,7 @@ public class PlanService {
     private static final Map<Plan, Set<Feature>> FEATURES = Map.of(
             Plan.FREE, EnumSet.noneOf(Feature.class),
             Plan.PRO, EnumSet.of(Feature.ANALYSE_IA, Feature.RAPPORTS_AVANCES,
-                    Feature.MULTI_CAMPUS, Feature.BRANDING),
+                    Feature.MULTI_CAMPUS, Feature.BRANDING, Feature.EXPORT_PAIE),
             Plan.ENTERPRISE, EnumSet.allOf(Feature.class)
     );
 
