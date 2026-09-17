@@ -96,4 +96,15 @@ public record LignePaie(
     public double heuresAArbitrer() {
         return Math.round((heuresEnAttente + heuresNonEmargees) * 100) / 100.0;
     }
+
+    /**
+     * Séances dont le sort est déjà joué : les prévues, moins celles qui n'ont pas eu lieu.
+     *
+     * <p>C'est le seul dénominateur honnête pour un taux d'émargement en cours de mois.
+     * Rapporter les séances émargées au total prévu ferait afficher « 4 / 20 » le 5 du mois à
+     * un enseignant qui n'a pas manqué un seul cours.
+     */
+    public long seancesDues() {
+        return seancesPrevues - seancesAVenir;
+    }
 }

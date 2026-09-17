@@ -1,12 +1,14 @@
 package ci.esatic.sigep.controller.web;
 
 import ci.esatic.sigep.dto.response.LignePaie;
+import ci.esatic.sigep.entity.Etablissement;
 import ci.esatic.sigep.entity.User;
 import ci.esatic.sigep.service.EtablissementCourantService;
 import ci.esatic.sigep.service.ExportPaieService;
 import ci.esatic.sigep.tenant.plan.Feature;
 import ci.esatic.sigep.tenant.plan.PlanService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -31,6 +33,7 @@ import java.util.Locale;
  */
 @Controller
 @RequiredArgsConstructor
+@Slf4j
 public class PaieWebController {
 
     private final ExportPaieService exportPaieService;
@@ -38,6 +41,10 @@ public class PaieWebController {
     private final EtablissementCourantService etablissementCourantService;
 
     private static final DateTimeFormatter MOIS = DateTimeFormatter.ofPattern("yyyy-MM");
+
+    /** Fenetre de mois acceptee : au-dela, les calculs de mois voisin debordent. */
+    private static final YearMonth PLANCHER = YearMonth.of(2000, 1);
+    private static final YearMonth PLAFOND = YearMonth.of(2100, 12);
 
     @GetMapping("/admin/paie")
     public String paie(@RequestParam(required = false) String mois, Model model) {
@@ -72,7 +79,7 @@ public class PaieWebController {
         if (admin == null || !disponible()) return ResponseEntity.status(403).build();
         YearMonth periode = periode(mois);
         byte[] contenu = exportPaieService.versCsv(exportPaieService.calculer(periode), periode);
-        return fichier(contenu, "paie_" + periode.format(MOIS) + ".csv",
+        return fichier(contenu, nomFichier(periode, "csv"),
                 MediaType.parseMediaType("text/csv; charset=UTF-8"));
     }
 
@@ -83,12 +90,32 @@ public class PaieWebController {
         YearMonth periode = periode(mois);
         try {
             byte[] contenu = exportPaieService.versExcel(exportPaieService.calculer(periode), periode);
-            return fichier(contenu, "paie_" + periode.format(MOIS) + ".xlsx",
+            return fichier(contenu, nomFichier(periode, "xlsx"),
                     MediaType.parseMediaType(
                             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
         } catch (Exception e) {
+            // Sans cette trace, un echec — y compris le refus de la garde tenant — devient un
+            // 500 muet sur un fichier de paie : personne ne peut dire pourquoi il manque.
+            log.error("Export paie XLSX impossible pour {} : {}", periode, e.toString(), e);
             return ResponseEntity.internalServerError().build();
         }
+    }
+
+    /**
+     * Nom du fichier telecharge, portant l'etablissement.
+     *
+     * <p>Sans lui, deux ecoles produisent le meme « paie_2026-03.csv » : dans le dossier de
+     * telechargements d'un gestionnaire qui suit plusieurs etablissements, ou dans la boite du
+     * service paie d'un groupe, le second ecrase le premier sans un mot.
+     *
+     * <p>Le libelle est passe au meme tamis que les noms de rapports : lettres, chiffres, tiret
+     * et point uniquement. Aucun texte libre n'atteint l'en-tete HTTP.
+     */
+    private String nomFichier(YearMonth periode, String extension) {
+        Etablissement etablissement = etablissementCourantService.courant();
+        String qui = etablissement == null ? null : etablissement.getSlug();
+        String tamise = qui == null ? "" : qui.replaceAll("[^A-Za-z0-9_-]", "");
+        return "paie_" + (tamise.isEmpty() ? "" : tamise + "_") + periode.format(MOIS) + "." + extension;
     }
 
     private boolean disponible() {
@@ -106,7 +133,11 @@ public class PaieWebController {
     private static YearMonth periode(String mois) {
         if (mois == null || mois.isBlank()) return YearMonth.now();
         try {
-            return YearMonth.parse(mois.trim());
+            YearMonth demande = YearMonth.parse(mois.trim());
+            // Les bornes de YearMonth vont a +/- 999 999 999 ans. A l'extremite, le simple
+            // calcul du mois suivant, qui alimente la fleche de navigation, deborde et rend
+            // une erreur 500. Aucune paie ne se fait hors de cette fenetre.
+            return demande.isBefore(PLANCHER) || demande.isAfter(PLAFOND) ? YearMonth.now() : demande;
         } catch (Exception e) {
             return YearMonth.now();
         }

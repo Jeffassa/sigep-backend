@@ -23,7 +23,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.util.ArrayList;
@@ -63,15 +62,6 @@ public class ExportPaieService {
     private final SeanceRepository seanceRepository;
     private final EmargementRepository emargementRepository;
     private final EnseignantRepository enseignantRepository;
-
-    /**
-     * Durée maximale admise pour une séance qui franchit minuit.
-     *
-     * <p>Sert à distinguer un cours du soir d'une saisie inversée. 21 h → 00 h donne trois
-     * heures et passe ; 10 h → 08 h en donnerait vingt-deux, ce qui n'est pas un cours mais
-     * deux champs échangés.
-     */
-    private static final long PLAFOND_MINUIT_MINUTES = 14 * 60;
 
     /** En-têtes des deux formats, dans l'ordre. Une seule source pour ne pas les voir diverger. */
     private static final String[] COLONNES = {
@@ -358,7 +348,7 @@ public class ExportPaieService {
 
         void ajouter(Seance s, LocalDateTime maintenant) {
             prevues++;
-            Duree d = duree(s);
+            DureeSeance.Duree d = DureeSeance.de(s);
             if (!d.exploitable()) {
                 // Ni payée, ni portée au débit de l'enseignant : personne ne peut rien conclure
                 // d'horaires qui ne veulent rien dire. La colonne dédiée le signale.
@@ -367,7 +357,11 @@ public class ExportPaieService {
             }
 
             StatutSeance statut = s.getStatut();
-            if (statut == StatutSeance.EMARGE) {
+            // EN_RETARD est aujourd'hui inutilisé — aucun code ne le pose. S'il revenait, il
+            // signifierait « présent, mais arrivé après le début » : une présence, donc des
+            // heures dues. Le laisser tomber dans la branche par défaut le compterait comme un
+            // oubli d'émargement et retirerait ces heures de la paie.
+            if (statut == StatutSeance.EMARGE || statut == StatutSeance.EN_RETARD) {
                 emargees++;
                 minutesEmargees += d.minutes();
             } else if (statut == StatutSeance.EN_ATTENTE_VALIDATION) {
@@ -385,35 +379,8 @@ public class ExportPaieService {
         }
     }
 
-    /** Durée d'une séance, et si l'on peut en faire quelque chose. */
-    private record Duree(long minutes, boolean exploitable) {}
-
-    private static final Duree INEXPLOITABLE = new Duree(0, false);
-
-    /**
-     * Durée d'une séance, en minutes entières.
-     *
-     * <p>On cumule en minutes et on ne divise qu'à la fin : additionner des heures en virgule
-     * flottante fait dériver le total de quelques secondes par séance, et un total d'heures
-     * faux sur une fiche de paie se remarque.
-     *
-     * <p>Une heure de fin antérieure au début a deux lectures possibles : un cours du soir qui
-     * franchit minuit (21 h → 00 h), ou deux champs échangés (10 h → 08 h). La durée obtenue
-     * tranche — trois heures d'un côté, vingt-deux de l'autre. Au-delà du plafond, on refuse de
-     * deviner et on le dit, plutôt que de compter zéro heure en silence : c'est cette version
-     * silencieuse qui amputait une paie sans que personne ne s'en aperçoive.
-     */
-    private static Duree duree(Seance s) {
-        if (s.getHeureDebut() == null || s.getHeureFin() == null) return INEXPLOITABLE;
-        long m = Duration.between(s.getHeureDebut(), s.getHeureFin()).toMinutes();
-        if (m > 0) return new Duree(m, true);
-        if (m == 0) return INEXPLOITABLE;                  // durée nulle : saisie fautive
-        long parMinuit = m + 24 * 60;
-        return parMinuit <= PLAFOND_MINUIT_MINUTES ? new Duree(parMinuit, true) : INEXPLOITABLE;
-    }
-
     /** Fin réelle de la séance, le lendemain si elle franchit minuit. */
-    private static LocalDateTime finit(Seance s, Duree d) {
+    private static LocalDateTime finit(Seance s, DureeSeance.Duree d) {
         return LocalDateTime.of(s.getDate(), s.getHeureDebut()).plusMinutes(d.minutes());
     }
 

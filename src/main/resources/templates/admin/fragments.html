@@ -349,6 +349,11 @@
         return !(p.indexOf('/admin/dashboard') !== -1 || p.indexOf('/admin/rapports') !== -1
             || p.indexOf('/admin/messages') !== -1 || p.indexOf('/admin/statistiques') !== -1
             || p.indexOf('/admin/abonnement') !== -1
+            // Paie : la page la plus couteuse de l'application (tout l'annuaire + toutes les
+            // seances du mois, a chaque appel). Rien n'y est vivant — les heures d'un mois clos
+            // ne bougent pas de seconde en seconde — et la rafraichir en boucle ferait tourner
+            // le calcul complet une fois par seconde et par onglet ouvert.
+            || p.indexOf('/admin/paie') !== -1
             || /\/admin\/enseignants\/.+/.test(p));
     }
     {

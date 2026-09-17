@@ -461,6 +461,177 @@ class ExportPaieTest {
                 .hasMessageContaining("etablissement");
     }
 
+    @Test
+    void deuxEtablissements_neSeVoientPas_dansLeMemeFichier() {
+        // L isolation etait affirmee par une sonde jetable, prouvee par aucun test. C est
+        // pourtant le risque le plus grave de cet ecran : un fichier de paie qui deborde livre
+        // la remuneration de tout un corps enseignant a une autre ecole.
+        preparer();
+        Long a = tenant;
+        Enseignant chezA = enseignant("PAIE-CHEZ-A", "Ahoua", StatutEnseignant.VALIDATED);
+        seance(chezA, 3, "08:00", "10:00", StatutSeance.EMARGE);
+        Seance sA = seanceRepository.findAll().get(0);
+        emargement(sA, chezA, true, true);
+
+        preparer();                       // un second etablissement, avec son propre referentiel
+        Long b = tenant;
+        Enseignant chezB = enseignant("PAIE-CHEZ-B", "Zadi", StatutEnseignant.VALIDATED);
+        seance(chezB, 3, "08:00", "10:00", StatutSeance.EMARGE);
+
+        assertThat(a).isNotEqualTo(b);
+
+        // Vu depuis B : uniquement B.
+        rendreVisible();
+        assertThat(exportPaieService.calculer(MOIS, APRES))
+                .extracting(LignePaie::matricule)
+                .contains("PAIE-CHEZ-B")
+                .doesNotContain("PAIE-CHEZ-A");
+
+        // Vu depuis A : uniquement A — y compris la colonne des retards, qui vient d un
+        // agregat separe et pourrait fuir de son cote.
+        tenant = a;
+        rendreVisible();
+        List<LignePaie> vuParA = exportPaieService.calculer(MOIS, APRES);
+        assertThat(vuParA).extracting(LignePaie::matricule)
+                .contains("PAIE-CHEZ-A").doesNotContain("PAIE-CHEZ-B");
+        assertThat(vuParA.stream().mapToLong(LignePaie::retards).sum())
+                .as("les retards d un autre etablissement ne doivent pas entrer dans l agregat")
+                .isEqualTo(1);
+    }
+
+    @Test
+    void unEmargementHorsLigne_remplitLaColonneHorsLigne() {
+        // La colonne existait sans qu aucun test n en fasse sortir autre chose que zero : une
+        // inversion des deux compteurs de l agregat serait passee inapercue.
+        preparer();
+        Enseignant e = enseignant("PAIE-HL", "Dosso", StatutEnseignant.VALIDATED);
+        Seance s = seance(e, 11, "08:00", "10:00", StatutSeance.EMARGE);
+        emargement(s, e, false, true);           // hors-ligne, sans retard
+        rendreVisible();
+
+        LignePaie l = ligne("PAIE-HL");
+        assertThat(l.horsLigne()).isEqualTo(1);
+        assertThat(l.retards()).as("les deux compteurs ne doivent pas etre intervertis").isZero();
+    }
+
+    @Test
+    void uneSeanceEnRetard_estUnePresence_pasUnOubli() {
+        // EN_RETARD n est pose nulle part aujourd hui. S il revenait, il signifierait
+        // « present, arrive apres le debut » : le laisser tomber dans la branche par defaut
+        // retirerait ces heures de la paie.
+        preparer();
+        Enseignant e = enseignant("PAIE-RET", "Guei", StatutEnseignant.VALIDATED);
+        seance(e, 12, "08:00", "10:00", StatutSeance.EN_RETARD);
+        rendreVisible();
+
+        LignePaie l = ligne("PAIE-RET");
+        assertThat(l.heures()).isEqualTo(2.0);
+        assertThat(l.seancesNonEmargees()).isZero();
+        assertThat(l.estNette()).isTrue();
+    }
+
+    @Test
+    void uneJourneeSaisieALEnvers_neSePaiePas_quatorzeHeures() {
+        // 20 h -> 10 h : intervertir les bornes d une journee de dix heures donnait, par la
+        // lecture « franchit minuit », quatorze heures payees. Intervertir une seance de duree D
+        // produit toujours 24 h - D, soit au moins dix-huit heures pour toute seance de six
+        // heures ou moins : le plafond de nuit ecarte donc toutes les interversions plausibles.
+        preparer();
+        Enseignant e = enseignant("PAIE-ENVERS", "Niamke", StatutEnseignant.VALIDATED);
+        seance(e, 13, "20:00", "10:00", StatutSeance.EMARGE);
+        rendreVisible();
+
+        LignePaie l = ligne("PAIE-ENVERS");
+        assertThat(l.heures()).isZero();
+        assertThat(l.seancesDureeIncoherente()).isEqualTo(1);
+    }
+
+    @Test
+    void uneDureeAbsurdeEnAvant_estSignaleeAussi() {
+        // 06 h -> 23 h fait dix-sept heures en avant : l arithmetique ne pose aucune question,
+        // mais un cours ne dure pas dix-sept heures. Payer dix-sept heures sur une faute de
+        // frappe coute autant que n en payer aucune.
+        preparer();
+        Enseignant e = enseignant("PAIE-LONG", "Sery", StatutEnseignant.VALIDATED);
+        seance(e, 14, "06:00", "23:00", StatutSeance.EMARGE);
+        rendreVisible();
+
+        assertThat(ligne("PAIE-LONG").seancesDureeIncoherente()).isEqualTo(1);
+        assertThat(ligne("PAIE-LONG").heures()).isZero();
+    }
+
+    @Test
+    void uneJourneePleineDeDouzeHeures_resteUneSeancePayee() {
+        // Le pendant du test precedent : le plafond doit laisser passer une journee longue
+        // mais reelle, sinon il transformerait un seminaire en anomalie a arbitrer.
+        preparer();
+        Enseignant e = enseignant("PAIE-12H", "Ake", StatutEnseignant.VALIDATED);
+        seance(e, 15, "08:00", "20:00", StatutSeance.EMARGE);
+        rendreVisible();
+
+        LignePaie l = ligne("PAIE-12H");
+        assertThat(l.heures()).isEqualTo(12.0);
+        assertThat(l.seancesDureeIncoherente()).isZero();
+    }
+
+    @Test
+    void lesValeursDuCsv_sontDansLOrdreDesEnTetes() {
+        // Seuls les en-tetes etaient verifies. Intervertir deux colonnes de valeurs dans
+        // versCsv laissait la suite entierement verte, et un service paie aurait lu des
+        // retards dans la colonne des heures.
+        String csv = new String(exportPaieService.versCsv(
+                List.of(ligneFictive("M-9", "Bony", "Akissi")), MOIS), StandardCharsets.UTF_8);
+
+        String[] lignes = csv.substring(1).split("\r\n");
+        String[] entetes = lignes[0].split(";");
+        String[] valeurs = lignes[1].split(";");
+        assertThat(valeurs).hasSameSizeAs(entetes);
+
+        // ligneFictive : 3 prevues, 2 emargees, 3,50 h, 1 retard, 0 hors-ligne, 0 en attente,
+        // 1 non emargee pour 1,50 h, 0 a venir, 0 horaire incoherent.
+        assertThat(valeurs[indice(entetes, "Matricule")]).isEqualTo("\"M-9\"");
+        assertThat(valeurs[indice(entetes, "Seances prevues")]).isEqualTo("3");
+        assertThat(valeurs[indice(entetes, "Seances emargees")]).isEqualTo("2");
+        assertThat(valeurs[indice(entetes, "Heures a payer")]).isEqualTo("3,50");
+        assertThat(valeurs[indice(entetes, "Retards")]).isEqualTo("1");
+        assertThat(valeurs[indice(entetes, "Hors-ligne")]).isEqualTo("0");
+        assertThat(valeurs[indice(entetes, "Seances non emargees")]).isEqualTo("1");
+        assertThat(valeurs[indice(entetes, "Heures non emargees")]).isEqualTo("1,50");
+        assertThat(valeurs[indice(entetes, "Horaires incoherents")]).isEqualTo("0");
+    }
+
+    private static int indice(String[] entetes, String libelle) {
+        for (int i = 0; i < entetes.length; i++) {
+            if (entetes[i].replace("\"", "").equals(libelle)) return i;
+        }
+        throw new AssertionError("colonne absente : " + libelle);
+    }
+
+    @Test
+    void leTotalDuClasseur_estLaSommeDesHeuresAffichees() {
+        // La cellule TOTAL n etait relue par aucun test, et c est une somme d arrondis : c est
+        // pourtant le premier chiffre que cherche un service paie.
+        List<LignePaie> lignes = List.of(
+                ligneFictive("M-A", "Un", "Test"), ligneFictive("M-B", "Deux", "Test"));
+
+        try (Workbook wb = new XSSFWorkbook(new ByteArrayInputStream(
+                exportPaieService.versExcel(lignes, MOIS)))) {
+            var feuille = wb.getSheetAt(0);
+            double total = 0;
+            for (int r = 1; r <= lignes.size(); r++) {
+                total += feuille.getRow(r).getCell(8).getNumericCellValue();
+            }
+            var ligneTotal = feuille.getRow(lignes.size() + 2);
+            assertThat(ligneTotal.getCell(0).getStringCellValue()).isEqualTo("TOTAL");
+            assertThat(ligneTotal.getCell(8).getNumericCellValue()).isEqualTo(total);
+            // Une ligne vide separe le total des donnees : sans elle, un import la lirait
+            // comme un enseignant de plus.
+            assertThat(feuille.getRow(lignes.size() + 1)).isNull();
+        } catch (Exception e) {
+            throw new AssertionError(e);
+        }
+    }
+
     // ──────────────────────────────── le plan ──────────────────────────────
 
     @Test

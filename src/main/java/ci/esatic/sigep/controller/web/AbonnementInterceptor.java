@@ -30,7 +30,7 @@ public class AbonnementInterceptor implements HandlerInterceptor {
         if (uri.startsWith("/admin/abonnement") || uri.equals("/admin/logout")) {
             return true; // toujours accessibles, même expiré
         }
-        if (abonnementService.estExpire(etablissementCourantService.courant())) {
+        if (abonnementService.accesSuspendu(etablissementCourantService.courant())) {
             response.sendRedirect(request.getContextPath() + "/admin/abonnement");
             return false;
         }

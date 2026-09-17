@@ -32,12 +32,16 @@
                 <button type="submit" class="btn btn-ink h-11 px-5 rounded-xl font-medium">Afficher</button>
             </form>
             <div class="flex items-center gap-2">
-                <a th:href="@{/admin/paie(mois=${moisPrecedent})}" class="btn glass h-11 px-4 rounded-xl text-[13px]" title="Mois précédent">
-                    <span class="material-symbols-rounded text-[18px]">chevron_left</span>
+                <!-- aria-label : sans lui, le nom accessible du lien est le texte de la
+                     ligature de l'icone, et un lecteur d'ecran annonce « chevron_left ». -->
+                <a th:href="@{/admin/paie(mois=${moisPrecedent})}" class="btn glass h-11 px-4 rounded-xl text-[13px]"
+                   th:title="'Mois précédent : ' + ${moisPrecedent}" th:aria-label="'Mois précédent : ' + ${moisPrecedent}">
+                    <span class="material-symbols-rounded text-[18px]" aria-hidden="true">chevron_left</span>
                 </a>
                 <span class="text-[14px] font-medium px-2 whitespace-nowrap" th:text="${moisLibelle}">Septembre 2026</span>
-                <a th:href="@{/admin/paie(mois=${moisSuivant})}" class="btn glass h-11 px-4 rounded-xl text-[13px]" title="Mois suivant">
-                    <span class="material-symbols-rounded text-[18px]">chevron_right</span>
+                <a th:href="@{/admin/paie(mois=${moisSuivant})}" class="btn glass h-11 px-4 rounded-xl text-[13px]"
+                   th:title="'Mois suivant : ' + ${moisSuivant}" th:aria-label="'Mois suivant : ' + ${moisSuivant}">
+                    <span class="material-symbols-rounded text-[18px]" aria-hidden="true">chevron_right</span>
                 </a>
             </div>
         </section>
@@ -96,14 +100,15 @@
             <!-- min-w : sans elle, le navigateur comprime les sept colonnes dans la largeur
                  d'un telephone et plus rien ne se lit. Avec elle, c'est le tableau qui defile
                  dans sa carte, et la page, elle, ne bouge pas. -->
-            <div class="overflow-x-auto">
+            <div class="overflow-x-auto" tabindex="0" role="region" aria-label="Heures par enseignant">
                 <table class="w-full min-w-[720px] text-left">
+                    <caption class="sr-only">Heures constatées par enseignant sur le mois affiché</caption>
                     <thead>
                     <tr class="border-b border-line">
                         <th class="px-5 py-4 font-mono text-[10px] uppercase tracking-wider text-muted">Matricule</th>
                         <th class="px-5 py-4 font-mono text-[10px] uppercase tracking-wider text-muted">Enseignant</th>
                         <th class="px-5 py-4 font-mono text-[10px] uppercase tracking-wider text-muted">Grade</th>
-                        <th class="px-5 py-4 font-mono text-[10px] uppercase tracking-wider text-muted text-right">Séances</th>
+                        <th class="px-5 py-4 font-mono text-[10px] uppercase tracking-wider text-muted text-right" title="Séances émargées sur séances déjà passées">Séances</th>
                         <th class="px-5 py-4 font-mono text-[10px] uppercase tracking-wider text-muted text-right">Heures</th>
                         <th class="px-5 py-4 font-mono text-[10px] uppercase tracking-wider text-muted text-right">Retards</th>
                         <th class="px-5 py-4 font-mono text-[10px] uppercase tracking-wider text-muted text-right">À trancher</th>
@@ -113,18 +118,25 @@
                     <tr th:if="${lignes.isEmpty()}">
                         <td colspan="7" class="px-5 py-12 text-center text-muted">Aucune séance sur ce mois.</td>
                     </tr>
-                    <tr th:each="l : ${lignes}" class="zebra border-b border-line/60">
+                    <tr th:each="l : ${lignes}" class="zebra border-b border-line">
                         <td class="px-5 py-4 font-mono text-[12px]" th:text="${l.matricule}">ENS-0001</td>
                         <td class="px-5 py-4 text-[14px]" th:text="${l.nomComplet()}">Prénom Nom</td>
                         <td class="px-5 py-4 text-[13px] text-muted" th:text="${#strings.isEmpty(l.grade) ? '—' : l.grade}">—</td>
-                        <td class="px-5 py-4 text-[13px] text-right" th:text="${l.seancesEmargees} + ' / ' + ${l.seancesPrevues}">0 / 0</td>
+                        <!-- Denominateur : les seances DUES, pas les prevues. Le 5 du mois, un
+                             enseignant assidu afficherait sinon « 4 / 20 ». -->
+                        <td class="px-5 py-4 text-[13px] text-right" th:text="${l.seancesEmargees} + ' / ' + ${l.seancesDues()}">0 / 0</td>
                         <td class="px-5 py-4 text-[14px] text-right font-medium" th:text="${#numbers.formatDecimal(l.heures, 1, 'POINT', 2, 'COMMA')}">0,00</td>
                         <td class="px-5 py-4 text-[13px] text-right text-muted" th:text="${l.retards}">0</td>
                         <td class="px-5 py-4 text-right">
                             <span th:if="${l.estNette()}" class="text-muted text-[13px]">—</span>
+                            <!-- Une ligne aux horaires incoherents n'a ni heures en attente ni
+                                 heures manquantes : elle affichait « 0,00 h » tout en etant
+                                 signalee. On nomme alors ce qui cloche. -->
                             <span th:unless="${l.estNette()}"
                                   class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-ink text-white font-mono text-[10px] uppercase tracking-wider"
-                                  th:text="${#numbers.formatDecimal(l.heuresAArbitrer(), 1, 'POINT', 2, 'COMMA')} + ' h'">0,00 h</span>
+                                  th:text="${l.heuresAArbitrer() > 0}
+                                           ? ${#numbers.formatDecimal(l.heuresAArbitrer(), 1, 'POINT', 2, 'COMMA')} + ' h'
+                                           : ${l.seancesDureeIncoherente()} + ' horaire(s)'">0,00 h</span>
                         </td>
                     </tr>
                     </tbody>

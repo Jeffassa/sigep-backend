@@ -64,7 +64,7 @@
                 <tr th:if="${cles.isEmpty()}">
                     <td colspan="5" class="px-6 py-12 text-center text-muted">Aucune clé pour le moment.</td>
                 </tr>
-                <tr th:each="c : ${cles}" class="zebra border-b border-line/60">
+                <tr th:each="c : ${cles}" class="zebra border-b border-line">
                     <td class="px-6 py-4 text-[14px]" th:text="${c.libelle}">Nom</td>
                     <td class="px-6 py-4 font-mono text-[12px] text-muted" th:text="${c.prefixe} + '…'">sigep_…</td>
                     <td class="px-6 py-4 text-[13px] text-muted"
@@ -98,9 +98,9 @@
             </tr>
             </thead>
             <tbody class="text-[13px]">
-            <tr class="border-b border-line/60"><td class="py-3 font-mono text-[12px]">/api/public/ping</td><td class="py-3 text-muted">Vérifie que la clé est acceptée</td></tr>
-            <tr class="border-b border-line/60"><td class="py-3 font-mono text-[12px]">/api/public/enseignants</td><td class="py-3 text-muted">Votre corps enseignant</td></tr>
-            <tr class="border-b border-line/60"><td class="py-3 font-mono text-[12px]">/api/public/seances?debut=&amp;fin=</td><td class="py-3 text-muted">Les séances d'une période, 92 jours au plus</td></tr>
+            <tr class="border-b border-line"><td class="py-3 font-mono text-[12px]">/api/public/ping</td><td class="py-3 text-muted">Vérifie que la clé est acceptée</td></tr>
+            <tr class="border-b border-line"><td class="py-3 font-mono text-[12px]">/api/public/enseignants</td><td class="py-3 text-muted">Votre corps enseignant</td></tr>
+            <tr class="border-b border-line"><td class="py-3 font-mono text-[12px]">/api/public/seances?debut=&amp;fin=</td><td class="py-3 text-muted">Les séances d'une période, 92 jours au plus</td></tr>
             <tr><td class="py-3 font-mono text-[12px]">/api/public/emargements/total</td><td class="py-3 text-muted">Le nombre d'émargements enregistrés</td></tr>
             </tbody>
         </table>
