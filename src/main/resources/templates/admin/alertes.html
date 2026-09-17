@@ -57,7 +57,7 @@
                     <td colspan="6" class="px-6 py-12 text-center text-muted">
                         <span class="material-symbols-rounded text-[36px] block mb-2 opacity-40">check_circle</span>Tout est à jour.</td>
                 </tr>
-                <tr th:each="s : ${seancesNonEmargees}" class="zebra border-b border-line/60">
+                <tr th:each="s : ${seancesNonEmargees}" class="zebra border-b border-line">
                     <td class="px-6 py-3.5 font-mono text-[12px] text-muted" th:text="${#temporals.format(s.date,'dd/MM/yy')}">--</td>
                     <td class="px-6 py-3.5 font-mono text-[12px] text-muted">
                         <span th:text="${#temporals.format(s.heureDebut,'HH:mm')}">--</span>–<span th:text="${#temporals.format(s.heureFin,'HH:mm')}">--</span></td>
@@ -102,7 +102,7 @@
                     <td colspan="8" class="px-6 py-12 text-center text-muted">
                         <span class="material-symbols-rounded text-[36px] block mb-2 opacity-40">check_circle</span>Aucun émargement hors-ligne à valider.</td>
                 </tr>
-                <tr th:each="eh : ${emargementsHorsLigne}" class="zebra border-b border-line/60">
+                <tr th:each="eh : ${emargementsHorsLigne}" class="zebra border-b border-line">
                     <td class="px-6 py-3.5 font-mono text-[12px] font-medium" th:text="${#temporals.format(eh.seance.date,'dd/MM/yyyy')}">--</td>
                     <td class="px-6 py-3.5 font-mono text-[12px] text-muted" th:text="${#temporals.format(eh.dateHeure,'dd/MM HH:mm')}">--</td>
                     <td class="px-6 py-3.5 text-[14px] font-medium" th:text="${eh.enseignant.prenom + ' ' + eh.enseignant.nom}">Ens.</td>
@@ -163,7 +163,7 @@
                     <td colspan="6" class="px-6 py-12 text-center text-muted">
                         <span class="material-symbols-rounded text-[36px] block mb-2 opacity-40">check_circle</span>Aucune demande.</td>
                 </tr>
-                <tr th:each="d : ${rattrapagesEnAttente}" class="zebra border-b border-line/60">
+                <tr th:each="d : ${rattrapagesEnAttente}" class="zebra border-b border-line">
                     <td class="px-6 py-3.5 text-[14px] font-medium" th:text="${d.enseignant.prenom + ' ' + d.enseignant.nom}">Ens.</td>
                     <td class="px-6 py-3.5 text-[14px] text-muted" th:text="${d.matiere.libelle}">Matière</td>
                     <td class="px-6 py-3.5 text-[14px] text-muted" th:text="${d.classe.libelle}">Classe</td>
@@ -221,7 +221,7 @@
                     <td colspan="4" class="px-6 py-12 text-center text-muted">
                         <span class="material-symbols-rounded text-[36px] block mb-2 opacity-40">check_circle</span>Aucun enseignant en attente.</td>
                 </tr>
-                <tr th:each="e : ${enseignantsEnAttente}" class="zebra border-b border-line/60">
+                <tr th:each="e : ${enseignantsEnAttente}" class="zebra border-b border-line">
                     <td class="px-6 py-3.5 font-mono text-[12px] font-medium" th:text="${e.matricule}">MAT</td>
                     <td class="px-6 py-3.5 text-[14px] font-medium" th:text="${e.prenom + ' ' + e.nom}">Nom</td>
                     <td class="px-6 py-3.5 text-[14px] text-muted" th:text="${e.departement}">—</td>

@@ -46,6 +46,23 @@ public interface EmargementRepository extends JpaRepository<Emargement, Long> {
     // Badge d'alertes : nb de hors-ligne en attente (actionnable, contrairement au cumul total).
     long countByHorsLigneTrueAndValideFalse();
 
+    /**
+     * Export paie : retards et hors-ligne cumulés par enseignant sur une plage de dates de séance.
+     *
+     * <p>Un agrégat plutôt qu'une requête par enseignant. L'export de paie est justement l'écran
+     * où l'établissement est le plus gros : une boucle y coûterait une requête par ligne du
+     * fichier.
+     *
+     * @return des lignes {@code [enseignantId, nbRetards, nbHorsLigne]}
+     */
+    @Query("SELECT e.enseignant.id, "
+         + "SUM(CASE WHEN e.enRetard = true THEN 1 ELSE 0 END), "
+         + "SUM(CASE WHEN e.horsLigne = true THEN 1 ELSE 0 END) "
+         + "FROM Emargement e WHERE e.seance.date BETWEEN :debut AND :fin "
+         + "GROUP BY e.enseignant.id")
+    List<Object[]> signauxParEnseignant(@Param("debut") LocalDate debut,
+                                        @Param("fin") LocalDate fin);
+
     // C2 — plafond : nb de hors-ligne d'un enseignant sur une plage de dates de séance.
     @Query("SELECT COUNT(e) FROM Emargement e WHERE e.horsLigne = true " +
            "AND e.enseignant.id = :enseignantId AND e.seance.date BETWEEN :debut AND :fin")

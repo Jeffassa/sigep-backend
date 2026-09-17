@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('SIGEP | Paie')}"></head>
+<body>
+
+<div th:replace="~{admin/fragments :: topbar('paie')}"></div>
+
+<main class="max-w-[1200px] mx-auto px-5 md:px-8 py-10 pb-36">
+
+    <div class="mb-8" data-reveal>
+        <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mb-2">Paie</p>
+        <h1 class="font-serif text-[clamp(34px,5vw,52px)] leading-[1.02] tracking-tight">Heures faites</h1>
+        <p class="text-[14px] text-muted mt-3">Les heures constatées par enseignant sur un mois, prêtes à partir au service paie.</p>
+    </div>
+
+    <div th:if="${!paieDisponible}" class="glass rounded-3xl p-6 mb-6" data-reveal>
+        <p class="text-[14px]">L'export des heures fait partie des plans Pro et Enterprise.
+            <a th:href="@{/admin/abonnement}" class="underline">Voir les plans</a></p>
+    </div>
+
+    <div th:if="${paieDisponible}">
+
+        <!-- Choix du mois. La paie se fait par mois : un sélecteur de mois, pas deux dates
+             à saisir, et une flèche de part et d'autre pour la navigation la plus fréquente. -->
+        <section class="glass rounded-3xl p-5 mb-6 flex flex-col sm:flex-row gap-4 sm:items-end" data-reveal>
+            <form th:action="@{/admin/paie}" method="get" class="flex items-end gap-3 flex-grow">
+                <div>
+                    <label for="mois" class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Mois</label>
+                    <input type="month" id="mois" name="mois" th:value="${mois}"
+                           class="h-11 px-4 rounded-xl bg-white/55 border border-line"/>
+                </div>
+                <button type="submit" class="btn btn-ink h-11 px-5 rounded-xl font-medium">Afficher</button>
+            </form>
+            <div class="flex items-center gap-2">
+                <!-- aria-label : sans lui, le nom accessible du lien est le texte de la
+                     ligature de l'icone, et un lecteur d'ecran annonce « chevron_left ». -->
+                <a th:href="@{/admin/paie(mois=${moisPrecedent})}" class="btn glass h-11 px-4 rounded-xl text-[13px]"
+                   th:title="'Mois précédent : ' + ${moisPrecedent}" th:aria-label="'Mois précédent : ' + ${moisPrecedent}">
+                    <span class="material-symbols-rounded text-[18px]" aria-hidden="true">chevron_left</span>
+                </a>
+                <span class="text-[14px] font-medium px-2 whitespace-nowrap" th:text="${moisLibelle}">Septembre 2026</span>
+                <a th:href="@{/admin/paie(mois=${moisSuivant})}" class="btn glass h-11 px-4 rounded-xl text-[13px]"
+                   th:title="'Mois suivant : ' + ${moisSuivant}" th:aria-label="'Mois suivant : ' + ${moisSuivant}">
+                    <span class="material-symbols-rounded text-[18px]" aria-hidden="true">chevron_right</span>
+                </a>
+            </div>
+        </section>
+
+        <!-- Les quatre chiffres du mois. Le premier est celui qu'on paie ; les deux suivants
+             disent ce qui reste à trancher avant de le considérer définitif ; le dernier, ce qui
+             n'a pas encore eu lieu et n'a donc rien à voir avec un manquement. -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6" data-reveal>
+            <div class="glass-strong rounded-3xl p-6">
+                <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Heures à payer</p>
+                <p class="font-serif text-[40px] leading-none" th:text="${#numbers.formatDecimal(totaux.heures, 1, 'POINT', 2, 'COMMA')}">0,00</p>
+                <p class="text-[12px] text-muted mt-2"><span th:text="${totaux.enseignantsActifs}">0</span> enseignant(s) en activité sur le mois</p>
+            </div>
+            <div class="glass rounded-3xl p-6">
+                <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-2">En attente de validation</p>
+                <p class="font-serif text-[40px] leading-none" th:text="${#numbers.formatDecimal(totaux.heuresEnAttente, 1, 'POINT', 2, 'COMMA')}">0,00</p>
+                <p class="text-[12px] text-muted mt-2">Émargements hors-ligne à confirmer</p>
+            </div>
+            <div class="glass rounded-3xl p-6">
+                <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Sans émargement</p>
+                <p class="font-serif text-[40px] leading-none" th:text="${#numbers.formatDecimal(totaux.heuresNonEmargees, 1, 'POINT', 2, 'COMMA')}">0,00</p>
+                <p class="text-[12px] text-muted mt-2">Séances terminées qu'aucun scan ne couvre</p>
+            </div>
+            <!-- Les seances qui n'ont pas encore eu lieu sont mises a part : les melanger aux
+                 oublis ferait remonter tout l'etablissement des qu'on exporte le mois en cours,
+                 et le vrai oubli de scan disparaitrait dans le bruit. -->
+            <div class="glass rounded-3xl p-6">
+                <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Encore à venir</p>
+                <p class="font-serif text-[40px] leading-none" th:text="${#numbers.formatDecimal(totaux.heuresAVenir, 1, 'POINT', 2, 'COMMA')}">0,00</p>
+                <p class="text-[12px] text-muted mt-2">Cours du mois qui n'ont pas encore eu lieu</p>
+            </div>
+        </section>
+
+        <div th:if="${totaux.seancesIncoherentes > 0}" class="glass rounded-2xl p-4 mb-4 flex items-start gap-3 text-[13px]" data-reveal
+             style="border-color:rgba(234,88,12,.4)">
+            <span class="material-symbols-rounded text-[18px] mt-px">schedule</span>
+            <span><strong th:text="${totaux.seancesIncoherentes}">0</strong> séance(s) ont des horaires dont aucune durée ne peut se déduire — heure de fin avant le début, ou durée nulle. Elles ne sont comptées nulle part : corrigez-les dans le planning avant l'envoi, sinon ces heures ne seront payées à personne.</span>
+        </div>
+        <div th:if="${totaux.lignesAArbitrer > 0}" class="glass rounded-2xl p-4 mb-6 flex items-start gap-3 text-[13px]" data-reveal>
+            <span class="material-symbols-rounded text-[18px] mt-px">flag</span>
+            <span><strong th:text="${totaux.lignesAArbitrer}">0</strong> ligne(s) demandent un arbitrage avant l'envoi : une séance sans émargement n'est pas nécessairement une séance non faite. Elles sont remontées en tête du tableau.</span>
+        </div>
+
+        <!-- Les téléchargements portent une extension dans l'URL : la navigation instantanée
+             les laisse alors passer en navigation réelle, sinon le fichier finirait en mémoire. -->
+        <section class="flex flex-wrap gap-3 mb-6" data-reveal>
+            <a th:href="@{/admin/paie/export.csv(mois=${mois})}" class="btn btn-ink h-11 px-5 rounded-xl font-medium inline-flex items-center gap-2">
+                <span class="material-symbols-rounded text-[18px]">table_view</span>CSV
+            </a>
+            <a th:href="@{/admin/paie/export.xlsx(mois=${mois})}" class="btn glass h-11 px-5 rounded-xl font-medium inline-flex items-center gap-2">
+                <span class="material-symbols-rounded text-[18px]">download</span>Excel
+            </a>
+        </section>
+
+        <section class="glass rounded-3xl overflow-hidden mb-6" data-reveal>
+            <!-- min-w : sans elle, le navigateur comprime les sept colonnes dans la largeur
+                 d'un telephone et plus rien ne se lit. Avec elle, c'est le tableau qui defile
+                 dans sa carte, et la page, elle, ne bouge pas. -->
+            <div class="overflow-x-auto" tabindex="0" role="region" aria-label="Heures par enseignant">
+                <table class="w-full min-w-[720px] text-left">
+                    <caption class="sr-only">Heures constatées par enseignant sur le mois affiché</caption>
+                    <thead>
+                    <tr class="border-b border-line">
+                        <th class="px-5 py-4 font-mono text-[10px] uppercase tracking-wider text-muted">Matricule</th>
+                        <th class="px-5 py-4 font-mono text-[10px] uppercase tracking-wider text-muted">Enseignant</th>
+                        <th class="px-5 py-4 font-mono text-[10px] uppercase tracking-wider text-muted">Grade</th>
+                        <th class="px-5 py-4 font-mono text-[10px] uppercase tracking-wider text-muted text-right" title="Séances émargées sur séances déjà passées">Séances</th>
+                        <th class="px-5 py-4 font-mono text-[10px] uppercase tracking-wider text-muted text-right">Heures</th>
+                        <th class="px-5 py-4 font-mono text-[10px] uppercase tracking-wider text-muted text-right">Retards</th>
+                        <th class="px-5 py-4 font-mono text-[10px] uppercase tracking-wider text-muted text-right">À trancher</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:if="${lignes.isEmpty()}">
+                        <td colspan="7" class="px-5 py-12 text-center text-muted">Aucune séance sur ce mois.</td>
+                    </tr>
+                    <tr th:each="l : ${lignes}" class="zebra border-b border-line">
+                        <td class="px-5 py-4 font-mono text-[12px]" th:text="${l.matricule}">ENS-0001</td>
+                        <td class="px-5 py-4 text-[14px]" th:text="${l.nomComplet()}">Prénom Nom</td>
+                        <td class="px-5 py-4 text-[13px] text-muted" th:text="${#strings.isEmpty(l.grade) ? '—' : l.grade}">—</td>
+                        <!-- Denominateur : les seances DUES, pas les prevues. Le 5 du mois, un
+                             enseignant assidu afficherait sinon « 4 / 20 ». -->
+                        <td class="px-5 py-4 text-[13px] text-right" th:text="${l.seancesEmargees} + ' / ' + ${l.seancesDues()}">0 / 0</td>
+                        <td class="px-5 py-4 text-[14px] text-right font-medium" th:text="${#numbers.formatDecimal(l.heures, 1, 'POINT', 2, 'COMMA')}">0,00</td>
+                        <td class="px-5 py-4 text-[13px] text-right text-muted" th:text="${l.retards}">0</td>
+                        <td class="px-5 py-4 text-right">
+                            <span th:if="${l.estNette()}" class="text-muted text-[13px]">—</span>
+                            <!-- Une ligne aux horaires incoherents n'a ni heures en attente ni
+                                 heures manquantes : elle affichait « 0,00 h » tout en etant
+                                 signalee. On nomme alors ce qui cloche. -->
+                            <span th:unless="${l.estNette()}"
+                                  class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-ink text-white font-mono text-[10px] uppercase tracking-wider"
+                                  th:text="${l.heuresAArbitrer() > 0}
+                                           ? ${#numbers.formatDecimal(l.heuresAArbitrer(), 1, 'POINT', 2, 'COMMA')} + ' h'
+                                           : ${l.seancesDureeIncoherente()} + ' horaire(s)'">0,00 h</span>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Ce que le fichier dit, et ce qu'il ne dit pas. Un service paie qui reçoit un
+             chiffre sans savoir comment il est construit ne peut ni le vérifier ni le
+             contester : autant l'écrire là où le fichier se produit. -->
+        <section class="glass rounded-3xl p-6" data-reveal>
+            <h2 class="font-serif text-[22px] mb-4">Ce que ce fichier contient</h2>
+            <dl class="text-[14px] space-y-4">
+                <div>
+                    <dt class="font-medium">Les heures à payer</dt>
+                    <dd class="text-muted mt-1">La durée cumulée des séances réellement émargées. C'est le seul chiffre prouvé : derrière chacun se trouve un scan horodaté.</dd>
+                </div>
+                <div>
+                    <dt class="font-medium">Les séances sans émargement</dt>
+                    <dd class="text-muted mt-1">Des heures planifiées qu'aucun scan ne couvre. Elles sont signalées à part, jamais retirées d'office : un oubli de scan existe, et retrancher une paie sur un incident technique se retourne contre l'établissement.</dd>
+                </div>
+                <div>
+                    <dt class="font-medium">Les séances encore à venir</dt>
+                    <dd class="text-muted mt-1">Sur le mois en cours, les cours qui n'ont pas encore eu lieu. Ils ne sont ni payés ni reprochés : ils figurent à part pour que vous sachiez que le fichier est partiel.</dd>
+                </div>
+                <div>
+                    <dt class="font-medium">Les horaires incohérents</dt>
+                    <dd class="text-muted mt-1">Une heure de fin avant l'heure de début, ou une durée nulle. Plutôt que de compter zéro heure sans rien dire, le fichier les isole : ce sont des heures qui disparaîtraient d'une paie sans que personne ne s'en aperçoive.</dd>
+                </div>
+                <div>
+                    <dt class="font-medium">Les retards</dt>
+                    <dd class="text-muted mt-1">Émargements arrivés après la fin de la séance. La séance est comptée entière : la sanction, s'il doit y en avoir une, n'est pas une décision d'algorithme.</dd>
+                </div>
+                <div>
+                    <dt class="font-medium">Aucun montant</dt>
+                    <dd class="text-muted mt-1">SIGEP ne connaît pas le taux horaire d'un enseignant — il dépend du grade, de l'ancienneté, parfois d'une convention. Le fichier livre les heures ; le service paie applique ses barèmes.</dd>
+                </div>
+            </dl>
+            <p class="text-[13px] text-muted mt-5 pt-5 border-t border-line">Le CSV suit la convention française (point-virgule, décimale en virgule) : il s'ouvre en colonnes dans Excel. Le fichier Excel contient de vrais nombres, à additionner directement.</p>
+        </section>
+
+    </div>
+
+</main>
+
+<div th:replace="~{admin/fragments :: dock('paie')}"></div>
+<div th:replace="~{admin/fragments :: palette}"></div>
+<div th:replace="~{admin/fragments :: scripts}"></div>
+
+</body>
+</html>
