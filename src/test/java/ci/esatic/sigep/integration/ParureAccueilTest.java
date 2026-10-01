@@ -79,6 +79,43 @@ class ParureAccueilTest {
     }
 
     @Test
+    void uneDecoration_nePeutJamaisEffacerUnBoutonDAppel() throws Exception {
+        // Le défaut que ce test retient : l'entrée du hero visait « .hero-cta > * », qui
+        // désigne TOUS les appels à l'action de la page. gsap.from() pose opacity:0 à
+        // l'instant même et ne le relève qu'en fin de tween — si le tween ne finit jamais
+        // (onglet ouvert en arrière-plan, donc requestAnimationFrame gelé ; appareil lent ;
+        // script interrompu), le visiteur arrive sur une page dont les cinq boutons sont
+        // invisibles. C'est toute la conversion du site qui disparaît, sans erreur nulle part.
+        String html = accueil();
+
+        assertThat(html)
+                .as("l'entree du hero ne doit viser que le hero")
+                .doesNotContain(".from('.hero-cta > *'");
+        assertThat(html).contains(".hero .hero-cta > *");
+
+        // Et quoi qu'il arrive, les styles posés par l'animation sont effacés.
+        assertThat(html)
+                .as("un filet doit rendre le contenu visible meme si l'animation n'aboutit pas")
+                .contains("clearProps")
+                .contains("setTimeout(rendreVisible");
+    }
+
+    @Test
+    void leFondAnime_neDependDAucuneBibliotheque() throws Exception {
+        String html = accueil();
+
+        // Le fond était rendu par Three.js — 130 Ko compressés pour une grille de points, et
+        // rien du tout pour qui n'obtient pas de contexte WebGL. Il tient désormais dans un
+        // canvas 2D : aucune dépendance, et le repli est la page elle-même.
+        assertThat(html).doesNotContain("three.min.js").doesNotContain("THREE.");
+        assertThat(html).contains("function fond()").contains("getContext('2d')");
+
+        // Le canevas est posé DERRIÈRE la page : l'effacement de la traînée doit retirer de
+        // l'alpha, jamais repeindre un fond opaque qui masquerait le contenu.
+        assertThat(html).contains("destination-out");
+    }
+
+    @Test
     void laPage_resteEntiereSansAucunScript() throws Exception {
         String html = accueil();
 

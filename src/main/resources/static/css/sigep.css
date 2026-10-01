@@ -1,5 +1,39 @@
 :root {
-    /* ===== Thème CLAIR (par défaut) ===== */
+    
+/* ============================================================================
+   LA COCHE DE RÉUSSITE
+
+   Elle se trace : le cercle se referme, puis le trait se pose. Une icône qui
+   apparaît d'un bloc ne dit rien de plus qu'un point vert ; une coche qui se
+   dessine dit « c'est fait », au moment où ça vient de l'être — et l'œil la
+   remarque sans qu'on ait à faire clignoter quoi que ce soit.
+
+   Tracé par stroke-dashoffset, donc en CSS seul : aucune bibliothèque
+   d'animation pour dix-huit pixels. Et sous prefers-reduced-motion, la coche
+   est simplement là, complète : une confirmation ne doit jamais dépendre d'une
+   animation que l'utilisateur a demandé de ne pas jouer.
+   ========================================================================= */
+.coche { width: 18px; height: 18px; flex: none; color: #10b981; display: block; }
+.coche circle, .coche path {
+    fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round;
+}
+.coche circle {
+    stroke-width: 2.4; stroke-dasharray: 126; stroke-dashoffset: 126;
+    transform: rotate(-90deg); transform-origin: 50% 50%;
+    animation: coche-cercle .5s cubic-bezier(.22,1,.36,1) forwards;
+}
+.coche path {
+    stroke-width: 3; stroke-dasharray: 30; stroke-dashoffset: 30;
+    animation: coche-trait .32s cubic-bezier(.22,1,.36,1) .34s forwards;
+}
+@keyframes coche-cercle { to { stroke-dashoffset: 0; } }
+@keyframes coche-trait  { to { stroke-dashoffset: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+    .coche circle, .coche path { animation: none; stroke-dashoffset: 0; }
+}
+
+/* ===== Thème CLAIR (par défaut) ===== */
     --c-bg: #f4f4f5;                       /* fond de page */
     --c-ink: #0a0a0a;                      /* texte/élément fort */
     --c-ink2: #1c1c1e;
