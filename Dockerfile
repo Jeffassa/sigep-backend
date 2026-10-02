@@ -9,7 +9,7 @@ COPY src/ src/
 RUN mvn -B -q clean package -DskipTests
 
 # ---- Étape runtime : image légère, utilisateur non-root ----
-FROM eclipse-temurin:21-jre AS runtime
+FROM eclipse-temurin:25-jre AS runtime
 WORKDIR /app
 # Utilisateur non privilégié
 RUN groupadd --system app && useradd --system --gid app app
