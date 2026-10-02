@@ -183,6 +183,10 @@
                 <span class="material-symbols-rounded">monitoring</span><span>Statistiques</span></a>
             <a class="palette-item" th:href="@{/admin/alertes}" data-key="alertes emargements manquants rattrapages">
                 <span class="material-symbols-rounded">notifications</span><span>Alertes</span></a>
+            <a class="palette-item" th:href="@{/admin/api}" data-key="api cle integration developpeur rest json export outils">
+                <span class="material-symbols-rounded">key</span><span>API (clés d'intégration)</span></a>
+            <a class="palette-item" th:href="@{/admin/sso}" data-key="sso oidc openid connect annuaire google workspace microsoft entra azure keycloak identite connexion organisation">
+                <span class="material-symbols-rounded">corporate_fare</span><span>Connexion par votre annuaire (SSO)</span></a>
             <a class="palette-item" th:href="@{/admin/abonnement}" data-key="abonnement plan facturation renouveler paiement expiration">
                 <span class="material-symbols-rounded">card_membership</span><span>Abonnement</span></a>
             <a th:if="${qrDisplayUrl != null}" class="palette-item" th:href="@{/admin/ecran-emargement}"
@@ -362,6 +366,12 @@
             // ne bougent pas de seconde en seconde — et la rafraichir en boucle ferait tourner
             // le calcul complet une fois par seconde et par onglet ouvert.
             || p.indexOf('/admin/paie') !== -1
+            // SSO et cles d'API : des formulaires qu'on remplit lentement, et dont une partie
+            // ne s'affiche qu'UNE fois (la cle en clair, juste apres sa creation). Un
+            // remplacement du contenu effacerait un secret a demi saisi, ou un secret qui
+            // n'existe plus nulle part ailleurs.
+            || p.indexOf('/admin/sso') !== -1
+            || p.indexOf('/admin/api') !== -1
             || /\/admin\/enseignants\/.+/.test(p));
     }
     {

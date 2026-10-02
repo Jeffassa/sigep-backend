@@ -161,6 +161,12 @@ app:
       #  - QR_DISPLAY_ALLOWED_IPS : IP(s) publiques autorisées (réseau de l'établissement), séparées par des virgules
       key: ${QR_DISPLAY_KEY:}
       allowed-ips: ${QR_DISPLAY_ALLOWED_IPS:}
+  sso:
+    # Clé de chiffrement des secrets clients OIDC (32 octets en base64).
+    # Vide = SSO indisponible sur ce serveur, et c'est un défaut FERMÉ assumé : plutôt ne pas
+    # proposer la fonctionnalité que conserver en clair le secret qui ouvre l'annuaire d'un
+    # établissement. Génération : openssl rand -base64 32
+    secret-key: ${APP_SSO_SECRET_KEY:}
   rapports:
     dossier: ${RAPPORTS_DOSSIER:rapports}
   mail:

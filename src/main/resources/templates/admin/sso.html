@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('SIGEP | Connexion par votre annuaire')}"></head>
+<body>
+
+<div th:replace="~{admin/fragments :: topbar('sso')}"></div>
+
+<main class="max-w-[1000px] mx-auto px-5 md:px-8 py-10 pb-36">
+
+    <div class="mb-8" data-reveal>
+        <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mb-2">Identité</p>
+        <h1 class="font-serif text-[clamp(34px,5vw,52px)] leading-[1.02] tracking-tight">Connexion par votre annuaire</h1>
+        <p class="text-[14px] text-muted mt-3">
+            Vos administrateurs entrent avec le compte qu'ils ont déjà — Google Workspace,
+            Microsoft Entra, Keycloak — au lieu d'un mot de passe de plus.
+        </p>
+    </div>
+
+    <div data-flash th:if="${success}" class="glass rounded-2xl p-3.5 mb-5 flex items-start gap-2 text-[13px]" data-reveal
+         style="background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.35)">
+        <svg th:replace="~{admin/fragments :: coche}"></svg><span th:text="${success}">OK</span>
+    </div>
+    <div data-flash th:if="${error}" class="glass rounded-2xl p-3.5 mb-5 flex items-start gap-2 text-[13px]" data-reveal>
+        <span class="material-symbols-rounded text-[18px] shrink-0">error</span><span th:text="${error}">Erreur</span>
+    </div>
+
+    <!-- Verrou d'offre. Celui qui PROTÈGE n'est pas ici mais sur le chemin de connexion
+         lui-même : un plan qui perd le SSO ferme la porte le jour même, que cet écran soit
+         atteignable ou non. Celui-ci ne fait qu'expliquer. -->
+    <div th:if="${!ssoDisponible}" class="glass rounded-3xl p-6 mb-6" data-reveal>
+        <p class="text-[14px]">La connexion par votre annuaire fait partie du plan Enterprise.
+            <a th:href="@{/admin/abonnement}" class="underline">Voir les plans</a></p>
+    </div>
+
+    <!-- Clé de chiffrement absente côté serveur : le secret client ne pourrait être enregistré
+         qu'en clair, ce qu'on refuse. Dit explicitement, parce que « ça ne marche pas » sans
+         raison est le pire des messages. -->
+    <div th:if="${ssoDisponible and !ssoInstalle}" class="glass rounded-3xl p-6 mb-6" data-reveal
+         style="border-color:rgba(186,26,26,.3)">
+        <h2 class="font-serif text-[20px] mb-2">Pas encore activé sur ce serveur</h2>
+        <p class="text-[14px] text-muted">
+            La clé qui chiffre les secrets de connexion n'est pas installée. Tant qu'elle manque,
+            nous préférons refuser l'enregistrement plutôt que de conserver votre secret en clair.
+            Écrivez-nous : l'activation prend quelques minutes et ne demande rien de votre côté.
+        </p>
+    </div>
+
+    <section th:if="${ssoDisponible and ssoInstalle}" class="glass rounded-3xl p-6 mb-6" data-reveal>
+        <h2 class="font-serif text-[22px] mb-1">À déclarer chez votre fournisseur</h2>
+        <!-- Cette URL décide de la réussite ou de l'échec, au caractère près. C'est le motif de
+             refus numéro un d'une première configuration OIDC, et le message du fournisseur
+             (« redirect_uri_mismatch ») ne dit jamais quelle valeur il attendait. -->
+        <p class="text-[13px] text-muted mb-4">
+            Créez une application OpenID Connect chez votre fournisseur, puis collez-y cette
+            adresse de retour — exactement, au caractère près.
+        </p>
+        <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1.5">URL de redirection</p>
+        <p class="font-mono text-[13px] break-all rounded-xl p-3.5 mb-5"
+           style="background:#17212b;color:#eef5f7" th:text="${urlRetour}">https://…/login/oauth2/code/…</p>
+
+        <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1.5">Lien de connexion de vos agents</p>
+        <p class="font-mono text-[13px] break-all rounded-xl p-3.5"
+           style="background:rgba(10,10,10,.05);border:1px solid var(--line)" th:text="${urlConnexion}">https://…/sso/…</p>
+        <p class="text-[13px] text-muted mt-2">
+            Distribuez ce lien : il mène droit à votre système de connexion. Vos administrateurs
+            peuvent aussi partir de la page de connexion SIGEP et saisir leur adresse.
+        </p>
+    </section>
+
+    <section th:if="${ssoDisponible and ssoInstalle}" class="glass rounded-3xl p-6 mb-6" data-reveal>
+        <h2 class="font-serif text-[22px] mb-4"
+            th:text="${config != null} ? 'Votre fournisseur' : 'Déclarer votre fournisseur'">Déclarer votre fournisseur</h2>
+
+        <form th:action="@{/admin/sso}" method="post" class="space-y-5">
+            <div class="grid md:grid-cols-2 gap-5">
+                <div>
+                    <label for="fournisseur" class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Nom affiché</label>
+                    <input id="fournisseur" name="fournisseur" type="text" maxlength="80" required
+                           th:value="${config != null} ? ${config.fournisseur} : ''"
+                           placeholder="Google Workspace"
+                           class="w-full h-11 px-4 rounded-xl bg-white/55 border border-line"/>
+                    <p class="text-[12px] text-muted mt-1.5">Ce que vos agents liront sur le bouton.</p>
+                </div>
+                <div>
+                    <label for="clientId" class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Identifiant client</label>
+                    <input id="clientId" name="clientId" type="text" maxlength="255" required
+                           th:value="${config != null} ? ${config.clientId} : ''"
+                           placeholder="123456789-abc.apps.googleusercontent.com"
+                           class="w-full h-11 px-4 rounded-xl bg-white/55 border border-line font-mono text-[13px]"/>
+                </div>
+            </div>
+
+            <div>
+                <label for="issuer" class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Adresse de l'émetteur</label>
+                <input id="issuer" name="issuer" type="url" maxlength="400" required
+                       th:value="${config != null} ? ${config.issuer} : ''"
+                       placeholder="https://accounts.google.com"
+                       class="w-full h-11 px-4 rounded-xl bg-white/55 border border-line font-mono text-[13px]"/>
+                <!-- Tout le reste en est déduit : points d'accès, clés de signature. Rien n'est
+                     recopié à la main, donc rien ne se désaligne — et une rotation de clés chez
+                     le fournisseur ne demande rien ici. -->
+                <p class="text-[12px] text-muted mt-1.5">
+                    L'« issuer » indiqué par votre fournisseur. Nous y découvrons tout le reste.
+                    Doit commencer par <code>https://</code>.
+                </p>
+            </div>
+
+            <div>
+                <label for="clientSecret" class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Secret client</label>
+                <!-- Jamais réaffiché : il est chiffré en entrant et ne ressort pas. Laisser vide
+                     conserve celui déjà enregistré — sans quoi on ne pourrait pas corriger un
+                     domaine sans avoir retrouvé un secret qu'on n'a plus. -->
+                <input id="clientSecret" name="clientSecret" type="password" autocomplete="new-password"
+                       th:required="${config == null}"
+                       th:placeholder="${config != null} ? 'Inchangé — laissez vide pour conserver' : 'Collez le secret fourni'"
+                       class="w-full h-11 px-4 rounded-xl bg-white/55 border border-line font-mono text-[13px]"/>
+                <p class="text-[12px] text-muted mt-1.5">
+                    Chiffré à l'enregistrement. Il n'est jamais réaffiché, pas même à vous :
+                    laissez ce champ vide pour conserver celui déjà enregistré.
+                </p>
+            </div>
+
+            <div>
+                <label for="domaines" class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Domaines acceptés</label>
+                <input id="domaines" name="domaines" type="text" maxlength="500"
+                       th:value="${config != null} ? ${config.domaines} : ''"
+                       placeholder="votre-etablissement.ci, campus.votre-etablissement.ci"
+                       class="w-full h-11 px-4 rounded-xl bg-white/55 border border-line"/>
+                <p class="text-[12px] text-muted mt-1.5">
+                    Facultatif, séparés par des virgules. Vide = tout domaine accepté par votre
+                    fournisseur. Dans tous les cas, seul un compte existant chez nous ouvre une session.
+                </p>
+            </div>
+
+            <div class="space-y-3 pt-1">
+                <label class="flex items-start gap-3 cursor-pointer">
+                    <input type="checkbox" name="actif" value="true" class="mt-1"
+                           th:checked="${config == null} or ${config.actif}"/>
+                    <span class="text-[14px]">Activer la connexion par annuaire
+                        <span class="block text-[12px] text-muted">Décochez pour la suspendre sans perdre cette configuration — le jour où votre fournisseur tombe en panne, vos mots de passe reprennent la main en une case.</span>
+                    </span>
+                </label>
+                <label class="flex items-start gap-3 cursor-pointer">
+                    <input type="checkbox" name="exigerOtp" value="true" class="mt-1"
+                           th:checked="${config != null} and ${config.exigerOtp}"/>
+                    <!-- Décoché par défaut, et c'est un choix assumé : un établissement qui
+                         délègue l'authentification applique sa propre politique de second
+                         facteur, et lui réclamer un code par courriel par-dessus reviendrait à
+                         ne lui avoir rien vendu. La case est là pour qui sait que son
+                         fournisseur n'en impose aucun. -->
+                    <span class="text-[14px]">Exiger en plus notre code à six chiffres
+                        <span class="block text-[12px] text-muted">Par défaut non : votre fournisseur applique déjà votre politique de second facteur. Cochez si ce n'est pas le cas chez vous.</span>
+                    </span>
+                </label>
+            </div>
+
+            <div class="flex flex-wrap gap-3 pt-2">
+                <button type="submit" class="btn btn-ink h-11 px-6 rounded-xl font-medium">Enregistrer</button>
+            </div>
+        </form>
+
+        <form th:if="${config != null}" th:action="@{/admin/sso/supprimer}" method="post" class="mt-4 pt-4 border-t border-line"
+              onsubmit="return confirm('Supprimer cette configuration ? Vos administrateurs se reconnecteront par mot de passe. Aucun compte n\'est touché.')">
+            <button type="submit" class="btn glass h-10 px-5 rounded-lg text-[13px]">Supprimer la configuration</button>
+        </form>
+    </section>
+
+    <!-- La section qui évite l'appel au support. Les deux questions que tout le monde pose
+         avant de brancher un annuaire sont « est-ce que ça crée des comptes ? » et « qu'est-ce
+         qui se passe si ça tombe en panne ? ». -->
+    <section th:if="${ssoDisponible}" class="glass rounded-3xl p-6" data-reveal>
+        <h2 class="font-serif text-[22px] mb-4">Ce que cela change, et ce que cela ne change pas</h2>
+        <div class="grid md:grid-cols-2 gap-6 text-[14px]">
+            <div>
+                <p class="font-medium mb-1.5">Aucun compte n'est créé automatiquement</p>
+                <p class="text-muted text-[13px]">
+                    Votre fournisseur dit qui est la personne ; c'est nous qui décidons si elle
+                    entre, à partir d'un compte que vous avez créé. Un agent sans compte SIGEP
+                    n'ouvre rien, même authentifié chez vous. Créez d'abord l'accès, ici, dans vos
+                    administrateurs.
+                </p>
+            </div>
+            <div>
+                <p class="font-medium mb-1.5">Un départ est effectif le jour même</p>
+                <p class="text-muted text-[13px]">
+                    C'est le vrai gain. Un compte désactivé chez vous n'ouvre plus de session ici,
+                    sans que personne ait à y penser. Pensez tout de même à retirer l'accès SIGEP
+                    de la personne : le compte, lui, existe toujours.
+                </p>
+            </div>
+            <div>
+                <p class="font-medium mb-1.5">Les mots de passe continuent de fonctionner</p>
+                <p class="text-muted text-[13px]">
+                    Le SSO s'ajoute, il ne remplace rien. C'est volontaire : une panne chez votre
+                    fournisseur ne doit pas vous enfermer dehors. Gardez au moins un
+                    administrateur capable d'entrer par mot de passe.
+                </p>
+            </div>
+            <div>
+                <p class="font-medium mb-1.5">Les enseignants ne sont pas concernés</p>
+                <p class="text-muted text-[13px]">
+                    Ils émargent depuis l'application mobile, qui garde sa propre connexion. Le
+                    SSO ne vaut aujourd'hui que pour cet espace d'administration.
+                </p>
+            </div>
+        </div>
+    </section>
+
+</main>
+
+<div th:replace="~{admin/fragments :: dock('sso')}"></div>
+<div th:replace="~{admin/fragments :: palette}"></div>
+<div th:replace="~{admin/fragments :: scripts}"></div>
+
+</body>
+</html>

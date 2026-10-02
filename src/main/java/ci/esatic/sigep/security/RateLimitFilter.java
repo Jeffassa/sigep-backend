@@ -47,6 +47,10 @@ public class RateLimitFilter extends OncePerRequestFilter {
     /** Changement de mot de passe : exige l'ancien, donc cible de force brute. */
     private static final String CHANGE_PWD_PATH = "/api/profil/mot-de-passe";
     private static final String ADMIN_LOGIN_PATH = "/admin-login";
+    /** Découverte SSO : « quelle organisation ? » — sans authentification, par construction. */
+    private static final String SSO_PATH = "/sso";
+    /** Départ vers un fournisseur d'identité : « /oauth2/authorization/<etablissement> ». */
+    private static final String SSO_DEPART_PREFIXE = "/oauth2/authorization/";
     /** Initiation Mobile Money : chaque appel pousse une demande sur un téléphone réel. */
     private static final String MOMO_INIT_PATH = "/admin/abonnement/momo";
     private static final String ANALYSE_IA_PATH = "/admin/api/stats/analyse"; // appels Claude facturés (GET)
@@ -167,6 +171,12 @@ public class RateLimitFilter extends OncePerRequestFilter {
         // Anti-harcèlement : sans borne, on pourrait faire sonner un numéro tiers en rafale.
         if (MOMO_INIT_PATH.equals(uri)) return maxSignup;
         if (ADMIN_LOGIN_PATH.equals(uri)) return maxAdminLogin;
+        // Découverte SSO : le formulaire parcourt les configurations actives pour retrouver
+        // l'établissement d'un domaine. Sans authentification, et donc sans borne, il
+        // deviendrait un outil de reconnaissance — on y essaie des domaines en rafale pour
+        // dresser la liste de nos clients. Même budget que la connexion administrateur, et
+        // pour la même raison.
+        if (SSO_PATH.equals(uri)) return maxAdminLogin;
         return 0;
     }
 
@@ -180,6 +190,10 @@ public class RateLimitFilter extends OncePerRequestFilter {
         // partagée par tous les établissements : sans budget, un seul compte qui boucle sur
         // ces adresses prive toutes les autres écoles de l'émargement.
         if (uri.startsWith("/admin/paie")) return true;
+        // Départ vers un fournisseur d'identité (GET) : un cache manquant déclenche un appel
+        // réseau sortant vers le fournisseur. Boucler dessus ferait de notre serveur un relais
+        // de charge vers l'infrastructure d'un client — à ses frais, et sous notre adresse.
+        if (uri.startsWith(SSO_DEPART_PREFIXE)) return true;
         if (!"POST".equalsIgnoreCase(request.getMethod())) return false;
         return MOMO_INIT_PATH.equals(uri)
                 || "/api/rapports/generer".equals(uri)

@@ -43,6 +43,18 @@ public enum TypeEvenement {
     /** Compte authentifié sans établissement rattaché : anomalie d'isolation. */
     ACCES_SANS_ETABLISSEMENT("Accès sans établissement"),
 
+    /** Session ouverte par le fournisseur d'identité de l'établissement. */
+    CONNEXION_SSO_REUSSIE("Connexion SSO réussie"),
+
+    /**
+     * Retour du fournisseur d'identité refusé.
+     *
+     * <p>Le motif compte autant que l'évènement : une adresse non vérifiée, un domaine hors
+     * liste ou un compte d'un AUTRE établissement ne racontent pas la même histoire qu'un
+     * visiteur qui a cliqué « annuler ». Il est consigné dans le détail.
+     */
+    CONNEXION_SSO_REFUSEE("Connexion SSO refusée"),
+
     /**
      * Action corrective menée par le super-administrateur.
      *
