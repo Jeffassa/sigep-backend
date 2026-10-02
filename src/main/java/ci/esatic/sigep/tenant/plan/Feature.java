@@ -7,5 +7,7 @@ public enum Feature {
     MULTI_CAMPUS,
     BRANDING,           // logo de l'établissement
     SSO,
+    /** Export des heures faites, par enseignant et par mois, a destination du service paie. */
+    EXPORT_PAIE,
     API_PUBLIQUE
 }

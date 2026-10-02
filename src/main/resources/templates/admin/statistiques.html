@@ -188,7 +188,7 @@
                 <tr th:if="${parEnseignant.isEmpty()}">
                     <td colspan="6" class="px-6 py-12 text-center text-muted">Aucune séance sur la période.</td>
                 </tr>
-                <tr th:each="e : ${parEnseignant}" class="zebra border-b border-line/60">
+                <tr th:each="e : ${parEnseignant}" class="zebra border-b border-line">
                     <td class="px-6 py-3.5 text-[14px] font-medium" th:text="${e.nom}">Nom</td>
                     <td class="px-6 py-3.5 text-[14px] text-muted" th:text="${e.total}">0</td>
                     <td class="px-6 py-3.5 text-[14px] text-muted" th:text="${e.emargees}">0</td>
@@ -225,7 +225,7 @@
                     </tr></thead>
                     <tbody>
                     <tr th:if="${parClasse.isEmpty()}"><td colspan="3" class="px-6 py-10 text-center text-muted">Aucune donnée.</td></tr>
-                    <tr th:each="c : ${parClasse}" class="zebra border-b border-line/60">
+                    <tr th:each="c : ${parClasse}" class="zebra border-b border-line">
                         <td class="px-6 py-3.5 text-[14px] font-medium" th:text="${c.libelle}">Classe</td>
                         <td class="px-6 py-3.5 text-[14px] text-muted" th:text="${c.emargees} + '/' + ${c.total}">0</td>
                         <td class="px-6 py-3.5 font-mono text-[13px]" th:text="${#numbers.formatDecimal(c.taux,1,0)} + '%'">0%</td>
@@ -245,7 +245,7 @@
                     </tr></thead>
                     <tbody>
                     <tr th:if="${parMatiere.isEmpty()}"><td colspan="3" class="px-6 py-10 text-center text-muted">Aucune donnée.</td></tr>
-                    <tr th:each="ma : ${parMatiere}" class="zebra border-b border-line/60">
+                    <tr th:each="ma : ${parMatiere}" class="zebra border-b border-line">
                         <td class="px-6 py-3.5 text-[14px] font-medium" th:text="${ma.libelle}">Matière</td>
                         <td class="px-6 py-3.5 text-[14px] text-muted" th:text="${ma.emargees} + '/' + ${ma.total}">0</td>
                         <td class="px-6 py-3.5 font-mono text-[13px]" th:text="${#numbers.formatDecimal(ma.taux,1,0)} + '%'">0%</td>

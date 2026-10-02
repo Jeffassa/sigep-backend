@@ -23,6 +23,22 @@ public class AbonnementService {
                 && e.getDateExpiration().isBefore(LocalDate.now());
     }
 
+    /**
+     * L'accès à l'administration doit-il être suspendu ?
+     *
+     * <p>Deux causes, et non une seule. L'abonnement arrivé à terme, bien sûr. Mais aussi la
+     * désactivation décidée depuis la plateforme : le super administrateur dispose d'un
+     * interrupteur {@code actif} qui ne fermait, jusqu'ici, aucune porte. Un établissement
+     * désactivé continuait de consulter ses écrans et de télécharger ses fichiers, dont celui
+     * de la paie — soit tout ce que la désactivation est censée arrêter.
+     *
+     * <p>La page d'abonnement reste ouverte dans les deux cas : suspendre un accès n'est pas
+     * enfermer quelqu'un dehors sans lui dire par où revenir.
+     */
+    public boolean accesSuspendu(Etablissement e) {
+        return estExpire(e) || (e != null && !e.isActif());
+    }
+
     /** Jours restants avant expiration (négatif si déjà expiré), ou null si pas d'expiration. */
     public Long joursAvantExpiration(Etablissement e) {
         if (e == null || e.getDateExpiration() == null) return null;

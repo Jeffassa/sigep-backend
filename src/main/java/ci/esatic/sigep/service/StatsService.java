@@ -38,8 +38,7 @@ public class StatsService {
         List<Emargement> emargements = emargementRepository.findByEnseignantId(id);
         long emargees = emargements.size();
         double heures = emargements.stream()
-                .mapToDouble(e -> Duration.between(
-                        e.getSeance().getHeureDebut(), e.getSeance().getHeureFin()).toMinutes() / 60.0)
+                .mapToDouble(e -> DureeSeance.heures(e.getSeance()))
                 .sum();
         long enRetard = emargements.stream().filter(Emargement::isEnRetard).count();
         double taux = total > 0 ? Math.round(emargees * 1000.0 / total) / 10.0 : 0.0;

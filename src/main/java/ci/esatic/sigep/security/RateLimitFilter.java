@@ -175,6 +175,11 @@ public class RateLimitFilter extends OncePerRequestFilter {
         String uri = request.getRequestURI();
         if (uri == null) return false;
         if (ANALYSE_IA_PATH.equals(uri)) return true;                 // analyse IA (GET)
+        // Export de paie (GET) : chaque appel relit tout l'annuaire et toutes les séances du
+        // mois, puis construit un classeur entier en mémoire. L'instance de production est
+        // partagée par tous les établissements : sans budget, un seul compte qui boucle sur
+        // ces adresses prive toutes les autres écoles de l'émargement.
+        if (uri.startsWith("/admin/paie")) return true;
         if (!"POST".equalsIgnoreCase(request.getMethod())) return false;
         return MOMO_INIT_PATH.equals(uri)
                 || "/api/rapports/generer".equals(uri)

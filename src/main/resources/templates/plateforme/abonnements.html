@@ -37,7 +37,7 @@
                 </tr></thead>
                 <tbody>
                 <tr th:each="e : ${etablissements}" class="border-b border-line"
-                    th:classappend="${expires.contains(e.id)} ? ' bg-ink/5' : ''">
+                    th:classappend="${expires.contains(e.id)} ? ' bg-ink' : ''">
                     <td class="px-7 py-3">
                         <p class="font-medium" th:text="${e.nom}">Nom</p>
                         <p class="font-mono text-[11px] text-muted" th:text="${e.slug}">slug</p>

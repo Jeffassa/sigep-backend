@@ -75,11 +75,10 @@ public class RapportService {
                 fin.atTime(23, 59, 59));
 
         // Calculer le total d'heures
+        // Règle unique (cf. DureeSeance) : un cours de 21 h à minuit valait ici « -21,0 h »,
+        // et ce total est celui qui s'imprime sur le rapport signé.
         double totalHeures = emargements.stream()
-                .mapToDouble(e -> Duration.between(
-                        e.getSeance().getHeureDebut().atDate(e.getSeance().getDate()),
-                        e.getSeance().getHeureFin().atDate(e.getSeance().getDate())
-                ).toMinutes() / 60.0)
+                .mapToDouble(e -> DureeSeance.heures(e.getSeance()))
                 .sum();
 
         String nomFichier = String.format("Rapport_%s_%s_%s_%s.pdf",
@@ -164,7 +163,7 @@ public class RapportService {
             Emargement e = emargements.get(i);
             Seance s = e.getSeance();
             Color bg = (i % 2 == 0) ? Color.WHITE : new Color(242, 244, 246);
-            double heures = Duration.between(s.getHeureDebut(), s.getHeureFin()).toMinutes() / 60.0;
+            double heures = DureeSeance.heures(s);
 
             addDataCell(table, s.getMatiere().getLibelle(), bodyFont, bg);
             addDataCell(table, s.getClasse().getLibelle(), bodyFont, bg);
@@ -305,8 +304,7 @@ public class RapportService {
                 List<Seance> emargees = seances.stream()
                         .filter(s -> s.getStatut() == StatutSeance.EMARGE).collect(Collectors.toList());
                 long nbEmargees = emargees.size();
-                double heures = emargees.stream()
-                        .mapToDouble(s -> Duration.between(s.getHeureDebut(), s.getHeureFin()).toMinutes() / 60.0).sum();
+                double heures = emargees.stream().mapToDouble(DureeSeance::heures).sum();
                 double taux = total > 0 ? Math.round(nbEmargees * 1000.0 / total) / 10.0 : 0.0;
 
                 org.apache.poi.ss.usermodel.Row row = sheet.createRow(r++);
