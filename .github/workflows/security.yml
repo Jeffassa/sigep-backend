@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # 1) Scan complet → SARIF (remonté dans l'onglet Security), NON bloquant.
       - name: Scan du système de fichiers (SARIF)
