@@ -110,6 +110,14 @@
     </div>
 </header>
 
+<!-- ======================= COCHE DE RÉUSSITE =======================
+     aria-hidden : le message qui l'accompagne porte déjà l'information. Annoncer
+     « coche » en plus ne ferait que doubler la phrase au lecteur d'écran. -->
+<svg th:fragment="coche" class="coche" viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+    <circle cx="24" cy="24" r="20"/>
+    <path d="M15 24.5 L21 30.5 L33.5 17.5"/>
+</svg>
+
 <!-- ============================ DOCK macOS ============================ -->
 <nav th:fragment="dock(active)" class="dock glass-strong" id="dock" aria-label="Navigation principale">
     <a th:href="@{/admin/dashboard}" class="dock-item" th:classappend="${active=='dashboard'}?'active':''" data-label="Tableau de bord">

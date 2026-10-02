@@ -32,19 +32,25 @@
     <meta name="twitter:image" th:content="${baseUrl} + '/images/og-sigep.png'"/>
     <link rel="preconnect" href="https://fonts.googleapis.com"/>
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="crossorigin"/>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+    <!-- Les trois faces de SIGEP, identiques a celles de l'administration : la landing et
+         l'application parlaient jusqu'ici deux langues typographiques differentes. -->
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
     <style>
         :root {
-            /* Palette SOMBRE (défaut) */
-            --bg: #08080a;
-            --bg-2: #0d0d10;
-            --surface: #141418;
-            --surface-2: #1a1a1f;
-            --border: rgba(255,255,255,.08);
-            --border-2: rgba(255,255,255,.14);
-            --text: #f4f4f5;
-            --muted: #a1a1aa;
-            --dim: #71717a;
+            /* Palette SOMBRE (défaut).
+               Les gris penchent très légèrement vers le vert de la marque plutôt que d'être
+               neutres : un gris parfaitement neutre à côté d'un accent saturé se lit comme une
+               valeur par défaut, pas comme un choix. Le fond n'est pas un noir pur non plus —
+               #000 sur un écran OLED mange les ombres et aplatit toute la profondeur. */
+            --bg: #0a0c0b;
+            --bg-2: #0e1110;
+            --surface: #131716;
+            --surface-2: #1a1f1d;
+            --border: rgba(236,245,241,.08);
+            --border-2: rgba(236,245,241,.15);
+            --text: #f1f3f1;
+            --muted: #98a09b;
+            --dim: #6c7470;
             --accent: #34d399;
             --accent-2: #10b981;
             --accent-soft: rgba(52,211,153,.12);
@@ -55,11 +61,14 @@
             --nav-border: rgba(0,0,0,.06);
             --shadow: 0 20px 60px rgba(0,0,0,.45);
             --radius: 20px;
-            --font-display: 'Space Grotesk', system-ui, sans-serif;
-            --font-body: 'Inter', system-ui, sans-serif;
+            --font-display: 'Instrument Serif', 'Iowan Old Style', Georgia, serif;
+            --font-body: 'Geist', system-ui, -apple-system, sans-serif;
+            --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
         }
         html.light {
-            --bg: #f6f6f7;
+            /* Papier tiède plutôt que gris froid : la page parle de registres et de feuilles
+               d'émargement, pas d'un tableau de bord d'ingénierie. */
+            --bg: #f7f7f4;
             --bg-2: #ffffff;
             --surface: #ffffff;
             --surface-2: #f4f4f5;
@@ -89,10 +98,15 @@
 
         .wrap { max-width: 1160px; margin: 0 auto; padding: 0 20px; }
         .eyebrow {
-            font-family: var(--font-body); font-size: 12px; font-weight: 600;
-            letter-spacing: .16em; text-transform: uppercase; color: var(--accent);
+            font-family: var(--font-mono); font-size: 11px; font-weight: 500;
+            letter-spacing: .22em; text-transform: uppercase; color: var(--accent);
         }
-        h1, h2, h3 { font-family: var(--font-display); font-weight: 700; letter-spacing: -.02em; line-height: 1.05; }
+        /* font-weight 400 : Instrument Serif n'est livré qu'en régulier. Demander 700
+           ferait synthétiser un faux gras par le navigateur — des contours épaissis
+           mécaniquement, que l'œil lit comme une police mal installée. Un serif en 400 pèse
+           moins qu'un grotesque en 700 : les corps montent d'un cran pour compenser. */
+        h1, h2, h3 { font-family: var(--font-display); font-weight: 400; letter-spacing: -.015em; line-height: 1.02; }
+        h1 em, h2 em { font-style: italic; }
         .muted { color: var(--muted); }
 
         /* ---------- NAVBAR (pilule blanche flottante) ---------- */
@@ -111,18 +125,33 @@
             width: 30px; height: 30px; border-radius: 9px;
             background: linear-gradient(140deg, var(--accent), var(--accent-2));
             display: grid; place-items: center; color: var(--accent-ink);
-            font-weight: 700; font-family: var(--font-display); font-size: 17px; flex: none;
+            font-weight: 400; font-family: var(--font-display); font-size: 17px; flex: none;
         }
         /* Logo de marque (image). .brand-mark reste utilisee pour l'avatar d'etablissement du mockup. */
         .brand-logo { width: 32px; height: 32px; border-radius: 9px; flex: none; display: block; }
         .foot .brand-logo { width: 30px; height: 30px; }
-        .brand-name { font-family: var(--font-display); font-weight: 700; font-size: 22px; letter-spacing: -.02em; color: var(--nav-text); }
-        .nav-links { display: flex; align-items: center; gap: 4px; }
+        .brand-name { font-family: var(--font-display); font-weight: 400; font-size: 24px; letter-spacing: -.01em; color: var(--nav-text); }
+        .nav-links { display: flex; align-items: center; gap: 4px; position: relative; }
         .nav-links a.link {
             padding: 9px 14px; border-radius: 999px; font-size: 14px; font-weight: 500;
-            color: var(--nav-muted); transition: background .15s, color .15s;
+            color: var(--nav-muted); transition: color .18s; position: relative; z-index: 1;
         }
-        .nav-links a.link:hover { color: var(--nav-text); background: rgba(0,0,0,.05); }
+        .nav-links a.link:hover { color: var(--nav-text); }
+        .nav-links a.link[aria-current] { color: var(--nav-text); }
+
+        /* Le repère glissant.
+           Un lien actif qui change simplement de couleur se remarque à peine ; un repère qui
+           SE DÉPLACE d'un lien à l'autre raconte le déplacement, et l'on comprend où l'on est
+           sans avoir à lire. Il vit sous les liens (z-index) et n'existe pas tant que le
+           script n'a pas trouvé une section : sans JavaScript, rien ne clignote dans le vide. */
+        .nav-ind {
+            position: absolute; top: 50%; left: 0; height: 36px; width: 0;
+            transform: translateY(-50%); border-radius: 999px;
+            background: rgba(0,0,0,.06); opacity: 0; pointer-events: none; z-index: 0;
+            transition: transform .34s cubic-bezier(.32,.72,0,1), width .34s cubic-bezier(.32,.72,0,1), opacity .2s;
+        }
+        .nav-ind.on { opacity: 1; }
+        @media (prefers-reduced-motion: reduce) { .nav-ind { transition: opacity .2s; } }
         .nav-cta { display: flex; align-items: center; gap: 8px; }
         .icon-btn {
             width: 40px; height: 40px; border-radius: 999px; border: 1px solid var(--nav-border);
@@ -151,18 +180,24 @@
 
         .nav-toggle { display: none; }
 
-        /* ---------- HERO ---------- */
-        .hero { text-align: center; padding: 72px 0 20px; }
+        /* ---------- HERO ----------
+           Aligné à gauche, sur une mesure courte. Tout centrer est le réflexe qui fait se
+           ressembler toutes les pages d'accueil : l'œil n'a plus d'arête à suivre, et chaque
+           ligne recommence ailleurs que la précédente. */
+        .hero { text-align: left; padding: 76px 0 20px; max-width: 1160px; }
         .badge {
             display: inline-flex; align-items: center; gap: 8px;
             background: var(--surface); border: 1px solid var(--border-2);
             color: var(--muted); border-radius: 999px; padding: 7px 15px; font-size: 13px; font-weight: 500;
         }
         .badge .dot { width: 7px; height: 7px; border-radius: 999px; background: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
-        h1.title { font-size: clamp(40px, 7vw, 76px); max-width: 15ch; margin: 22px auto 0; }
-        h1.title .grad { background: linear-gradient(120deg, var(--accent), #6ee7b7); -webkit-background-clip: text; background-clip: text; color: transparent; }
-        .lead { font-size: clamp(16px, 2.2vw, 19px); color: var(--muted); max-width: 620px; margin: 22px auto 0; }
-        .hero-cta { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 32px; }
+        h1.title { font-size: clamp(44px, 7.4vw, 88px); max-width: 17ch; margin: 20px 0 0; text-wrap: balance; }
+        /* L'emphase passe par l'italique du serif, pas par un dégradé découpé dans le texte.
+           Un dégradé sur un titre est devenu la signature des pages générées — et il abîme le
+           contraste, donc la lisibilité, pour un effet que la police porte mieux. */
+        h1.title em { font-style: italic; color: var(--text); }
+        .lead { font-size: clamp(16.5px, 2.2vw, 19px); color: var(--muted); max-width: 54ch; margin: 24px 0 0; line-height: 1.6; text-wrap: pretty; }
+        .hero-cta { display: flex; flex-wrap: wrap; gap: 12px; justify-content: flex-start; margin-top: 34px; }
         .hero-note { font-size: 12.5px; color: var(--dim); margin-top: 18px; letter-spacing: .01em; }
         /* Derrière tout le contenu, et jamais cliquable. L'opacité monte une fois la trame
            prête : elle apparaît alors sans à-coup plutôt que de surgir d'un bloc. */
@@ -176,7 +211,13 @@
         @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(4px)} }
 
         /* ---------- MOCKUP DASHBOARD ---------- */
-        .shot-wrap { max-width: 1040px; margin: 40px auto 0; padding: 0 20px; }
+        /* Légèrement incliné et décalé : un aperçu parfaitement de face et parfaitement
+           centré se lit comme une capture d'écran collée là ; de biais, il se lit comme un
+           écran posé sur un bureau. L'inclinaison est minime — au-delà, le texte de
+           l'interface devient pénible à déchiffrer, et c'est lui qu'on vient regarder. */
+        .shot-wrap { max-width: 1060px; margin: 52px auto 0; padding: 0 20px; perspective: 1800px; }
+        .shot-wrap .shot { transform: rotateX(3.2deg) rotateZ(-.5deg); transform-origin: 50% 0; }
+        @media (prefers-reduced-motion: reduce) { .shot-wrap .shot { transform: none; } }
         .shot {
             background: var(--surface); border: 1px solid var(--border-2); border-radius: 24px;
             box-shadow: var(--shadow); overflow: hidden; display: grid; grid-template-columns: 210px 1fr;
@@ -208,8 +249,8 @@
 
         /* ---------- SECTIONS ---------- */
         section.block { padding: 72px 0; }
-        .sec-head { text-align: center; max-width: 640px; margin: 0 auto 44px; }
-        .sec-head h2 { font-size: clamp(28px, 4vw, 42px); margin-top: 12px; }
+        .sec-head { text-align: left; max-width: 46ch; margin: 0 0 44px; }
+        .sec-head h2 { font-size: clamp(30px, 4.2vw, 48px); margin-top: 14px; text-wrap: balance; }
         .sec-head p { color: var(--muted); margin-top: 12px; font-size: 16px; }
 
         .features { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
@@ -349,6 +390,7 @@
             <span class="brand-name" th:text="${marque} ?: 'SIGEP'">SIGEP</span>
         </a>
         <div class="nav-links" id="navLinks">
+            <span class="nav-ind" id="navInd" aria-hidden="true"></span>
             <a class="link" href="#fonctionnement">Fonctionnement</a>
             <a class="link" href="#fonctionnalites">Fonctionnalités</a>
             <a class="link" href="#tarifs">Tarifs</a>
@@ -376,7 +418,7 @@
     <canvas id="trame" aria-hidden="true"></canvas>
     <section class="hero wrap reveal">
         
-        <h1 class="title">Suivez les heures de vos enseignants, <span class="grad">séance par séance.</span></h1>
+        <h1 class="title">Suivez les heures de vos enseignants, <em>séance par séance.</em></h1>
         <p class="lead">
             L'enseignant scanne le QR code affiché dans la salle. Vous voyez aussitôt qui a fait cours,
             combien d'heures, et vous sortez l'état pour la paie sans rien ressaisir.
@@ -679,6 +721,70 @@
     })();
 </script>
 
+<!-- ===================== REPÈRE DE NAVIGATION =====================
+     Indique dans quelle section on se trouve. Sans bibliothèque, sans écouteur de défilement :
+     un IntersectionObserver coûte infiniment moins qu'un calcul de position à chaque pixel
+     parcouru, et ne bloque jamais le fil principal pendant qu'on fait défiler la page. -->
+<script>
+(function () {
+    var liens = Array.prototype.slice.call(document.querySelectorAll('.nav-links a.link[href^="#"]'));
+    var repere = document.getElementById('navInd');
+    if (!liens.length || !repere || !('IntersectionObserver' in window)) return;
+
+    var parSection = {};
+    var sections = [];
+    liens.forEach(function (a) {
+        var el = document.getElementById(a.getAttribute('href').slice(1));
+        if (!el) return;                       // un lien sans cible ne doit rien casser
+        parSection[el.id] = a;
+        sections.push(el);
+    });
+    if (!sections.length) return;
+
+    var courant = null;
+
+    function placer(a) {
+        if (a === courant) return;
+        if (courant) courant.removeAttribute('aria-current');
+        courant = a;
+        if (!a) { repere.classList.remove('on'); return; }
+
+        // aria-current : l'information doit exister pour qui n'a que le lecteur d'écran, et
+        // pas seulement sous la forme d'un rectangle qui glisse.
+        a.setAttribute('aria-current', 'true');
+        var r = a.getBoundingClientRect();
+        var rp = repere.parentElement.getBoundingClientRect();
+        repere.style.width = r.width + 'px';
+        repere.style.transform = 'translateY(-50%) translateX(' + (r.left - rp.left) + 'px)';
+        repere.classList.add('on');
+    }
+
+    // La bande observée couvre le tiers supérieur-central de l'écran : la section
+    // « courante » est celle qu'on lit, pas celle qui vient d'entrer par le bas. Elle doit
+    // rester LARGE — une bande trop fine laisse passer les frontières de section entre deux
+    // observations, et le repère reste alors accroché à la section précédente.
+    var vues = {};
+    var observateur = new IntersectionObserver(function (entrees) {
+        entrees.forEach(function (e) { vues[e.target.id] = e.isIntersecting; });
+        var trouvee = null;
+        for (var i = 0; i < sections.length; i++) {
+            if (vues[sections[i].id]) { trouvee = parSection[sections[i].id]; break; }
+        }
+        placer(trouvee);
+    }, { rootMargin: '-15% 0px -55% 0px', threshold: 0 });
+
+    sections.forEach(function (el) { observateur.observe(el); });
+
+    // Le repère est positionné en pixels : il doit être replacé quand la barre change de
+    // largeur, sinon il reste accroché à l'ancienne position du lien.
+    var minuteur;
+    window.addEventListener('resize', function () {
+        clearTimeout(minuteur);
+        minuteur = setTimeout(function () { var a = courant; courant = null; placer(a); }, 150);
+    }, { passive: true });
+})();
+</script>
+
 <!-- ===================== PARURE ANIMEE =====================
      Chargée APRÈS le rendu, et seulement quand elle ne coûte rien au visiteur.
 
@@ -703,6 +809,7 @@
         return false;
     }
 
+    /* Reste à charger : GSAP seul, pour la chorégraphie d'entrée. */
     function charger(url) {
         return new Promise(function (ok, ko) {
             var el = document.createElement('script');
@@ -711,104 +818,143 @@
         });
     }
 
-    /* ---- La trame : une grille de points qu'une onde traverse ----------------
-       Le produit tient dans un geste, un code scanné en salle. La page d'accueil le
-       raconte en fond, sans l'illustrer lourdement. */
-    function trame() {
+    /* ---- Le fond : un champ de flux ------------------------------------------
+       Des milliers de particules suivent un champ de vecteurs qui se déforme lentement,
+       en laissant derrière elles une traînée qui s'efface. C'est un courant continu : ce
+       que la page raconte, des séances qui défilent sans qu'on ait à les compter.
+
+       Rendu en canvas 2D plutôt qu'en WebGL. L'ancienne version demandait Three.js —
+       130 Ko compressés — pour afficher une grille de points, et laissait sans rien les
+       navigateurs qui refusent le contexte WebGL. Ici : aucune bibliothèque, et le repli
+       est la page elle-même.
+
+       Le canevas est TRANSPARENT : il est posé derrière le contenu, sur le fond de la
+       page. L'effacement progressif se fait donc en 'destination-out' — on retire de
+       l'alpha — et non en repeignant un fond opaque par-dessus, qui masquerait la page. */
+    function fond() {
         var canvas = document.getElementById('trame');
-        if (!canvas || !window.THREE) return;
+        if (!canvas) return;
+        var ctx = canvas.getContext('2d');
+        if (!ctx) return;
 
-        var renderer;
-        try {
-            renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
-        } catch (e) {
-            return;   // pas de WebGL : la page se passe très bien de cette parure
+        var dpr = Math.min(window.devicePixelRatio || 1, 2);
+        var w = 0, h = 0, particules = [], temps = 0, boucleId = 0;
+
+        // Une seule teinte, celle de la marque. Les champs de flux colorés virent vite au
+        // fond d'écran : la variation reste dans la luminosité et l'alpha, pas dans la roue
+        // chromatique.
+        function teinte() {
+            return racine.classList.contains('light')
+                /* Réglé à l'œil, sur fond réel, puis redescendu : à pleine intensité le
+                   courant se lit comme un motif et concurrence le titre. Il doit se sentir,
+                   pas se regarder — on ne doit pas pouvoir le décrire après avoir quitté la
+                   page. */
+                ? { h: 162, s: 42, l: 38, a: 0.13, effacement: 0.016 }
+                : { h: 158, s: 64, l: 54, a: 0.26, effacement: 0.012 };
         }
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.6));
-        renderer.setSize(window.innerWidth, window.innerHeight, false);
+        var couleur = teinte();
 
-        var scene = new THREE.Scene();
-        var camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
-        camera.position.set(0, 0, 14);
-
-        var COLONNES = 64, LIGNES = 34, PAS = 0.62;
-        var total = COLONNES * LIGNES;
-        var positions = new Float32Array(total * 3);
-        var i = 0;
-        for (var y = 0; y < LIGNES; y++) {
-            for (var x = 0; x < COLONNES; x++) {
-                positions[i++] = (x - COLONNES / 2) * PAS;
-                positions[i++] = (y - LIGNES / 2) * PAS;
-                positions[i++] = 0;
-            }
+        function angle(x, y, t) {
+            var e = 0.0022;
+            return Math.sin(x * e + t * 0.0006) * Math.PI
+                 + Math.cos(y * e + t * 0.00045) * Math.PI
+                 + Math.sin((x + y) * e * 0.55 + t * 0.0008) * Math.PI * 0.55;
         }
-        var geometrie = new THREE.BufferGeometry();
-        geometrie.setAttribute('position', new THREE.BufferAttribute(positions, 3));
 
-        var clair = racine.classList.contains('light');
-        var matiere = new THREE.PointsMaterial({
-            size: 0.055,
-            color: new THREE.Color(clair ? 0x10b981 : 0x34d399),
-            transparent: true,
-            opacity: clair ? 0.5 : 0.62,
-            sizeAttenuation: true
-        });
-        var points = new THREE.Points(geometrie, matiere);
-        scene.add(points);
+        function naitre() {
+            var vie = 220 + Math.floor(Math.random() * 320);
+            var x = Math.random() * w, y = Math.random() * h;
+            // px/py : la position précédente. C'est elle qui permet de tracer un SEGMENT
+            // plutôt qu'un point — et un champ de flux dessiné en points isolés ne ressemble
+            // pas à un courant, mais à de la poussière sur l'écran.
+            return { x: x, y: y, px: x, py: y,
+                     v: 0.75 + Math.random() * 1.5,
+                     age: Math.floor(Math.random() * vie), vie: vie };
+        }
 
-        var souris = { x: 0, y: 0 };
-        window.addEventListener('pointermove', function (e) {
-            souris.x = (e.clientX / window.innerWidth) * 2 - 1;
-            souris.y = -(e.clientY / window.innerHeight) * 2 + 1;
-        }, { passive: true });
+        function dimensionner() {
+            w = window.innerWidth;
+            h = window.innerHeight;
+            canvas.width = Math.round(w * dpr);
+            canvas.height = Math.round(h * dpr);
+            canvas.style.width = w + 'px';
+            canvas.style.height = h + 'px';
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            ctx.clearRect(0, 0, w, h);
 
-        var attribut = geometrie.getAttribute('position');
-        var depart = performance.now();
-        var enCours = true;
+            // Le nombre suit la surface, et reste borné : un écran 4K ne doit pas coûter
+            // quatre fois plus de calcul qu'un portable.
+            var n = Math.min(1100, Math.max(340, Math.round((w * h) / 1800)));
+            particules = [];
+            for (var k = 0; k < n; k++) particules.push(naitre());
+        }
 
-        // Une page qu'on ne regarde pas ne doit rien consommer.
+        var actif = true;
         document.addEventListener('visibilitychange', function () {
-            var reprend = !document.hidden && !enCours;
-            enCours = !document.hidden;
-            if (reprend) boucle();
+            var reprend = !document.hidden && !actif;
+            actif = !document.hidden;          // une page qu'on ne regarde pas ne coûte rien
+            if (reprend) dessiner();
         });
 
-        function boucle() {
-            if (!enCours) return;
-            requestAnimationFrame(boucle);
-            var t = (performance.now() - depart) / 1000;
+        function dessiner() {
+            if (!actif) return;
+            boucleId = requestAnimationFrame(dessiner);
+            temps++;
 
-            // L'onde balaie la grille de bas en haut, comme le faisceau d'un scanner.
-            var front = ((t * 0.42) % 2.6) * 14 - 12;
-            for (var k = 0; k < total; k++) {
-                var py = attribut.getY(k);
-                var d = Math.abs(py - front);
-                var relief = d < 2.2 ? Math.cos((d / 2.2) * Math.PI * 0.5) * 1.15 : 0;
-                var houle = Math.sin(t * 0.5 + attribut.getX(k) * 0.22) * 0.18;
-                attribut.setZ(k, relief + houle);
+            // Effacement par retrait d'alpha : la traînée s'estompe sans qu'aucun fond
+            // opaque ne vienne recouvrir la page.
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.fillStyle = 'rgba(0,0,0,' + couleur.effacement + ')';
+            ctx.fillRect(0, 0, w, h);
+            ctx.globalCompositeOperation = 'source-over';
+
+            ctx.lineWidth = 1;
+            ctx.lineCap = 'round';
+
+            for (var k = 0; k < particules.length; k++) {
+                var p = particules[k];
+                p.px = p.x; p.py = p.y;
+
+                var a = angle(p.x, p.y, temps);
+                p.x += Math.cos(a) * p.v;
+                p.y += Math.sin(a) * p.v;
+                p.age++;
+
+                if (p.age > p.vie) { particules[k] = naitre(); continue; }
+
+                // Au passage d'un bord, on replace AUSSI la position précédente : sans cela,
+                // le segment traverserait tout l'écran d'un trait.
+                var saute = false;
+                if (p.x < 0) { p.x += w; saute = true; } else if (p.x > w) { p.x -= w; saute = true; }
+                if (p.y < 0) { p.y += h; saute = true; } else if (p.y > h) { p.y -= h; saute = true; }
+                if (saute) { p.px = p.x; p.py = p.y; continue; }
+
+                // Apparition et disparition progressives : sans elles, les particules
+                // clignotent à chaque renaissance.
+                var t = p.age / p.vie;
+                var alpha = Math.min(t * 7, 1) * Math.min((1 - t) * 5, 1) * couleur.a;
+
+                ctx.strokeStyle = 'hsla(' + couleur.h + ',' + couleur.s + '%,' + couleur.l + '%,' + alpha + ')';
+                ctx.beginPath();
+                ctx.moveTo(p.px, p.py);
+                ctx.lineTo(p.x, p.y);
+                ctx.stroke();
             }
-            attribut.needsUpdate = true;
-
-            // La trame suit le regard, de très loin : un mouvement qu'on devine sans le voir.
-            points.rotation.y += ((souris.x * 0.16) - points.rotation.y) * 0.03;
-            points.rotation.x += ((souris.y * 0.10) - points.rotation.x) * 0.03;
-
-            renderer.render(scene, camera);
         }
-        boucle();
+
+        dimensionner();
+        dessiner();
         canvas.classList.add('visible');
 
+        var minuteur;
         window.addEventListener('resize', function () {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight, false);
+            clearTimeout(minuteur);
+            minuteur = setTimeout(dimensionner, 180);   // redimensionner recrée tout : on attend la fin du geste
         }, { passive: true });
 
-        // La bascule de thème change la couleur des points, sinon ils jurent sur fond clair.
+        // La bascule de thème change la couleur du courant, sinon il jure sur fond clair.
         new MutationObserver(function () {
-            var c = racine.classList.contains('light');
-            matiere.color.set(c ? 0x10b981 : 0x34d399);
-            matiere.opacity = c ? 0.5 : 0.62;
+            couleur = teinte();
         }).observe(racine, { attributes: true, attributeFilter: ['class'] });
     }
 
@@ -819,11 +965,42 @@
 
         // Le hero s'installe en trois temps plutôt que d'apparaître d'un bloc : l'oeil suit
         // le titre, puis la promesse, puis l'action.
-        gsap.timeline({ defaults: { ease: 'power3.out' } })
+        //
+        // DEUX PRÉCAUTIONS, et elles ne sont pas décoratives.
+        //
+        // La portée d'abord : « .hero-cta > * » désignait TOUS les appels à l'action de la
+        // page — celui du hero, celui de la bande intermédiaire, celui du pied. Une entrée de
+        // hero mettait ainsi à zéro les cinq boutons du site.
+        //
+        // Le filet ensuite : gsap.from() pose opacity:0 à l'instant même, et ne le relève
+        // qu'en fin de tween. Si le tween ne finit jamais — onglet ouvert en arrière-plan,
+        // donc requestAnimationFrame gelé, appareil qui rame, script interrompu — le visiteur
+        // arrive sur une page dont tous les boutons sont invisibles. Une décoration ne doit
+        // jamais pouvoir effacer le contenu : on efface donc les styles posés, quoi qu'il
+        // arrive, au bout de trois secondes.
+        var entree = ['.hero .title', '.hero .lead', '.hero .hero-cta > *',
+                      '.hero .hero-note', '.hero .scroll-hint'];
+
+        function rendreVisible() {
+            entree.forEach(function (sel) {
+                document.querySelectorAll(sel).forEach(function (el) {
+                    gsap.set(el, { clearProps: 'all' });
+                });
+            });
+        }
+
+        // Un onglet en arrière-plan ne joue pas l'animation : on n'y touche donc pas du tout.
+        if (document.hidden) return;
+
+        var minuteurEntree = setTimeout(rendreVisible, 3000);
+        gsap.timeline({
+                defaults: { ease: 'power3.out' },
+                onComplete: function () { clearTimeout(minuteurEntree); rendreVisible(); }
+            })
             .from('.hero .title', { y: 26, opacity: 0, duration: 0.9 })
             .from('.hero .lead', { y: 18, opacity: 0, duration: 0.7 }, '-=0.55')
-            .from('.hero-cta > *', { y: 14, opacity: 0, duration: 0.6, stagger: 0.09 }, '-=0.4')
-            .from('.hero-note, .scroll-hint', { opacity: 0, duration: 0.6, stagger: 0.08 }, '-=0.3');
+            .from('.hero .hero-cta > *', { y: 14, opacity: 0, duration: 0.6, stagger: 0.09 }, '-=0.4')
+            .from('.hero .hero-note, .hero .scroll-hint', { opacity: 0, duration: 0.6, stagger: 0.08 }, '-=0.3');
 
         // L'aperçu de l'interface s'élève doucement pendant qu'on descend vers lui.
         var shot = document.querySelector('.shot-wrap');
@@ -856,9 +1033,8 @@
             .then(mouvement)
             .catch(function () { /* la page vit sans : rien a rattraper */ });
 
-        charger('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js')
-            .then(trame)
-            .catch(function () {});
+        // Le fond ne demande rien à personne : ni bibliothèque, ni WebGL.
+        fond();
     }
 
     // Après le chargement complet : la parure ne doit jamais retarder le premier affichage.
