@@ -164,8 +164,22 @@ public class SecurityConfig {
                         .successHandler(connexionSsoHandler)
                         .failureHandler(echecSsoHandler))
                 .authenticationProvider(authenticationProvider())
-                // Rate-limiting (anti-bruteforce du login admin + filet global) avant l'auth form.
-                .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class);
+                // Rate-limiting : AVANT le depart OAuth2, et non avant le formulaire.
+                //
+                // La nuance decide si les budgets existent. L'ordre reel de la chaine est
+                // « … LogoutFilter, OAuth2AuthorizationRequestRedirectFilter,
+                // OAuth2LoginAuthenticationFilter, RateLimitFilter, UsernamePassword… » : place
+                // avant le formulaire, le limiteur se retrouve DERRIERE les deux filtres OAuth2.
+                // Or le premier repond — il redirige vers le fournisseur — sans jamais rendre la
+                // main. Le budget ecrit pour /oauth2/authorization/** n'etait donc consulte sur
+                // aucune requete, alors que c'est le seul chemin ouvert sans authentification qui
+                // declenche un appel reseau sortant. Le place ici, il couvre les deux : le depart
+                // OAuth2 precede de toute facon le formulaire.
+                // Un test (OrdreDesFiltresTest) tient cet ordre, parce qu'un budget jamais lu se
+                // lit tres bien dans le code.
+                .addFilterBefore(rateLimitFilter,
+                        org.springframework.security.oauth2.client.web
+                                .OAuth2AuthorizationRequestRedirectFilter.class);
         appliquerHeadersSecurite(http);
         if (requireHttps) {
             http.requiresChannel(c -> c.anyRequest().requiresSecure());

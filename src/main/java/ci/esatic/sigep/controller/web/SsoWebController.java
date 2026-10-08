@@ -6,6 +6,7 @@ import ci.esatic.sigep.repository.ConfigurationSsoRepository;
 import ci.esatic.sigep.repository.EtablissementRepository;
 import ci.esatic.sigep.security.sso.RegistreSsoTenant;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -40,6 +41,7 @@ import java.util.Optional;
  */
 @Controller
 @RequiredArgsConstructor
+@Slf4j
 public class SsoWebController {
 
     private final EtablissementRepository etablissementRepository;
@@ -122,16 +124,32 @@ public class SsoWebController {
      * qui tranche à la connexion, donc sans risque de divergence entre les deux.
      */
     private Optional<String> parDomaine(String email) {
+        var trouves = new java.util.LinkedHashSet<String>();
         for (ConfigurationSso config : configurationSsoRepository.findByActifTrue()) {
             if (config.domainesAutorises().isEmpty()) continue;   // sans domaine, rien à retrouver
             if (!config.accepteLeDomaine(email)) continue;
             Optional<Etablissement> etablissement =
                     etablissementRepository.findById(config.getEtablissementId());
-            if (etablissement.isPresent()) {
-                Optional<String> slug = parSlug(etablissement.get().getSlug());
-                if (slug.isPresent()) return slug;
-            }
+            if (etablissement.isEmpty()) continue;
+            parSlug(etablissement.get().getSlug()).ifPresent(trouves::add);
         }
-        return Optional.empty();
+
+        // DEUX établissements qui revendiquent le même domaine : on ne tranche pas.
+        //
+        // Rien n'empêche un établissement d'inscrire dans sa liste le domaine d'un autre — nous
+        // ne vérifions aucune propriété de domaine. En rendant le premier venu, cette page
+        // enverrait les agents d'une école vers le fournisseur d'identité d'une autre, qui
+        // verrait passer leurs adresses et pourrait leur présenter sa propre page de connexion.
+        // Aucune session ne s'ouvrirait — le rattachement du compte y veille — mais l'hameçonnage
+        // n'a pas besoin d'aller jusque-là.
+        //
+        // On renvoie donc au mot de passe, comme pour un domaine inconnu, et on le signale : une
+        // revendication concurrente n'arrive pas par hasard.
+        if (trouves.size() > 1) {
+            log.warn("SSO : le domaine de « {} » est revendiqué par {} établissements ({}) — "
+                    + "découverte refusée.", email, trouves.size(), trouves);
+            return Optional.empty();
+        }
+        return trouves.stream().findFirst();
     }
 }

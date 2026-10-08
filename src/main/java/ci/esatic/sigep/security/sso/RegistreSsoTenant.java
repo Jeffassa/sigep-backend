@@ -92,10 +92,18 @@ public class RegistreSsoTenant implements ClientRegistrationRepository {
                 .findByEtablissementId(etablissement.getId()).orElse(null);
         if (config == null || !config.isActif()) {
             cache.remove(registrationId);
+            // Sans cette ligne, un refus au DÉPART ne laissait aucune trace : l'administrateur
+            // qui appelle en disant « ça ne marche plus » n'avait rien à nous montrer, et nous
+            // rien à lire. Le niveau « info » est volontaire — c'est un refus ordinaire, pas un
+            // incident — et il ne va pas au journal de sécurité, qu'une simple sonde remplirait.
+            log.info("SSO : depart refuse pour « {} » — {}.", registrationId,
+                    config == null ? "aucune configuration" : "configuration desactivee");
             return null;
         }
-        if (!ouvertALaConnexion(etablissement)) {
+        String blocage = ceQuiFerme(etablissement);
+        if (blocage != null) {
             cache.remove(registrationId);
+            log.info("SSO : depart refuse pour « {} » — {}.", registrationId, blocage);
             return null;
         }
 
@@ -127,16 +135,27 @@ public class RegistreSsoTenant implements ClientRegistrationRepository {
     }
 
     /**
-     * L'établissement est-il, en lui-même, en état d'ouvrir une session ?
+     * Ce qui ferme la porte à cet établissement, ou {@code null} s'il peut entrer.
      *
      * <p>Les mêmes conditions que la connexion par mot de passe, pas d'autres : un dossier non
      * validé, un abonnement expiré ou un compte suspendu ferment la porte quelle que soit la
      * manière d'y frapper. Une seconde porte d'entrée ne doit pas être une porte plus facile.
+     *
+     * <p>Rend la raison plutôt qu'un booléen : elle part au journal technique, et c'est la seule
+     * chose qui permettra de répondre à « pourquoi notre SSO ne marche plus ? » sans demander à
+     * l'administrateur de rejouer la scène.
      */
-    private boolean ouvertALaConnexion(Etablissement e) {
-        if (e.getStatut() != null && e.getStatut() != StatutEtablissement.VALIDE) return false;
-        if (abonnementService.accesSuspendu(e)) return false;
-        return planService.estDisponible(e, Feature.SSO);
+    private String ceQuiFerme(Etablissement e) {
+        if (e.getStatut() != null && e.getStatut() != StatutEtablissement.VALIDE) {
+            return "etablissement au statut " + e.getStatut();
+        }
+        if (abonnementService.accesSuspendu(e)) {
+            return "abonnement expire ou acces suspendu";
+        }
+        if (!planService.estDisponible(e, Feature.SSO)) {
+            return "plan " + e.getPlan() + " sans l'option SSO";
+        }
+        return null;
     }
 
     /** Change dès qu'un champ qui compte change : c'est ce qui périme l'entrée en cache. */
@@ -153,7 +172,7 @@ public class RegistreSsoTenant implements ClientRegistrationRepository {
         EmetteurAutorise.verifier(config.getIssuer());
 
         String secret = chiffrement.dechiffrer(config.getClientSecret());
-        return decouverte.decouvrir(config.getIssuer())
+        ClientRegistration inscription = decouverte.decouvrir(config.getIssuer())
                 .registrationId(registrationId)
                 .clientId(config.getClientId())
                 .clientSecret(secret)
@@ -169,6 +188,43 @@ public class RegistreSsoTenant implements ClientRegistrationRepository {
                 .scope("openid", "email", "profile")
                 .clientName(config.getFournisseur())
                 .build();
+
+        verifierLesAdressesDecouvertes(inscription);
+        return inscription;
+    }
+
+    /**
+     * Les adresses que le fournisseur a DÉCLARÉES doivent franchir le même filtre que la sienne.
+     *
+     * <p>Vérifier l'émetteur et s'arrêter là laissait la porte grande ouverte : le document de
+     * découverte est rédigé par le fournisseur, et c'est lui qui nomme le point d'accès des
+     * jetons, celui des clés de signature et celui des informations d'utilisateur. Un document
+     * déclarant {@code "token_endpoint": "http://10.0.0.5:9200/"} aurait fait poster à notre
+     * serveur, depuis l'intérieur de l'infrastructure, une requête vers une machine interne — et
+     * cette requête porte l'authentification du client, c'est-à-dire que le <b>secret client
+     * serait parti en clair</b> sur du HTTP.
+     *
+     * <p>Autrement dit, la règle « HTTPS obligatoire, aucune adresse interne » ne s'appliquait
+     * qu'à la seule adresse qui ne reçoit jamais de secret, et à aucune de celles que le serveur
+     * visite réellement en exploitation. Elle s'applique maintenant aux quatre.
+     *
+     * <p>Le cas n'est pas seulement malveillant : un fournisseur légitime mal configuré, qui
+     * annonce son point d'accès en {@code http://}, ferait voyager le secret d'un vrai client en
+     * clair sur le réseau. Rien ne s'y serait opposé.
+     */
+    private static void verifierLesAdressesDecouvertes(ClientRegistration inscription) {
+        ClientRegistration.ProviderDetails details = inscription.getProviderDetails();
+        for (String adresse : new String[] {
+                details.getAuthorizationUri(),
+                details.getTokenUri(),
+                details.getJwkSetUri(),
+                details.getUserInfoEndpoint() == null ? null : details.getUserInfoEndpoint().getUri()
+        }) {
+            if (adresse == null || adresse.isBlank()) {
+                continue;   // point d'accès facultatif, non déclaré
+            }
+            EmetteurAutorise.verifier(adresse);
+        }
     }
 
     /** Oublie ce qui est en cache pour un établissement (après modification de sa configuration). */

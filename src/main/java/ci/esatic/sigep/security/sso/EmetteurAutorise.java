@@ -28,15 +28,28 @@ import java.util.Locale;
  *       quelque chose qui nous appartient.</li>
  * </ul>
  *
- * <h2>Ce que ce garde-fou ne couvre pas</h2>
+ * <h2>Où ce filtre s'applique</h2>
  *
- * <p>Il vérifie le nom au moment où on l'enregistre et au moment où on l'utilise, mais il ne
- * contrôle pas la connexion elle-même : un nom qui résout vers une adresse publique à la
+ * <p>À <b>toutes</b> les adresses que le serveur visitera, et pas seulement à celle qu'on a
+ * saisie. C'est une correction, pas une précision : vérifier le seul émetteur laissait la porte
+ * grande ouverte, puisque le document de découverte — rédigé par le fournisseur — nomme ensuite
+ * le point d'accès des jetons, celui des clés et celui des informations d'utilisateur. Un
+ * document déclarant {@code "token_endpoint": "http://10.0.0.5:9200/"} aurait fait poster à notre
+ * serveur, vers une machine interne et <b>en clair</b>, une requête portant le secret client.
+ * {@code RegistreSsoTenant} repasse donc les quatre adresses ici après la découverte.
+ *
+ * <p>Les redirections sont refusées à la lecture du document ({@code DecouverteOidc}) : sans
+ * cela, une adresse publique renvoyant vers {@code https://10.0.0.5/} aurait fait partir le
+ * second saut sans aucun contrôle.
+ *
+ * <h2>Ce que ce garde-fou ne couvre toujours pas</h2>
+ *
+ * <p>Il vérifie le nom, pas la connexion. Un nom qui résout vers une adresse publique à la
  * vérification et vers une adresse interne à l'appel suivant — une réattribution DNS — passerait
- * entre les deux. S'en prémunir vraiment demande de choisir l'adresse au moment de la connexion,
- * dans la fabrique de sockets du client HTTP. La fenêtre est connue et assumée ici ; elle
- * suppose un attaquant qui contrôle un domaine ET notre résolveur, et elle reste ouverte à un
- * administrateur d'un établissement déjà client, pas à un visiteur.
+ * entre les deux. S'en prémunir demande de choisir l'adresse IP au moment de la connexion, dans
+ * la fabrique de sockets du client HTTP. La fenêtre est connue et assumée : elle suppose un
+ * attaquant qui contrôle un domaine ET le timing de notre résolveur, et elle n'est ouverte qu'à
+ * un administrateur d'un établissement déjà client, jamais à un visiteur.
  */
 @Slf4j
 public final class EmetteurAutorise {

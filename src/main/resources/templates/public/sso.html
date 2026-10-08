@@ -21,9 +21,7 @@
             connexion de votre établissement.
         </p>
 
-        <div th:if="${erreurSso}"
-             class="flex items-start gap-2 p-3 mb-4 rounded-xl text-[13px]"
-             style="background:rgba(186,26,26,.08);color:#7a0010;border:1px solid rgba(186,26,26,.2)">
+        <div th:if="${erreurSso}" class="alerte flex items-start gap-2 p-3 mb-4 rounded-xl text-[13px]">
             <span class="material-symbols-rounded text-[18px] shrink-0">error</span>
             <span th:text="${erreurSso}">Erreur.</span>
         </div>

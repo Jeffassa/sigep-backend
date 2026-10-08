@@ -45,6 +45,24 @@
         </p>
     </div>
 
+    <!-- Le cas qui ne se voit pas autrement : la clé de chiffrement a changé côté serveur, et
+         le secret enregistré est devenu illisible. L'écran afficherait sinon une configuration
+         parfaitement saine pendant que chaque connexion échoue — et l'administrateur
+         chercherait la panne du côté de son annuaire. -->
+    <div th:if="${ssoDisponible and ssoInstalle and config != null and !secretRelisible}"
+         class="alerte rounded-3xl p-6 mb-6 flex items-start gap-3" data-reveal>
+        <span class="material-symbols-rounded text-[22px] shrink-0">key_off</span>
+        <div>
+            <p class="font-medium text-[15px] mb-1">Votre secret client n'est plus lisible</p>
+            <p class="text-[13px]">
+                La clé qui le protège a changé sur le serveur. Votre configuration paraît
+                complète, mais aucune connexion par annuaire ne peut aboutir tant que le secret
+                n'a pas été ressaisi ci-dessous. Reprenez-le chez votre fournisseur
+                (ou régénérez-en un) et enregistrez à nouveau.
+            </p>
+        </div>
+    </div>
+
     <section th:if="${ssoDisponible and ssoInstalle}" class="glass rounded-3xl p-6 mb-6" data-reveal>
         <h2 class="font-serif text-[22px] mb-1">À déclarer chez votre fournisseur</h2>
         <!-- Cette URL décide de la réussite ou de l'échec, au caractère près. C'est le motif de

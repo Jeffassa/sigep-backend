@@ -16,18 +16,14 @@
         <h2 class="font-serif text-[26px] mb-1">Connexion</h2>
         <p class="text-[14px] text-muted mb-6">Réservé à l'administration de votre établissement.</p>
 
-        <div th:if="${error}"
-             class="flex items-center gap-2 p-3 mb-4 rounded-xl text-[13px]"
-             style="background:rgba(186,26,26,.08);color:#7a0010;border:1px solid rgba(186,26,26,.2)">
+        <div th:if="${error}" class="alerte flex items-center gap-2 p-3 mb-4 rounded-xl text-[13px]">
             <span class="material-symbols-rounded text-[18px]">error</span>
             <span th:text="${error}">Erreur.</span>
         </div>
         <!-- Refus SSO. Le texte vient du serveur, traduit depuis un motif codé : l'adresse ne
              transporte jamais de phrase, et un lien forgé ne peut donc pas faire afficher ici un
              message d'hameçonnage sous notre charte. -->
-        <div th:if="${ssoErreur}"
-             class="flex items-start gap-2 p-3 mb-4 rounded-xl text-[13px]"
-             style="background:rgba(186,26,26,.08);color:#7a0010;border:1px solid rgba(186,26,26,.2)">
+        <div th:if="${ssoErreur}" class="alerte flex items-start gap-2 p-3 mb-4 rounded-xl text-[13px]">
             <span class="material-symbols-rounded text-[18px] shrink-0">shield_person</span>
             <span th:text="${ssoErreur}">Refus.</span>
         </div>

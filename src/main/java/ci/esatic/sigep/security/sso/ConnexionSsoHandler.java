@@ -168,24 +168,34 @@ public class ConnexionSsoHandler implements AuthenticationSuccessHandler {
                     "domaine", email);
         }
 
-        // Volontairement insensible à la casse : « Admin@ecole.ci » chez le fournisseur et
-        // « admin@ecole.ci » chez nous désignent la même personne. Mais si DEUX comptes se
-        // révélaient ainsi homonymes, on refuse au lieu d'en choisir un : deviner lequel
-        // reviendrait à ouvrir une session au hasard entre deux identités.
-        List<User> candidats = userRepository.findAllByEmailIgnoreCase(email);
+        // Insensible à la casse : « Admin@ecole.ci » chez le fournisseur et « admin@ecole.ci »
+        // chez nous désignent la même personne, et refuser l'entrée pour une majuscule serait
+        // incompréhensible.
+        //
+        // BORNÉE À L'ÉTABLISSEMENT, et c'est essentiel. Chercher dans toute la base donnait un
+        // levier contre nos propres clients : la contrainte d'unicité distingue les majuscules,
+        // si bien qu'un établissement pouvait créer chez lui « Admin@ecole-voisine.ci » et rendre
+        // du même coup cette adresse AMBIGUË — donc refusée — à la connexion de l'école voisine.
+        // Fermer la porte d'un concurrent sans toucher à ses données est exactement le genre de
+        // chose qu'un cloisonnement doit rendre impossible.
+        //
+        // Deux homonymes DANS le même établissement restent possibles, et là on refuse plutôt
+        // que de choisir : ouvrir une session au hasard entre deux identités serait pire.
+        List<User> candidats = userRepository.findAllByEmailIgnoreCaseAndEtablissementId(
+                email, etablissement.getId());
         if (candidats.size() > 1) {
-            log.error("SSO : {} comptes portent l'adresse {} — connexion refusée.",
-                    candidats.size(), email);
+            log.error("SSO : {} comptes du même établissement portent l'adresse {} — "
+                    + "connexion refusée.", candidats.size(), email);
             throw new RefusSso("Plusieurs comptes portent cette adresse. Contactez-nous.",
                     "ambigu", email);
         }
         User utilisateur = candidats.isEmpty() ? null : candidats.get(0);
 
-        if (utilisateur == null || utilisateur.getEtablissement() == null
-                || !etablissement.getId().equals(utilisateur.getEtablissement().getId())) {
-            // Un seul message pour les deux cas — compte inexistant, ou compte d'un AUTRE
-            // établissement. Les distinguer apprendrait à un fournisseur d'identité quelles
-            // adresses existent ailleurs chez nous.
+        if (utilisateur == null) {
+            // Un seul message, que le compte n'existe nulle part ou qu'il appartienne à un AUTRE
+            // établissement : la requête ci-dessus ne fait pas la différence, et c'est voulu. La
+            // faire apprendrait à un fournisseur d'identité quelles adresses existent ailleurs
+            // chez nous.
             throw new RefusSso("Aucun compte de cet établissement ne porte cette adresse.",
                     "inconnu-compte", email);
         }
@@ -255,9 +265,16 @@ public class ConnexionSsoHandler implements AuthenticationSuccessHandler {
     /**
      * Ferme tout et renvoie à la page de connexion avec une explication.
      *
-     * <p>La session est détruite, pas seulement vidée : le visiteur est arrivé ici authentifié
-     * auprès du fournisseur, et laisser traîner une session à demi ouverte ne sert à rien
-     * d'autre qu'à produire un état que personne n'a prévu.
+     * <p>La session est détruite quand elle n'a servi qu'à cet échange : le visiteur est arrivé
+     * authentifié auprès du fournisseur, et laisser traîner une session à demi ouverte ne produit
+     * qu'un état que personne n'a prévu.
+     *
+     * <p><b>Mais pas si quelqu'un travaillait dedans.</b> Une même session de navigateur peut
+     * déjà porter un administrateur connecté par mot de passe — il suffit qu'il ouvre dans un
+     * second onglet le lien SSO mis en favori par un collègue, ou celui que l'écran de
+     * configuration lui conseille d'essayer. La détruire le jetterait dehors au milieu de son
+     * travail, pour un échec qui ne le concerne pas. On se contente alors d'effacer le contexte
+     * de la requête en cours.
      */
     private void refuser(HttpServletRequest requete, HttpServletResponse reponse,
                          String message, String motif, String identifiant) throws IOException {
@@ -267,7 +284,7 @@ public class ConnexionSsoHandler implements AuthenticationSuccessHandler {
 
         SecurityContextHolder.clearContext();
         HttpSession session = requete.getSession(false);
-        if (session != null) {
+        if (session != null && !porteUnCompteApplicatif(session)) {
             session.invalidate();
         }
         // C'est le MOTIF qui voyage, pas la phrase. Une adresse comme
@@ -277,6 +294,22 @@ public class ConnexionSsoHandler implements AuthenticationSuccessHandler {
         // reste retombe sur une phrase generique.
         reponse.sendRedirect("/admin-login?sso_error="
                 + java.net.URLEncoder.encode(motif, java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    /**
+     * Cette session porte-t-elle déjà quelqu'un de connecté chez nous ?
+     *
+     * <p>Lu dans la session et non dans le contexte courant : à l'instant où l'on refuse, le
+     * contexte de la requête porte l'identité OIDC qui vient d'arriver, pas celle de la personne
+     * qui travaillait peut-être déjà dans cet onglet.
+     */
+    static boolean porteUnCompteApplicatif(HttpSession session) {
+        Object contexte = session.getAttribute(
+                HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY);
+        return contexte instanceof SecurityContext sc
+                && sc.getAuthentication() != null
+                && sc.getAuthentication().isAuthenticated()
+                && sc.getAuthentication().getPrincipal() instanceof User;
     }
 
     private static boolean aLeRole(User u, String role) {

@@ -64,7 +64,11 @@ public class EchecSsoHandler implements AuthenticationFailureHandler {
 
         SecurityContextHolder.clearContext();
         var session = requete.getSession(false);
-        if (session != null) {
+        // Pas si quelqu'un travaillait dedans : la même session de navigateur peut déjà porter
+        // un administrateur connecté par mot de passe, qui vient simplement d'ouvrir un lien SSO
+        // périmé dans un second onglet. Le jeter dehors pour un échec qui ne le concerne pas
+        // serait la pire façon de traiter une panne du fournisseur.
+        if (session != null && !ConnexionSsoHandler.porteUnCompteApplicatif(session)) {
             session.invalidate();
         }
         reponse.sendRedirect("/admin-login?sso_error="

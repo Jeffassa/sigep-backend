@@ -44,6 +44,7 @@ public class SsoAdminWebController {
         model.addAttribute("ssoDisponible", planService.estDisponible(etablissement, Feature.SSO));
         model.addAttribute("ssoInstalle", service.disponibleSurCeServeur());
         model.addAttribute("config", service.charger(etablissement).orElse(null));
+        model.addAttribute("secretRelisible", service.secretRelisible(etablissement));
         model.addAttribute("slug", etablissement == null ? "" : etablissement.getSlug());
         model.addAttribute("urlRetour", baseUrl(requete) + "/login/oauth2/code/"
                 + (etablissement == null ? "" : etablissement.getSlug()));

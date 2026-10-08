@@ -163,8 +163,19 @@ class SsoConnexionTest {
                 .isEqualTo("/admin/dashboard");
     }
 
+    /**
+     * Ce que ce test prouve, et ce qu'il ne prouve pas.
+     *
+     * <p>Le profil de test coupe le second facteur ({@code admin-otp.enabled=false}) : l'arbitrage
+     * « le SSO remplace-t-il notre code ? » est donc ici tranché d'avance, et ce test ne le
+     * vérifie pas. Il vérifie autre chose, qui compte aussi : que l'interrupteur d'exploitation
+     * étant coupé, le drapeau de session est bien posé — sans lui, le garde de {@code /admin/**}
+     * renverrait vers une page de code qu'aucun courriel n'a préparée, et personne n'entrerait.
+     *
+     * <p>L'arbitrage lui-même est tenu par {@code SsoWebTest}, qui rallume l'interrupteur.
+     */
     @Test
-    void sansSecondFacteurSupplementaire_laSessionEstOuverteSansPasserParLeCode() throws Exception {
+    void lInterrupteurDExploitationCoupe_laisseLaSessionOuverte() throws Exception {
         Etablissement e = etablissement(Plan.ENTERPRISE);
         configurer(e, null);
         compte(e, "chef@ecole.ci", ERole.ROLE_ADMIN, true);
@@ -377,6 +388,77 @@ class SsoConnexionTest {
         assertThat(jouer(retourDuFournisseur("etablissement-fantome", "x@y.ci", true),
                 requete("etablissement-fantome")))
                 .isEqualTo("/admin-login?sso_error=etablissement");
+    }
+
+    @Test
+    void unHomonymeCreeChezUnConcurrent_neFermePasLaPorte() throws Exception {
+        Etablissement cible = etablissement(Plan.ENTERPRISE);
+        configurer(cible, null);
+        compte(cible, "directrice@ecole-cible.ci", ERole.ROLE_ADMIN, true);
+
+        // Un établissement voisin crée chez LUI un compte dont l'adresse ne diffère que par la
+        // casse. La contrainte d'unicité de la colonne ne s'y oppose pas : « Directrice@… » et
+        // « directrice@… » sont deux lignes distinctes.
+        Etablissement voisine = etablissement(Plan.ENTERPRISE);
+        compte(voisine, "Directrice@Ecole-Cible.ci", ERole.ROLE_ADMIN, true);
+
+        // Si la recherche de compte balayait toute la base, elle trouverait DEUX homonymes et
+        // refuserait pour ambiguïté : n'importe quel client fermerait ainsi la porte SSO d'un
+        // concurrent, sans jamais toucher à ses données.
+        assertThat(jouer(retourDuFournisseur(cible.getSlug(), "directrice@ecole-cible.ci", true),
+                requete(cible.getSlug())))
+                .isEqualTo("/admin/dashboard");
+    }
+
+    @Test
+    void unRefus_neJettePasDehorsQuelquUnQuiTravaillait() throws Exception {
+        Etablissement e = etablissement(Plan.ENTERPRISE);
+        configurer(e, null);
+        User enPlaceDansLOnglet = compte(e, "occupee@ecole.ci", ERole.ROLE_ADMIN, true);
+
+        // Un administrateur déjà connecté par mot de passe. Il ouvre dans un second onglet le
+        // lien SSO qu'un collègue lui a transmis, et ce lien échoue.
+        MockHttpServletRequest requete = requete(e.getSlug());
+        var session = (org.springframework.mock.web.MockHttpSession) requete.getSession();
+        var contexte = SecurityContextHolder.createEmptyContext();
+        contexte.setAuthentication(new org.springframework.security.authentication
+                .UsernamePasswordAuthenticationToken(enPlaceDansLOnglet, "n/a",
+                        enPlaceDansLOnglet.getAuthorities()));
+        session.setAttribute(org.springframework.security.web.context
+                .HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, contexte);
+
+        jouer(retourDuFournisseur(e.getSlug(), "inconnue@ecole.ci", true), requete);
+
+        // Le détruire le jetterait dehors au milieu de son travail, pour un échec qui ne le
+        // concerne pas — et la panne d'un fournisseur deviendrait une déconnexion générale.
+        assertThat(session.isInvalid())
+                .as("la session d'un administrateur deja connecte ne doit pas etre detruite")
+                .isFalse();
+        assertThat(session.getAttribute(org.springframework.security.web.context
+                .HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY)).isNotNull();
+    }
+
+    @Test
+    void laSessionOuverte_porteLIdentiteApplicative_etPasSeulementLeContexteDuFil() throws Exception {
+        Etablissement e = etablissement(Plan.ENTERPRISE);
+        configurer(e, null);
+        compte(e, "chef@ecole.ci", ERole.ROLE_ADMIN, true);
+
+        MockHttpServletRequest requete = requete(e.getSlug());
+        jouer(retourDuFournisseur(e.getSlug(), "chef@ecole.ci", true), requete);
+
+        // Lire le SecurityContextHolder ne prouve presque rien : le gestionnaire vient de l'y
+        // poser lui-même, et il serait perdu à la fin de la requête. Ce qui survit à la
+        // redirection, c'est ce qui est ÉCRIT EN SESSION — et c'est de là que l'application
+        // relira l'identité à la requête suivante.
+        Object contexte = requete.getSession().getAttribute(
+                org.springframework.security.web.context.HttpSessionSecurityContextRepository
+                        .SPRING_SECURITY_CONTEXT_KEY);
+        assertThat(contexte).isInstanceOf(org.springframework.security.core.context.SecurityContext.class);
+        var principal = ((org.springframework.security.core.context.SecurityContext) contexte)
+                .getAuthentication().getPrincipal();
+        assertThat(principal).isInstanceOf(User.class);
+        assertThat(((User) principal).getEmail()).isEqualTo("chef@ecole.ci");
     }
 
     @Test

@@ -56,6 +56,28 @@ public class ConfigurationSsoService {
     }
 
     /**
+     * Le secret enregistré est-il encore lisible ?
+     *
+     * <p>Une clé de chiffrement changée ou perdue ne casse rien de visible : l'écran continue
+     * d'afficher une configuration complète et saine, le fournisseur est bien déclaré, la case
+     * « Activer » est cochée — et <b>chaque connexion échoue</b>, sans que rien ne relie les deux.
+     * L'administrateur conclut à une panne de son annuaire et cherche du mauvais côté.
+     *
+     * <p>Un déchiffrement à blanc répond à la question tout de suite. Il ne rend jamais le
+     * secret : seulement s'il a pu être relu.
+     */
+    public boolean secretRelisible(Etablissement etablissement) {
+        return charger(etablissement).map(c -> {
+            try {
+                chiffrement.dechiffrer(c.getClientSecret());
+                return true;
+            } catch (RuntimeException e) {
+                return false;
+            }
+        }).orElse(true);   // pas de configuration : rien d'anormal à signaler
+    }
+
+    /**
      * Crée ou remplace la configuration de cet établissement.
      *
      * @param secretEnClair nouveau secret, ou vide pour conserver celui déjà enregistré
@@ -108,7 +130,14 @@ public class ConfigurationSsoService {
 
         // Avant d'écrire : le fournisseur répond-il seulement ? Une configuration fausse
         // enregistrée est un administrateur enfermé dehors, qui n'apprendra la cause de rien.
-        verifierAupresDuFournisseur(issuerNet);
+        //
+        // SAUF quand on DÉSACTIVE. Exiger que le fournisseur réponde pour avoir le droit de
+        // couper le SSO rendait l'interrupteur inutilisable au seul moment où l'on en a besoin :
+        // celui où le fournisseur est en panne. L'administrateur se retrouvait devant une case à
+        // décocher et un enregistrement qui refusait de passer.
+        if (actif) {
+            verifierAupresDuFournisseur(issuerNet);
+        }
 
         ConfigurationSso enregistree = repository.save(config);
         // Le registre garde une heure en mémoire ce qu'il a découvert : sans cet oubli, une
