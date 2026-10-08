@@ -63,6 +63,8 @@
       REDIS_PORT: 6379
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET requis (min 256 bits base64, voir .env.docker.example)}
       JWT_QR_SECRET: ${JWT_QR_SECRET:?JWT_QR_SECRET requis (min 256 bits base64, voir .env.docker.example)}
+      # Facultative : sans elle, le SSO OIDC n'est pas proposé. Exactement 32 octets en base64.
+      APP_SSO_SECRET_KEY: ${APP_SSO_SECRET_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy

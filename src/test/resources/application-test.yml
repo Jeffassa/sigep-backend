@@ -25,6 +25,11 @@ app:
     expiration: 86400000
     refresh-expiration: 2592000000
     qr-secret: dGVzdC1xci1zZWNyZXQta2V5LWZvci1zaWdlcC10ZXN0cy1vbmx5LTI2Yg==
+  sso:
+    # Cle de test, publique et sans valeur : elle ne protege que des secrets de test.
+    # Volontairement ABSENTE de application-dev.yml — une cle versionnee qui se retrouverait
+    # a proteger un vrai secret client serait pire que pas de SSO du tout.
+    secret-key: c2lnZXAtdGVzdC1zc28ta2V5LTMyLW9jdGV0cyEhISE=
   rapports:
     dossier: target/test-rapports
   security:

@@ -32,6 +32,8 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD requis}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET requis}
       JWT_QR_SECRET: ${JWT_QR_SECRET:?JWT_QR_SECRET requis}
+      # Facultative : sans elle, le SSO OIDC n'est pas proposé. Exactement 32 octets en base64.
+      APP_SSO_SECRET_KEY: ${APP_SSO_SECRET_KEY:-}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@esatic.ci}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       APP_SECURITY_REQUIRE_HTTPS: ${APP_SECURITY_REQUIRE_HTTPS:-true}

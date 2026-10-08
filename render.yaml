@@ -31,5 +31,11 @@ services:
         sync: false
       - key: JWT_QR_SECRET   # openssl rand -base64 48 (différent)
         sync: false
+      # SSO OIDC (Enterprise) : chiffre le secret client que chaque établissement enregistre.
+      # FACULTATIF — sans elle, le SSO n'est simplement pas proposé, rien d'autre ne change.
+      # ATTENTION : la perdre ou la changer rend illisibles les secrets déjà enregistrés, et
+      # chaque établissement devra ressaisir le sien.
+      - key: APP_SSO_SECRET_KEY   # openssl rand -base64 32 (EXACTEMENT 32 octets)
+        sync: false
       - key: ADMIN_PASSWORD  # vide = généré et affiché 1 fois dans les logs
         sync: false

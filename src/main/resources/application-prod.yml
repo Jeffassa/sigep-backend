@@ -40,6 +40,11 @@ server:
         # PAS envoyé et l'utilisateur retomberait sur l'écran de connexion après avoir payé.
         # 'lax' n'envoie le cookie que sur les navigations GET de premier niveau : la
         # protection CSRF sur les POST reste entière (et les jetons CSRF Spring restent actifs).
+        #
+        # Le SSO en dépend aussi, et de la même façon : le retour du fournisseur d'identité
+        # (/login/oauth2/code/…) est une navigation GET venue d'un autre site. En 'strict', le
+        # cookie ne partirait pas, la session qui porte le « state » et le « nonce » serait
+        # introuvable, et CHAQUE connexion SSO échouerait — sans que rien n'indique pourquoi.
         same-site: ${SESSION_COOKIE_SAMESITE:lax}
         name: SIGEPSESSIONID
 

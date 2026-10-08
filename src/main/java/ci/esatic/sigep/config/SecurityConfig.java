@@ -34,6 +34,11 @@ public class SecurityConfig {
     private final ci.esatic.sigep.service.JournalSecuriteService journalSecurite;
     private final ci.esatic.sigep.security.ClientIpResolver clientIpResolver;
     private final ci.esatic.sigep.security.CleApiAuthFilter cleApiAuthFilter;
+    private final ci.esatic.sigep.security.sso.RegistreSsoTenant registreSso;
+    private final ci.esatic.sigep.security.sso.ConnexionSsoHandler connexionSsoHandler;
+    private final ci.esatic.sigep.security.sso.EchecSsoHandler echecSsoHandler;
+    private final ci.esatic.sigep.security.sso.SansMemoireDesJetons sansMemoireDesJetons;
+    private final ci.esatic.sigep.security.sso.ResolveurDemandeSso resolveurDemandeSso;
 
     /** Voir {@link AdminOtpInterceptor} : interrupteur de secours du second facteur. */
     @org.springframework.beans.factory.annotation.Value("${app.security.admin-otp.enabled:true}")
@@ -55,11 +60,23 @@ public class SecurityConfig {
                 // c'est l'un des trois filets qui empêchent un administrateur d'être enfermé
                 // dehors. La règle .requestMatchers plus bas ne pouvait rien y faire : une chaîne
                 // n'arbitre que les URL qu'elle capte.
+                // Les quatre adresses du SSO sont captees ICI, et c'est une condition de
+                // fonctionnement, non un rangement. Laissees a la chaine API, elles seraient
+                // SANS ETAT : le parametre « state » et le « nonce » d'OpenID Connect — les deux
+                // valeurs que le navigateur doit retrouver au retour pour prouver que c'est bien
+                // lui qui est parti — vivent en session. Sans session, l'echange echoue a chaque
+                // fois, et la cause est invisible.
                 .securityMatcher("/admin/**", "/admin-login", "/admin-otp", "/admin-otp/**",
-                        "/plateforme/**")
+                        "/plateforme/**", "/sso", "/sso/**",
+                        "/oauth2/authorization/**", "/login/oauth2/code/**")
                 // CSRF activé : Thymeleaf injecte automatiquement le token dans th:action
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/admin-login").permitAll()
+                        // Le SSO est, par nature, ce qu'on emprunte AVANT d'etre authentifie.
+                        // Ces adresses n'ouvrent rien par elles-memes : elles menent au
+                        // fournisseur d'identite, et c'est son retour qui est examine.
+                        .requestMatchers("/sso", "/sso/**").permitAll()
+                        .requestMatchers("/oauth2/authorization/**", "/login/oauth2/code/**").permitAll()
                         // Second facteur : commun aux DEUX profils d'administration. Sans cette
                         // règle, /admin-otp retombe sur anyRequest().hasRole("ADMIN") et le super
                         // administrateur — qui ne porte que ROLE_SUPER_ADMIN — reçoit un 403 sur la
@@ -124,9 +141,45 @@ public class SecurityConfig {
                         .invalidateHttpSession(true)
                         .clearAuthentication(true)
                 )
+                // SSO OpenID Connect par etablissement. Le registre fabrique l'inscription a
+                // partir de la base — un fournisseur d'identite par etablissement, modifiable
+                // sans redeploiement — et c'est lui qui refuse deja plan insuffisant,
+                // etablissement suspendu ou configuration desactivee.
+                .oauth2Login(sso -> sso
+                        .loginPage("/admin-login")
+                        .clientRegistrationRepository(registreSso)
+                        // Un etablissement sans SSO utilisable n'est pas une panne : le
+                        // resolveur rend « rien » la ou celui de Spring leve une exception, et
+                        // un lien mis en favori apres un changement d'offre mene a la connexion
+                        // par mot de passe au lieu d'une page « erreur du serveur ».
+                        .authorizationEndpoint(point -> point
+                                .authorizationRequestResolver(resolveurDemandeSso))
+                        // Le jeton d'acces du fournisseur n'est pas conserve : nous ne nous en
+                        // servons jamais, et le garder en session serait un secret de plus a
+                        // perdre — celui du compte Google ou Microsoft de la personne.
+                        .authorizedClientRepository(sansMemoireDesJetons)
+                        // C'est ici que l'identite OIDC est echangee contre un User applicatif :
+                        // au-dela de cette ligne, plus rien dans l'application ne sait que le SSO
+                        // existe.
+                        .successHandler(connexionSsoHandler)
+                        .failureHandler(echecSsoHandler))
                 .authenticationProvider(authenticationProvider())
-                // Rate-limiting (anti-bruteforce du login admin + filet global) avant l'auth form.
-                .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class);
+                // Rate-limiting : AVANT le depart OAuth2, et non avant le formulaire.
+                //
+                // La nuance decide si les budgets existent. L'ordre reel de la chaine est
+                // « … LogoutFilter, OAuth2AuthorizationRequestRedirectFilter,
+                // OAuth2LoginAuthenticationFilter, RateLimitFilter, UsernamePassword… » : place
+                // avant le formulaire, le limiteur se retrouve DERRIERE les deux filtres OAuth2.
+                // Or le premier repond — il redirige vers le fournisseur — sans jamais rendre la
+                // main. Le budget ecrit pour /oauth2/authorization/** n'etait donc consulte sur
+                // aucune requete, alors que c'est le seul chemin ouvert sans authentification qui
+                // declenche un appel reseau sortant. Le place ici, il couvre les deux : le depart
+                // OAuth2 precede de toute facon le formulaire.
+                // Un test (OrdreDesFiltresTest) tient cet ordre, parce qu'un budget jamais lu se
+                // lit tres bien dans le code.
+                .addFilterBefore(rateLimitFilter,
+                        org.springframework.security.oauth2.client.web
+                                .OAuth2AuthorizationRequestRedirectFilter.class);
         appliquerHeadersSecurite(http);
         if (requireHttps) {
             http.requiresChannel(c -> c.anyRequest().requiresSecure());

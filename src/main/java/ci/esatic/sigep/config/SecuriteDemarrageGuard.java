@@ -26,7 +26,12 @@ public class SecuriteDemarrageGuard {
     /** Clés de repli de DÉV (cf. application-dev.yml) — publiques, interdites hors profil dev. */
     private static final Set<String> SECRETS_DEV_CONNUS = Set.of(
             "ZGV2LXNpZ2VwLWp3dC1zZWNyZXQta2V5LW5vdC1mb3ItcHJvZHVjdGlvbi0yMDI2",
-            "ZGV2LXFyLXNpZ2VwLXNlY3JldC1rZXktbm90LWZvci1wcm9kdWN0aW9uLTIwMjY="
+            "ZGV2LXFyLXNpZ2VwLXNlY3JldC1rZXktbm90LWZvci1wcm9kdWN0aW9uLTIwMjY=",
+            // Clé de chiffrement des secrets clients OIDC, repli de dév. Elle protège les
+            // secrets qui ouvrent l'annuaire d'un établissement : versionnée, elle ne protège
+            // plus rien. Elle est ici pour que le SSO se développe en local sans réglage, et
+            // dans cette liste pour qu'elle ne sorte jamais du profil « dev ».
+            "ZGV2LXNpZ2VwLXNzby1rZXktTk9ULUZPUi1QUk9EISE="
     );
 
     /** Minimum requis pour HMAC-SHA256 : 256 bits = 32 octets (aligné sur Keys.hmacShaKeyFor). */
@@ -36,15 +41,19 @@ public class SecuriteDemarrageGuard {
     private final String jwtSecret;
     private final String qrSecret;
     private final boolean requireHttps;
+    private final String ssoSecret;
 
     public SecuriteDemarrageGuard(Environment env,
                                   @Value("${app.jwt.secret:}") String jwtSecret,
                                   @Value("${app.jwt.qr-secret:}") String qrSecret,
-                                  @Value("${app.security.require-https:false}") boolean requireHttps) {
+                                  @Value("${app.security.require-https:false}") boolean requireHttps,
+                                  @Value("${app.sso.secret-key:}") String ssoSecret) {
         this.env = env;
         this.jwtSecret = jwtSecret;
         this.qrSecret = qrSecret;
         this.requireHttps = requireHttps;
+        this.ssoSecret = ssoSecret == null ? "" : ssoSecret.trim()
+                .replaceAll("^[\"']|[\"']$", "").trim();
     }
 
     @PostConstruct
@@ -61,12 +70,13 @@ public class SecuriteDemarrageGuard {
                     "Démarrage refusé (sécurité) : profil 'prod' actif mais app.security.require-https=false. "
                   + "Activez APP_SECURITY_REQUIRE_HTTPS=true (ne jamais servir de jetons en clair).");
         }
-        if (SECRETS_DEV_CONNUS.contains(jwtSecret) || SECRETS_DEV_CONNUS.contains(qrSecret)) {
+        if (SECRETS_DEV_CONNUS.contains(jwtSecret) || SECRETS_DEV_CONNUS.contains(qrSecret)
+                || SECRETS_DEV_CONNUS.contains(ssoSecret)) {
             throw new IllegalStateException(
                     "Démarrage refusé (sécurité) : une clé secrète de DÉVELOPPEMENT (publique, "
                   + "versionnée) est utilisée hors du profil 'dev'. Définissez des valeurs propres "
-                  + "à l'environnement pour JWT_SECRET et JWT_QR_SECRET, et activez le bon profil "
-                  + "(SPRING_PROFILES_ACTIVE=prod en production).");
+                  + "à l'environnement pour JWT_SECRET, JWT_QR_SECRET et APP_SSO_SECRET_KEY, et "
+                  + "activez le bon profil (SPRING_PROFILES_ACTIVE=prod en production).");
         }
         // Défense en profondeur : rejeter toute clé faible (vide, non base64, < 256 bits) même
         // si elle n'est pas dans la blacklist ci-dessus (ex. anciens replis 'dev_secret_change_in_prod').

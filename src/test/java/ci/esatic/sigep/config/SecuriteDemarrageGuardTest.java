@@ -20,6 +20,9 @@ class SecuriteDemarrageGuardTest {
     private static final String SECRET_OK_2 = "dGVzdC1xci1zZWNyZXQta2V5LWZvci1zaWdlcC10ZXN0cy1vbmx5LTI2Yg==";
     // Clé de dev publique blacklistée (application-dev.yml).
     private static final String SECRET_DEV = "ZGV2LXNpZ2VwLWp3dC1zZWNyZXQta2V5LW5vdC1mb3ItcHJvZHVjdGlvbi0yMDI2";
+    // Clé SSO de dev, versionnée elle aussi (application-dev.yml) : elle chiffre les secrets
+    // clients OIDC, c'est-à-dire ce qui ouvre l'annuaire d'un établissement.
+    private static final String SSO_DEV = "ZGV2LXNpZ2VwLXNzby1rZXktTk9ULUZPUi1QUk9EISE=";
 
     private Environment env(String... profils) {
         Environment env = mock(Environment.class);
@@ -32,7 +35,35 @@ class SecuriteDemarrageGuardTest {
     }
 
     private void verifier(Environment env, String jwt, String qr, boolean requireHttps) {
-        new SecuriteDemarrageGuard(env, jwt, qr, requireHttps).verifierSecrets();
+        verifier(env, jwt, qr, requireHttps, "");
+    }
+
+    private void verifier(Environment env, String jwt, String qr, boolean requireHttps, String sso) {
+        new SecuriteDemarrageGuard(env, jwt, qr, requireHttps, sso).verifierSecrets();
+    }
+
+    @Test
+    void laCleSsoDeDev_refuseLeDemarrageHorsDev() {
+        // Elle est versionnée, donc publique. En production, elle ne protégerait plus les
+        // secrets clients de nos établissements : n'importe qui les déchiffrerait depuis une
+        // sauvegarde de base. Le démarrage s'arrête plutôt que de servir avec elle.
+        assertThatThrownBy(() -> verifier(env("prod"), SECRET_OK_1, SECRET_OK_2, true, SSO_DEV))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("DÉVELOPPEMENT");
+    }
+
+    @Test
+    void laCleSsoDeDev_estAccepteeEnDev() {
+        assertThatCode(() -> verifier(env("dev"), SECRET_DEV, SECRET_OK_2, false, SSO_DEV))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    void sansCleSso_leDemarrageResteNormal() {
+        // Le SSO est facultatif : son absence ne doit empêcher aucun démarrage, et seulement
+        // rendre la fonctionnalité indisponible.
+        assertThatCode(() -> verifier(env("prod"), SECRET_OK_1, SECRET_OK_2, true, ""))
+                .doesNotThrowAnyException();
     }
 
     @Test

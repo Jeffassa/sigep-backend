@@ -47,9 +47,17 @@ public class AdminDashboardController {
     @GetMapping("/admin-login")
     public String loginPage(@RequestParam(required = false) String error,
                             @RequestParam(required = false) String logout,
+                            @RequestParam(name = "sso_error", required = false) String ssoErreur,
                             Model model) {
         if (error != null) model.addAttribute("error", "Identifiants incorrects.");
         if (logout != null) model.addAttribute("logout", "Deconnexion reussie.");
+        // Le refus SSO arrive sous forme de MOTIF codé, jamais de phrase : la traduction se fait
+        // ici, à partir d'une table fermée. Un lien forgé ne peut donc pas faire afficher un
+        // message d'hameçonnage sur notre propre page de connexion.
+        if (ssoErreur != null) {
+            model.addAttribute("ssoErreur",
+                    ci.esatic.sigep.security.sso.MessageRefusSso.pour(ssoErreur));
+        }
         return "admin/login";
     }
 

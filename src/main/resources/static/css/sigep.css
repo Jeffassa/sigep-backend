@@ -1,38 +1,5 @@
 :root {
     
-/* ============================================================================
-   LA COCHE DE RÉUSSITE
-
-   Elle se trace : le cercle se referme, puis le trait se pose. Une icône qui
-   apparaît d'un bloc ne dit rien de plus qu'un point vert ; une coche qui se
-   dessine dit « c'est fait », au moment où ça vient de l'être — et l'œil la
-   remarque sans qu'on ait à faire clignoter quoi que ce soit.
-
-   Tracé par stroke-dashoffset, donc en CSS seul : aucune bibliothèque
-   d'animation pour dix-huit pixels. Et sous prefers-reduced-motion, la coche
-   est simplement là, complète : une confirmation ne doit jamais dépendre d'une
-   animation que l'utilisateur a demandé de ne pas jouer.
-   ========================================================================= */
-.coche { width: 18px; height: 18px; flex: none; color: #10b981; display: block; }
-.coche circle, .coche path {
-    fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round;
-}
-.coche circle {
-    stroke-width: 2.4; stroke-dasharray: 126; stroke-dashoffset: 126;
-    transform: rotate(-90deg); transform-origin: 50% 50%;
-    animation: coche-cercle .5s cubic-bezier(.22,1,.36,1) forwards;
-}
-.coche path {
-    stroke-width: 3; stroke-dasharray: 30; stroke-dashoffset: 30;
-    animation: coche-trait .32s cubic-bezier(.22,1,.36,1) .34s forwards;
-}
-@keyframes coche-cercle { to { stroke-dashoffset: 0; } }
-@keyframes coche-trait  { to { stroke-dashoffset: 0; } }
-
-@media (prefers-reduced-motion: reduce) {
-    .coche circle, .coche path { animation: none; stroke-dashoffset: 0; }
-}
-
 /* ===== Thème CLAIR (par défaut) ===== */
     --c-bg: #f4f4f5;                       /* fond de page */
     --c-ink: #0a0a0a;                      /* texte/élément fort */
@@ -83,6 +50,89 @@ html.dark {
     --c-accent-soft: rgba(52,211,153,.12);
     --c-accent-ink: #04160e;
     color-scheme: dark;
+}
+
+/* ============================================================================
+   CE QUI SUIT DOIT RESTER HORS DE :root ET DE html.dark
+
+   Les deux blocs ci-dessous ont vécu, pendant une version, À L'INTÉRIEUR de
+   « :root { } ». Rien ne l'avait signalé : la feuille se chargeait, les pages
+   s'affichaient, aucun outil ne protestait. Le navigateur applique en effet les
+   règles imbriquées — « .coche » devenait « :root .coche » et fonctionnait
+   encore — mais deux choses se perdaient en silence :
+
+     · « @keyframes » n'est pas admis dans une règle de style : les deux
+       animations étaient PUREMENT ET SIMPLEMENT SUPPRIMÉES par l'analyseur. La
+       coche de réussite restait donc à son décalage de tracé initial, c'est-à-
+       dire INVISIBLE, sur les dix messages de confirmation de l'administration ;
+     · « html.dark .alerte » devenait « :root html.dark .alerte », qui ne
+       correspond à rien — html.dark ne peut pas être un descendant de :root,
+       c'est le même élément. La variante sombre ne s'appliquait jamais.
+
+   Un test (ReglesCssHorsRacineTest) vérifie désormais cette structure, parce
+   qu'aucun symptôme ne la trahit à l'œil.
+   ========================================================================= */
+/* ============================================================================
+   LE BANDEAU DE REFUS
+
+   Il était écrit en #7a0010 — un rouge presque noir — posé en dur dans le
+   gabarit. Sur le thème clair, il se lit. Sur le fond quasi noir du thème
+   sombre, il disparaît : le texte et le fond se confondent.
+
+   Or ce bandeau ne s'affiche que sur la page de connexion, c'est-à-dire face à
+   quelqu'un qui ne parvient déjà pas à entrer. Un message de refus illisible
+   équivaut à pas de message : la personne voit qu'il s'est passé quelque chose,
+   et ne saura jamais quoi.
+
+   La couleur suit donc le thème, comme tout le reste de l'interface.
+   ========================================================================= */
+.alerte {
+    --alerte-fond:  rgba(186,26,26,.08);
+    --alerte-trait: rgba(186,26,26,.22);
+    --alerte-texte: #7a0010;
+    background: var(--alerte-fond);
+    border: 1px solid var(--alerte-trait);
+    color: var(--alerte-texte);
+}
+html.dark .alerte {
+    /* Rouge clair sur fond sombre : l'inverse exact, et non une simple inversion
+       de luminosité — un rouge vif saturé vibrerait sur du noir. */
+    --alerte-fond:  rgba(248,113,113,.10);
+    --alerte-trait: rgba(248,113,113,.30);
+    --alerte-texte: #fca5a5;
+}
+
+/* ============================================================================
+   LA COCHE DE RÉUSSITE
+
+   Elle se trace : le cercle se referme, puis le trait se pose. Une icône qui
+   apparaît d'un bloc ne dit rien de plus qu'un point vert ; une coche qui se
+   dessine dit « c'est fait », au moment où ça vient de l'être — et l'œil la
+   remarque sans qu'on ait à faire clignoter quoi que ce soit.
+
+   Tracé par stroke-dashoffset, donc en CSS seul : aucune bibliothèque
+   d'animation pour dix-huit pixels. Et sous prefers-reduced-motion, la coche
+   est simplement là, complète : une confirmation ne doit jamais dépendre d'une
+   animation que l'utilisateur a demandé de ne pas jouer.
+   ========================================================================= */
+.coche { width: 18px; height: 18px; flex: none; color: #10b981; display: block; }
+.coche circle, .coche path {
+    fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round;
+}
+.coche circle {
+    stroke-width: 2.4; stroke-dasharray: 126; stroke-dashoffset: 126;
+    transform: rotate(-90deg); transform-origin: 50% 50%;
+    animation: coche-cercle .5s cubic-bezier(.22,1,.36,1) forwards;
+}
+.coche path {
+    stroke-width: 3; stroke-dasharray: 30; stroke-dashoffset: 30;
+    animation: coche-trait .32s cubic-bezier(.22,1,.36,1) .34s forwards;
+}
+@keyframes coche-cercle { to { stroke-dashoffset: 0; } }
+@keyframes coche-trait  { to { stroke-dashoffset: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+    .coche circle, .coche path { animation: none; stroke-dashoffset: 0; }
 }
 * { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
 body {
