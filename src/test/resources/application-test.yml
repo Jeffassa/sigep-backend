@@ -15,9 +15,6 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.H2Dialect
         format_sql: false
-  jackson:
-    serialization:
-      write-dates-as-timestamps: false
 
 app:
   jwt:

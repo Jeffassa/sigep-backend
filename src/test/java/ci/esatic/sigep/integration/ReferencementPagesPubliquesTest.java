@@ -5,9 +5,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -28,7 +28,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 @ActiveProfiles("test")
 class ReferencementPagesPubliquesTest {
 
-    @MockBean private DataInitializer dataInitializer;
+    @MockitoBean private DataInitializer dataInitializer;
 
     @Autowired private MockMvc mockMvc;
 
@@ -99,7 +99,7 @@ class ReferencementPagesPubliquesTest {
         int ferme = html.indexOf("</script>", ouvre);
         String json = html.substring(ouvre, ferme).trim();
 
-        var noeud = new com.fasterxml.jackson.databind.ObjectMapper().readTree(json);
+        var noeud = new tools.jackson.databind.ObjectMapper().readTree(json);
 
         assertThat(noeud.path("@graph")).as("le graphe doit porter ses trois noeuds").hasSize(3);
         assertThat(json).as("aucune expression de template ne doit subsister").doesNotContain("${");

@@ -4,14 +4,14 @@ import ci.esatic.sigep.config.DataInitializer;
 import ci.esatic.sigep.entity.ERole;
 import ci.esatic.sigep.entity.Role;
 import ci.esatic.sigep.repository.RoleRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -37,13 +37,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Transactional
 class MultiTenantE2ETest {
 
-    @MockBean private DataInitializer dataInitializer; // évite de polluer la base H2 partagée
+    @MockitoBean private DataInitializer dataInitializer; // évite de polluer la base H2 partagée
 
     @Autowired private MockMvc mockMvc;
     @Autowired private ObjectMapper objectMapper;
     @Autowired private RoleRepository roleRepository;
     @Autowired private ci.esatic.sigep.repository.EtablissementRepository etablissementRepository;
     @Autowired private EntityManager em;
+    @Autowired private ci.esatic.sigep.repository.UserRepository userRepository;
+    @Autowired private ci.esatic.sigep.security.JwtService jwtService;
 
     @BeforeEach
     void setUp() {
@@ -163,14 +165,9 @@ class MultiTenantE2ETest {
                     etablissementRepository.save(e);
                 });
 
-        MvcResult res = mockMvc.perform(post("/api/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(
-                                Map.of("email", email, "password", "Secret@2026"))))
-                .andExpect(status().isOk())
-                .andReturn();
-        return objectMapper.readTree(res.getResponse().getContentAsString())
-                .get("data").get("token").asText();
+        // Un compte d'administration ne reçoit pas de jeton par /api/auth/login : on le frappe
+        // directement, l'objet du test étant le cloisonnement des routes qui l'acceptent.
+        return jwtService.generateToken(userRepository.findByEmail(email).orElseThrow());
     }
 
     private long creerClasse(String token, String libelle) throws Exception {

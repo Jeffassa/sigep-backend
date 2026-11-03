@@ -30,6 +30,7 @@ public class AlerteService {
                 + rattrapageRepository.countByStatut(StatutDemande.EN_ATTENTE)
                 + enseignantRepository.countByStatut(StatutEnseignant.PENDING)
                 // Hors-ligne EN ATTENTE de validation (actionnable) — pas le cumul historique.
-                + emargementRepository.countByHorsLigneTrueAndValideFalse();
+                + emargementRepository.countByHorsLigneTrueAndValideFalse()
+                + seanceRepository.countByStatut(ci.esatic.sigep.entity.StatutSeance.A_VALIDER);
     }
 }

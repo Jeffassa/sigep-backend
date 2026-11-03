@@ -85,7 +85,7 @@ public class StatistiquesService {
             LocalDate d = (LocalDate) r[0];
             LocalTime h = (LocalTime) r[1];
             StatutSeance st = (StatutSeance) r[2];
-            if (d.isBefore(today) && st != StatutSeance.EMARGE) oublis++;
+            if (d.isBefore(today) && st != StatutSeance.EMARGE) oublis++;   // A_VALIDER exclu par la requête
             int dow = d.getDayOfWeek().getValue();          // 1=Lun .. 7=Dim
             if (dow >= 1 && dow <= 6 && h != null) {
                 int ji = dow - 1;

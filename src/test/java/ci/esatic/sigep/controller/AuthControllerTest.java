@@ -3,12 +3,12 @@ package ci.esatic.sigep.controller;
 import ci.esatic.sigep.config.DataInitializer;
 import ci.esatic.sigep.dto.response.AuthResponse;
 import ci.esatic.sigep.service.AuthService;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.test.context.ActiveProfiles;
@@ -30,8 +30,8 @@ class AuthControllerTest {
     @Autowired private MockMvc mockMvc;
     @Autowired private ObjectMapper objectMapper;
 
-    @MockBean private AuthService authService;
-    @MockBean private DataInitializer dataInitializer;
+    @MockitoBean private AuthService authService;
+    @MockitoBean private DataInitializer dataInitializer;
 
     // =========================================================================
     // POST /api/auth/login

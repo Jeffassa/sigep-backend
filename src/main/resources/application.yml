@@ -24,10 +24,10 @@ spring:
       maximum-pool-size: ${DB_POOL_MAX:25}
       minimum-idle: ${DB_POOL_MIN:5}
   jackson:
-    serialization:
-      write-dates-as-timestamps: false
-    deserialization:
-      fail-on-unknown-properties: false
+    # Jackson 3 (Boot 4) change ses défauts : ordre des champs, null sur un type primitif,
+    # énumérations. Ceci garde le contrat de l'API inchangé pour le mobile : dates en ISO-8601,
+    # propriétés inconnues ignorées. Adopter les défauts stricts serait une décision à part.
+    use-jackson2-defaults: true
   # Le schéma est géré par Flyway (db/migration). Hibernate se contente de valider.
   flyway:
     enabled: ${FLYWAY_ENABLED:true}

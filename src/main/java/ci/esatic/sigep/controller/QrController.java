@@ -26,6 +26,7 @@ public class QrController {
     private final QrCodeService qrCodeService;
     private final EtablissementRepository etablissementRepository;
     private final ClientIpResolver clientIpResolver;
+    private final ci.esatic.sigep.service.AbonnementService abonnementService;
 
     // SECURITE : l'affichage du QR est une PREUVE DE PRESENCE → ne doit jamais être public
     // sur internet. Au moins l'un des deux doit être défini, sinon l'affichage renvoie 403.
@@ -84,7 +85,8 @@ public class QrController {
     private Etablissement tenantKiosqueAutorise(String slug, String key) {
         if (slug == null || slug.isBlank() || key == null || key.isBlank()) return null;
         Etablissement e = etablissementRepository.findBySlug(slug.trim()).orElse(null);
-        if (e == null || !e.isActif() || e.getKioskKey() == null || e.getKioskKey().isBlank()) return null;
+        if (e == null || abonnementService.accesSuspendu(e)
+                || e.getKioskKey() == null || e.getKioskKey().isBlank()) return null;
         return SecurityUtils.constantTimeEquals(e.getKioskKey(), key) ? e : null;
     }
 

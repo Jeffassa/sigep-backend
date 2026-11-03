@@ -40,6 +40,7 @@ public class AuthService {
     private final RefreshTokenService refreshTokenService;
     private final AuthenticationManager authenticationManager;
     private final PlanService planService;
+    private final AbonnementService abonnementService;
 
     public AuthResponse login(LoginRequest request) {
         Authentication authentication = authenticationManager.authenticate(
@@ -47,6 +48,9 @@ public class AuthService {
         );
 
         User user = (User) authentication.getPrincipal();
+
+        // Après la vérification du mot de passe, pour ne rien apprendre à qui n'en a pas.
+        refuserCompteAdministration(user);
 
         // SA-2 : l'établissement doit avoir été validé par le super admin (dossier d'inscription).
         verifierEtablissementValide(user);
@@ -186,6 +190,7 @@ public class AuthService {
         if (!user.isEnabled()) {
             throw new CompteNonValideException("Compte désactivé. Veuillez contacter l'administration.");
         }
+        refuserCompteAdministration(user);
         verifierEtablissementValide(user);
         if (enseignant != null) {
             if (enseignant.getStatut() == StatutEnseignant.PENDING) {
@@ -204,13 +209,37 @@ public class AuthService {
     }
 
     /**
+     * Les comptes d'administration ne reçoivent pas de jeton d'API.
+     *
+     * <p>Leur connexion passe par le second facteur de l'espace web. Un jeton délivré ici sur le
+     * seul mot de passe ouvrirait les mêmes données sans ce second facteur, et le client de cette
+     * route, l'application mobile, ne sert que les enseignants. Le refresh applique la même règle
+     * pour fermer aussi les sessions déjà ouvertes.
+     */
+    private void refuserCompteAdministration(User user) {
+        boolean administration = user.getAuthorities().stream().anyMatch(a ->
+                ERole.ROLE_ADMIN.name().equals(a.getAuthority())
+                        || ERole.ROLE_SUPER_ADMIN.name().equals(a.getAuthority()));
+        if (administration) {
+            throw new CompteNonValideException(
+                    "Les comptes d'administration se connectent depuis l'espace web.");
+        }
+    }
+
+    /**
      * SA-2 : le dossier d'inscription de l'établissement doit avoir été validé par le
      * SUPER ADMIN. Tant qu'il est EN_ATTENTE (ou s'il a été REFUSÉ), aucune connexion
-     * ni aucun refresh n'aboutit pour les comptes de cet établissement.
+     * ni aucun refresh n'aboutit pour les comptes de cet établissement. Il en va de même
+     * quand l'accès est suspendu : abonnement expiré ou désactivation par la plateforme.
      */
     private void verifierEtablissementValide(User user) {
         Etablissement e = user.getEtablissement();
-        if (e == null || e.getStatut() == null) return;
+        if (e == null) return;
+        if (abonnementService.accesSuspendu(e)) {
+            throw new CompteNonValideException(
+                    "L'accès de votre établissement est suspendu. Contactez votre administration.");
+        }
+        if (e.getStatut() == null) return;
         if (e.getStatut() == StatutEtablissement.EN_ATTENTE) {
             throw new CompteNonValideException(
                     "Votre dossier d'inscription est en cours d'analyse. "

@@ -128,9 +128,7 @@ public class SecurityConfig {
                 // Rate-limiting (anti-bruteforce du login admin + filet global) avant l'auth form.
                 .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class);
         appliquerHeadersSecurite(http);
-        if (requireHttps) {
-            http.requiresChannel(c -> c.anyRequest().requiresSecure());
-        }
+        exigerHttps(http);
         return http.build();
     }
 
@@ -163,9 +161,7 @@ public class SecurityConfig {
                             "{\"success\":false,\"message\":\"Clé d'API requise.\"}");
                 }));
         appliquerHeadersSecurite(http);
-        if (requireHttps) {
-            http.requiresChannel(c -> c.anyRequest().requiresSecure());
-        }
+        exigerHttps(http);
         return http.build();
     }
 
@@ -228,10 +224,34 @@ public class SecurityConfig {
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         appliquerHeadersSecurite(http);
-        if (requireHttps) {
-            http.requiresChannel(c -> c.anyRequest().requiresSecure());
-        }
+        exigerHttps(http);
         return http.build();
+    }
+
+    /**
+     * Redirige le trafic en clair vers HTTPS, quel que soit le port d'écoute.
+     *
+     * <p>Le filtre de Spring Security lève une exception — donc un 500 — pour tout port absent de
+     * sa table, qui ne connaît que 80 et 8080. Or l'hébergeur impose le sien ({@code ${PORT}}), et
+     * une requête interne sans {@code X-Forwarded-Proto}, comme une sonde de santé, y arrive
+     * directement. Le port public HTTPS, lui, est toujours 443 : c'est le proxy qui termine le TLS.
+     */
+    private void exigerHttps(HttpSecurity http) throws Exception {
+        if (!requireHttps) {
+            return;
+        }
+        http.portMapper(ports -> ports.portMapper(new org.springframework.security.web.PortMapper() {
+                    @Override
+                    public Integer lookupHttpPort(Integer httpsPort) {
+                        return 80;
+                    }
+
+                    @Override
+                    public Integer lookupHttpsPort(Integer httpPort) {
+                        return 443;
+                    }
+                }))
+                .redirectToHttps(Customizer.withDefaults());
     }
 
     /**
@@ -348,8 +368,7 @@ public class SecurityConfig {
      *  base sur UserDetailsService + PasswordEncoder (cf. authenticationManager), et chaque
      *  chaîne HTTP reçoit explicitement ce provider ci-dessous. */
     private AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        provider.setUserDetailsService(userDetailsService);
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
         provider.setPasswordEncoder(passwordEncoder());
         return provider;
     }

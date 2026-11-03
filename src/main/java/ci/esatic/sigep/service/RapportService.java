@@ -300,7 +300,7 @@ public class RapportService {
             int r = 1;
             for (Enseignant e : enseignants) {
                 List<Seance> seances = seanceRepository.findByEnseignantIdAndDateBetween(e.getId(), debut, fin);
-                long total = seances.size();
+                long total = seances.stream().filter(s -> s.getStatut() != StatutSeance.A_VALIDER).count();
                 List<Seance> emargees = seances.stream()
                         .filter(s -> s.getStatut() == StatutSeance.EMARGE).collect(Collectors.toList());
                 long nbEmargees = emargees.size();
