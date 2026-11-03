@@ -40,6 +40,7 @@ public class TenantInterceptor implements HandlerInterceptor {
     // les deux beans se reclameraient mutuellement au demarrage.
     @org.springframework.context.annotation.Lazy
     private final ci.esatic.sigep.service.JournalSecuriteService journalSecurite;
+    private final ci.esatic.sigep.service.AbonnementService abonnementService;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
@@ -84,6 +85,19 @@ public class TenantInterceptor implements HandlerInterceptor {
                     null, user.getEmail(), request.getRequestURI(),
                     "Compte authentifie sans etablissement rattache");
             response.sendError(HttpServletResponse.SC_FORBIDDEN, "Compte non rattache a un etablissement.");
+            return false;
+        }
+
+        // Un établissement suspendu perd aussi l'API, et pas seulement les pages d'administration.
+        // La déconnexion reste ouverte. Les pages web gardent leur propre blocage, qui mène à
+        // la page d'abonnement (AbonnementInterceptor).
+        String uri = request.getRequestURI();
+        if (uri.startsWith("/api/") && !uri.startsWith("/api/auth/")
+                && abonnementService.accesSuspendu(user.getEtablissement())) {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            response.setContentType("application/json;charset=UTF-8");
+            response.getWriter().write("{\"success\":false,\"message\":\"L'accès de votre établissement "
+                    + "est suspendu. Contactez votre administration.\"}");
             return false;
         }
 

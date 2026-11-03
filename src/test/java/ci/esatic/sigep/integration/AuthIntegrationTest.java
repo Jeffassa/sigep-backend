@@ -67,7 +67,9 @@ class AuthIntegrationTest {
 
     @Test
     void login_devraitRetournerUnTokenJwtReel() throws Exception {
-        String body = objectMapper.writeValueAsString(Map.of("email", EMAIL, "password", PASSWORD));
+        creerEnseignant("jeton@esatic.ci", "ENS-J-1", StatutEnseignant.VALIDATED);
+        String body = objectMapper.writeValueAsString(
+                Map.of("email", "jeton@esatic.ci", "password", PASSWORD));
 
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -75,8 +77,40 @@ class AuthIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.token").isNotEmpty())
-                .andExpect(jsonPath("$.data.email").value(EMAIL))
-                .andExpect(jsonPath("$.data.roles[0]").value("ROLE_ADMIN"));
+                .andExpect(jsonPath("$.data.email").value("jeton@esatic.ci"))
+                .andExpect(jsonPath("$.data.roles[0]").value("ROLE_ENSEIGNANT"));
+    }
+
+    @Test
+    void login_compteAdministration_neRecoitPasDeJeton() throws Exception {
+        // Le second facteur vit dans l'espace web : un jeton délivré ici sur le seul mot de
+        // passe le contournerait.
+        String body = objectMapper.writeValueAsString(Map.of("email", EMAIL, "password", PASSWORD));
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.data.token").doesNotExist());
+    }
+
+    @Test
+    void login_superAdministrateur_neRecoitPasDeJeton() throws Exception {
+        Role root = roleRepository.findByName(ERole.ROLE_SUPER_ADMIN)
+                .orElseGet(() -> roleRepository.save(new Role(null, ERole.ROLE_SUPER_ADMIN)));
+        userRepository.save(User.builder()
+                .email("root@esatic.ci")
+                .password(passwordEncoder.encode(PASSWORD))
+                .roles(Set.of(root))
+                .build());
+        String body = objectMapper.writeValueAsString(
+                Map.of("email", "root@esatic.ci", "password", PASSWORD));
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.data.token").doesNotExist());
     }
 
     @Test

@@ -98,6 +98,7 @@ public class EmargementService {
         if (!seance.getEnseignant().getId().equals(enseignant.getId())) {
             throw new MetierException("SEANCE_NON_ATTRIBUEE", "Cette seance ne vous appartient pas");
         }
+        refuserSeanceAValider(seance);
         // Règle 3 : unicité — pas déjà émargée (ni en attente).
         if (emargementRepository.existsBySeanceId(seance.getId())) {
             throw new MetierException("DEJA_EMARGEE", "Cette seance a deja ete emargee");
@@ -274,6 +275,7 @@ public class EmargementService {
         if (!seance.getEnseignant().getId().equals(enseignant.getId())) {
             throw new MetierException("SEANCE_NON_ATTRIBUEE", "Cette seance ne vous appartient pas");
         }
+        refuserSeanceAValider(seance);
 
         // Fuseau + tolérances PROPRES à l'établissement (E1 + E7).
         ZoneId zone = zoneDe(etab);
@@ -303,6 +305,14 @@ public class EmargementService {
         }
 
         return maintenant.isAfter(finAutorisee);
+    }
+
+    /** Une séance importée par l'enseignant ne donne lieu à aucun émargement avant l'accord de la scolarité. */
+    private void refuserSeanceAValider(Seance seance) {
+        if (seance.getStatut() == StatutSeance.A_VALIDER) {
+            throw new MetierException("SEANCE_A_VALIDER",
+                    "Cette seance attend la validation de la scolarite.");
+        }
     }
 
     /** Règles d'émargement EN LIGNE : communes + QR frais + appartenance tenant + anti-rejeu. */

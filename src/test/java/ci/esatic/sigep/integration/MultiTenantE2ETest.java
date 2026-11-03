@@ -44,6 +44,8 @@ class MultiTenantE2ETest {
     @Autowired private RoleRepository roleRepository;
     @Autowired private ci.esatic.sigep.repository.EtablissementRepository etablissementRepository;
     @Autowired private EntityManager em;
+    @Autowired private ci.esatic.sigep.repository.UserRepository userRepository;
+    @Autowired private ci.esatic.sigep.security.JwtService jwtService;
 
     @BeforeEach
     void setUp() {
@@ -163,14 +165,9 @@ class MultiTenantE2ETest {
                     etablissementRepository.save(e);
                 });
 
-        MvcResult res = mockMvc.perform(post("/api/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(
-                                Map.of("email", email, "password", "Secret@2026"))))
-                .andExpect(status().isOk())
-                .andReturn();
-        return objectMapper.readTree(res.getResponse().getContentAsString())
-                .get("data").get("token").asText();
+        // Un compte d'administration ne reçoit pas de jeton par /api/auth/login : on le frappe
+        // directement, l'objet du test étant le cloisonnement des routes qui l'acceptent.
+        return jwtService.generateToken(userRepository.findByEmail(email).orElseThrow());
     }
 
     private long creerClasse(String token, String libelle) throws Exception {

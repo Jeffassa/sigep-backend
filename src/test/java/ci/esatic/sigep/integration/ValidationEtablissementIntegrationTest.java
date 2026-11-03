@@ -26,11 +26,10 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.Matchers.containsString;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -90,11 +89,11 @@ class ValidationEtablissementIntegrationTest {
                 .findFirst().orElseThrow().getSlug();
     }
 
+    /** L'administrateur se connecte par l'espace web : c'est là que le statut du dossier le bloque. */
     private org.springframework.test.web.servlet.ResultActions login(String email) throws Exception {
-        return mockMvc.perform(post("/api/auth/login")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(
-                        Map.of("email", email, "password", "Secret@2026"))));
+        return mockMvc.perform(post("/admin-login").with(csrf())
+                .param("username", email)
+                .param("password", "Secret@2026"));
     }
 
     @Test
@@ -104,8 +103,7 @@ class ValidationEtablissementIntegrationTest {
         String slug = inscrire("Ecole Workflow " + n, email);
 
         // 1) Dossier EN_ATTENTE : connexion bloquée avec le message d'analyse.
-        login(email).andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.message", containsString("en cours d'analyse")));
+        login(email).andExpect(redirectedUrl("/admin-login?pending=1"));
 
         // 2) Le super admin valide le dossier.
         mockMvc.perform(post("/plateforme/etablissements/valider")
@@ -115,9 +113,8 @@ class ValidationEtablissementIntegrationTest {
         assertThat(etablissementRepository.findBySlug(slug).orElseThrow().getStatut())
                 .isEqualTo(StatutEtablissement.VALIDE);
 
-        // 3) La connexion aboutit désormais (token délivré).
-        login(email).andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.token").isNotEmpty());
+        // 3) La connexion aboutit désormais.
+        login(email).andExpect(redirectedUrl("/admin/dashboard"));
     }
 
     @Test
@@ -131,8 +128,7 @@ class ValidationEtablissementIntegrationTest {
                         .param("slug", slug))
                 .andExpect(status().is3xxRedirection());
 
-        login(email).andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.message", containsString("retenu")));
+        login(email).andExpect(redirectedUrl("/admin-login?rejected=1"));
     }
 
     @Test

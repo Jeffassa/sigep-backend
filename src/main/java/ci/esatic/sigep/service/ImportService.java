@@ -191,7 +191,9 @@ public class ImportService {
                 .classe(ctx.upsertClasse(exigerLibelle(classe, "classe")))
                 .salle(ctx.upsertSalle(exigerLibelle(salle, "salle")))
                 .type(TypeSeance.NORMALE)
-                .statut(StatutSeance.A_FAIRE)
+                // Une séance émargée devient des heures payées : celle qu'un enseignant déclare
+                // lui-même attend l'accord de la scolarité. Seul l'import admin passe directement.
+                .statut(enseignantFixe == null ? StatutSeance.A_FAIRE : StatutSeance.A_VALIDER)
                 .build();
     }
 

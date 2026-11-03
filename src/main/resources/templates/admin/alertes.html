@@ -71,6 +71,64 @@
         </div>
     </section>
 
+    <!-- Séances déclarées par les enseignants : à accepter avant tout émargement -->
+    <section th:if="${!seancesAValider.isEmpty()}" class="glass rounded-3xl overflow-hidden mb-6" data-reveal>
+        <div class="px-7 py-5 border-b border-line flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5">
+                <span class="material-symbols-rounded">edit_calendar</span>
+                <div>
+                    <h2 class="font-serif text-[22px]">Séances importées par les enseignants</h2>
+                    <p class="text-[12px] text-muted mt-0.5">Elles ne peuvent être ni émargées ni comptées pour la paie tant que vous ne les avez pas acceptées.</p>
+                </div>
+            </div>
+            <form th:action="@{/admin/seances/valider-tout}" method="post"
+                  th:attr="onsubmit=|return confirm('Accepter les ${seancesAValider.size()} séances en attente ?');|">
+                <button type="submit" class="btn btn-ink h-9 px-3 rounded-lg text-[12px] font-medium inline-flex items-center gap-1">
+                    <span class="material-symbols-rounded text-[16px]">done_all</span> Tout accepter
+                </button>
+            </form>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead><tr class="border-b border-line">
+                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Date</th>
+                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Horaire</th>
+                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Enseignant</th>
+                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Matière</th>
+                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Classe</th>
+                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Salle</th>
+                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted text-right">Action</th>
+                </tr></thead>
+                <tbody>
+                <tr th:each="sv : ${seancesAValider}" class="zebra border-b border-line">
+                    <td class="px-6 py-3.5 font-mono text-[12px] font-medium" th:text="${#temporals.format(sv.date,'dd/MM/yyyy')}">--</td>
+                    <td class="px-6 py-3.5 font-mono text-[12px] text-muted">
+                        <span th:text="${#temporals.format(sv.heureDebut,'HH:mm')}">--</span>–<span th:text="${#temporals.format(sv.heureFin,'HH:mm')}">--</span></td>
+                    <td class="px-6 py-3.5 text-[14px] font-medium" th:text="${sv.enseignant.prenom + ' ' + sv.enseignant.nom}">Ens.</td>
+                    <td class="px-6 py-3.5 text-[14px] text-muted" th:text="${sv.matiere.libelle}">Matière</td>
+                    <td class="px-6 py-3.5 text-[14px] text-muted" th:text="${sv.classe.libelle}">Classe</td>
+                    <td class="px-6 py-3.5 text-[14px] text-muted" th:text="${sv.salle.libelle}">Salle</td>
+                    <td class="px-6 py-3.5">
+                        <div class="flex items-center gap-2 justify-end">
+                            <form th:action="@{'/admin/seances/' + ${sv.id} + '/valider'}" method="post">
+                                <button type="submit" class="btn btn-ink h-9 px-3 rounded-lg text-[12px] font-medium inline-flex items-center gap-1">
+                                    <span class="material-symbols-rounded text-[16px]">check</span> Accepter
+                                </button>
+                            </form>
+                            <form th:action="@{'/admin/seances/' + ${sv.id} + '/refuser'}" method="post"
+                                  onsubmit="return confirm('Écarter cette séance ?');">
+                                <button type="submit" class="h-9 px-3 rounded-lg border border-line text-[12px] font-medium inline-flex items-center gap-1 hover:bg-ink hover:text-white transition">
+                                    <span class="material-symbols-rounded text-[16px]">close</span> Écarter
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
     <!-- 2. Émargements hors-ligne (Audit présence sans QR de salle) -->
     <section class="glass rounded-3xl overflow-hidden mb-6" data-reveal>
         <div class="px-7 py-5 border-b border-line flex items-center justify-between">

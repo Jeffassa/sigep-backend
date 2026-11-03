@@ -32,6 +32,7 @@ public class AlerteWebController {
     private final RattrapageService rattrapageService;
     private final ci.esatic.sigep.repository.EmargementRepository emargementRepository;
     private final ci.esatic.sigep.service.EmargementService emargementService;
+    private final ci.esatic.sigep.service.SeanceService seanceService;
 
     @GetMapping("/admin/alertes")
     public String alertes(Model model) {
@@ -43,8 +44,41 @@ public class AlerteWebController {
                 enseignantRepository.findByStatutOrderByNomAsc(StatutEnseignant.PENDING));
         model.addAttribute("emargementsHorsLigne",
                 emargementRepository.findEmargementsHorsLigneEnAttente().stream().limit(50).toList());
+        model.addAttribute("seancesAValider", seanceService.getSeancesAValider());
         model.addAttribute("salles", salleRepository.findAll());
         return "admin/alertes";
+    }
+
+    /** Accepte une séance importée par un enseignant : elle devient émargeable. */
+    @PostMapping("/admin/seances/{id}/valider")
+    public String validerSeance(@PathVariable Long id, RedirectAttributes ra) {
+        try {
+            seanceService.validerImport(id);
+            ra.addFlashAttribute("success", "Séance acceptée : l'enseignant peut l'émarger.");
+        } catch (Exception e) {
+            ra.addFlashAttribute("error", "Erreur : " + e.getMessage());
+        }
+        return "redirect:/admin/alertes";
+    }
+
+    /** Accepte toutes les séances en attente : un emploi du temps importé en compte souvent des dizaines. */
+    @PostMapping("/admin/seances/valider-tout")
+    public String validerToutesLesSeances(RedirectAttributes ra) {
+        int n = seanceService.validerTousLesImports();
+        ra.addFlashAttribute("success", n + " séance(s) acceptée(s).");
+        return "redirect:/admin/alertes";
+    }
+
+    /** Écarte une séance importée par un enseignant. */
+    @PostMapping("/admin/seances/{id}/refuser")
+    public String refuserSeance(@PathVariable Long id, RedirectAttributes ra) {
+        try {
+            seanceService.refuserImport(id);
+            ra.addFlashAttribute("success", "Séance écartée.");
+        } catch (Exception e) {
+            ra.addFlashAttribute("error", "Erreur : " + e.getMessage());
+        }
+        return "redirect:/admin/alertes";
     }
 
     /** Accepte une demande de rattrapage : crée la séance dans la salle choisie + email à l'enseignant. */
