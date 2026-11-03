@@ -6,9 +6,9 @@ import ci.esatic.sigep.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
@@ -34,7 +34,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Transactional
 class AdminWebIntegrationTest {
 
-    @MockBean private DataInitializer dataInitializer;
+    @MockitoBean private DataInitializer dataInitializer;
 
     @Autowired private MockMvc mockMvc;
     @Autowired private PasswordEncoder passwordEncoder;
@@ -134,7 +134,7 @@ class AdminWebIntegrationTest {
     void dashboard_sansAuth_devraitRedirigerVersLogin() throws Exception {
         mockMvc.perform(get("/admin/dashboard"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrlPattern("**/admin-login"));
+                .andExpect(redirectedUrl("/admin-login"));
     }
 
     @Test
