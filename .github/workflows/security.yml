@@ -23,7 +23,7 @@ jobs:
 
       # 1) Scan complet → SARIF (remonté dans l'onglet Security), NON bloquant.
       - name: Scan du système de fichiers (SARIF)
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: fs
           scanners: vuln,secret,misconfig
@@ -41,7 +41,7 @@ jobs:
 
       # 2) Gate BLOQUANT : échoue la CI en présence d'une vulnérabilité CRITICAL ou HIGH corrigeable.
       - name: Gate CRITICAL+HIGH (bloquant)
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: fs
           scanners: vuln,secret,misconfig
