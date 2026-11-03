@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('SIGEP | Calendrier')}"></head>
+<body>
+
+<div th:replace="~{admin/fragments :: topbar('calendrier')}"></div>
+
+<main class="max-w-[1240px] mx-auto px-5 md:px-8 py-10 pb-36">
+
+    <div class="en-tete-page">
+        <div>
+            <p class="surtitre">Vie de l'établissement</p>
+            <h1 class="titre-page">Calendrier</h1>
+            <p class="chapeau">Fermetures, semestres, remplacements et règles d'émargement.</p>
+        </div>
+    </div>
+
+    <div data-flash th:if="${success}" class="feuille mb-5 flex items-center gap-2 text-[13px]"
+         style="background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.35)">
+        <svg th:replace="~{admin/fragments :: coche}"></svg><span th:text="${success}">OK</span>
+    </div>
+    <div data-flash th:if="${error}" class="feuille mb-5 text-[13px]" style="border-color:rgba(186,26,26,.3)">
+        <span th:text="${error}">Erreur</span>
+    </div>
+
+    <section class="feuille mb-10">
+        <h2 class="titre-section">Jours fériés, vacances et semestres</h2>
+        <p class="chapitre-note">Un cours répété chaque semaine n'est pas créé pendant une fermeture. Les semestres servent de période aux statistiques et, par défaut, aux imports.</p>
+        <form th:action="@{/admin/calendrier/periodes}" method="post" class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+            <div class="md:col-span-2">
+                <label for="periodeType" class="etiquette">Type</label>
+                <select id="periodeType" name="type" class="w-full h-11 px-3 champ">
+                    <option value="FERIE">Jour férié</option>
+                    <option value="VACANCES">Vacances</option>
+                    <option value="SEMESTRE">Semestre</option>
+                </select>
+            </div>
+            <div class="md:col-span-4">
+                <label for="periodeLibelle" class="etiquette">Nom</label>
+                <input id="periodeLibelle" type="text" name="libelle" required maxlength="120" class="w-full h-11 px-3 champ"/>
+            </div>
+            <div class="md:col-span-2">
+                <label for="periodeDebut" class="etiquette">Du</label>
+                <input id="periodeDebut" type="date" name="debut" required class="w-full h-11 px-3 champ"/>
+            </div>
+            <div class="md:col-span-2">
+                <label for="periodeFin" class="etiquette">Au (facultatif)</label>
+                <input id="periodeFin" type="date" name="fin" class="w-full h-11 px-3 champ"/>
+            </div>
+            <button type="submit" class="md:col-span-2 btn btn-ink h-11 font-medium">Ajouter</button>
+            <label class="md:col-span-12 flex items-center gap-2 text-[13px]">
+                <input type="checkbox" name="retirerSeances" value="true"/>
+                Pour une fermeture, retirer les séances déjà prévues et non émargées sur ces dates
+            </label>
+        </form>
+        <div class="overflow-x-auto mt-6" th:unless="${#lists.isEmpty(periodes)}">
+            <table class="registre">
+                <thead><tr><th>Nom</th><th>Type</th><th>Du</th><th>Au</th><th></th></tr></thead>
+                <tbody>
+                <tr th:each="p : ${periodes}">
+                    <td th:text="${p.libelle}">Nom</td>
+                    <td th:switch="${p.type.name()}">
+                        <span th:case="'FERIE'">Jour férié</span>
+                        <span th:case="'VACANCES'">Vacances</span>
+                        <span th:case="*">Semestre</span>
+                    </td>
+                    <td th:text="${#temporals.format(p.debut,'dd/MM/yyyy')}">01/01/2027</td>
+                    <td th:text="${#temporals.format(p.fin,'dd/MM/yyyy')}">01/01/2027</td>
+                    <td class="text-right">
+                        <form th:action="@{/admin/calendrier/periodes/{id}/supprimer(id=${p.id})}" method="post">
+                            <button type="submit" class="btn text-[13px] underline">Retirer</button>
+                        </form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="feuille mb-10">
+        <h2 class="titre-section">Remplacer un enseignant</h2>
+        <p class="chapitre-note">Les séances non émargées de la période passent au remplaçant, qui les voit dans son planning, les émarge et reçoit un e-mail. Ses heures lui reviennent.</p>
+        <form th:action="@{/admin/calendrier/remplacement}" method="post" class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+            <div class="md:col-span-3">
+                <label for="remplAbsent" class="etiquette">Enseignant absent</label>
+                <select id="remplAbsent" name="absent" required class="w-full h-11 px-3 champ">
+                    <option th:each="e : ${enseignants}" th:value="${e.id}" th:text="${e.prenom + ' ' + e.nom}">Enseignant</option>
+                </select>
+            </div>
+            <div class="md:col-span-3">
+                <label for="remplRemplacant" class="etiquette">Remplaçant</label>
+                <select id="remplRemplacant" name="remplacant" required class="w-full h-11 px-3 champ">
+                    <option th:each="e : ${enseignants}" th:value="${e.id}" th:text="${e.prenom + ' ' + e.nom}">Enseignant</option>
+                </select>
+            </div>
+            <div class="md:col-span-2">
+                <label for="remplDebut" class="etiquette">Du</label>
+                <input id="remplDebut" type="date" name="debut" required class="w-full h-11 px-3 champ"/>
+            </div>
+            <div class="md:col-span-2">
+                <label for="remplFin" class="etiquette">Au</label>
+                <input id="remplFin" type="date" name="fin" required class="w-full h-11 px-3 champ"/>
+            </div>
+            <button type="submit" class="md:col-span-2 btn btn-ink h-11 font-medium">Remplacer</button>
+        </form>
+    </section>
+
+    <section class="feuille">
+        <h2 class="titre-section">Tolérance d'émargement</h2>
+        <p class="chapitre-note">Le temps pendant lequel un enseignant peut émarger autour de l'horaire de sa séance.</p>
+        <form th:action="@{/admin/calendrier/tolerance}" method="post" class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+            <div class="md:col-span-3">
+                <label for="toleranceAvant" class="etiquette">Avant le début (min)</label>
+                <input id="toleranceAvant" type="number" name="avant" min="0" max="120" required
+                       th:value="${etablissementCourant.toleranceAvantMinutes}" class="w-full h-11 px-3 champ"/>
+            </div>
+            <div class="md:col-span-3">
+                <label for="toleranceApres" class="etiquette">Après la fin (min)</label>
+                <input id="toleranceApres" type="number" name="apres" min="0" max="120" required
+                       th:value="${etablissementCourant.toleranceApresMinutes}" class="w-full h-11 px-3 champ"/>
+            </div>
+            <button type="submit" class="md:col-span-2 btn btn-ink h-11 font-medium">Enregistrer</button>
+        </form>
+    </section>
+</main>
+
+<div th:replace="~{admin/fragments :: dock('calendrier')}"></div>
+<div th:replace="~{admin/fragments :: palette}"></div>
+<div th:replace="~{admin/fragments :: scripts}"></div>
+</body>
+</html>

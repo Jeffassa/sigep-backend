@@ -45,6 +45,7 @@ public class AdminDashboardController {
     private final EtablissementCourantService etablissementCourantService;
     private final AlerteService alerteService;
     private final ci.esatic.sigep.repository.EmargementRepository emargementRepository;
+    private final ci.esatic.sigep.service.CalendrierService calendrierService;
 
     @GetMapping("/admin-login")
     public String loginPage(@RequestParam(required = false) String error,
@@ -129,6 +130,7 @@ public class AdminDashboardController {
         }
         model.addAllAttributes(statistiquesService.computeStatistiques(d, f));
         model.addAttribute("periode", periode);
+        model.addAttribute("semestres", calendrierService.semestres());
         model.addAttribute("aiEnabled", aiAnalyseService.isEnabled());
         return "admin/statistiques";
     }

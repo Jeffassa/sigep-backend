@@ -36,6 +36,8 @@ public class ReferentielWebController {
     private final ci.esatic.sigep.tenant.plan.PlanService planService;
     private final EtablissementCourantService etablissementCourantService;
     private final EtablissementRepository etablissementRepository;
+    private final ci.esatic.sigep.service.ImportService importService;
+    private final ci.esatic.sigep.service.CalendrierService calendrierService;
 
     @GetMapping("/admin/referentiels")
     public String referentiels(Model model) {
@@ -205,6 +207,48 @@ public class ReferentielWebController {
             ra.addFlashAttribute("error", "Suppression impossible : cette salle est utilisée par des séances.");
         }
         return "redirect:/admin/referentiels";
+    }
+
+    // --- Dépôt de l'emploi du temps ---
+    @PostMapping("/admin/planning/importer")
+    public String importerEmploiDuTemps(
+            @RequestParam("fichier") org.springframework.web.multipart.MultipartFile fichier,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) LocalDate debut,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) LocalDate fin,
+            @RequestParam(required = false) String classe,
+            RedirectAttributes ra) {
+        // Sans période indiquée, les cours répétés valent pour ce qui reste du semestre en cours :
+        // des séances créées dans le passé compteraient aussitôt comme des oublis.
+        if (debut == null && fin == null) {
+            var semestre = calendrierService.semestreDe(LocalDate.now()).orElse(null);
+            if (semestre != null) {
+                debut = LocalDate.now();
+                fin = semestre.getFin();
+            }
+        }
+        String nom = fichier.getOriginalFilename() == null ? "" : fichier.getOriginalFilename().toLowerCase();
+        if (fichier.isEmpty() || !(nom.endsWith(".xlsx") || nom.endsWith(".xls") || nom.endsWith(".csv"))) {
+            ra.addFlashAttribute("error", "Déposez un fichier Excel (.xlsx, .xls) ou CSV.");
+            return "redirect:/admin/rapports";
+        }
+        try {
+            java.util.Map<String, Object> resultat = importService.importerPlanning(fichier, debut, fin, classe);
+            int importees = (Integer) resultat.get("totalImporte");
+            int doublons = (Integer) resultat.get("doublonsIgnores");
+            int enErreur = (Integer) resultat.get("lignesEnErreur");
+            int fermes = (Integer) resultat.get("joursFermesIgnores");
+            String message = importees + " séance(s) importée(s)"
+                    + (doublons > 0 ? ", " + doublons + " déjà présente(s) ignorée(s)" : "")
+                    + (fermes > 0 ? ", " + fermes + " date(s) sautée(s) : établissement fermé" : "")
+                    + (enErreur > 0 ? ", " + enErreur + " ligne(s) à corriger" : "") + ".";
+            ra.addFlashAttribute(importees > 0 || enErreur == 0 ? "success" : "error", message);
+            ra.addFlashAttribute("erreursImport", resultat.get("erreurs"));
+        } catch (IllegalArgumentException e) {
+            ra.addFlashAttribute("error", "Import impossible : " + e.getMessage());
+        } catch (Exception e) {
+            ra.addFlashAttribute("error", "Ce fichier n'a pas pu être lu. Vérifiez qu'il s'ouvre bien dans Excel.");
+        }
+        return "redirect:/admin/rapports";
     }
 
     // --- Modèle d'emploi du temps (CSV téléchargeable) ---

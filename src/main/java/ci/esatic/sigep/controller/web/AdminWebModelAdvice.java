@@ -14,7 +14,9 @@ import org.springframework.web.bind.annotation.ModelAttribute;
         AlerteWebController.class,
         ReferentielWebController.class,
         EnseignantWebController.class,
-        RapportWebController.class
+        RapportWebController.class,
+        CalendrierWebController.class,
+        EquipeWebController.class
 })
 @RequiredArgsConstructor
 public class AdminWebModelAdvice {

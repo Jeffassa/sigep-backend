@@ -74,81 +74,95 @@
         </div>
     </section>
 
-    <!-- KPIs -->
-    <section class="releve" data-reveal>
-        <div>
-            <p class="releve-libelle">Clients</p>
-            <p class="releve-chiffre" th:text="${nbEtablissements}">0</p>
+    <!-- Ce qui demande une action -->
+    <section class="releve" aria-label="À traiter">
+        <a href="#a-traiter" th:classappend="${aTraiter.size() > 0} ? 'releve-urgent'">
+            <p class="releve-libelle">À traiter</p>
+            <p class="releve-chiffre" th:text="${aTraiter.size()}">0</p>
+            <p class="releve-note">établissement(s) à contacter</p>
+        </a>
+        <div th:classappend="${revenuARisque > 0} ? 'releve-urgent'">
+            <p class="releve-libelle">Revenu à risque</p>
+            <p class="releve-chiffre"><span th:text="${#numbers.formatInteger(revenuARisque, 1, 'WHITESPACE')}">0</span><small th:text="${symbole} + ' / mois'">FCFA</small></p>
+            <p class="releve-note">clients payants expirés ou qui décrochent</p>
         </div>
         <div>
-            <p class="releve-libelle">Actifs</p>
+            <p class="releve-libelle">Encaissé ce mois</p>
+            <p class="releve-chiffre"><span th:text="${#numbers.formatInteger(encaisseMois, 1, 'WHITESPACE')}">0</span><small th:text="${symbole}">FCFA</small></p>
+            <p class="releve-note" th:text="'mois dernier : ' + ${#numbers.formatInteger(encaisseMoisPrecedent, 1, 'WHITESPACE')}">mois dernier : 0</p>
+        </div>
+        <div>
+            <p class="releve-libelle">Clients actifs</p>
             <p class="releve-chiffre" th:text="${nbActifs}">0</p>
-        </div>
-        <div>
-            <p class="releve-libelle">Expirés</p>
-            <p class="releve-chiffre" th:text="${nbExpires}">0</p>
-        </div>
-        <div>
-            <p class="releve-libelle">Inscrits ce mois</p>
-            <p class="releve-chiffre" th:text="${inscriptionsMois}">0</p>
-        </div>
-        <div>
-            <p class="releve-libelle">MRR estimé</p>
-            <p class="releve-chiffre">
-                <span th:text="${#numbers.formatInteger(mrr, 1, 'WHITESPACE')}">0</span>
-                <small th:text="${symbole}">FCFA</small>
-            </p>
-        </div>
-        <div>
-            <p class="releve-libelle">Encaissé (total)</p>
-            <p class="releve-chiffre">
-                <span th:text="${#numbers.formatInteger(totalEncaisse, 1, 'WHITESPACE')}">0</span>
-                <small th:text="${symbole}">FCFA</small>
-            </p>
-            <p class="releve-note" th:text="'dont ' + ${#numbers.formatInteger(encaisseMois,1,'WHITESPACE')} + ' ce mois'">—</p>
-        </div>
-        <div>
-            <p class="releve-libelle">Par plan</p>
-            <div class="flex flex-wrap gap-x-3 gap-y-1 mt-1 font-mono text-[12px]">
-                <span>FREE&nbsp;<strong th:text="${parPlan['FREE']} ?: 0">0</strong></span>
-                <span>PRO&nbsp;<strong th:text="${parPlan['PRO']} ?: 0">0</strong></span>
-                <span>ENT&nbsp;<strong th:text="${parPlan['ENTERPRISE']} ?: 0">0</strong></span>
-            </div>
+            <p class="releve-note" th:text="${inscriptionsMois} + ' inscrit(s) ce mois, ' + ${tauxConversion} + ' % abonnés'">0</p>
         </div>
     </section>
 
-    <!-- KPIs business complémentaires -->
-    <section class="releve" data-reveal>
-        <div>
-            <p class="releve-libelle">Conversion</p>
-            <p class="releve-chiffre" th:text="${tauxConversion} + '%'">0%</p>
-            <p class="releve-note">Abonnés / inscrits</p>
+    <section th:if="${!paiementsAVerifier.isEmpty()}" class="note note-alerte note-bloc mb-8" data-reveal>
+        <p class="font-medium" th:text="${paiementsAVerifier.size()} + ' paiement(s) à vérifier : le fournisseur n\'a pas donné de verdict clair. Contrôlez-les chez lui avant toute relance.'">Paiements à vérifier</p>
+        <p th:each="pi : ${paiementsAVerifier}" class="font-mono text-[13px] mt-1"
+           th:text="${pi.reference} + ' · ' + ${#numbers.formatInteger(pi.montantAttendu,1,'WHITESPACE')} + ' ' + ${pi.devise} + ' · ' + (${nomParEtab[pi.etablissementId]} ?: ('#' + ${pi.etablissementId}))">REF</p>
+    </section>
+
+    <section id="a-traiter" class="chapitre" th:if="${!aTraiter.isEmpty()}" data-reveal>
+        <div class="chapitre-tete"><h2 class="titre-section">À traiter en premier</h2></div>
+        <div class="overflow-x-auto">
+            <table class="registre" data-mobile-keep="2">
+                <thead><tr><th>Établissement</th><th>Pourquoi</th><th>Contact</th></tr></thead>
+                <tbody>
+                <tr th:each="l : ${aTraiter}">
+                    <td class="fort"><a class="underline" th:href="@{/plateforme/etablissements/{s}(s=${l.e.slug})}" th:text="${l.e.nom}">Nom</a></td>
+                    <td class="discret" th:text="${l.motif}">Motif</td>
+                    <td class="code"><a th:if="${l.contact}" class="underline" th:href="'mailto:' + ${l.contact}" th:text="${l.contact}">contact</a></td>
+                </tr>
+                </tbody>
+            </table>
         </div>
-        <div>
-            <p class="releve-libelle">Validation</p>
-            <p class="releve-chiffre" th:text="${tauxValidation} + '%'">0%</p>
-            <p class="releve-note">Dossiers validés</p>
+    </section>
+
+    <!-- L'usage réel, établissement par établissement -->
+    <section class="chapitre" data-reveal>
+        <div class="chapitre-tete">
+            <h2 class="titre-section">Santé des établissements</h2>
+            <form method="get" th:action="@{/plateforme}" class="flex flex-wrap items-center gap-2">
+                <input type="text" name="q" th:value="${q}" placeholder="Rechercher…" aria-label="Rechercher un établissement" class="h-9 px-3 champ text-[13px] w-40"/>
+                <select name="plan" aria-label="Plan" class="h-9 px-2 champ text-[13px]">
+                    <option value="" th:selected="${fPlan == null or fPlan == ''}">Tous les plans</option>
+                    <option value="FREE" th:selected="${fPlan == 'FREE'}">Free</option>
+                    <option value="PRO" th:selected="${fPlan == 'PRO'}">Pro</option>
+                    <option value="ENTERPRISE" th:selected="${fPlan == 'ENTERPRISE'}">Enterprise</option>
+                </select>
+                <select name="statut" aria-label="Statut" class="h-9 px-2 champ text-[13px]">
+                    <option value="" th:selected="${fStatut == null or fStatut == ''}">Tous les statuts</option>
+                    <option value="VALIDE" th:selected="${fStatut == 'VALIDE'}">Validé</option>
+                    <option value="EN_ATTENTE" th:selected="${fStatut == 'EN_ATTENTE'}">En attente</option>
+                    <option value="REFUSE" th:selected="${fStatut == 'REFUSE'}">Refusé</option>
+                </select>
+                <button type="submit" class="btn btn-ink h-9 px-3 text-[13px] font-medium">Filtrer</button>
+            </form>
         </div>
-        <div>
-            <p class="releve-libelle">ARPU (mensuel)</p>
-            <p class="releve-chiffre">
-                <span th:text="${#numbers.formatInteger(arpu,1,'WHITESPACE')}">0</span>
-                <small th:text="${symbole}">FCFA</small>
-            </p>
-            <p class="releve-note">Par client payant</p>
-        </div>
-        <div>
-            <p class="releve-libelle">Expire bientôt</p>
-            <p class="releve-chiffre" th:classappend="${expireBientot > 0} ? ' text-accent'"
-               th:text="${expireBientot}">0</p>
-            <p class="releve-note">À relancer (J-7)</p>
-        </div>
-        <div>
-            <p class="releve-libelle">Dossiers</p>
-            <div class="flex flex-wrap gap-x-5 gap-y-1 mt-2 font-mono text-[12px]">
-                <span>en&nbsp;attente&nbsp;<strong class="font-serif text-[22px]" th:text="${enAttente.size()}">0</strong></span>
-                <span class="text-muted">refusés&nbsp;<strong class="font-serif text-[22px]" th:text="${nbRefuses}">0</strong></span>
-            </div>
+        <div class="overflow-x-auto">
+            <table class="registre" data-mobile-keep="2">
+                <thead><tr><th>Établissement</th><th>État</th><th>Plan</th><th>Enseignants</th><th>Émargement · 30 j</th><th>Dernier émargement</th><th>Échéance</th></tr></thead>
+                <tbody>
+                <tr th:if="${lignes.isEmpty()}"><td colspan="7" class="vide">Aucun établissement client pour le moment.</td></tr>
+                <tr th:each="l : ${lignes}">
+                    <td class="fort"><a class="underline" th:href="@{/plateforme/etablissements/{s}(s=${l.e.slug})}" th:text="${l.e.nom}">Nom</a><span class="sous" th:text="${l.e.slug}">slug</span></td>
+                    <td><span class="etat" th:classappend="${l.priorite <= 2} ? 'etat-alerte' : (${l.priorite == 3} ? 'etat-attente' : (${l.priorite >= 6} ? 'etat-discret' : ''))" th:text="${l.etat}">Actif</span></td>
+                    <td class="code" th:text="${l.e.plan}">PLAN</td>
+                    <td class="code" th:text="${l.enseignants} + (${l.e.maxEnseignants > 0} ? ' / ' + ${l.e.maxEnseignants} : '')">0</td>
+                    <td>
+                        <span th:if="${l.seances30j == 0}" class="discret">Aucune séance</span>
+                        <div th:unless="${l.seances30j == 0}" class="flex items-center gap-2">
+                            <span class="jauge"><span th:style="'width:' + ${l.tauxPct} + '%'"></span></span>
+                            <span class="code" th:text="${l.tauxPct} + ' % · ' + ${l.seances30j} + ' séances'">0 %</span>
+                        </div>
+                    </td>
+                    <td class="code" th:text="${l.dernierEmargement != null} ? ${#temporals.format(l.dernierEmargement,'dd/MM/yyyy')} : '—'">—</td>
+                    <td class="code" th:text="${l.e.dateExpiration != null} ? ${#temporals.format(l.e.dateExpiration,'dd/MM/yyyy')} : 'Illimité'">—</td>
+                </tr>
+                </tbody>
+            </table>
         </div>
     </section>
 
@@ -202,71 +216,6 @@
         </div>
     </section>
 
-    <!-- Liste des établissements -->
-    <section class="chapitre" data-reveal>
-        <div class="chapitre-tete">
-            
-            <h2 class="titre-section">Tous les établissements</h2>
-            <!-- Recherche + filtres (GET, sans JS) -->
-            <form method="get" th:action="@{/plateforme}" class="flex flex-wrap items-center gap-2">
-                <input type="text" name="q" th:value="${q}" placeholder="Rechercher…"
-                       class="h-9 px-3 champ text-[13px] w-40"/>
-                <select name="plan" class="h-9 px-2 champ text-[13px]">
-                    <option value="" th:selected="${fPlan == null or fPlan == ''}">Tous les plans</option>
-                    <option value="FREE" th:selected="${fPlan == 'FREE'}">Free</option>
-                    <option value="PRO" th:selected="${fPlan == 'PRO'}">Pro</option>
-                    <option value="ENTERPRISE" th:selected="${fPlan == 'ENTERPRISE'}">Enterprise</option>
-                </select>
-                <select name="statut" class="h-9 px-2 champ text-[13px]">
-                    <option value="" th:selected="${fStatut == null or fStatut == ''}">Tous les statuts</option>
-                    <option value="VALIDE" th:selected="${fStatut == 'VALIDE'}">Validé</option>
-                    <option value="EN_ATTENTE" th:selected="${fStatut == 'EN_ATTENTE'}">En attente</option>
-                    <option value="REFUSE" th:selected="${fStatut == 'REFUSE'}">Refusé</option>
-                </select>
-                <button type="submit" class="btn btn-ink h-9 px-3 rounded-lg text-[12px] font-medium">Filtrer</button>
-            </form>
-        </div>
-        <div class="overflow-x-auto">
-            <table class="registre" data-mobile-keep="2">
-                <thead><tr>
-                    <th>Établissement</th>
-                    <th>Plan</th>
-                    <th>Enseignants</th>
-                    <th>Expiration</th>
-                    <th>Statut</th>
-                </tr></thead>
-                <tbody>
-                <tr th:each="e : ${etablissements}">
-                    <td>
-                        <a th:href="@{/plateforme/etablissements/{s}(s=${e.slug})}" class="group inline-flex items-center gap-1.5">
-                            <span class="font-medium group-hover:underline" th:text="${e.nom}">Nom</span>
-                            <span class="material-symbols-rounded text-[16px] text-muted">chevron_right</span>
-                        </a>
-                        <p class="font-mono text-[11px] text-muted" th:text="${e.slug}">slug</p>
-                    </td>
-                    <td><span class="etat" th:text="${e.plan}">PLAN</span></td>
-                    <td class="code" th:text="${enseignantsParEtab[e.id]} ?: 0">0</td>
-                    <td th:text="${e.dateExpiration != null} ? ${#temporals.format(e.dateExpiration,'dd/MM/yyyy')} : 'Illimité'">--</td>
-                    <td>
-                        <span th:if="${e.statut.name() == 'EN_ATTENTE'}" class="etat etat-attente">
-                            En attente</span>
-                        <span th:if="${e.statut.name() == 'REFUSE'}" class="etat etat-discret">
-                            Refusé</span>
-                        <span th:if="${e.statut.name() == 'VALIDE' and expires.contains(e.id)}" class="visa">
-                            Expiré</span>
-                        <span th:if="${e.statut.name() == 'VALIDE' and !expires.contains(e.id) and e.actif}" class="etat">
-                            Actif</span>
-                        <span th:if="${e.statut.name() == 'VALIDE' and !expires.contains(e.id) and !e.actif}" class="etat etat-discret">
-                            Suspendu</span>
-                    </td>
-                </tr>
-                <tr th:if="${#lists.isEmpty(etablissements)}">
-                    <td colspan="5" class="vide">Aucun établissement client pour le moment.</td>
-                </tr>
-                </tbody>
-            </table>
-        </div>
-    </section>
 </main>
 
 <div th:replace="~{plateforme/fragments :: dock('dashboard')}"></div>

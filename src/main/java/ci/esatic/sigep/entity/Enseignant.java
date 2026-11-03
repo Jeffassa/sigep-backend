@@ -8,8 +8,12 @@ import org.hibernate.annotations.Filter;
 
 @Entity
 @Table(name = "enseignants",
-        uniqueConstraints = @UniqueConstraint(name = "uk_enseignant_etab_matricule",
-                columnNames = {"etablissement_id", "matricule"}))
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_enseignant_etab_matricule",
+                        columnNames = {"etablissement_id", "matricule"}),
+                @UniqueConstraint(name = "uk_enseignant_etab_user",
+                        columnNames = {"etablissement_id", "user_id"})
+        })
 @Filter(name = "tenantFilter", condition = "etablissement_id = :tenantId")
 @EntityListeners(TenantListener.class)
 @Getter
@@ -43,7 +47,9 @@ public class Enseignant implements TenantScoped {
 
     private String photoUrl;
 
-    @OneToOne(cascade = CascadeType.ALL)
+    // Un vacataire a un seul compte et une fiche dans chaque établissement où il intervient :
+    // supprimer une fiche ne doit donc jamais emporter le compte par cascade.
+    @ManyToOne(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinColumn(name = "user_id", referencedColumnName = "id")
     private User user;
 

@@ -21,6 +21,8 @@
             <nav class="onglets" aria-label="Période">
                 <a th:href="@{/admin/statistiques(periode='semaine')}" th:classappend="${periode=='semaine'}?'actif':''">Cette semaine</a>
                 <a th:href="@{/admin/statistiques(periode='mois')}" th:classappend="${periode=='mois'}?'actif':''">Ce mois</a>
+                <a th:each="s : ${semestres}" th:href="@{/admin/statistiques(debut=${s.debut}, fin=${s.fin})}" th:text="${s.libelle}"
+                   th:classappend="${debut == s.debut and fin == s.fin}?'actif':''">Semestre</a>
             </nav>
             <form method="get" th:action="@{/admin/statistiques}" class="flex flex-wrap items-end gap-2">
                 <input type="date" name="debut" th:value="${debut}"

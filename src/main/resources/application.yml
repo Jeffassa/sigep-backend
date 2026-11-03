@@ -138,6 +138,8 @@ springdoc:
     path: /swagger-ui.html
 
 app:
+  keep-alive:
+    url: ${APP_KEEP_ALIVE_URL:}
   jwt:
     # SECURITE : JWT_SECRET OBLIGATOIRE en variable d'environnement (min 256 bits, base64). Voir .env.example
     secret: ${JWT_SECRET}

@@ -31,7 +31,7 @@
 
         <section class="feuille lg:col-span-3">
             <h2 class="titre-section">Format d'emploi du temps</h2>
-            <p class="chapitre-note">Le type choisi change le nom des colonnes dans le modèle à télécharger.</p>
+            <p class="chapitre-note">Le type choisi change seulement les titres du modèle à télécharger. À l'import, SIGEP reconnaît ces titres et ceux de vos propres fichiers.</p>
             <form th:action="@{/admin/planning/format}" method="post" class="flex flex-col md:flex-row gap-3 items-start md:items-end">
                 <div>
                     <label class="etiquette">Type</label>
@@ -209,8 +209,7 @@
     </div>
 
     <p class="chapitre-note mt-8">
-        Le modèle d'emploi du temps utilise ces libellés (colonnes MATIERE / CLASSE / SALLE).
-        Créez d'abord vos matières, classes et salles, puis téléchargez le modèle à remplir.
+        Les matières, classes et salles absentes sont créées automatiquement à l'import de l'emploi du temps.
     </p>
 </main>
 

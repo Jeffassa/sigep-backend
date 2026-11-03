@@ -103,6 +103,23 @@ public interface SeanceRepository extends JpaRepository<Seance, Long> {
            "GROUP BY s.enseignant.id, s.enseignant.prenom, s.enseignant.nom, s.enseignant.matricule")
     List<Object[]> tauxParEnseignant(@Param("debut") LocalDate debut, @Param("fin") LocalDate fin);
 
+    // Vue de la plateforme : l'usage réel de chaque établissement sur une période.
+    @Query("SELECT s.etablissementId, COUNT(s), SUM(CASE WHEN s.statut = 'EMARGE' THEN 1 ELSE 0 END) " +
+           "FROM Seance s WHERE s.date BETWEEN :debut AND :fin AND s.statut <> 'A_VALIDER' " +
+           "GROUP BY s.etablissementId")
+    List<Object[]> activiteParEtablissement(@Param("debut") LocalDate debut, @Param("fin") LocalDate fin);
+
+    // Horaires des séances émargées : les heures se calculent sur leur durée réelle.
+    @Query("SELECT s.enseignant.id, s.heureDebut, s.heureFin FROM Seance s " +
+           "WHERE s.date BETWEEN :debut AND :fin AND s.statut = 'EMARGE'")
+    List<Object[]> horairesEmargees(@Param("debut") LocalDate debut, @Param("fin") LocalDate fin);
+
+    // Séances à retirer d'une fermeture : ni émargées, ni issues d'une demande de rattrapage.
+    @Query("SELECT s FROM Seance s WHERE s.date BETWEEN :debut AND :fin AND s.statut = 'A_FAIRE' " +
+           "AND NOT EXISTS (SELECT 1 FROM Emargement e WHERE e.seance = s) " +
+           "AND NOT EXISTS (SELECT 1 FROM DemandeRattrapage d WHERE d.seanceRattrapage = s)")
+    List<Seance> seancesRetirables(@Param("debut") LocalDate debut, @Param("fin") LocalDate fin);
+
     // Projection légère (date, heure de début, statut) pour la heatmap et les oublis
     @Query("SELECT s.date, s.heureDebut, s.statut FROM Seance s " +
            "WHERE s.date BETWEEN :debut AND :fin AND s.statut <> 'A_VALIDER'")

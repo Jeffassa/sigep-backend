@@ -44,6 +44,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet"/>
     <link rel="stylesheet" th:href="@{/css/sigep.css}"/>
     <link rel="stylesheet" th:href="@{/css/registre-pages.css}"/>
+    <!-- Ce profil consulte sans modifier : le serveur refuse ces envois, autant ne pas les proposer. -->
+    <style th:if="${lectureSeule}">main form[method="post"]:not(.ouvert-lecture){display:none!important}</style>
 
 </head>
 
@@ -75,7 +77,7 @@
             </button>
             <!-- Écran d'émargement (QR de salle) : lien tout prêt, clé kiosque déjà injectée (C4).
                  S'ouvre dans un nouvel onglet → à projeter/afficher sur l'écran de la salle. -->
-            <a th:if="${qrDisplayUrl != null}" th:href="${qrDisplayUrl}" target="_blank" rel="noopener"
+            <a th:if="${qrDisplayUrl != null and (menu == null or menu.contains('messages'))}" th:href="${qrDisplayUrl}" target="_blank" rel="noopener"
                title="Ouvrir l'écran d'émargement (QR de salle)"
                class="btn btn-gold flex items-center gap-2 px-3.5 h-10 rounded-full text-[13px] font-medium">
                 <span class="material-symbols-rounded text-[18px]">qr_code_2</span>
@@ -92,7 +94,7 @@
             <div class="flex items-center gap-2.5 pl-3 border-l border-line">
                 <div class="text-right hidden md:block leading-tight">
                     <p class="text-[13px] font-medium" th:text="${etablissementNom} ?: 'Administration'">Établissement</p>
-                    <p class="font-mono text-[12px] text-muted" th:text="${adminEmail} ?: 'Administration'">admin</p>
+                    <a th:href="@{/admin/mon-compte}" class="font-mono text-[12px] text-muted hover:underline" th:text="${adminEmail} ?: 'Administration'">admin</a>
                 </div>
                 <div class="pastille pastille-haute"
                      th:text="${etablissementNom != null and !#strings.isEmpty(etablissementNom)} ? ${#strings.toUpperCase(#strings.substring(etablissementNom,0,1))} : 'S'">A</div>
@@ -123,25 +125,31 @@
     <a th:href="@{/admin/dashboard}" class="dock-item" th:classappend="${active=='dashboard'}?'active':''" data-label="Tableau de bord">
         <span class="material-symbols-rounded">dashboard</span><span class="dock-tip">Tableau de bord</span>
     </a>
-    <a th:href="@{/admin/enseignants}" class="dock-item" th:classappend="${active=='enseignants'}?'active':''" data-label="Enseignants">
+    <a th:if="${menu == null or menu.contains('enseignants')}" th:href="@{/admin/enseignants}" class="dock-item" th:classappend="${active=='enseignants'}?'active':''" data-label="Enseignants">
         <span class="material-symbols-rounded">groups</span><span class="dock-tip">Enseignants</span>
     </a>
-    <a th:href="@{/admin/messages}" class="dock-item" th:classappend="${active=='messages'}?'active':''" data-label="Messages">
+    <a th:if="${menu == null or menu.contains('messages')}" th:href="@{/admin/messages}" class="dock-item" th:classappend="${active=='messages'}?'active':''" data-label="Messages">
         <span class="material-symbols-rounded">mail</span><span class="dock-tip">Messages</span>
     </a>
     <a th:href="@{/admin/rapports}" class="dock-item" th:classappend="${active=='rapports'}?'active':''" data-label="Rapports">
         <span class="material-symbols-rounded">description</span><span class="dock-tip">Rapports</span>
     </a>
-    <a th:href="@{/admin/paie}" class="dock-item" th:classappend="${active=='paie'}?'active':''" data-label="Paie">
+    <a th:if="${menu == null or menu.contains('paie')}" th:href="@{/admin/paie}" class="dock-item" th:classappend="${active=='paie'}?'active':''" data-label="Paie">
         <span class="material-symbols-rounded">payments</span><span class="dock-tip">Paie</span>
     </a>
-    <a th:href="@{/admin/referentiels}" class="dock-item" th:classappend="${active=='referentiels'}?'active':''" data-label="Référentiels">
+    <a th:if="${menu == null or menu.contains('calendrier')}" th:href="@{/admin/calendrier}" class="dock-item" th:classappend="${active=='calendrier'}?'active':''" data-label="Calendrier">
+        <span class="material-symbols-rounded">event</span><span class="dock-tip">Calendrier</span>
+    </a>
+    <a th:if="${menu == null or menu.contains('referentiels')}" th:href="@{/admin/referentiels}" class="dock-item" th:classappend="${active=='referentiels'}?'active':''" data-label="Référentiels">
         <span class="material-symbols-rounded">library_books</span><span class="dock-tip">Référentiels</span>
     </a>
     <a th:href="@{/admin/statistiques}" class="dock-item" th:classappend="${active=='statistiques'}?'active':''" data-label="Statistiques">
         <span class="material-symbols-rounded">monitoring</span><span class="dock-tip">Statistiques</span>
     </a>
-    <a th:href="@{/admin/alertes}" class="dock-item" th:classappend="${active=='alertes'}?'active':''" data-label="Alertes" style="position:relative;">
+    <a th:if="${menu == null}" th:href="@{/admin/equipe}" class="dock-item" th:classappend="${active=='equipe'}?'active':''" data-label="Équipe">
+        <span class="material-symbols-rounded">manage_accounts</span><span class="dock-tip">Équipe</span>
+    </a>
+    <a th:if="${menu == null or menu.contains('alertes')}" th:href="@{/admin/alertes}" class="dock-item" th:classappend="${active=='alertes'}?'active':''" data-label="Alertes" style="position:relative;">
         <span class="material-symbols-rounded">notifications</span><span class="dock-tip">Alertes</span>
         <span th:if="${alertesCount != null and alertesCount > 0}"
               class="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-1 bg-ink text-white text-[9px] font-mono rounded-full flex items-center justify-center"
@@ -169,23 +177,27 @@
         <div id="paletteList" class="py-2 max-h-[52vh] overflow-y-auto">
             <a class="palette-item" th:href="@{/admin/dashboard}" data-key="tableau de bord dashboard accueil">
                 <span class="material-symbols-rounded">dashboard</span><span>Tableau de bord</span></a>
-            <a class="palette-item" th:href="@{/admin/enseignants}" data-key="enseignants professeurs liste">
+            <a th:if="${menu == null or menu.contains('enseignants')}" class="palette-item" th:href="@{/admin/enseignants}" data-key="enseignants professeurs liste">
                 <span class="material-symbols-rounded">groups</span><span>Enseignants</span></a>
-            <a class="palette-item" th:href="@{/admin/enseignants/nouveau}" data-key="nouvel enseignant ajouter creer">
+            <a th:if="${menu == null or menu.contains('messages')}" class="palette-item" th:href="@{/admin/enseignants/nouveau}" data-key="nouvel enseignant ajouter creer">
                 <span class="material-symbols-rounded">person_add</span><span>Nouvel enseignant</span></a>
             <a class="palette-item" th:href="@{/admin/rapports}" data-key="rapports pdf import generer">
                 <span class="material-symbols-rounded">description</span><span>Rapports &amp; import</span></a>
-            <a class="palette-item" th:href="@{/admin/paie}" data-key="paie heures export salaire remuneration vacataire csv excel">
+            <a th:if="${menu == null or menu.contains('paie')}" class="palette-item" th:href="@{/admin/paie}" data-key="paie heures export salaire remuneration vacataire csv excel">
                 <span class="material-symbols-rounded">payments</span><span>Paie (export des heures)</span></a>
-            <a class="palette-item" th:href="@{/admin/referentiels}" data-key="referentiels matieres classes salles modele emploi du temps">
+            <a th:if="${menu == null or menu.contains('calendrier')}" class="palette-item" th:href="@{/admin/calendrier}" data-key="calendrier feries vacances semestres remplacement tolerance">
+                <span class="material-symbols-rounded">event</span><span>Calendrier et remplacements</span></a>
+            <a th:if="${menu == null}" class="palette-item" th:href="@{/admin/equipe}" data-key="equipe comptes scolarite comptabilite direction acces">
+                <span class="material-symbols-rounded">manage_accounts</span><span>Équipe</span></a>
+            <a th:if="${menu == null or menu.contains('referentiels')}" class="palette-item" th:href="@{/admin/referentiels}" data-key="referentiels matieres classes salles modele emploi du temps">
                 <span class="material-symbols-rounded">library_books</span><span>Référentiels (matières · classes · salles)</span></a>
             <a class="palette-item" th:href="@{/admin/statistiques}" data-key="statistiques stats analyse tendances kpi recommandations heatmap">
                 <span class="material-symbols-rounded">monitoring</span><span>Statistiques</span></a>
-            <a class="palette-item" th:href="@{/admin/alertes}" data-key="alertes emargements manquants rattrapages">
+            <a th:if="${menu == null or menu.contains('alertes')}" class="palette-item" th:href="@{/admin/alertes}" data-key="alertes emargements manquants rattrapages">
                 <span class="material-symbols-rounded">notifications</span><span>Alertes</span></a>
             <a class="palette-item" th:href="@{/admin/abonnement}" data-key="abonnement plan facturation renouveler paiement expiration">
                 <span class="material-symbols-rounded">card_membership</span><span>Abonnement</span></a>
-            <a th:if="${qrDisplayUrl != null}" class="palette-item" th:href="@{/admin/ecran-emargement}"
+            <a th:if="${qrDisplayUrl != null and (menu == null or menu.contains('messages'))}" class="palette-item" th:href="@{/admin/ecran-emargement}"
                data-key="qr code ecran emargement salle affichage scanner presence kiosque cle regenerer">
                 <span class="material-symbols-rounded">qr_code_2</span><span>Écran d'émargement (QR de salle)</span></a>
             <button type="button" class="palette-item" onclick="window.__logout&amp;&amp;window.__logout()"

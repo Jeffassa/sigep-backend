@@ -21,12 +21,48 @@
         <span th:text="${error}">Erreur</span>
     </div>
 
+    <section th:if="${erreursImport != null and !erreursImport.isEmpty()}" class="note note-attention note-bloc" data-reveal>
+        <p class="font-medium mb-1">Lignes à corriger dans votre fichier</p>
+        <ul class="list-disc pl-5">
+            <li th:each="e, i : ${erreursImport}" th:if="${i.index < 20}" th:text="${e}">Ligne 3 : date invalide</li>
+        </ul>
+        <p th:if="${erreursImport.size() > 20}" class="mt-1" th:text="'… et ' + ${erreursImport.size() - 20} + ' autre(s).'">… et 3 autres.</p>
+    </section>
+
+    <!-- Emploi du temps -->
+    <section th:if="${menu == null or menu.contains('messages')}" class="feuille mb-10" data-reveal>
+        <h2 class="titre-section">Importer l'emploi du temps</h2>
+        <p class="chapitre-note">Votre fichier tel qu'il est : Excel ou CSV, en liste ou en grille (jours et créneaux croisés). Dans une grille, chaque case donne la matière, l'enseignant et la salle, et chaque feuille peut être une classe. Pour une liste, SIGEP reconnaît les titres courants (cours, UE, module, professeur, intervenant, niveau, local, horaire…). L'enseignant se reconnaît à son matricule, son e-mail ou son nom. Un fichier réimporté ne crée pas de doublon.</p>
+        <form th:action="@{/admin/planning/importer}" method="post" enctype="multipart/form-data" data-no-boost
+              class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+            <div class="md:col-span-3">
+                <label for="fichierEdt" class="etiquette">Fichier</label>
+                <input id="fichierEdt" type="file" name="fichier" accept=".xlsx,.xls,.csv" required class="text-[14px] w-full"/>
+            </div>
+            <div class="md:col-span-2">
+                <label for="edtDebut" class="etiquette">Valable du</label>
+                <input id="edtDebut" type="date" name="debut" class="w-full h-11 px-3 champ"/>
+            </div>
+            <div class="md:col-span-2">
+                <label for="edtFin" class="etiquette">au</label>
+                <input id="edtFin" type="date" name="fin" class="w-full h-11 px-3 champ"/>
+            </div>
+            <div class="md:col-span-3">
+                <label for="edtClasse" class="etiquette">Classe (grille, si le fichier ne la dit pas)</label>
+                <input id="edtClasse" type="text" name="classe" maxlength="100" class="w-full h-11 px-3 champ"/>
+            </div>
+            <button type="submit" class="md:col-span-2 btn btn-ink h-11 font-medium">Importer</button>
+        </form>
+        <p class="text-[13px] text-muted mt-3">La période ne sert que si votre fichier donne un jour (« Lundi ») plutôt qu'une date : le cours est alors répété chaque semaine, hors jours fériés et vacances. Sans période, c'est le semestre en cours qui s'applique.
+            <a th:href="@{/admin/planning/modele}" class="underline">Télécharger un modèle</a></p>
+    </section>
+
     <!-- Génération -->
     <section class="feuille mb-10" data-reveal>
         <h2 class="titre-section">Générer les rapports</h2>
         <p class="text-[13px] text-muted mb-5">Un PDF individuel (matricule + nom) par enseignant, sur la période choisie.</p>
         <form th:action="@{/admin/rapports/generer}" method="post" id="formGenerer"
-              class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+              class="ouvert-lecture grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
             <div>
                 <label class="etiquette">Date de début</label>
                 <input type="date" name="debut" id="dateDebut" required

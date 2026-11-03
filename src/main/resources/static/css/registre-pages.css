@@ -171,3 +171,7 @@ body.porte { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr)
 @media (max-width: 420px) { .marque-haute span { display: none; } }
 .page-texte h2 { margin: 32px 0 8px; font-stretch: 75%; font-weight: 800; font-size: 26px; line-height: 32px; }
 .page-texte p, .page-texte li { font-size: 16px; line-height: 26px; }
+
+/* Le chemin du retour, depuis les pages d'entrée */
+.retour-accueil { display: inline-flex; align-items: center; min-height: 44px; margin-bottom: 8px; font-size: 14px; color: var(--c-muted); text-decoration: underline; text-underline-offset: 3px; }
+.retour-accueil:hover { color: var(--c-ink); }
