@@ -27,8 +27,8 @@
     <script>
         (function () {
             try {
+                // Le papier par défaut : la nuit reste un choix explicite de la personne.
                 var t = localStorage.getItem('sigep-theme');
-                if (!t) t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
                 if (t === 'dark') document.documentElement.classList.add('dark');
             } catch (e) {}
         })();
@@ -37,13 +37,13 @@
          à chaque page (fin du flash/FOUC + navigation instantanée). Régénéré via tailwind/. -->
     <link rel="stylesheet" th:href="@{/css/tailwind.css}"/>
 
-    <!-- Polices : Instrument Serif (display) · Geist (UI) · JetBrains Mono (data) -->
+    <!-- Polices : Archivo (titres et texte) · Bodoni Moda italique (accent) · DM Mono (chiffres) -->
     <link rel="preconnect" href="https://fonts.googleapis.com"/>
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
-    <link href="https://fonts.cdnfonts.com/css/geist" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&amp;family=Bodoni+Moda:ital,opsz,wght@1,6..96,400..700&amp;family=DM+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet"/>
     <link rel="stylesheet" th:href="@{/css/sigep.css}"/>
+    <link rel="stylesheet" th:href="@{/css/registre-pages.css}"/>
 
 </head>
 
@@ -52,14 +52,13 @@
 <!-- ============================ TOP BAR ============================ -->
 <header th:fragment="topbar(active)"
         class="glass sticky top-0 z-50 border-x-0 border-t-0" style="border-radius:0;">
-    <div class="max-w-[1240px] mx-auto h-16 px-5 md:px-8 flex items-center justify-between">
-        <a th:href="@{/admin/dashboard}" class="flex items-center gap-2.5 group">
+    <div class="barre-haute max-w-[1240px] mx-auto h-16 px-5 md:px-8 flex items-center justify-between">
+        <a th:href="@{/admin/dashboard}" class="marque-haute flex items-center gap-2.5 group">
             <!-- Le logo déposé par l'établissement prend la place de celui de la plateforme.
                  C'est précisément ce que l'offre Pro vend sous « logo de l'établissement ». -->
             <img th:src="${etablissementLogo} ?: @{/images/logo_sigep.png}"
                  th:alt="${etablissementLogo != null} ? ${etablissementNom} : ''" alt=""
-                 style="width:32px;height:32px;border-radius:9px;flex:none;display:block;object-fit:contain"/><span class="font-serif text-[30px] leading-none tracking-tight" th:text="${marque} ?: 'SIGEP'">SIGEP</span>
-            <span class="hidden sm:inline font-mono text-[10px] uppercase tracking-[0.2em] text-muted mb-[2px]">Solutions de Gestion</span>
+                 style="width:32px;height:32px;flex:none;display:block;object-fit:contain"/><span class="font-serif text-[30px] leading-none tracking-tight" th:text="${marque} ?: 'SIGEP'">SIGEP</span>
         </a>
 
         <div class="flex items-center gap-3">
@@ -84,8 +83,8 @@
             </a>
             <!-- Plan de l'établissement (+ « Passer à Pro » si Free) -->
             <span th:if="${etablissementPlan != null}" th:text="${etablissementPlan}"
-                  th:classappend="${etablissementPlan == 'FREE'} ? ' badge-gold' : ' glass text-muted'"
-                  class="hidden md:inline font-mono text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-full">PLAN</span>
+                  th:classappend="${etablissementPlan == 'FREE'} ? ' badge-gold px-2' : ' text-muted'"
+                  class="hidden md:inline font-mono text-[13px]">PLAN</span>
             <a th:if="${etablissementPlan == 'FREE'}" th:href="@{/admin/abonnement}"
                class="hidden md:inline-flex items-center gap-1 px-3 h-9 rounded-full text-[12px] font-medium btn btn-gold">
                 <span class="material-symbols-rounded text-[16px]">workspace_premium</span>Passer à Pro
@@ -93,9 +92,9 @@
             <div class="flex items-center gap-2.5 pl-3 border-l border-line">
                 <div class="text-right hidden md:block leading-tight">
                     <p class="text-[13px] font-medium" th:text="${etablissementNom} ?: 'Administration'">Établissement</p>
-                    <p class="font-mono text-[10px] text-muted uppercase tracking-wider" th:text="${adminEmail} ?: 'Administration'">admin</p>
+                    <p class="font-mono text-[12px] text-muted" th:text="${adminEmail} ?: 'Administration'">admin</p>
                 </div>
-                <div class="w-9 h-9 rounded-full bg-ink text-white flex items-center justify-center font-serif text-[15px]"
+                <div class="pastille pastille-haute"
                      th:text="${etablissementNom != null and !#strings.isEmpty(etablissementNom)} ? ${#strings.toUpperCase(#strings.substring(etablissementNom,0,1))} : 'S'">A</div>
             </div>
         </div>
@@ -118,8 +117,9 @@
     <path d="M15 24.5 L21 30.5 L33.5 17.5"/>
 </svg>
 
-<!-- ============================ DOCK macOS ============================ -->
+<!-- ============================ ONGLETS DU CLASSEUR ============================ -->
 <nav th:fragment="dock(active)" class="dock glass-strong" id="dock" aria-label="Navigation principale">
+    <a th:href="@{/admin/dashboard}" class="dock-marque" th:text="${marque} ?: 'SIGEP'">SIGEP</a>
     <a th:href="@{/admin/dashboard}" class="dock-item" th:classappend="${active=='dashboard'}?'active':''" data-label="Tableau de bord">
         <span class="material-symbols-rounded">dashboard</span><span class="dock-tip">Tableau de bord</span>
     </a>
@@ -223,33 +223,6 @@
         try { localStorage.setItem('sigep-theme', dark ? 'dark' : 'light'); } catch (e) {}
     };
 
-    /* ----- Dock : magnification façon macOS -----
-       Fonction rejouable : la navigation instantanée remplace le contenu du dock pour mettre à
-       jour l'onglet actif, ce qui rendrait caduques des références capturées une seule fois. ----- */
-    function setupDock() {
-        const dock = document.getElementById('dock');
-        if (!dock || dock.dataset.ready === '1') return;
-        dock.dataset.ready = '1';
-        const BASE = 46, MAX = 24, RANGE = 90;
-        // Les éléments sont relus à chaque mouvement : le dock peut avoir été réécrit entre-temps.
-        const items = () => Array.from(dock.querySelectorAll('.dock-item'));
-        dock.addEventListener('mousemove', (e) => {
-            items().forEach(it => {
-                const r = it.getBoundingClientRect();
-                const c = r.left + r.width / 2;
-                const d = Math.abs(e.clientX - c);
-                const boost = d < RANGE ? (1 - d / RANGE) * MAX : 0;
-                const s = BASE + boost;
-                it.style.width = s + 'px'; it.style.height = s + 'px';
-                it.style.marginBottom = (boost * 0.35) + 'px';
-            });
-        });
-        dock.addEventListener('mouseleave', () => {
-            items().forEach(it => { it.style.width = BASE+'px'; it.style.height = BASE+'px'; it.style.marginBottom='0'; });
-        });
-    }
-    setupDock();
-
     /* ----- Palette ⌘K ----- */
     const overlay = document.getElementById('paletteOverlay');
     const input = document.getElementById('paletteInput');
@@ -282,15 +255,6 @@
             else if (e.key === 'Enter') { e.preventDefault(); its[sel]?.click(); }
         });
     }
-
-    /* ----- Révélation progressive à l'arrivée sur une page ----- */
-    function setupReveal() {
-        document.querySelectorAll('main [data-reveal]').forEach((el, i) => {
-            el.classList.add('reveal');
-            el.style.animationDelay = (i * 60) + 'ms';
-        });
-    }
-    setupReveal();
 
     /* ----- Tableaux : lignes dépliables sur mobile (le CSS desktop reste intact) -----
        Fonction réutilisable : rejouée après chaque actualisation du contenu. ----- */
@@ -419,7 +383,7 @@
         /* --- Fine barre de progression : sans elle, une page lente semble ne rien faire --- */
         var barre = document.createElement('div');
         barre.style.cssText = 'position:fixed;top:0;left:0;height:2px;width:0;z-index:9999;' +
-            'background:linear-gradient(90deg,#34d399,#10b981);transition:width .2s ease,opacity .3s;' +
+            'background:#f5a623;transition:width .2s ease,opacity .3s;' +
             'opacity:0;pointer-events:none';
         document.body.appendChild(barre);
         var progression = function (etat) {
@@ -540,10 +504,6 @@
                     actuel.scrollLeft = glissement;
                 }
             });
-            // Le dock n'est PAS réarmé : ses écouteurs sont posés sur l'élément lui-même, que
-            // l'on conserve, et setupDock relit ses éléments à chaque mouvement. Le réarmer
-            // empilait deux écouteurs de plus à chaque navigation — après vingt pages, quarante
-            // gestionnaires exécutaient le même calcul à chaque déplacement de souris.
 
             var titre = doc.querySelector('title');
             if (titre) document.title = titre.textContent;
@@ -551,7 +511,6 @@
             rejouerScriptsDePage(doc);
             setupMobileTables();
             armerFlash();
-            if (options && options.animer) setupReveal();
 
             if (urlFinale) history.replaceState({ y: window.scrollY }, '', urlFinale);
             return true;
@@ -724,21 +683,19 @@
         .sigep-cookie[hidden] { display: none !important; }
         .sigep-cookie__card { pointer-events: auto; max-width: 760px; width: 100%;
             display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between;
-            background: rgba(20,20,24,.72);
-            backdrop-filter: blur(24px) saturate(160%); -webkit-backdrop-filter: blur(24px) saturate(160%);
-            border: 1px solid rgba(255,255,255,.14); border-radius: 18px; padding: 15px 18px; color: #f4f4f5;
-            box-shadow: 0 24px 60px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.16);
+            background: #081a38;
+            border: 1px solid #3a5684; border-radius: 2px; padding: 15px 18px; color: #f6ecd9;
             animation: sc-in .5s cubic-bezier(.16,1,.3,1) both; }
         @keyframes sc-in { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
-        .sigep-cookie__txt { font: 400 13px/1.55 'Geist', system-ui, sans-serif; flex: 1 1 340px; min-width: 260px; }
+        .sigep-cookie__txt { font: 400 13px/1.55 Archivo, Arial, sans-serif; flex: 1 1 340px; min-width: 260px; }
         .sigep-cookie__txt strong { display: block; font-weight: 600; font-size: 14px; margin-bottom: 3px; }
-        .sigep-cookie__txt a { color: #34d399; text-decoration: underline; }
+        .sigep-cookie__txt a { color: #ffbe57; text-decoration: underline; }
         .sigep-cookie__btns { display: flex; gap: 8px; flex-wrap: wrap; }
-        .sc-btn { font: 600 13px 'Geist', system-ui, sans-serif; border-radius: 999px; padding: 9px 16px;
+        .sc-btn { font: 600 13px Archivo, Arial, sans-serif; border-radius: 2px; min-height: 44px; padding: 9px 16px;
             cursor: pointer; border: 1px solid transparent; transition: opacity .15s, background .15s; white-space: nowrap; }
-        .sc-accent { background: linear-gradient(140deg, #34d399, #10b981); color: #04160e; }
+        .sc-accent { background: #f5a623; color: #081a38; }
         .sc-accent:hover { opacity: .92; }
-        .sc-ghost { background: transparent; border-color: rgba(255,255,255,.22); color: #f4f4f5; }
+        .sc-ghost { background: transparent; border-color: #5b769f; color: #f6ecd9; }
         .sc-ghost:hover { background: rgba(255,255,255,.08); }
         @media (max-width: 560px) { .sigep-cookie__btns { width: 100%; } .sc-btn { flex: 1; } }
         @media (prefers-reduced-motion: reduce) { .sigep-cookie__card { animation: none; } }

@@ -2,12 +2,14 @@ package ci.esatic.sigep.controller.web;
 
 import ci.esatic.sigep.entity.Enseignant;
 import ci.esatic.sigep.entity.StatutDemande;
+import ci.esatic.sigep.entity.StatutSeance;
 import ci.esatic.sigep.entity.User;
 import ci.esatic.sigep.repository.DemandeRattrapageRepository;
 import ci.esatic.sigep.repository.EnseignantRepository;
 import ci.esatic.sigep.repository.SeanceRepository;
 import ci.esatic.sigep.service.AiAnalyseService;
 import ci.esatic.sigep.service.AlerteService;
+import ci.esatic.sigep.service.DureeSeance;
 import ci.esatic.sigep.service.EtablissementCourantService;
 import ci.esatic.sigep.service.StatistiquesService;
 import ci.esatic.sigep.tenant.plan.Feature;
@@ -66,7 +68,41 @@ public class AdminDashboardController {
                         .stream().limit(6).toList());
         model.addAttribute("tendanceSemaines", computeTendanceSemaines(6));
         model.addAttribute("classement", computeClassement(30));
+        ajouterRegistreDuJour(model);
         return "admin/dashboard";
+    }
+
+    /**
+     * Le registre du jour et la phrase qui le résume.
+     *
+     * <p>Une heure n'est comptée qu'une fois la séance signée ET terminée ; une séance n'est à
+     * relancer qu'une fois terminée sans signature : tant qu'elle dure, le scan peut encore venir.
+     */
+    private void ajouterRegistreDuJour(Model model) {
+        LocalDate aujourdhui = LocalDate.now();
+        java.time.LocalTime maintenant = java.time.LocalTime.now();
+        List<ci.esatic.sigep.entity.Seance> seances = seanceRepository.findAllByDateOrderByHeureDebutAsc(aujourdhui)
+                .stream().filter(s -> s.getStatut() != StatutSeance.A_VALIDER).toList();
+
+        long signees = 0, aRelancer = 0, minutes = 0;
+        for (ci.esatic.sigep.entity.Seance s : seances) {
+            boolean signee = s.getStatut() == StatutSeance.EMARGE || s.getStatut() == StatutSeance.EN_RETARD;
+            boolean finie = s.getHeureFin().isBefore(maintenant);
+            if (signee) {
+                signees++;
+                if (finie) minutes += DureeSeance.de(s).minutes();
+            } else if (finie && s.getStatut() != StatutSeance.EN_ATTENTE_VALIDATION) {
+                aRelancer++;
+            }
+        }
+        model.addAttribute("seancesDuJour", seances);
+        model.addAttribute("signeesDuJour", signees);
+        model.addAttribute("aRelancerDuJour", aRelancer);
+        model.addAttribute("heuresDuJour", (minutes / 60) + " h " + String.format("%02d", minutes % 60));
+        model.addAttribute("heureCourante", maintenant);
+        model.addAttribute("seancesAValider", seanceRepository.countByStatut(StatutSeance.A_VALIDER));
+        model.addAttribute("dateDuJour", aujourdhui.format(
+                DateTimeFormatter.ofPattern("EEEE d MMMM", java.util.Locale.FRENCH)));
     }
 
     /** Page de statistiques complètes (KPIs, tendances, répartitions, heatmap, recommandations). */

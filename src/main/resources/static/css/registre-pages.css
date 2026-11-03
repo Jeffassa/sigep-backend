@@ -1,0 +1,173 @@
+/* =========================================================================
+   LE REGISTRE, PAGE PAR PAGE
+
+   Une page de gestion se lit comme un registre : un titre, un relevé de chiffres
+   posé sur une règle, puis des tableaux tenus à l'encre. Pas de cartes : un trait
+   suffit à séparer deux choses.
+   ========================================================================= */
+.surtitre { margin: 0 0 8px; font: 13px 'DM Mono', monospace; color: var(--c-muted); }
+.titre-page {
+    margin: 0; font-stretch: 75%; font-weight: 900; line-height: 1.02; letter-spacing: -.01em;
+    font-size: clamp(44px, 5.6vw, 76px);
+}
+.chapeau { margin: 12px 0 0; max-width: 68ch; font-size: 16px; line-height: 24px; color: var(--c-muted); }
+.en-tete-page { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px 32px; margin-bottom: 32px; }
+
+/* Le relevé : des chiffres alignés entre deux règles, sans boîte autour de chacun. */
+.releve {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    border-top: 2px solid var(--c-ink);
+    background: var(--c-surface); margin-bottom: 40px;
+}
+.releve > * { padding: 16px 20px 18px; border-left: 1px solid var(--c-line); min-width: 0; }
+.releve > :first-child { border-left: 0; }
+.releve-libelle { margin: 0 0 6px; font: 13px/18px 'DM Mono', monospace; color: var(--c-muted); }
+.releve-chiffre {
+    margin: 0; font-stretch: 75%; font-weight: 900; font-size: 44px; line-height: 48px;
+    font-variant-numeric: tabular-nums; overflow-wrap: anywhere;
+}
+.releve-mot { font-size: clamp(24px, 2.4vw, 30px); line-height: 40px; overflow-wrap: normal; }
+.releve-chiffre small { display: block; font-size: 15px; line-height: 18px; font-weight: 500; font-stretch: 100%; color: var(--c-muted); }
+.releve > * { border-bottom: 1px solid var(--c-line); }
+.phrase-du-jour .surligne { white-space: nowrap; }
+.releve-note { margin: 4px 0 0; font-size: 13px; line-height: 18px; color: var(--c-muted); }
+.releve .tete { grid-column: span 2; }
+.releve .tete .releve-chiffre { font-size: clamp(56px, 7vw, 88px); line-height: 1; }
+.releve a { text-decoration: none; }
+.releve a:hover .releve-chiffre { color: var(--c-cachet); }
+.releve-urgent .releve-chiffre { color: var(--c-cachet); }
+@media (max-width: 640px) {
+    .releve { grid-template-columns: 1fr 1fr; }
+    .releve > * { border-left: 0; border-top: 1px solid var(--c-line); padding: 14px 16px; }
+    .releve > :nth-child(even) { border-left: 1px solid var(--c-line); }
+    .releve .tete { grid-column: 1 / -1; border-left: 0; }
+    .releve .tete ~ :nth-child(even) { border-left: 0; }
+    .releve .tete ~ :nth-child(odd) { border-left: 1px solid var(--c-line); }
+    .releve-chiffre { font-size: 36px; line-height: 40px; }
+}
+
+/* Un chapitre : un titre, éventuellement ses actions, et ce qu'il annonce. */
+.chapitre { margin-bottom: 48px; }
+.chapitre-tete { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px 24px; margin-bottom: 8px; }
+.chapitre-tete .titre-section { margin: 0; line-height: 40px; }
+.chapitre-note { margin: 0 0 12px; font-size: 14px; line-height: 20px; color: var(--c-muted); max-width: 72ch; }
+
+/* Le tableau tenu à l'encre */
+.registre { width: 100%; border-collapse: collapse; background: var(--c-surface); text-align: left; font-size: 15px; }
+.registre th {
+    padding: 8px 14px; font: 500 13px/18px 'DM Mono', monospace; color: var(--c-ink);
+    border-bottom: 2px solid var(--c-ink); white-space: nowrap; vertical-align: bottom;
+}
+.registre td { padding: 12px 14px; border-bottom: 1px solid var(--c-line); vertical-align: middle; }
+.registre tbody tr:last-child td { border-bottom: 1px solid var(--c-ink); }
+.registre .fort { font-weight: 600; }
+.registre .discret { color: var(--c-muted); }
+.registre .code { font: 13px 'DM Mono', monospace; color: var(--c-muted); white-space: nowrap; }
+.registre .vide { padding: 32px 14px; text-align: center; color: var(--c-muted); font-size: 15px; }
+.registre .sous { display: block; font: 12px 'DM Mono', monospace; color: var(--c-muted); }
+.ligne-vide { margin: 0; padding: 14px 16px; background: var(--c-surface); border-top: 2px solid var(--c-ink); border-bottom: 1px solid var(--c-ink); color: var(--c-muted); font-size: 15px; }
+
+/* La feuille : ce qui se remplit ou se lit d'un bloc */
+.feuille { background: var(--c-surface); border-top: 2px solid var(--c-ink); border-bottom: 1px solid var(--c-line); padding: 24px clamp(16px, 2.4vw, 32px); }
+.feuille-danger { border-top-color: var(--c-cachet); }
+.feuille .titre-section { line-height: 40px; }
+
+/* Les champs s'écrivent sur une ligne, comme sur un formulaire papier */
+.etiquette { display: block; margin-bottom: 6px; font: 13px/18px 'DM Mono', monospace; color: var(--c-muted); }
+.champ { background: var(--c-field); border: 1px solid var(--c-line); border-bottom: 2px solid var(--c-ink); border-radius: 0; color: var(--c-ink); }
+.champ:hover:not(:focus) { border-color: var(--c-line); border-bottom-color: var(--c-ink); }
+.champ:focus { outline: 0; background: var(--c-accent-soft); }
+
+/* Les notes en marge : un trait de couleur, le texte, rien d'autre */
+.note { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 16px; padding: 12px 16px; background: var(--c-surface); border-left: 4px solid var(--c-ink); font-size: 14px; line-height: 20px; }
+.note-ok { border-left-color: #1f7a6b; }
+.note-alerte { border-left-color: var(--c-cachet); }
+.note-attention { border-left-color: var(--c-accent); }
+
+/* Les états : un mot, ou un cachet quand la chose est acquise */
+.etat { display: inline-block; font: 13px/20px 'DM Mono', monospace; white-space: nowrap; }
+.etat-discret { color: var(--c-muted); }
+.etat-alerte { color: var(--c-cachet); }
+.etat-attente { background: var(--c-accent); color: var(--c-accent-ink); padding: 0 6px; }
+.niveau-excellent, .niveau-bon { color: #1f7a6b; }
+.niveau-moyen { color: #8a5a0a; }
+.niveau-faible { color: var(--c-cachet); }
+html.dark .niveau-excellent, html.dark .niveau-bon { color: #7fd8c4; }
+html.dark .niveau-moyen { color: var(--c-accent); }
+
+/* La jauge : un trait plein sur un trait fin */
+.jauge { display: block; width: 88px; height: 8px; background: var(--c-track); }
+.jauge > span { display: block; height: 100%; background: var(--c-ink); }
+
+/* Boutons secondaires et actions de ligne */
+.btn.glass { background: transparent; border: 1px solid var(--c-ink); color: var(--c-ink); }
+.btn.glass:hover { background: var(--c-ink); color: var(--c-bg); }
+.btn-danger { background: var(--c-cachet); color: #fff; }
+html.dark .btn-danger { color: #081a38; }
+.bouton-ligne { display: inline-flex; align-items: center; justify-content: center; gap: 4px; height: 36px; min-width: 36px; padding: 0 10px; border: 1px solid var(--c-ink); background: transparent; color: var(--c-ink); font-size: 13px; font-weight: 500; }
+.bouton-ligne:hover { background: var(--c-ink); color: var(--c-bg); }
+.pastille { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; flex: none; background: var(--c-ink); color: var(--c-bg); font-stretch: 75%; font-weight: 800; font-size: 16px; }
+
+/* Listes des référentiels */
+.ligne-registre { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 6px 0; border-bottom: 1px solid var(--c-line); font-size: 15px; }
+.ligne-registre:first-of-type { border-top: 2px solid var(--c-ink); }
+
+/* Les onglets de période ou de filtre */
+.onglets { display: inline-flex; flex-wrap: wrap; border-bottom: 2px solid var(--c-ink); }
+.onglets a { display: flex; align-items: center; height: 40px; padding: 0 16px; font-size: 14px; font-weight: 500; text-decoration: none; color: var(--c-muted); }
+.onglets a:hover { color: var(--c-ink); }
+.onglets a.actif { background: var(--c-ink); color: var(--c-bg); }
+
+/* Le code, sur la nuit */
+.nuit-code { background: #081a38; color: #d4dcea; padding: 16px; font: 13px/20px 'DM Mono', monospace; overflow-x: auto; }
+
+/* Le rail de la plateforme porte le nom de l'espace */
+.dock-marque { display: block; padding: 8px 24px 16px; color: #f6ecd9; font-stretch: 75%; font-weight: 900; font-size: 30px; line-height: 32px; text-decoration: none; }
+.dock-marque small { display: block; font: 12px 'DM Mono', monospace; color: #d4dcea; }
+@media (max-width: 900px) { .dock-marque { display: none; } }
+
+/* La porte d'entrée : connexion, code, inscription */
+body.porte { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); min-height: 100vh; }
+.porte-nuit { display: flex; flex-direction: column; justify-content: space-between; gap: 24px; padding: 40px clamp(24px, 4vw, 64px); background: #081a38; color: #f6ecd9; }
+.porte-nuit .marque { color: #fff; font-stretch: 75%; font-weight: 900; font-size: 34px; line-height: 40px; text-decoration: none; }
+.porte-nuit .accroche { margin: 0; color: #fff; font-stretch: 75%; font-weight: 900; font-size: clamp(44px, 5.4vw, 80px); line-height: 1.02; }
+.porte-nuit .accroche em { font-family: 'Bodoni Moda', Didot, Georgia, serif; font-weight: 500; font-stretch: 100%; color: #ffbe57; }
+.porte-nuit .bas { margin: 0; font: 13px/20px 'DM Mono', monospace; color: #d4dcea; }
+.porte-page { display: flex; align-items: center; justify-content: center; padding: 40px 20px; min-width: 0; }
+.porte-page > main { width: 100%; max-width: 460px; }
+.porte-page .titre-page { font-size: clamp(38px, 4vw, 56px); margin-bottom: 8px; }
+@media (max-width: 900px) {
+    body.porte { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+    .porte-nuit { padding: 20px; gap: 12px; }
+    .porte-nuit .accroche { font-size: 36px; }
+    .porte-nuit .bas { display: none; }
+    .porte-page { align-items: flex-start; }
+}
+
+/* La barre du haut : la marque est dans le rail, il ne reste que les actions */
+.pastille-haute { width: 36px; height: 36px; font-size: 15px; }
+@media (min-width: 768px) { .pastille-haute { display: none; } }
+@media (min-width: 901px) {
+    body:has(> #dock) .marque-haute { display: none; }
+    body:has(> #dock) .barre-haute { justify-content: flex-end; }
+}
+
+/* Les filtres au-dessus d'une liste */
+.barre-filtre { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 24px; padding: 8px 16px; background: var(--c-surface); border-top: 2px solid var(--c-ink); border-bottom: 1px solid var(--c-line); }
+.barre-filtre > div { flex: 1 1 240px; }
+
+/* Le relevé qui a un chiffre de tête : deux parts pour lui, une pour chacun des autres */
+@media (min-width: 641px) {
+    .releve:has(> .tete) { grid-template-columns: minmax(0, 2fr) repeat(auto-fit, minmax(0, 1fr)); }
+    .releve:has(> .tete) > .tete { grid-column: auto; }
+}
+
+.note-bloc { display: block; }
+.note.hidden { display: none; }
+.page-texte .titre-page { margin: 16px 0 24px; }
+
+/* Le texte juridique */
+.page-texte { max-width: 72ch; }
+@media (max-width: 420px) { .marque-haute span { display: none; } }
+.page-texte h2 { margin: 32px 0 8px; font-stretch: 75%; font-weight: 800; font-size: 26px; line-height: 32px; }
+.page-texte p, .page-texte li { font-size: 16px; line-height: 26px; }

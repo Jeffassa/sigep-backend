@@ -8,19 +8,16 @@
 <main class="max-w-[920px] mx-auto px-5 md:px-8 py-10 pb-36">
 
     <section class="mb-8" data-reveal>
-        <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mb-2">Facturation</p>
-        <h1 class="font-serif text-[clamp(34px,5vw,52px)] leading-[1.02] tracking-tight">Abonnement</h1>
+        <p class="surtitre">Facturation</p>
+        <h1 class="titre-page">Abonnement</h1>
     </section>
 
     <!-- Messages -->
-    <div data-flash th:if="${erreurAbo}" class="flex items-center gap-2 p-3 mb-4 rounded-xl text-[13px]"
-         style="background:rgba(186,26,26,.08);color:#7a0010;border:1px solid rgba(186,26,26,.2)">
-        <span class="material-symbols-rounded text-[18px]">error</span><span th:text="${erreurAbo}"></span>
+    <div data-flash th:if="${erreurAbo}" class="note note-alerte">
+        <span th:text="${erreurAbo}"></span>
     </div>
     <!-- Paiement CONFIRMÉ (réconcilié via l'API Stripe : montant vérifié, plan appliqué). -->
-    <div data-flash th:if="${paiementReconcilie}" class="flex items-start gap-2 p-3 mb-4 rounded-xl text-[13px]"
-         style="background:rgba(16,185,129,.12);color:#0f7a3d;border:1px solid rgba(16,185,129,.35)">
-        <span class="material-symbols-rounded text-[18px]" style="color:#10b981">verified</span>
+    <div data-flash th:if="${paiementReconcilie}" class="note note-ok">
         <span>Paiement confirmé. Votre abonnement est actif au plan
             <strong th:text="${etablissementPlan} ?: 'Pro'">Pro</strong>.
             Aucune reconnexion nécessaire.</span>
@@ -28,78 +25,62 @@
     <!-- Mobile Money confirmé. Repose sur un attribut FLASH posé par le serveur après
          vérification réelle du paiement — et non sur un paramètre d'URL, qu'il suffirait
          de taper pour faire croire à un paiement réussi. -->
-    <div data-flash th:if="${momoConfirme}" class="flex items-start gap-2 p-3 mb-4 rounded-xl text-[13px]"
-         style="background:rgba(16,185,129,.12);color:#0f7a3d;border:1px solid rgba(16,185,129,.35)">
-        <span class="material-symbols-rounded text-[18px]" style="color:#10b981">verified</span>
+    <div data-flash th:if="${momoConfirme}" class="note note-ok">
         <span>Paiement Mobile Money confirmé. Votre abonnement est actif au plan
             <strong th:text="${etablissementPlan} ?: 'Pro'">Pro</strong>.</span>
     </div>
     <!-- Avertissement MODE TEST : l'argent est fictif chez le fournisseur, mais l'abonnement
          prolongé en base est bien réel. Sans ce repère, une mauvaise configuration créditerait
          des clients sans qu'aucun encaissement n'ait eu lieu. -->
-    <div th:if="${momoSandbox}" class="flex items-start gap-2 p-3 mb-4 rounded-xl text-[13px]"
-         style="background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.45)">
-        <span class="material-symbols-rounded text-[18px]" style="color:#d97706">science</span>
+    <div th:if="${momoSandbox}" class="note note-attention">
         <span><strong>Mode test (sandbox)</strong> : les paiements Mobile Money sont simulés,
             aucun argent n'est débité. L'abonnement, lui, est bien prolongé.</span>
     </div>
     <!-- Retour de Stripe sans confirmation encore obtenue : le webhook finalisera. -->
-    <div th:if="${param.paye != null and !paiementReconcilie}" class="flex items-start gap-2 p-3 mb-4 rounded-xl text-[13px]"
-         style="background:rgba(10,10,10,.05);border:1px solid var(--c-line)">
-        <span class="material-symbols-rounded text-[18px]">hourglass_top</span>
+    <div th:if="${param.paye != null and !paiementReconcilie}" class="note">
         <span>Paiement reçu, confirmation en cours. Votre plan sera actif dès que le paiement
             est validé, en général en quelques secondes. Actualisez la page si rien ne change.</span>
     </div>
-    <div th:if="${param.annule}" class="flex items-center gap-2 p-3 mb-4 rounded-xl text-[13px]"
-         style="background:rgba(10,10,10,.05);border:1px solid var(--line)">
-        <span class="material-symbols-rounded text-[18px]">info</span><span>Paiement annulé. Aucun montant n'a été prélevé.</span>
+    <div th:if="${param.annule}" class="note">
+        <span>Paiement annulé. Aucun montant n'a été prélevé.</span>
     </div>
 
     <!-- Statut de l'abonnement -->
-    <section class="glass rounded-3xl p-7 mb-6" data-reveal>
-        <div class="flex flex-wrap items-center justify-between gap-4">
+    <section class="mb-8" data-reveal>
+        <div class="releve mb-0">
             <div>
-                <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Plan</p>
-                <p class="font-serif text-[28px]" th:text="${etablissementPlan} ?: 'FREE'">PLAN</p>
+                <p class="releve-libelle">Plan</p>
+                <p class="releve-chiffre releve-mot" th:text="${etablissementPlan} ?: 'FREE'">PLAN</p>
             </div>
             <div>
-                <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Expiration</p>
-                <p class="font-serif text-[28px]"
-                   th:text="${dateExpiration != null} ? ${#temporals.format(dateExpiration,'dd/MM/yyyy')} : 'Illimité'">--</p>
+                <p class="releve-libelle">Expiration</p>
+                <p class="releve-chiffre releve-mot" th:text="${dateExpiration != null} ? ${#temporals.format(dateExpiration,'dd/MM/yyyy')} : 'Illimité'">--</p>
             </div>
             <div>
-                <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Statut</p>
-                <span th:if="${abonnementExpire}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-ink text-white text-[13px]">
-                    <span class="material-symbols-rounded text-[18px]">lock</span> Expiré
-                </span>
-                <span th:unless="${abonnementExpire}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full glass text-[13px]">
-                    <span class="material-symbols-rounded text-[18px]">check_circle</span>
-                    <span th:if="${joursAvantExpiration != null}" th:text="'Actif · ' + ${joursAvantExpiration} + ' j restants'">Actif</span>
-                    <span th:unless="${joursAvantExpiration != null}">Actif</span>
-                </span>
+                <p class="releve-libelle">Statut</p>
+                <p th:if="${abonnementExpire}" class="mt-2"><span class="visa visa-rouge">EXPIRÉ</span></p>
+                <p th:unless="${abonnementExpire}" class="mt-2"><span class="visa">ACTIF</span></p>
+                <p class="releve-note" th:if="${joursAvantExpiration != null and !abonnementExpire}" th:text="${joursAvantExpiration} + ' jours restants'">0 jours restants</p>
             </div>
         </div>
 
-        <div th:if="${abonnementExpire}" class="mt-6 p-4 rounded-2xl text-[14px]"
-             style="background:rgba(186,26,26,.06);border:1px solid rgba(186,26,26,.18)">
+        <div th:if="${abonnementExpire}" class="note note-alerte mt-4">
             Votre abonnement a expiré : l'accès à l'espace est suspendu jusqu'au renouvellement.
         </div>
     </section>
 
     <!-- Paiement en ligne (Stripe) — choix du plan -->
-    <section th:if="${stripeEnabled}" class="glass-strong rounded-3xl p-7 mb-6" data-reveal
-             style="outline:2px solid var(--c-accent); outline-offset:-2px;">
-        <div class="flex items-center gap-2.5 mb-3">
-            <span class="material-symbols-rounded">credit_card</span>
-            <h2 class="font-serif text-[22px]">Choisir un plan &amp; payer</h2>
+    <section th:if="${stripeEnabled}" class="feuille mb-8" data-reveal>
+        <div class="mb-2">
+            <h2 class="titre-section">Choisir un plan &amp; payer</h2>
         </div>
         <p class="text-[14px] text-muted mb-5">Paiement par carte bancaire. Votre plan est actif
             dès la confirmation.</p>
 
         <form th:action="@{/admin/abonnement/payer}" method="post" class="flex flex-wrap items-end gap-3">
             <div>
-                <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-1.5">Plan</label>
-                <select name="plan" id="planSel" class="h-11 px-3 rounded-xl bg-white/60 border border-line text-[14px]">
+                <label class="etiquette">Plan</label>
+                <select name="plan" id="planSel" class="h-11 px-3 champ text-[14px]">
                     <option value="PRO" th:attr="data-prix=${prixPro}"
                             th:text="'Pro : ' + ${#numbers.formatInteger(prixPro,1,'WHITESPACE')} + ' ' + ${symbole} + ' / mois'">Pro</option>
                     <option value="ENTERPRISE" th:if="${prixEnterprise > 0}" th:attr="data-prix=${prixEnterprise}"
@@ -107,8 +88,8 @@
                 </select>
             </div>
             <div>
-                <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-1.5">Durée</label>
-                <select name="mois" id="moisSel" class="h-11 px-3 rounded-xl bg-white/60 border border-line text-[14px]">
+                <label class="etiquette">Durée</label>
+                <select name="mois" id="moisSel" class="h-11 px-3 champ text-[14px]">
                     <option value="1">1 mois</option>
                     <option value="3">3 mois</option>
                     <option value="12">12 mois</option>
@@ -144,10 +125,9 @@
     </section>
 
     <!-- Mobile Money AUTOMATISÉ (NovaSend) : demande poussée sur le téléphone du client -->
-    <section th:if="${momoEnabled}" class="glass-strong rounded-3xl p-7 mb-6" data-reveal>
-        <div class="flex items-center gap-2.5 mb-3">
-            <span class="material-symbols-rounded">smartphone</span>
-            <h2 class="font-serif text-[22px]">Payer par Mobile Money</h2>
+    <section th:if="${momoEnabled}" class="feuille mb-6" data-reveal>
+        <div class="mb-2">
+            <h2 class="titre-section">Payer par Mobile Money</h2>
         </div>
         <p class="text-[14px] text-muted mb-5">Wave, Orange Money, MTN MoMo ou Moov. Vous recevez une
             demande de validation sur votre téléphone. Une fois acceptée, l'abonnement est prolongé
@@ -155,8 +135,8 @@
 
         <form th:action="@{/admin/abonnement/momo}" method="post" class="flex flex-wrap items-end gap-3">
             <div>
-                <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-1.5">Plan</label>
-                <select name="plan" id="momoPlan" class="h-11 px-3 rounded-xl bg-white/60 border border-line text-[14px]">
+                <label class="etiquette">Plan</label>
+                <select name="plan" id="momoPlan" class="h-11 px-3 champ text-[14px]">
                     <option value="PRO" th:attr="data-prix=${prixPro}"
                             th:text="'Pro : ' + ${#numbers.formatInteger(prixPro,1,'WHITESPACE')} + ' ' + ${symbole}">Pro</option>
                     <option value="ENTERPRISE" th:if="${prixEnterprise > 0}" th:attr="data-prix=${prixEnterprise}"
@@ -164,16 +144,16 @@
                 </select>
             </div>
             <div>
-                <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-1.5">Durée</label>
-                <select name="mois" id="momoMois" class="h-11 px-3 rounded-xl bg-white/60 border border-line text-[14px]">
+                <label class="etiquette">Durée</label>
+                <select name="mois" id="momoMois" class="h-11 px-3 champ text-[14px]">
                     <option value="1">1 mois</option>
                     <option value="3">3 mois</option>
                     <option value="12">12 mois</option>
                 </select>
             </div>
             <div>
-                <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-1.5">Opérateur</label>
-                <select name="provider" id="momoProvider" class="h-11 px-3 rounded-xl bg-white/60 border border-line text-[14px]">
+                <label class="etiquette">Opérateur</label>
+                <select name="provider" id="momoProvider" class="h-11 px-3 champ text-[14px]">
                     <option value="WAVE">Wave</option>
                     <option value="ORANGE">Orange Money</option>
                     <option value="MOMO">MTN MoMo</option>
@@ -181,14 +161,14 @@
                 </select>
             </div>
             <div>
-                <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-1.5">Téléphone</label>
+                <label class="etiquette">Téléphone</label>
                 <input type="tel" name="msisdn" required placeholder="+2250700000000" pattern="\+?[0-9]{8,15}"
-                       class="h-11 px-3 rounded-xl bg-white/60 border border-line text-[14px]"/>
+                       class="h-11 px-3 champ text-[14px]"/>
             </div>
             <div id="momoOtpBloc" style="display:none">
-                <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-1.5">Code OTP</label>
+                <label class="etiquette">Code OTP</label>
                 <input type="text" name="otp" inputmode="numeric" maxlength="8" placeholder="#144*82#"
-                       class="h-11 px-3 rounded-xl bg-white/60 border border-line text-[14px] w-[130px]"/>
+                       class="h-11 px-3 champ text-[14px] w-[130px]"/>
             </div>
             <button type="submit" class="btn btn-ink inline-flex items-center gap-2 h-11 px-5 rounded-xl font-medium">
                 <span class="material-symbols-rounded text-[18px]">send_to_mobile</span>
@@ -220,10 +200,9 @@
     </section>
 
     <!-- Repli : validation manuelle tant que l'encaissement automatique n'est pas activé -->
-    <section th:unless="${momoEnabled}" class="glass rounded-3xl p-7 mb-6" data-reveal>
-        <div class="flex items-center gap-2.5 mb-4">
-            <span class="material-symbols-rounded">payments</span>
-            <h2 class="font-serif text-[22px]">Payer par Mobile Money</h2>
+    <section th:unless="${momoEnabled}" class="feuille mb-6" data-reveal>
+        <div class="mb-2">
+            <h2 class="titre-section">Payer par Mobile Money</h2>
         </div>
         <ol class="space-y-2.5 text-[14px] text-muted list-decimal pl-5">
             <li>Réglez le montant de votre plan

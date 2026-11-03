@@ -8,34 +8,34 @@
 <main class="max-w-[1240px] mx-auto px-5 md:px-8 py-10 pb-36">
 
     <div class="mb-8" data-reveal>
-        <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mb-2">Données</p>
-        <h1 class="font-serif text-[clamp(34px,5vw,52px)] leading-[1.02] tracking-tight">Rapports &amp; import</h1>
+        <p class="surtitre">Données</p>
+        <h1 class="titre-page">Rapports &amp; import</h1>
     </div>
 
-    <div data-flash th:if="${success}" class="glass rounded-2xl p-3.5 mb-5 flex items-center gap-2 text-[13px]" data-reveal
+    <div data-flash th:if="${success}" class="feuille mb-5 flex items-center gap-2 text-[13px]" data-reveal
          style="background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.35)">
         <svg th:replace="~{admin/fragments :: coche}"></svg><span th:text="${success}">OK</span>
     </div>
-    <div data-flash th:if="${error}" class="glass rounded-2xl p-3.5 mb-5 flex items-center gap-2 text-[13px]" data-reveal
+    <div data-flash th:if="${error}" class="feuille mb-5 flex items-center gap-2 text-[13px]" data-reveal
          style="border-color:rgba(186,26,26,.3)">
-        <span class="material-symbols-rounded text-[18px]">error</span><span th:text="${error}">Erreur</span>
+        <span th:text="${error}">Erreur</span>
     </div>
 
     <!-- Génération -->
-    <section class="glass rounded-3xl p-7 mb-6" data-reveal>
-        <h2 class="font-serif text-[24px] mb-1">Générer les rapports</h2>
+    <section class="feuille mb-10" data-reveal>
+        <h2 class="titre-section">Générer les rapports</h2>
         <p class="text-[13px] text-muted mb-5">Un PDF individuel (matricule + nom) par enseignant, sur la période choisie.</p>
         <form th:action="@{/admin/rapports/generer}" method="post" id="formGenerer"
               class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
             <div>
-                <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Date de début</label>
+                <label class="etiquette">Date de début</label>
                 <input type="date" name="debut" id="dateDebut" required
-                       class="w-full h-11 px-4 rounded-xl bg-white/55 border border-line focus:ring-0 focus:border-ink transition"/>
+                       class="w-full h-11 px-4 champ"/>
             </div>
             <div>
-                <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Date de fin</label>
+                <label class="etiquette">Date de fin</label>
                 <input type="date" name="fin" id="dateFin" required
-                       class="w-full h-11 px-4 rounded-xl bg-white/55 border border-line focus:ring-0 focus:border-ink transition"/>
+                       class="w-full h-11 px-4 champ"/>
             </div>
             <button type="submit" class="btn btn-ink h-11 rounded-xl font-medium flex items-center justify-center gap-2">
                 <span class="material-symbols-rounded text-[20px]">picture_as_pdf</span> Générer
@@ -44,17 +44,17 @@
     </section>
 
     <!-- Table rapports -->
-    <section class="glass rounded-3xl overflow-hidden" data-reveal>
-        <div class="px-7 py-5 border-b border-line">
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="font-serif text-[22px]">Rapports générés</h2>
+    <section class="chapitre" data-reveal>
+        <div class="mb-4">
+            <div class="chapitre-tete">
+                <h2 class="titre-section">Rapports générés</h2>
                 <span class="font-mono text-[11px] text-muted" th:text="${rapports.size()} + ' fichier(s)'">0</span>
             </div>
             <!-- Recherche : par enseignant et/ou période -->
             <form method="get" th:action="@{/admin/rapports}" id="formFiltre" class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                <div class="md:col-span-4">
-                    <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Enseignant</label>
-                    <select name="enseignantId" id="filtreEnseignant" class="w-full h-11 px-4 rounded-xl bg-white/55 border border-line focus:ring-0 focus:border-ink transition">
+                <div class="md:col-span-3">
+                    <label class="etiquette">Enseignant</label>
+                    <select name="enseignantId" id="filtreEnseignant" class="w-full h-11 px-4 champ">
                         <option value="">Tous les enseignants</option>
                         <option th:each="e : ${enseignants}" th:value="${e.id}"
                                 th:text="${e.prenom + ' ' + e.nom}"
@@ -62,16 +62,16 @@
                     </select>
                 </div>
                 <div class="md:col-span-3">
-                    <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Du</label>
+                    <label class="etiquette">Du</label>
                     <input type="date" name="debut" id="filtreDebut" th:value="${fDebut}"
-                           class="w-full h-11 px-4 rounded-xl bg-white/55 border border-line focus:ring-0 focus:border-ink transition"/>
+                           class="w-full h-11 px-4 champ"/>
                 </div>
                 <div class="md:col-span-3">
-                    <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Au</label>
+                    <label class="etiquette">Au</label>
                     <input type="date" name="fin" id="filtreFin" th:value="${fFin}"
-                           class="w-full h-11 px-4 rounded-xl bg-white/55 border border-line focus:ring-0 focus:border-ink transition"/>
+                           class="w-full h-11 px-4 champ"/>
                 </div>
-                <div class="md:col-span-2 flex gap-2">
+                <div class="md:col-span-3 flex gap-2">
                     <button type="submit" class="btn btn-ink h-11 flex-1 rounded-xl font-medium flex items-center justify-center gap-1.5">
                         <span class="material-symbols-rounded text-[18px]">search</span> Filtrer
                     </button>
@@ -101,42 +101,38 @@
                    title="La synthèse Excel et le téléchargement groupé sont inclus dans le plan Pro. Voir l'abonnement."
                    class="btn btn-gold inline-flex items-center gap-1.5 px-4 h-10 rounded-xl text-[13px] font-medium">
                     <span class="material-symbols-rounded text-[18px]">lock</span> Exports avancés
-                    <span class="font-mono text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-ink text-white">Pro</span>
+                    <span class="font-mono text-[12px]">Pro</span>
                 </a>
             </div>
         </div>
         <div class="overflow-x-auto">
-            <table class="w-full text-left">
+            <table class="registre">
                 <thead>
-                <tr class="border-b border-line">
-                    <th class="px-6 py-4 font-mono text-[10px] uppercase tracking-wider text-muted">Enseignant</th>
-                    <th class="px-6 py-4 font-mono text-[10px] uppercase tracking-wider text-muted">Période</th>
-                    <th class="px-6 py-4 font-mono text-[10px] uppercase tracking-wider text-muted">Assiduité</th>
-                    <th class="px-6 py-4 font-mono text-[10px] uppercase tracking-wider text-muted">Généré le</th>
-                    <th class="px-6 py-4 font-mono text-[10px] uppercase tracking-wider text-muted text-right">Action</th>
+                <tr>
+                    <th>Enseignant</th>
+                    <th>Période</th>
+                    <th>Assiduité</th>
+                    <th>Généré le</th>
+                    <th class="text-right">Action</th>
                 </tr>
                 </thead>
                 <tbody>
                 <tr th:if="${rapports.isEmpty()}">
-                    <td colspan="5" class="px-6 py-16 text-center text-muted">
-                        <span class="material-symbols-rounded text-[40px] block mb-2 opacity-40">description</span>
+                    <td colspan="5" class="vide">
                         Aucun rapport sur cette période.
                     </td>
                 </tr>
-                <tr th:each="rapport : ${rapports}" class="zebra border-b border-line">
-                    <td class="px-6 py-4 text-[14px] font-medium" th:text="${rapport.enseignantPrenom + ' ' + rapport.enseignantNom}">Nom</td>
-                    <td class="px-6 py-4 font-mono text-[12px] text-muted">
+                <tr th:each="rapport : ${rapports}">
+                    <td class="fort" th:text="${rapport.enseignantPrenom + ' ' + rapport.enseignantNom}">Nom</td>
+                    <td class="code">
                         <span th:text="${#temporals.format(rapport.periodeDebut,'dd/MM/yy')}">--</span> →
                         <span th:text="${#temporals.format(rapport.periodeFin,'dd/MM/yy')}">--</span>
                     </td>
-                    <td class="px-6 py-4">
-                        <span th:with="c=${rapport.niveau == 'Excellent' ? '#16a34a' : (rapport.niveau == 'Bon' ? '#0284c7' : (rapport.niveau == 'Moyen' ? '#d97706' : (rapport.niveau == 'Faible' ? '#dc2626' : '#94a3b8')))}"
-                              class="font-mono text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-full border"
-                              th:style="'border-color:' + ${c} + '55;color:' + ${c}"
-                              th:text="${rapport.niveau} + ' · ' + ${rapport.tauxEmargement} + '%'">Niveau</span>
+                    <td>
+                        <span class="etat" th:classappend="${'niveau-' + #strings.toLowerCase(rapport.niveau)}" th:text="${rapport.niveau} + ' · ' + ${rapport.tauxEmargement} + ' %'">Niveau</span>
                     </td>
-                    <td class="px-6 py-4 font-mono text-[12px] text-muted" th:text="${#temporals.format(rapport.dateGeneration,'dd/MM/yy HH:mm')}">--</td>
-                    <td class="px-6 py-4 text-right">
+                    <td class="code" th:text="${#temporals.format(rapport.dateGeneration,'dd/MM/yy HH:mm')}">--</td>
+                    <td class="text-right">
                         <a th:href="@{'/admin/rapports/' + ${rapport.id} + '/telecharger'}"
                            class="btn btn-ink inline-flex items-center gap-1.5 px-3.5 h-9 rounded-xl text-[12px] font-medium">
                             <span class="material-symbols-rounded text-[16px]">download</span> PDF
