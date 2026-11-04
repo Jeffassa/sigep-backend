@@ -134,6 +134,128 @@ public class ImportService {
         return result;
     }
 
+    // ─── Emploi du temps lu par IA : préparation et enregistrement après relecture ───────────
+
+    /** Une séance telle qu'elle s'affiche et revient de l'écran de relecture. */
+    public record LigneRelue(String date, String jour, String semaine, String debut, String fin, String matiere,
+                             Long enseignantId, String enseignantLu, String classe, String salle, String doute) {}
+
+    /** Le fichier sous forme de texte, pour un tableur ou un document Word que l'IA doit interpréter. */
+    public String transcrire(MultipartFile file) throws Exception {
+        String nom = file.getOriginalFilename() == null ? "" : file.getOriginalFilename().toLowerCase(Locale.ROOT);
+        StringBuilder t = new StringBuilder();
+        if (nom.endsWith(".docx")) {
+            try (org.apache.poi.xwpf.usermodel.XWPFDocument doc = new org.apache.poi.xwpf.usermodel.XWPFDocument(file.getInputStream());
+                 org.apache.poi.xwpf.extractor.XWPFWordExtractor extracteur = new org.apache.poi.xwpf.extractor.XWPFWordExtractor(doc)) {
+                return extracteur.getText();
+            }
+        }
+        for (Feuille f : lire(file)) {
+            if (!f.nom().isBlank()) t.append("Feuille : ").append(f.nom()).append('\n');
+            for (org.apache.poi.ss.util.CellRangeAddress z : f.fusions()) {
+                t.append("Cellules fusionnées : ").append(z.formatAsString()).append('\n');
+            }
+            for (Ligne l : f.lignes()) {
+                if (l.vide()) continue;
+                t.append('L').append(l.numero()).append(" :");
+                for (int c = 0; c < l.cellules().length; c++) {
+                    if (!l.cellule(c).isEmpty()) {
+                        t.append(' ').append(org.apache.poi.ss.util.CellReference.convertNumToColString(c))
+                                .append('=').append(l.cellule(c).replaceAll("\\s*\\R\\s*", " / ")).append(" |");
+                    }
+                }
+                t.append('\n');
+            }
+        }
+        return t.toString();
+    }
+
+    /** Annuaire et référentiels de l'établissement, pour que l'IA les reconnaisse dans le document. */
+    public String contexteEtablissement() {
+        StringBuilder t = new StringBuilder("Annuaire (matricule : prénom nom) :\n");
+        for (Enseignant e : enseignantRepository.findAll()) {
+            t.append(e.getMatricule()).append(" : ").append(e.getPrenom()).append(' ').append(e.getNom()).append('\n');
+        }
+        t.append("Classes : ").append(classeRepository.findAll().stream().map(Classe::getLibelle).collect(Collectors.joining(", "))).append('\n');
+        t.append("Salles : ").append(salleRepository.findAll().stream().map(Salle::getLibelle).collect(Collectors.joining(", "))).append('\n');
+        return t.toString();
+    }
+
+    /** Rapproche ce que l'IA a lu de l'annuaire. Rien n'est enregistré ici. */
+    public List<LigneRelue> preparerRelecture(PlanningIaService.Extraction extraction, String classeParDefaut) {
+        ContexteImport ctx = new ContexteImport();
+        List<LigneRelue> lignes = new ArrayList<>();
+        for (PlanningIaService.Ligne l : extraction.lignes()) {
+            Enseignant e = l.matricule() == null ? null : ctx.chercherEnseignant(l.matricule());
+            if (e == null && l.enseignant() != null) {
+                e = ctx.chercherEnseignant(CIVILITE.matcher(l.enseignant().trim()).replaceFirst("").trim());
+            }
+            lignes.add(new LigneRelue(l.date(), l.jour(), l.semaine(), l.debut(), l.fin(), l.matiere(),
+                    e == null ? null : e.getId(), l.enseignant(),
+                    isBlank(l.classe()) ? classeParDefaut : l.classe(), l.salle(), l.doute()));
+        }
+        return lignes;
+    }
+
+    /**
+     * Enregistre les séances relues. Tout y est revalidé : ces valeurs reviennent du navigateur.
+     *
+     * @param semaineA une date de la semaine A, pour un emploi du temps en semaines alternées
+     */
+    @Transactional
+    public Map<String, Object> importerRelues(List<LigneRelue> lignes, LocalDate debut, LocalDate fin, LocalDate semaineA) {
+        ContexteImport ctx = new ContexteImport();
+        List<Seance> seances = new ArrayList<>();
+        int numero = 0;
+        for (LigneRelue l : lignes) {
+            numero++;
+            try {
+                seances.addAll(seancesRelues(l, debut, fin, semaineA, ctx));
+            } catch (IllegalArgumentException e) {
+                ctx.erreur(numero, e.getMessage());
+            }
+        }
+        List<Seance> saved = seanceRepository.saveAll(sansDoublons(seances, ctx));
+        log.info("Import relu : {} séances, {} ligne(s) en erreur", saved.size(), ctx.erreurs.size());
+        return resultat(null, saved.size(), ctx, null);
+    }
+
+    private List<Seance> seancesRelues(LigneRelue l, LocalDate debut, LocalDate fin, LocalDate semaineA, ContexteImport ctx) {
+        if (l.enseignantId() == null) throw new IllegalArgumentException("choisissez l'enseignant");
+        Enseignant enseignant = enseignantRepository.findById(l.enseignantId())
+                .orElseThrow(() -> new IllegalArgumentException("enseignant introuvable"));
+        LocalTime heureDebut = parseTime(exigerLibelle(l.debut(), "début"));
+        LocalTime heureFin = parseTime(exigerLibelle(l.fin(), "fin"));
+        if (!DureeSeance.de(heureDebut, heureFin).exploitable()) {
+            throw new IllegalArgumentException("horaires incohérents " + heureDebut + " - " + heureFin);
+        }
+        String matiere = borner(exigerLibelle(l.matiere(), "matière"), "matière");
+        String classe = borner(exigerLibelle(l.classe(), "classe"), "classe");
+        String salle = borner(exigerLibelle(l.salle(), "salle"), "salle");
+        String quand = !isBlank(l.date()) ? l.date() : exigerLibelle(l.jour(), "date ou jour");
+
+        List<LocalDate> jours = new ArrayList<>(dates(quand, debut, fin, ctx));
+        String semaine = l.semaine() == null ? "" : l.semaine().trim().toUpperCase(Locale.ROOT);
+        if (isBlank(l.date()) && !semaine.isEmpty()) {
+            if (!semaine.equals("A") && !semaine.equals("B")) throw new IllegalArgumentException("semaine « " + semaine + " » : A ou B attendu");
+            if (semaineA == null) throw new IllegalArgumentException("indiquez une date de la semaine A");
+            LocalDate lundiA = semaineA.with(java.time.DayOfWeek.MONDAY);
+            jours.removeIf(j -> {
+                long ecart = java.time.temporal.ChronoUnit.WEEKS.between(lundiA, j.with(java.time.DayOfWeek.MONDAY));
+                return (Math.floorMod(ecart, 2L) == 0) != semaine.equals("A");
+            });
+        }
+        Matiere laMatiere = ctx.upsertMatiere(matiere);
+        Classe laClasse = ctx.upsertClasse(classe);
+        Salle laSalle = ctx.upsertSalle(salle);
+        return jours.stream().map(j -> seance(j, heureDebut, heureFin, enseignant, laMatiere, laClasse, laSalle, null)).toList();
+    }
+
+    private static String borner(String valeur, String champ) {
+        if (valeur.length() > 150) throw new IllegalArgumentException(champ + " trop longue");
+        return valeur;
+    }
+
     // ─── Lecture du fichier ────────────────────────────────────────────────────
     private record Ligne(int numero, String[] cellules) {
         String cellule(int i) {

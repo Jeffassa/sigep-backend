@@ -38,6 +38,9 @@ public class ReferentielWebController {
     private final EtablissementRepository etablissementRepository;
     private final ci.esatic.sigep.service.ImportService importService;
     private final ci.esatic.sigep.service.CalendrierService calendrierService;
+    private final ci.esatic.sigep.service.PlanningIaService planningIaService;
+    private final ci.esatic.sigep.repository.EnseignantRepository enseignantRepository;
+    private final tools.jackson.databind.ObjectMapper objectMapper;
 
     @GetMapping("/admin/referentiels")
     public String referentiels(Model model) {
@@ -216,6 +219,7 @@ public class ReferentielWebController {
             @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) LocalDate debut,
             @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) LocalDate fin,
             @RequestParam(required = false) String classe,
+            Model model,
             RedirectAttributes ra) {
         // Sans période indiquée, les cours répétés valent pour ce qui reste du semestre en cours :
         // des séances créées dans le passé compteraient aussitôt comme des oublis.
@@ -227,9 +231,17 @@ public class ReferentielWebController {
             }
         }
         String nom = fichier.getOriginalFilename() == null ? "" : fichier.getOriginalFilename().toLowerCase();
-        if (fichier.isEmpty() || !(nom.endsWith(".xlsx") || nom.endsWith(".xls") || nom.endsWith(".csv"))) {
-            ra.addFlashAttribute("error", "Déposez un fichier Excel (.xlsx, .xls) ou CSV.");
+        if (fichier.isEmpty()) {
+            ra.addFlashAttribute("error", "Déposez votre emploi du temps.");
             return "redirect:/admin/rapports";
+        }
+        if (ci.esatic.sigep.service.PlanningIaService.photoIphone(nom)) {
+            ra.addFlashAttribute("error", "Ce format de photo n'est pas lisible : enregistrez-la en JPEG ou PNG.");
+            return "redirect:/admin/rapports";
+        }
+        boolean tableur = nom.endsWith(".xlsx") || nom.endsWith(".xls") || nom.endsWith(".csv");
+        if (!tableur) {
+            return lireParIa(fichier, nom, debut, fin, classe, model, ra);
         }
         try {
             java.util.Map<String, Object> resultat = importService.importerPlanning(fichier, debut, fin, classe);
@@ -237,17 +249,100 @@ public class ReferentielWebController {
             int doublons = (Integer) resultat.get("doublonsIgnores");
             int enErreur = (Integer) resultat.get("lignesEnErreur");
             int fermes = (Integer) resultat.get("joursFermesIgnores");
+            // Rien de compris par les règles : la mise en page sort de l'ordinaire.
+            if (importees == 0 && doublons == 0 && fermes == 0 && planningIaService.disponible()) {
+                return lireParIa(fichier, nom, debut, fin, classe, model, ra);
+            }
             String message = importees + " séance(s) importée(s)"
                     + (doublons > 0 ? ", " + doublons + " déjà présente(s) ignorée(s)" : "")
                     + (fermes > 0 ? ", " + fermes + " date(s) sautée(s) : établissement fermé" : "")
                     + (enErreur > 0 ? ", " + enErreur + " ligne(s) à corriger" : "") + ".";
             ra.addFlashAttribute(importees > 0 || enErreur == 0 ? "success" : "error", message);
             ra.addFlashAttribute("erreursImport", resultat.get("erreurs"));
-        } catch (IllegalArgumentException e) {
-            ra.addFlashAttribute("error", "Import impossible : " + e.getMessage());
         } catch (Exception e) {
-            ra.addFlashAttribute("error", "Ce fichier n'a pas pu être lu. Vérifiez qu'il s'ouvre bien dans Excel.");
+            if (planningIaService.disponible()) {
+                return lireParIa(fichier, nom, debut, fin, classe, model, ra);
+            }
+            ra.addFlashAttribute("error", e instanceof IllegalArgumentException
+                    ? "Import impossible : " + e.getMessage()
+                    : "Ce fichier n'a pas pu être lu. Vérifiez qu'il s'ouvre bien dans Excel.");
         }
+        return "redirect:/admin/rapports";
+    }
+
+    /** L'IA lit le document ; rien n'est enregistré avant la relecture par l'établissement. */
+    private String lireParIa(org.springframework.web.multipart.MultipartFile fichier, String nom, LocalDate debut, LocalDate fin,
+                             String classe, Model model, RedirectAttributes ra) {
+        try {
+            byte[] octets = fichier.getBytes();
+            var type = ci.esatic.sigep.service.PlanningIaService.TypeDocument.image(octets);
+            if (type == null) {
+                if (!(nom.endsWith(".xlsx") || nom.endsWith(".xls") || nom.endsWith(".csv") || nom.endsWith(".docx"))) {
+                    ra.addFlashAttribute("error", "Format non pris en charge. Déposez un fichier Excel, CSV, Word (.docx), PDF, ou une photo JPEG ou PNG.");
+                    return "redirect:/admin/rapports";
+                }
+                octets = importService.transcrire(fichier).getBytes(StandardCharsets.UTF_8);
+                type = ci.esatic.sigep.service.PlanningIaService.TypeDocument.TEXTE;
+            }
+            var etab = etablissementCourantService.courant();
+            var lu = planningIaService.lire(octets, type, importService.contexteEtablissement(), etab == null ? null : etab.getId());
+            if (lu.lignes().isEmpty()) {
+                ra.addFlashAttribute("error", lu.remarque() == null || lu.remarque().isBlank()
+                        ? "Aucune séance trouvée dans ce document." : "Aucune séance trouvée : " + lu.remarque());
+                return "redirect:/admin/rapports";
+            }
+            model.addAttribute("lignes", importService.preparerRelecture(lu, classe));
+            model.addAttribute("remarque", lu.remarque());
+            model.addAttribute("debut", debut != null ? debut : dateLue(lu.periodeDebut()));
+            model.addAttribute("fin", fin != null ? fin : dateLue(lu.periodeFin()));
+            model.addAttribute("enseignants", enseignantRepository.findByStatutOrderByNomAsc(ci.esatic.sigep.entity.StatutEnseignant.VALIDATED));
+            return "admin/planning-relecture";
+        } catch (ci.esatic.sigep.service.PlanningIaService.LectureImpossible e) {
+            ra.addFlashAttribute("error", e.getMessage());
+        } catch (Exception e) {
+            ra.addFlashAttribute("error", "Ce fichier n'a pas pu être lu.");
+        }
+        return "redirect:/admin/rapports";
+    }
+
+    private static LocalDate dateLue(String valeur) {
+        try {
+            return valeur == null ? null : LocalDate.parse(valeur);
+        } catch (java.time.format.DateTimeParseException e) {
+            return null;
+        }
+    }
+
+    private static final int LIGNES_RELUES_MAX = 5000;
+
+    @PostMapping("/admin/planning/confirmer")
+    public String confirmerImport(
+            @RequestParam String lignes,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) LocalDate debut,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) LocalDate fin,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) LocalDate semaineA,
+            RedirectAttributes ra) {
+        java.util.List<ci.esatic.sigep.service.ImportService.LigneRelue> relues;
+        try {
+            relues = java.util.List.of(objectMapper.readValue(lignes, ci.esatic.sigep.service.ImportService.LigneRelue[].class));
+        } catch (Exception e) {
+            ra.addFlashAttribute("error", "Ces séances n'ont pas pu être lues. Recommencez l'import.");
+            return "redirect:/admin/rapports";
+        }
+        if (relues.size() > LIGNES_RELUES_MAX) {
+            ra.addFlashAttribute("error", "Trop de séances pour un seul import : découpez le document.");
+            return "redirect:/admin/rapports";
+        }
+        var resultat = importService.importerRelues(relues, debut, fin, semaineA);
+        int importees = (Integer) resultat.get("totalImporte");
+        int doublons = (Integer) resultat.get("doublonsIgnores");
+        int fermes = (Integer) resultat.get("joursFermesIgnores");
+        int enErreur = (Integer) resultat.get("lignesEnErreur");
+        ra.addFlashAttribute(importees > 0 || enErreur == 0 ? "success" : "error", importees + " séance(s) importée(s)"
+                + (doublons > 0 ? ", " + doublons + " déjà présente(s) ignorée(s)" : "")
+                + (fermes > 0 ? ", " + fermes + " date(s) sautée(s) : établissement fermé" : "")
+                + (enErreur > 0 ? ", " + enErreur + " ligne(s) à corriger" : "") + ".");
+        ra.addFlashAttribute("erreursImport", resultat.get("erreurs"));
         return "redirect:/admin/rapports";
     }
 

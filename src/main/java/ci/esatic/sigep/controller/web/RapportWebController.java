@@ -32,6 +32,7 @@ import java.util.List;
 public class RapportWebController {
 
     private final RapportService rapportService;
+    private final ci.esatic.sigep.service.PlanningIaService planningIaService;
     private final EnseignantRepository enseignantRepository;
     private final PlanService planService;
     private final EtablissementCourantService etablissementCourantService;
@@ -46,6 +47,7 @@ public class RapportWebController {
         model.addAttribute("fEnseignantId", enseignantId);
         model.addAttribute("fDebut", debut);
         model.addAttribute("fFin", fin);
+        model.addAttribute("lectureIa", planningIaService.disponible());
         return "admin/rapports";
     }
 

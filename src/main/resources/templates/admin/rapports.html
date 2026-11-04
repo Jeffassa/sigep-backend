@@ -37,7 +37,7 @@
               class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
             <div class="md:col-span-3">
                 <label for="fichierEdt" class="etiquette">Fichier</label>
-                <input id="fichierEdt" type="file" name="fichier" accept=".xlsx,.xls,.csv" required class="text-[14px] w-full"/>
+                <input id="fichierEdt" type="file" name="fichier" accept=".xlsx,.xls,.csv,.docx,.pdf,.jpg,.jpeg,.png,.webp" required class="text-[14px] w-full"/>
             </div>
             <div class="md:col-span-2">
                 <label for="edtDebut" class="etiquette">Valable du</label>
@@ -54,6 +54,7 @@
             <button type="submit" class="md:col-span-2 btn btn-ink h-11 font-medium">Importer</button>
         </form>
         <p class="text-[13px] text-muted mt-3">La période ne sert que si votre fichier donne un jour (« Lundi ») plutôt qu'une date : le cours est alors répété chaque semaine, hors jours fériés et vacances. Sans période, c'est le semestre en cours qui s'applique.
+            <span th:if="${lectureIa}">Un PDF, une photo, un document Word ou une présentation inhabituelle sont lus par intelligence artificielle : le document est transmis à notre prestataire (Anthropic), et vous relisez les séances avant tout enregistrement. La lecture peut prendre quelques minutes.</span>
             <a th:href="@{/admin/planning/modele}" class="underline">Télécharger un modèle</a></p>
     </section>
 
