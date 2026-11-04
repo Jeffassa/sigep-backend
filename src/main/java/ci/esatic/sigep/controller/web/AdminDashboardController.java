@@ -231,7 +231,9 @@ public class AdminDashboardController {
         stats.put("rattrapagesEnAttente", rattrapageRepository.countByStatut(StatutDemande.EN_ATTENTE));
         stats.put("emargementsHorsLigneCount", emargementRepository.countByHorsLigneTrueAndValideFalse());
         stats.put("tauxEmargement", tauxEmargement);
-        stats.put("heuresEffectuees", emargesSemaine * 2);
+        double heures = seanceRepository.horairesEmargees(monday, monday.plusDays(6)).stream()
+                .mapToDouble(r -> DureeSeance.de((java.time.LocalTime) r[1], (java.time.LocalTime) r[2]).heures()).sum();
+        stats.put("heuresEffectuees", Math.round(heures * 10) / 10.0);
         stats.put("tauxParJour", tauxParJour);
         stats.put("alertesCount", alerteService.compter());
         return stats;

@@ -123,7 +123,8 @@
                                     <option value="REJECTED"  th:selected="${ens.statut?.name() == 'REJECTED'}">Rejeter</option>
                                     <option value="ARCHIVE"   th:selected="${ens.statut?.name() == 'ARCHIVE'}">Archiver</option>
                                 </select>
-                                <button type="submit" class="bouton-ligne" title="Appliquer">
+                                <button type="submit" class="bouton-ligne" title="Appliquer" aria-label="Appliquer le statut">
+                                    <span class="material-symbols-rounded text-[16px]">check</span>
                                 </button>
                             </form>
                             <form th:if="${ens.user != null}"

@@ -385,6 +385,26 @@ class ConfortEtablissementsTest {
     }
 
     @Test
+    void leTableauDeBord_compteAussiLaDureeReelle() throws Exception {
+        LocalDate jour = LocalDate.now();
+        Enseignant e = fiche(compte(ERole.ROLE_ENSEIGNANT, ecoleA), ecoleA, "Kone", StatutEnseignant.VALIDATED);
+        seance(e, jour, LocalTime.of(8, 0), LocalTime.of(9, 30), StatutSeance.EMARGE);
+
+        mockMvc.perform(get("/admin/dashboard").with(user(compte(ERole.ROLE_ADMIN, ecoleA))))
+                .andExpect(model().attribute("heuresEffectuees", 1.5));
+    }
+
+    @Test
+    void uneSeanceDeclareeParUnEnseignant_sAfficheDansLesAlertes() throws Exception {
+        Enseignant e = fiche(compte(ERole.ROLE_ENSEIGNANT, ecoleA), ecoleA, "Kone", StatutEnseignant.VALIDATED);
+        Seance s = seance(e, LocalDate.of(2026, 11, 3), LocalTime.of(8, 0), LocalTime.of(10, 0), StatutSeance.A_VALIDER);
+
+        mockMvc.perform(get("/admin/alertes").with(user(compte(ERole.ROLE_ADMIN, ecoleA))))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(s.getMatiere().getLibelle())));
+    }
+
+    @Test
     void laTolerance_seRegleEtResteBornee() throws Exception {
         User admin = compte(ERole.ROLE_ADMIN, ecoleA);
         mockMvc.perform(post("/admin/calendrier/tolerance").param("avant", "5").param("apres", "45")
