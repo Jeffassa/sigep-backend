@@ -32,12 +32,12 @@
     <!-- Emploi du temps -->
     <section th:if="${menu == null or menu.contains('messages')}" class="feuille mb-10" data-reveal>
         <h2 class="titre-section">Importer l'emploi du temps</h2>
-        <p class="chapitre-note">Votre fichier tel qu'il est : Excel ou CSV, en liste ou en grille (jours et créneaux croisés). Dans une grille, chaque case donne la matière, l'enseignant et la salle, et chaque feuille peut être une classe. Pour une liste, SIGEP reconnaît les titres courants (cours, UE, module, professeur, intervenant, niveau, local, horaire…). L'enseignant se reconnaît à son matricule, son e-mail ou son nom. Un fichier réimporté ne crée pas de doublon.</p>
+        <p class="chapitre-note">Vos fichiers tels qu'ils sont : Excel, CSV, Word ou PDF, en liste ou en grille (jours et créneaux croisés). Un emploi du temps par classe ou par professeur : le professeur se reconnaît au champ ci-dessous, à une ligne « Enseignant : … » en tête, au nom de l'onglet ou à celui du fichier. Dans une grille, chaque case donne la matière, la salle et, selon le cas, l'enseignant ou la classe. Pour une liste, SIGEP reconnaît les titres courants (cours, UE, module, professeur, intervenant, niveau, local, horaire…). L'enseignant se reconnaît à son matricule, son e-mail ou son nom. Un fichier réimporté ne crée pas de doublon.</p>
         <form th:action="@{/admin/planning/importer}" method="post" enctype="multipart/form-data" data-no-boost
               class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
             <div class="md:col-span-3">
                 <label for="fichierEdt" class="etiquette">Fichier</label>
-                <input id="fichierEdt" type="file" name="fichier" accept=".xlsx,.xls,.csv,.docx,.pdf,.jpg,.jpeg,.png,.webp" required class="text-[14px] w-full"/>
+                <input id="fichierEdt" type="file" name="fichier" multiple accept=".xlsx,.xls,.csv,.docx,.pdf" required class="text-[14px] w-full"/>
             </div>
             <div class="md:col-span-2">
                 <label for="edtDebut" class="etiquette">Valable du</label>
@@ -51,10 +51,19 @@
                 <label for="edtClasse" class="etiquette">Classe (grille, si le fichier ne la dit pas)</label>
                 <input id="edtClasse" type="text" name="classe" maxlength="100" class="w-full h-11 px-3 champ"/>
             </div>
+            <div class="md:col-span-3">
+                <label for="edtEnseignant" class="etiquette">Professeur (si un seul fichier le concerne)</label>
+                <select id="edtEnseignant" name="enseignantId" class="w-full h-11 px-3 champ">
+                    <option value="">Reconnu dans le fichier</option>
+                    <th:block th:each="e : ${enseignants}">
+                        <option th:if="${e.statut.name() == 'VALIDATED'}" th:value="${e.id}" th:text="${e.prenom + ' ' + e.nom}">Enseignant</option>
+                    </th:block>
+                </select>
+            </div>
             <button type="submit" class="md:col-span-2 btn btn-ink h-11 font-medium">Importer</button>
         </form>
         <p class="text-[13px] text-muted mt-3">La période ne sert que si votre fichier donne un jour (« Lundi ») plutôt qu'une date : le cours est alors répété chaque semaine, hors jours fériés et vacances. Sans période, c'est le semestre en cours qui s'applique.
-            <span th:if="${lectureIa}">Un PDF, une photo, un document Word ou une présentation inhabituelle sont lus par intelligence artificielle : le document est transmis à notre prestataire (Anthropic), et vous relisez les séances avant tout enregistrement. La lecture peut prendre quelques minutes.</span>
+            Vous pouvez déposer plusieurs fichiers d'un coup, par exemple un par professeur. Un PDF est à relire avant enregistrement ; un PDF scanné ou une photo ne se lit pas : déposez l'original.
             <a th:href="@{/admin/planning/modele}" class="underline">Télécharger un modèle</a></p>
     </section>
 

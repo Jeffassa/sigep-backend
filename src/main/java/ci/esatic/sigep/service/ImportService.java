@@ -94,12 +94,21 @@ public class ImportService {
         return importerPlanning(file, debut, fin, null);
     }
 
-    /** @param classe classe d'une grille dont le fichier ne dit pas laquelle elle concerne */
     @Transactional
     public Map<String, Object> importerPlanning(MultipartFile file, LocalDate debut, LocalDate fin, String classe) throws Exception {
+        return importerPlanning(file, debut, fin, classe, null);
+    }
+
+    /**
+     * @param classe classe d'une grille dont le fichier ne dit pas laquelle elle concerne
+     * @param enseignantId titulaire de ce fichier, quand il est l'emploi du temps d'un seul professeur
+     */
+    @Transactional
+    public Map<String, Object> importerPlanning(MultipartFile file, LocalDate debut, LocalDate fin, String classe,
+                                                Long enseignantId) throws Exception {
         String filename = file.getOriginalFilename();
         ContexteImport ctx = new ContexteImport();  // caches référentiels + erreurs (E3/E4/C6)
-        List<Seance> seances = sansDoublons(analyser(lire(file), ctx, null, debut, fin, classe), ctx);
+        List<Seance> seances = sansDoublons(analyser(lire(file), ctx, enseignantChoisi(enseignantId), debut, fin, classe, filename), ctx);
         List<Seance> saved = seanceRepository.saveAll(seances);
         log.info("Import admin : {} séances importées, {} ligne(s) en erreur, {} doublon(s) ignoré(s)",
                 saved.size(), ctx.erreurs.size(), ctx.doublons);
@@ -113,7 +122,8 @@ public class ImportService {
 
         String filename = file.getOriginalFilename();
         ContexteImport ctx = new ContexteImport();
-        List<Seance> seances = sansDoublons(analyser(lire(file), ctx, enseignant, null, null, null), ctx);
+        ctx.parEnseignant = true;
+        List<Seance> seances = sansDoublons(analyser(lire(file), ctx, enseignant, null, null, null, null), ctx);
         List<Seance> saved = seanceRepository.saveAll(seances);
         log.info("Import enseignant {} : {} séances importées, {} ligne(s) en erreur",
                 enseignant.getMatricule(), saved.size(), ctx.erreurs.size());
@@ -134,83 +144,44 @@ public class ImportService {
         return result;
     }
 
-    // ─── Emploi du temps lu par IA : préparation et enregistrement après relecture ───────────
+    // ─── PDF : lu sur nos serveurs, relu par l'établissement avant enregistrement ───────────
 
     /** Une séance telle qu'elle s'affiche et revient de l'écran de relecture. */
-    public record LigneRelue(String date, String jour, String semaine, String debut, String fin, String matiere,
-                             Long enseignantId, String enseignantLu, String classe, String salle, String doute) {}
+    public record LigneRelue(String date, String debut, String fin, String matiere, Long enseignantId,
+                             String classe, String salle) {}
 
-    /** Le fichier sous forme de texte, pour un tableur ou un document Word que l'IA doit interpréter. */
-    public String transcrire(MultipartFile file) throws Exception {
-        String nom = file.getOriginalFilename() == null ? "" : file.getOriginalFilename().toLowerCase(Locale.ROOT);
-        StringBuilder t = new StringBuilder();
-        if (nom.endsWith(".docx")) {
-            try (org.apache.poi.xwpf.usermodel.XWPFDocument doc = new org.apache.poi.xwpf.usermodel.XWPFDocument(file.getInputStream());
-                 org.apache.poi.xwpf.extractor.XWPFWordExtractor extracteur = new org.apache.poi.xwpf.extractor.XWPFWordExtractor(doc)) {
-                return extracteur.getText();
-            }
-        }
-        for (Feuille f : lire(file)) {
-            if (!f.nom().isBlank()) t.append("Feuille : ").append(f.nom()).append('\n');
-            for (org.apache.poi.ss.util.CellRangeAddress z : f.fusions()) {
-                t.append("Cellules fusionnées : ").append(z.formatAsString()).append('\n');
-            }
-            for (Ligne l : f.lignes()) {
-                if (l.vide()) continue;
-                t.append('L').append(l.numero()).append(" :");
-                for (int c = 0; c < l.cellules().length; c++) {
-                    if (!l.cellule(c).isEmpty()) {
-                        t.append(' ').append(org.apache.poi.ss.util.CellReference.convertNumToColString(c))
-                                .append('=').append(l.cellule(c).replaceAll("\\s*\\R\\s*", " / ")).append(" |");
-                    }
-                }
-                t.append('\n');
-            }
-        }
-        return t.toString();
-    }
-
-    /** Annuaire et référentiels de l'établissement, pour que l'IA les reconnaisse dans le document. */
-    public String contexteEtablissement() {
-        StringBuilder t = new StringBuilder("Annuaire (matricule : prénom nom) :\n");
-        for (Enseignant e : enseignantRepository.findAll()) {
-            t.append(e.getMatricule()).append(" : ").append(e.getPrenom()).append(' ').append(e.getNom()).append('\n');
-        }
-        t.append("Classes : ").append(classeRepository.findAll().stream().map(Classe::getLibelle).collect(Collectors.joining(", "))).append('\n');
-        t.append("Salles : ").append(salleRepository.findAll().stream().map(Salle::getLibelle).collect(Collectors.joining(", "))).append('\n');
-        return t.toString();
-    }
-
-    /** Rapproche ce que l'IA a lu de l'annuaire. Rien n'est enregistré ici. */
-    public List<LigneRelue> preparerRelecture(PlanningIaService.Extraction extraction, String classeParDefaut) {
-        ContexteImport ctx = new ContexteImport();
-        List<LigneRelue> lignes = new ArrayList<>();
-        for (PlanningIaService.Ligne l : extraction.lignes()) {
-            Enseignant e = l.matricule() == null ? null : ctx.chercherEnseignant(l.matricule());
-            if (e == null && l.enseignant() != null) {
-                e = ctx.chercherEnseignant(CIVILITE.matcher(l.enseignant().trim()).replaceFirst("").trim());
-            }
-            lignes.add(new LigneRelue(l.date(), l.jour(), l.semaine(), l.debut(), l.fin(), l.matiere(),
-                    e == null ? null : e.getId(), l.enseignant(),
-                    isBlank(l.classe()) ? classeParDefaut : l.classe(), l.salle(), l.doute()));
-        }
-        return lignes;
-    }
+    public record LecturePdf(List<LigneRelue> lignes, List<String> erreurs) {}
 
     /**
-     * Enregistre les séances relues. Tout y est revalidé : ces valeurs reviennent du navigateur.
-     *
-     * @param semaineA une date de la semaine A, pour un emploi du temps en semaines alternées
+     * La mise en page d'un PDF se reconstitue d'après la position du texte : le résultat reste à
+     * vérifier. Rien n'est enregistré ici, pas même une nouvelle matière.
      */
+    @Transactional(readOnly = true)
+    public LecturePdf lirePdf(MultipartFile file, LocalDate debut, LocalDate fin, String classe, Long enseignantId) throws Exception {
+        List<Feuille> feuilles = feuillesDuPdf(file.getBytes());
+        if (feuilles.isEmpty()) {
+            throw new IllegalArgumentException("ce PDF ne contient pas de texte (document scanné ?) : déposez l'original Excel ou Word");
+        }
+        ContexteImport ctx = new ContexteImport();
+        ctx.simulation = true;
+        List<Seance> seances = sansDoublons(analyser(feuilles, ctx, enseignantChoisi(enseignantId), debut, fin, classe,
+                file.getOriginalFilename()), ctx);
+        List<LigneRelue> lignes = seances.stream().map(s -> new LigneRelue(s.getDate().toString(),
+                s.getHeureDebut().format(TIME_FMT), s.getHeureFin().format(TIME_FMT), s.getMatiere().getLibelle(),
+                s.getEnseignant().getId(), s.getClasse().getLibelle(), s.getSalle().getLibelle())).toList();
+        return new LecturePdf(lignes, ctx.erreurs);
+    }
+
+    /** Enregistre les séances relues. Tout y est revalidé : ces valeurs reviennent du navigateur. */
     @Transactional
-    public Map<String, Object> importerRelues(List<LigneRelue> lignes, LocalDate debut, LocalDate fin, LocalDate semaineA) {
+    public Map<String, Object> importerRelues(List<LigneRelue> lignes) {
         ContexteImport ctx = new ContexteImport();
         List<Seance> seances = new ArrayList<>();
         int numero = 0;
         for (LigneRelue l : lignes) {
             numero++;
             try {
-                seances.addAll(seancesRelues(l, debut, fin, semaineA, ctx));
+                seances.add(seanceRelue(l, ctx));
             } catch (IllegalArgumentException e) {
                 ctx.erreur(numero, e.getMessage());
             }
@@ -220,7 +191,7 @@ public class ImportService {
         return resultat(null, saved.size(), ctx, null);
     }
 
-    private List<Seance> seancesRelues(LigneRelue l, LocalDate debut, LocalDate fin, LocalDate semaineA, ContexteImport ctx) {
+    private Seance seanceRelue(LigneRelue l, ContexteImport ctx) {
         if (l.enseignantId() == null) throw new IllegalArgumentException("choisissez l'enseignant");
         Enseignant enseignant = enseignantRepository.findById(l.enseignantId())
                 .orElseThrow(() -> new IllegalArgumentException("enseignant introuvable"));
@@ -229,31 +200,134 @@ public class ImportService {
         if (!DureeSeance.de(heureDebut, heureFin).exploitable()) {
             throw new IllegalArgumentException("horaires incohérents " + heureDebut + " - " + heureFin);
         }
-        String matiere = borner(exigerLibelle(l.matiere(), "matière"), "matière");
-        String classe = borner(exigerLibelle(l.classe(), "classe"), "classe");
-        String salle = borner(exigerLibelle(l.salle(), "salle"), "salle");
-        String quand = !isBlank(l.date()) ? l.date() : exigerLibelle(l.jour(), "date ou jour");
-
-        List<LocalDate> jours = new ArrayList<>(dates(quand, debut, fin, ctx));
-        String semaine = l.semaine() == null ? "" : l.semaine().trim().toUpperCase(Locale.ROOT);
-        if (isBlank(l.date()) && !semaine.isEmpty()) {
-            if (!semaine.equals("A") && !semaine.equals("B")) throw new IllegalArgumentException("semaine « " + semaine + " » : A ou B attendu");
-            if (semaineA == null) throw new IllegalArgumentException("indiquez une date de la semaine A");
-            LocalDate lundiA = semaineA.with(java.time.DayOfWeek.MONDAY);
-            jours.removeIf(j -> {
-                long ecart = java.time.temporal.ChronoUnit.WEEKS.between(lundiA, j.with(java.time.DayOfWeek.MONDAY));
-                return (Math.floorMod(ecart, 2L) == 0) != semaine.equals("A");
-            });
-        }
-        Matiere laMatiere = ctx.upsertMatiere(matiere);
-        Classe laClasse = ctx.upsertClasse(classe);
-        Salle laSalle = ctx.upsertSalle(salle);
-        return jours.stream().map(j -> seance(j, heureDebut, heureFin, enseignant, laMatiere, laClasse, laSalle, null)).toList();
+        LocalDate date = parseDate(exigerLibelle(l.date(), "date"));
+        Matiere matiere = ctx.upsertMatiere(borner(exigerLibelle(l.matiere(), "matière"), "matière"));
+        Classe classe = ctx.upsertClasse(borner(exigerLibelle(l.classe(), "classe"), "classe"));
+        Salle salle = ctx.upsertSalle(borner(exigerLibelle(l.salle(), "salle"), "salle"));
+        return seance(date, heureDebut, heureFin, enseignant, matiere, classe, salle, ctx);
     }
 
     private static String borner(String valeur, String champ) {
         if (valeur.length() > 150) throw new IllegalArgumentException(champ + " trop longue");
         return valeur;
+    }
+
+    private Enseignant enseignantChoisi(Long id) {
+        if (id == null) return null;
+        return enseignantRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("enseignant introuvable"));
+    }
+
+    private record MotPdf(String texte, float debut, float fin, float y) {}
+
+    /** Une feuille par page pour des grilles ; une seule pour une liste qui court sur plusieurs pages. */
+    private List<Feuille> feuillesDuPdf(byte[] octets) throws java.io.IOException {
+        List<Feuille> pages = new ArrayList<>();
+        try (org.apache.pdfbox.pdmodel.PDDocument doc = org.apache.pdfbox.Loader.loadPDF(octets)) {
+            for (int p = 1; p <= doc.getNumberOfPages(); p++) {
+                List<MotPdf> mots = motsDeLaPage(doc, p);
+                if (!mots.isEmpty()) pages.add(new Feuille("", lignesDePage(mots), List.of()));
+            }
+        }
+        if (pages.isEmpty()) return pages;
+        boolean grilles = pages.stream().anyMatch(f -> reconnaitreGrille(f) != null || reconnaitreGrille(transposer(f)) != null);
+        if (grilles) return pages.stream().map(this::rassemblerLesCases).toList();
+        List<Ligne> toutes = new ArrayList<>();
+        for (Feuille f : pages) {
+            for (Ligne l : f.lignes()) toutes.add(new Ligne(toutes.size() + 1, l.cellules()));
+        }
+        return List.of(new Feuille("", toutes, List.of()));
+    }
+
+    private List<MotPdf> motsDeLaPage(org.apache.pdfbox.pdmodel.PDDocument doc, int page) throws java.io.IOException {
+        List<MotPdf> mots = new ArrayList<>();
+        org.apache.pdfbox.text.PDFTextStripper lecteur = new org.apache.pdfbox.text.PDFTextStripper() {
+            @Override
+            protected void writeString(String texte, List<org.apache.pdfbox.text.TextPosition> positions) {
+                if (texte.isBlank() || positions.isEmpty()) return;
+                org.apache.pdfbox.text.TextPosition dernier = positions.get(positions.size() - 1);
+                mots.add(new MotPdf(texte.trim(), positions.get(0).getXDirAdj(),
+                        dernier.getXDirAdj() + dernier.getWidthDirAdj(), positions.get(0).getYDirAdj()));
+            }
+        };
+        lecteur.setSortByPosition(true);
+        lecteur.setStartPage(page);
+        lecteur.setEndPage(page);
+        lecteur.getText(doc);
+        return mots;
+    }
+
+    /**
+     * Refait des lignes et des colonnes d'après la position des mots. Les colonnes sont celles de la
+     * ligne la plus remplie, en général les titres, et chaque bloc de texte rejoint la plus proche :
+     * un texte centré dans sa case tombe ainsi dans la bonne.
+     */
+    private List<Ligne> lignesDePage(List<MotPdf> mots) {
+        final float memeLigne = 3f;
+        final float memeCase = 8f;
+        List<MotPdf> tries = new ArrayList<>(mots);
+        tries.sort(Comparator.comparing(MotPdf::y));
+        List<List<MotPdf>> rangees = new ArrayList<>();
+        for (MotPdf m : tries) {
+            List<MotPdf> derniere = rangees.isEmpty() ? null : rangees.get(rangees.size() - 1);
+            if (derniere != null && Math.abs(derniere.get(0).y() - m.y()) <= memeLigne) derniere.add(m);
+            else rangees.add(new ArrayList<>(List.of(m)));
+        }
+        List<List<MotPdf>> blocs = new ArrayList<>();
+        for (List<MotPdf> rangee : rangees) {
+            rangee.sort(Comparator.comparing(MotPdf::debut));
+            List<MotPdf> rangeeBlocs = new ArrayList<>();
+            for (MotPdf m : rangee) {
+                MotPdf precedent = rangeeBlocs.isEmpty() ? null : rangeeBlocs.get(rangeeBlocs.size() - 1);
+                if (precedent != null && m.debut() - precedent.fin() < memeCase) {
+                    rangeeBlocs.set(rangeeBlocs.size() - 1, new MotPdf(precedent.texte() + " " + m.texte(), precedent.debut(), m.fin(), precedent.y()));
+                } else {
+                    rangeeBlocs.add(m);
+                }
+            }
+            blocs.add(rangeeBlocs);
+        }
+        List<MotPdf> reference = blocs.stream().max(Comparator.comparingInt(List::size)).orElse(List.of());
+        List<Ligne> lignes = new ArrayList<>();
+        for (List<MotPdf> rangee : blocs) {
+            String[] cellules = new String[reference.size()];
+            for (MotPdf bloc : rangee) {
+                float centre = (bloc.debut() + bloc.fin()) / 2;
+                int col = 0;
+                float ecart = Float.MAX_VALUE;
+                for (int c = 0; c < reference.size(); c++) {
+                    float e = Math.abs((reference.get(c).debut() + reference.get(c).fin()) / 2 - centre);
+                    if (e < ecart) {
+                        ecart = e;
+                        col = c;
+                    }
+                }
+                cellules[col] = cellules[col] == null ? bloc.texte() : cellules[col] + " " + bloc.texte();
+            }
+            lignes.add(new Ligne(lignes.size() + 1, cellules));
+        }
+        return lignes;
+    }
+
+    /** Dans un PDF, une case de plusieurs lignes est découpée : on la reconstitue sous son créneau. */
+    private Feuille rassemblerLesCases(Feuille feuille) {
+        Grille g = reconnaitreGrille(feuille);
+        if (g == null) return feuille;
+        List<Ligne> lignes = new ArrayList<>(feuille.lignes().subList(0, g.ligneJours() + 1));
+        int debutGrille = lignes.size();
+        for (Ligne l : feuille.lignes().subList(g.ligneJours() + 1, feuille.lignes().size())) {
+            if (creneau(g, l) != null || lignes.size() == debutGrille) {
+                lignes.add(l);
+                continue;
+            }
+            Ligne precedente = lignes.get(lignes.size() - 1);
+            String[] cumul = Arrays.copyOf(precedente.cellules(), Math.max(precedente.cellules().length, l.cellules().length));
+            for (int c = 0; c < l.cellules().length; c++) {
+                if (l.cellules()[c] == null) continue;
+                cumul[c] = cumul[c] == null ? l.cellules()[c] : cumul[c] + "\n" + l.cellules()[c];
+            }
+            lignes.set(lignes.size() - 1, new Ligne(precedente.numero(), cumul));
+        }
+        return new Feuille(feuille.nom(), lignes, feuille.fusions());
     }
 
     // ─── Lecture du fichier ────────────────────────────────────────────────────
@@ -271,9 +345,31 @@ public class ImportService {
     private record Feuille(String nom, List<Ligne> lignes, List<org.apache.poi.ss.util.CellRangeAddress> fusions) {}
 
     private List<Feuille> lire(MultipartFile file) throws Exception {
+        String nom = file.getOriginalFilename() == null ? "" : file.getOriginalFilename().toLowerCase(Locale.ROOT);
+        if (nom.endsWith(".docx")) return lireWord(file);
         return estCsv(file.getOriginalFilename())
                 ? List.of(new Feuille("", lireCsv(file), List.of()))
                 : lireClasseur(file);
+    }
+
+    /** Chaque tableau du document Word devient une feuille, précédée des titres du document. */
+    private List<Feuille> lireWord(MultipartFile file) throws Exception {
+        List<Feuille> feuilles = new ArrayList<>();
+        try (org.apache.poi.xwpf.usermodel.XWPFDocument doc = new org.apache.poi.xwpf.usermodel.XWPFDocument(file.getInputStream())) {
+            List<String> titres = doc.getParagraphs().stream().map(org.apache.poi.xwpf.usermodel.XWPFParagraph::getText)
+                    .filter(t -> !t.isBlank()).limit(10).toList();
+            for (org.apache.poi.xwpf.usermodel.XWPFTable table : doc.getTables()) {
+                List<Ligne> lignes = new ArrayList<>();
+                for (String titre : titres) lignes.add(new Ligne(lignes.size() + 1, new String[] {titre}));
+                for (org.apache.poi.xwpf.usermodel.XWPFTableRow rangee : table.getRows()) {
+                    lignes.add(new Ligne(lignes.size() + 1, rangee.getTableCells().stream()
+                            .map(org.apache.poi.xwpf.usermodel.XWPFTableCell::getText).toArray(String[]::new)));
+                }
+                feuilles.add(new Feuille("", lignes, List.of()));
+            }
+        }
+        if (feuilles.isEmpty()) throw new IllegalArgumentException("ce document Word ne contient aucun tableau");
+        return feuilles;
     }
 
     /** .xlsx comme .xls : beaucoup de scolarités travaillent encore sur d'anciens fichiers. */
@@ -429,19 +525,61 @@ public class ImportService {
 
     // ─── Construction des séances ──────────────────────────────────────────────
     private List<Seance> analyser(List<Feuille> feuilles, ContexteImport ctx, Enseignant enseignantFixe,
-                                  LocalDate debut, LocalDate fin, String classe) {
+                                  LocalDate debut, LocalDate fin, String classe, String nomFichier) {
         List<Seance> seances = new ArrayList<>();
         boolean grille = false;
-        // Une grille par feuille est l'usage courant : une feuille par classe.
+        Enseignant duFichier = enseignantFixe != null ? enseignantFixe : enseignantDuNomDeFichier(nomFichier, ctx);
+        // Une grille par feuille est l'usage courant : une feuille par classe ou par professeur.
         for (Feuille feuille : feuilles) {
             Grille g = reconnaitreGrille(feuille);
             if (g == null) g = reconnaitreGrille(transposer(feuille));
             if (g == null) continue;
             grille = true;
-            seances.addAll(analyserGrille(g, ctx, enseignantFixe, debut, fin, classe));
+            try {
+                Enseignant titulaire = enseignantFixe != null ? enseignantFixe : enseignantDeclare(feuille, ctx);
+                seances.addAll(analyserGrille(g, ctx, titulaire != null ? titulaire : duFichier, debut, fin, classe));
+            } catch (IllegalArgumentException e) {
+                ctx.erreur(1, e.getMessage());
+            }
         }
         if (grille || feuilles.isEmpty()) return seances;
-        return analyserListe(feuilles.get(0).lignes(), ctx, enseignantFixe, debut, fin);
+        // Une liste : la première feuille, et les suivantes si chacune dit à quel professeur elle est.
+        for (int f = 0; f < feuilles.size(); f++) {
+            try {
+                Enseignant titulaire = enseignantFixe != null ? enseignantFixe : enseignantDeclare(feuilles.get(f), ctx);
+                if (f > 0 && titulaire == null) continue;
+                seances.addAll(analyserListe(feuilles.get(f).lignes(), ctx, titulaire != null ? titulaire : duFichier, debut, fin));
+            } catch (IllegalArgumentException e) {
+                if (f == 0) throw e;
+                ctx.erreur(1, e.getMessage());
+            }
+        }
+        return seances;
+    }
+
+    /** Le professeur d'une feuille : écrit en tête (« Enseignant : M. Kouassi »), ou nom de l'onglet. */
+    private Enseignant enseignantDeclare(Feuille feuille, ContexteImport ctx) {
+        for (Ligne ligne : feuille.lignes().subList(0, Math.min(15, feuille.lignes().size()))) {
+            for (String cellule : ligne.cellules()) {
+                if (cellule == null) continue;
+                java.util.regex.Matcher m = ENTETE_ENSEIGNANT.matcher(cellule);
+                if (!m.find()) continue;
+                String nom = CIVILITE.matcher((m.group(1) != null ? m.group(1) : m.group(2)).trim()).replaceFirst("").trim();
+                Enseignant e = ctx.chercherEnseignant(nom);
+                if (e != null) return e;
+                throw new IllegalArgumentException("enseignant « " + nom + " » absent de l'annuaire : emploi du temps ignoré");
+            }
+        }
+        return feuille.nom().isBlank() ? null : ctx.chercherEnseignant(CIVILITE.matcher(feuille.nom().trim()).replaceFirst("").trim());
+    }
+
+    /** « EDT_Kouassi_Aya.xlsx » : un fichier par professeur porte souvent son nom. */
+    private Enseignant enseignantDuNomDeFichier(String nomFichier, ContexteImport ctx) {
+        if (nomFichier == null) return null;
+        String nom = nomFichier.replaceFirst("\\.[^.]+$", "").replaceAll("[_.-]+", " ")
+                .replaceAll("(?iu)\\b(edt|emploi|du|temps|planning|de|prof|s\\d|semestre|\\d+)\\b", " ")
+                .trim().replaceAll("\\s+", " ");
+        return nom.isEmpty() ? null : ctx.chercherEnseignant(CIVILITE.matcher(nom).replaceFirst("").trim());
     }
 
     private List<Seance> analyserListe(List<Ligne> lignes, ContexteImport ctx, Enseignant enseignantFixe,
@@ -489,13 +627,13 @@ public class ImportService {
 
         List<Seance> seances = new ArrayList<>();
         for (LocalDate jour : dates(date, debut, fin, ctx)) {
-            seances.add(seance(jour, heureDebut, heureFin, enseignant, matiere, classe, salle, enseignantFixe));
+            seances.add(seance(jour, heureDebut, heureFin, enseignant, matiere, classe, salle, ctx));
         }
         return seances;
     }
 
     private Seance seance(LocalDate jour, LocalTime heureDebut, LocalTime heureFin, Enseignant enseignant,
-                          Matiere matiere, Classe classe, Salle salle, Enseignant enseignantFixe) {
+                          Matiere matiere, Classe classe, Salle salle, ContexteImport ctx) {
         return Seance.builder()
                 .date(jour)
                 .heureDebut(heureDebut)
@@ -507,7 +645,7 @@ public class ImportService {
                 .type(TypeSeance.NORMALE)
                 // Une séance émargée devient des heures payées : celle qu'un enseignant déclare
                 // lui-même attend l'accord de la scolarité. Seul l'import admin passe directement.
-                .statut(enseignantFixe == null ? StatutSeance.A_FAIRE : StatutSeance.A_VALIDER)
+                .statut(ctx.parEnseignant ? StatutSeance.A_VALIDER : StatutSeance.A_FAIRE)
                 .build();
     }
 
@@ -521,6 +659,13 @@ public class ImportService {
             "(?iu)^\\s*(?:classe|niveau|fili[eè]re|groupe|promotion|promo|parcours|section)\\s*[:–—-]\\s*(.+)$");
     private static final java.util.regex.Pattern ENTETE_SALLE = java.util.regex.Pattern.compile(
             "(?iu)^\\s*(?:salle|local)\\s*[:–—-]\\s*(.+)$");
+    private static final java.util.regex.Pattern ENTETE_ENSEIGNANT = java.util.regex.Pattern.compile(
+            "(?iu)^\\s*(?:enseignant|enseignante|professeur|prof|intervenant|formateur|nom)\\s*[:–—-]\\s*(.+)$"
+                    + "|emploi du temps\\s+(?:de|du)\\s+(?:m\\.|mr\\.?|mme\\.?|dr\\.?|pr\\.?|prof\\.?|professeur)\\s*(.+)$");
+    /** Une classe qu'on reconnaît à son écriture dans une case : L3 Info, M2, BTS 1, 6e A, Tle D… */
+    private static final java.util.regex.Pattern ALLURE_DE_CLASSE = java.util.regex.Pattern.compile(
+            // Un seul chiffre après L, M ou B : « B12 » et « M201 » sont des salles.
+            "^(?:(?:l|m|b)\\s*-?\\s*[1-8](?:\\s.*)?|(?:licence|master|bts|dut|deug|prepa|cp|ce|cm)\\s*-?\\s*\\d.*|\\d+\\s*(?:e|eme|ere)\\b.*|(?:terminale|tle|seconde|premiere)\\b.*)$");
     private static final java.util.regex.Pattern ENTETE_TITRE = java.util.regex.Pattern.compile(
             "(?iu)emploi du temps\\s*[:–—-]\\s*(.+)$");
     private static final java.util.regex.Pattern CIVILITE = java.util.regex.Pattern.compile(
@@ -618,7 +763,7 @@ public class ImportService {
 
     private List<Seance> analyserGrille(Grille g, ContexteImport ctx, Enseignant enseignantFixe,
                                         LocalDate debut, LocalDate fin, String classeFormulaire) {
-        EnteteGrille entete = lireEntete(g);
+        EnteteGrille entete = lireEntete(g, ctx);
         String classe = entete.classe() != null ? entete.classe()
                 : !isBlank(classeFormulaire) ? classeFormulaire.trim()
                 : !g.feuille().nom().isBlank() && !FEUILLE_SANS_CLASSE.matcher(g.feuille().nom().trim()).matches()
@@ -672,7 +817,7 @@ public class ImportService {
     }
 
     /** Au-dessus des jours : la classe, parfois la salle, parfois la semaine concernée. */
-    private EnteteGrille lireEntete(Grille g) {
+    private EnteteGrille lireEntete(Grille g, ContexteImport ctx) {
         String classe = null;
         String salle = null;
         LocalDate debut = null;
@@ -687,7 +832,8 @@ public class ImportService {
                 m = ENTETE_TITRE.matcher(cellule);
                 if (m.find() && classe == null) {
                     String titre = m.group(1).split("\\s[-–—]\\s")[0].trim();
-                    if (!cle(titre).matches("^(semaine|semestre|annee|periode|du )(.*)")) classe = titre;
+                    if (!cle(titre).matches("^(semaine|semestre|annee|periode|du )(.*)")
+                            && ctx.chercherEnseignant(CIVILITE.matcher(titre).replaceFirst("").trim()) == null) classe = titre;
                 }
                 List<LocalDate> trouvees = new ArrayList<>();
                 java.util.regex.Matcher d = DATE_DANS_TEXTE.matcher(cellule);
@@ -723,7 +869,7 @@ public class ImportService {
                 if (enseignantFixe == null) enseignant = trouve;
                 continue;
             }
-            if (ctx.classes.containsKey(cle(v))) {
+            if (ctx.classes.containsKey(cle(v)) || (!ctx.salles.containsKey(cle(v)) && ALLURE_DE_CLASSE.matcher(cle(v)).matches())) {
                 classe = v;
             } else if (ctx.salles.containsKey(cle(v)) || SALLE_NOMMEE.matcher(v).matches() || SALLE_CODE.matcher(v).matches()) {
                 salle = v.replaceFirst("(?iu)^(?:salle|local)\\s*:?\\s*", "");
@@ -732,6 +878,8 @@ public class ImportService {
             }
         }
         if (reste.isEmpty()) throw new IllegalArgumentException("matière introuvable dans « " + une(texte) + " »");
+        // « Réseaux - Génie logiciel 3 - B12 » sur l'emploi du temps d'un professeur : matière, puis classe.
+        if (isBlank(classe) && reste.size() > 1) classe = reste.get(1);
         if (enseignant == null) {
             throw new IllegalArgumentException("aucun enseignant de l'annuaire reconnu dans « " + une(texte)
                     + " » (matricule, e-mail ou nom)");
@@ -745,7 +893,7 @@ public class ImportService {
         Salle laSalle = ctx.upsertSalle(salle);
         List<Seance> seances = new ArrayList<>();
         for (LocalDate date : dates(jour, du, au, ctx)) {
-            seances.add(seance(date, heureDebut, heureFin, enseignant, matiere, laClasse, laSalle, enseignantFixe));
+            seances.add(seance(date, heureDebut, heureFin, enseignant, matiere, laClasse, laSalle, ctx));
         }
         return seances;
     }
@@ -1068,6 +1216,10 @@ public class ImportService {
         int referentielsCrees = 0;
         int doublons = 0;
         int joursFermes = 0;
+        /** L'enseignant importe lui-même : ses séances attendent l'accord de la scolarité. */
+        boolean parEnseignant = false;
+        /** Lecture à relire : aucun référentiel n'est créé en base. */
+        boolean simulation = false;
         private List<PeriodeCalendrier> fermetures;
         private Map<String, Enseignant> annuaire;
         private final Set<String> homonymes = new HashSet<>();
@@ -1133,21 +1285,24 @@ public class ImportService {
         Matiere upsertMatiere(String libelle) {
             return matieres.computeIfAbsent(cle(libelle), k -> {
                 referentielsCrees++;
-                return matiereRepository.save(Matiere.builder().libelle(libelle).build());
+                Matiere m = Matiere.builder().libelle(libelle).build();
+                return simulation ? m : matiereRepository.save(m);
             });
         }
 
         Classe upsertClasse(String libelle) {
             return classes.computeIfAbsent(cle(libelle), k -> {
                 referentielsCrees++;
-                return classeRepository.save(Classe.builder().libelle(libelle).build());
+                Classe c = Classe.builder().libelle(libelle).build();
+                return simulation ? c : classeRepository.save(c);
             });
         }
 
         Salle upsertSalle(String libelle) {
             return salles.computeIfAbsent(cle(libelle), k -> {
                 referentielsCrees++;
-                return salleRepository.save(Salle.builder().libelle(libelle).build());
+                Salle s = Salle.builder().libelle(libelle).build();
+                return simulation ? s : salleRepository.save(s);
             });
         }
 

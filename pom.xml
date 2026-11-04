@@ -37,6 +37,12 @@
             <artifactId>anthropic-java</artifactId>
             <version>2.34.0</version>
         </dependency>
+        <!-- Lecture du texte des emplois du temps en PDF, sur nos serveurs -->
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>3.0.3</version>
+        </dependency>
         <!-- Stripe (paiement en ligne par carte — Checkout + webhook) -->
         <dependency>
             <groupId>com.stripe</groupId>

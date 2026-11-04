@@ -11,7 +11,7 @@ spring:
     multipart:
       # Borne la taille des uploads (import Excel) pour éviter un épuisement mémoire.
       max-file-size: ${MULTIPART_MAX_FILE_SIZE:10MB}
-      max-request-size: ${MULTIPART_MAX_REQUEST_SIZE:12MB}
+      max-request-size: ${MULTIPART_MAX_REQUEST_SIZE:50MB}
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/sigep_db}
     username: ${DB_USERNAME:postgres}
@@ -178,9 +178,6 @@ app:
     model: ${AI_MODEL:claude-opus-4-8}
     # Modèle standard (plans inférieurs) — maîtrise du coût par plan (E10).
     model-standard: ${AI_MODEL_STANDARD:claude-haiku-4-5}
-    # Lecture des emplois du temps (PDF, photos, mises en page libres), toujours relue avant import.
-    model-planning: ${AI_MODEL_PLANNING:claude-opus-5-5}
-    lectures-planning-par-jour: ${AI_LECTURES_PLANNING_PAR_JOUR:20}
   analytics:
     # Analytics web sans cookie (Plausible). Vide = désactivé. Ex. PLAUSIBLE_DOMAIN=sigep.store
     plausible-domain: ${PLAUSIBLE_DOMAIN:}

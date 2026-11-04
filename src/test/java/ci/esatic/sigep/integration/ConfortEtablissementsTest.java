@@ -190,6 +190,8 @@ class ConfortEtablissementsTest {
     @Test
     void lAdministrateur_creeUnAccesDansSonEtablissement() throws Exception {
         User admin = compte(ERole.ROLE_ADMIN, ecoleA);
+        roleRepository.findByName(ERole.ROLE_COMPTABILITE)
+                .orElseGet(() -> roleRepository.save(new Role(null, ERole.ROLE_COMPTABILITE)));
         String email = "nouvelle-" + n + "@test.local";
         mockMvc.perform(post("/admin/equipe").param("email", email).param("profil", "ROLE_COMPTABILITE")
                 .with(user(admin)).with(csrf())).andExpect(status().is3xxRedirection());

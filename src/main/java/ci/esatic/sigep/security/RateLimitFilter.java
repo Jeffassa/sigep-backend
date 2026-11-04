@@ -157,8 +157,6 @@ public class RateLimitFilter extends OncePerRequestFilter {
         // Analyse IA : GET coûteux (appels Claude facturés) → budget strict indépendant de la méthode.
         if (ANALYSE_IA_PATH.equals(uri)) return maxAi;
         if (!"POST".equalsIgnoreCase(request.getMethod())) return 0;
-        // Peut lancer une lecture par IA, elle aussi facturée.
-        if ("/admin/planning/importer".equals(uri)) return maxAi;
         if (LOGIN_PATH.equals(uri)) return maxLogin;
         if (REFRESH_PATH.equals(uri)) return maxRefresh;
         if (SIGNUP_PATH.equals(uri)) return maxSignup;
