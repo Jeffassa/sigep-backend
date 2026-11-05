@@ -69,7 +69,9 @@ class ImportServiceEnseignantsTest {
                 userRepository,
                 roleRepository,
                 passwordEncoder,
-                mailService);
+                mailService,
+                org.mockito.Mockito.mock(ci.esatic.sigep.repository.PeriodeCalendrierRepository.class),
+                org.mockito.Mockito.mock(CompteEnseignantService.class));
     }
 
     @Test

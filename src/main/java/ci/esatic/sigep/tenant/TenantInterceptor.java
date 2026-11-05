@@ -92,7 +92,8 @@ public class TenantInterceptor implements HandlerInterceptor {
         // La déconnexion reste ouverte. Les pages web gardent leur propre blocage, qui mène à
         // la page d'abonnement (AbonnementInterceptor).
         String uri = request.getRequestURI();
-        if (uri.startsWith("/api/") && !uri.startsWith("/api/auth/")
+        // Un vacataire peut toujours quitter un établissement suspendu pour un autre.
+        if (uri.startsWith("/api/") && !uri.startsWith("/api/auth/") && !uri.startsWith("/api/profil/etablissement/")
                 && abonnementService.accesSuspendu(user.getEtablissement())) {
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
             response.setContentType("application/json;charset=UTF-8");

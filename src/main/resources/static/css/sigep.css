@@ -1,5 +1,3 @@
-:root {
-    
 /* ============================================================================
    LA COCHE DE RÉUSSITE
 
@@ -13,7 +11,7 @@
    est simplement là, complète : une confirmation ne doit jamais dépendre d'une
    animation que l'utilisateur a demandé de ne pas jouer.
    ========================================================================= */
-.coche { width: 18px; height: 18px; flex: none; color: #10b981; display: block; }
+.coche { width: 18px; height: 18px; flex: none; color: var(--c-ink); display: block; }
 .coche circle, .coche path {
     fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round;
 }
@@ -33,60 +31,63 @@
     .coche circle, .coche path { animation: none; stroke-dashoffset: 0; }
 }
 
-/* ===== Thème CLAIR (par défaut) ===== */
-    --c-bg: #f4f4f5;                       /* fond de page */
-    --c-ink: #0a0a0a;                      /* texte/élément fort */
-    --c-ink2: #1c1c1e;
-    --c-muted: #6b6b70;                    /* texte secondaire */
-    --c-line: rgba(10,10,10,0.10);         /* bordures */
-    --c-surface: #ffffff;                  /* surfaces pleines (bg-white) */
-    --c-field: rgba(255,255,255,0.55);     /* champs translucides (bg-white/x) */
-    --c-track: rgba(10,10,10,0.08);        /* pistes (bg-black/x) */
-    --c-bar1: #0a0a0a; --c-bar2: #3a3a3a;  /* barres / courbes de graphe */
-    --c-heat: 10,10,10;                    /* teinte heatmap (rgb) */
-    --c-heat-empty: #eeeef0;               /* cellule heatmap vide */
-    --glass-bg: rgba(255,255,255,0.55);
-    --glass-brd: rgba(255,255,255,0.75);
-    --glass-strong-bg: rgba(255,255,255,0.72);
-    --grad-1: rgba(16,185,129,.06); --grad-2: rgba(16,185,129,.05); --grad-3: rgba(16,185,129,.06);
-    --grad-base: linear-gradient(180deg,#f7f7f8,#eeeef0);
-    /* Accent VERT (aligné sur la landing) — couleur de marque commune à toute l'app. */
-    --c-accent: #10b981;                   /* accent principal */
-    --c-accent-2: #34d399;                 /* accent clair (dégradés) */
-    --c-accent-soft: rgba(16,185,129,.12); /* fonds/halos discrets */
-    --c-accent-ink: #04160e;               /* texte sur fond accent */
+/* ===== Le papier : thème clair, par défaut =====
+   L'encre, le surligneur et le cachet sont ceux du registre papier que SIGEP remplace. */
+:root {
+    --c-bg: #fcfdff;                       /* la page de cahier */
+    --c-ink: #0f2f5f;                      /* l'encre */
+    --c-ink2: #24457a;
+    --c-muted: #46597c;                    /* texte secondaire, 6:1 sur le papier */
+    --c-line: #c3d0e6;                     /* les lignes du cahier */
+    --c-surface: #ffffff;
+    --c-field: #ffffff;
+    --c-track: rgba(15,47,95,.08);
+    --c-bar1: #0f2f5f; --c-bar2: #5b769f;  /* barres / courbes de graphe */
+    --c-heat: 15,47,95;
+    --c-heat-empty: #eef2f9;
+    --glass-bg: #ffffff;
+    --glass-brd: #c3d0e6;
+    --glass-strong-bg: #ffffff;
+    --regle: #dbe4f2;                      /* réglure du fond */
+    --regle-fine: #f0f3f9;
+    /* Le surligneur : sert à marquer, jamais à écrire. Texte foncé obligatoire dessus. */
+    --c-accent: #f5a623;
+    --c-accent-2: #d98a0f;
+    --c-accent-soft: rgba(245,166,35,.16);
+    --c-accent-ink: #081a38;
+    --c-cachet: #9c3f26;                   /* l'ocre kola du tampon, pour ce qui demande une action */
     /* alias rétro-compat */
     --ink: var(--c-ink); --muted: var(--c-muted);
     --ease: cubic-bezier(.16,1,.3,1);
 }
 html.dark {
-    /* ===== Thème SOMBRE (aligné sur la landing : quasi-noir + accent vert) ===== */
-    --c-bg: #08080a;
-    --c-ink: #f4f4f5;
-    --c-ink2: #c9c9cf;
-    --c-muted: #a1a1aa;
-    --c-line: rgba(255,255,255,0.10);
-    --c-surface: #141418;
-    --c-field: rgba(255,255,255,0.05);
-    --c-track: rgba(255,255,255,0.08);
-    --c-bar1: #34d399; --c-bar2: #10b981;
-    --c-heat: 52,211,153;
-    --c-heat-empty: #16161b;
-    --glass-bg: rgba(255,255,255,0.045);
-    --glass-brd: rgba(255,255,255,0.10);
-    --glass-strong-bg: rgba(20,20,24,0.82);
-    --grad-1: rgba(16,185,129,.07); --grad-2: rgba(16,185,129,.05); --grad-3: rgba(52,211,153,.05);
-    --grad-base: linear-gradient(180deg,#0c0c10,#08080a);
-    /* Accent VERT en sombre (teinte plus claire pour le contraste) */
-    --c-accent: #34d399;
-    --c-accent-2: #10b981;
-    --c-accent-soft: rgba(52,211,153,.12);
-    --c-accent-ink: #04160e;
+    /* ===== La nuit : thème sombre, sur le bleu nuit de la marque ===== */
+    --c-bg: #081a38;
+    --c-ink: #f6ecd9;
+    --c-ink2: #d4dcea;
+    --c-muted: #b3c0d6;
+    --c-line: #2c4670;
+    --c-surface: #0f2545;
+    --c-field: #0b1f3f;
+    --c-track: rgba(255,255,255,.1);
+    --c-bar1: #ffbe57; --c-bar2: #8fa6c9;
+    --c-heat: 255,190,87;
+    --c-heat-empty: #12294d;
+    --glass-bg: #0f2545;
+    --glass-brd: #2c4670;
+    --glass-strong-bg: #0f2545;
+    --regle: #122a50;
+    --regle-fine: #0c2042;
+    --c-accent: #ffbe57;
+    --c-accent-2: #f5a623;
+    --c-accent-soft: rgba(255,190,87,.14);
+    --c-accent-ink: #081a38;
+    --c-cachet: #ff9d7e;
     color-scheme: dark;
 }
 * { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
 body {
-    font-family: 'Geist','Geist Sans',system-ui,-apple-system,sans-serif;
+    font-family: Archivo, Arial, sans-serif;
     color: var(--c-ink); background: var(--c-bg); min-height: 100vh;
     transition: background .3s, color .3s;
 }
@@ -99,14 +100,14 @@ input, textarea, [contenteditable="true"] { caret-color: auto; cursor: text; }
 a, button, select, summary, label[for], .btn, .dock-item, .palette-item { cursor: pointer; }
 body::before {
     content:''; position:fixed; inset:0; z-index:-1; pointer-events:none;
-    background:
-      radial-gradient(38% 48% at 12% 8%, var(--grad-1), transparent 70%),
-      radial-gradient(36% 46% at 88% 16%, var(--grad-2), transparent 70%),
-      radial-gradient(60% 60% at 50% 108%, var(--grad-3), transparent 70%),
-      var(--grad-base);
+    /* La réglure Seyès du cahier : une ligne forte tous les 32 px, une fine tous les 8 px. */
+    background-color: var(--c-bg);
+    background-image: linear-gradient(var(--regle) 1px, transparent 1px), linear-gradient(var(--regle-fine) 1px, transparent 1px);
+    background-size: 100% 32px, 100% 8px;
 }
-.font-serif { font-family:'Instrument Serif',serif; }
-.font-mono  { font-family:'JetBrains Mono',monospace; }
+/* Les classes de titre gardent leur nom : c'est le dessin qui change dans tous les gabarits. */
+.font-serif { font-family: Archivo, 'Arial Narrow', sans-serif; font-stretch: 75%; font-weight: 800; }
+.font-mono  { font-family: 'DM Mono', ui-monospace, Consolas, monospace; }
 
 /* Logo dans la barre de navigation : le fond clair du fichier image se fond dans
    l'en-tête (multiply). En mode sombre : inversion + screen pour le même effet. */
@@ -115,22 +116,10 @@ html.dark .logo-nav { filter: invert(1) hue-rotate(180deg); mix-blend-mode: scre
 .material-symbols-rounded { font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24; }
 .fill { font-variation-settings:'FILL' 1; }
 
-.glass {
-    background: var(--glass-bg);
-    backdrop-filter: blur(22px) saturate(150%);
-    -webkit-backdrop-filter: blur(22px) saturate(150%);
-    border: 1px solid var(--glass-brd);
-    box-shadow: 0 10px 40px rgba(0,0,0,.07), inset 0 1px 0 rgba(255,255,255,.6);
-}
-.glass-strong {
-    background: var(--glass-strong-bg);
-    backdrop-filter: blur(30px) saturate(160%);
-    -webkit-backdrop-filter: blur(30px) saturate(160%);
-    border: 1px solid var(--glass-brd);
-    box-shadow: 0 20px 60px rgba(0,0,0,.12);
-}
-.glass-card { transition: transform .5s var(--ease), box-shadow .5s var(--ease); }
-.glass-card:hover { transform: translateY(-4px); box-shadow: 0 22px 60px rgba(0,0,0,.12); }
+.glass { background: var(--glass-bg); border: 1px solid var(--glass-brd); }
+.glass-strong { background: var(--glass-strong-bg); border: 1px solid var(--glass-brd); }
+.glass-card { transition: border-color .2s; }
+.glass-card:hover { border-color: var(--c-ink); }
 
 @keyframes rise { from { opacity:0; transform: translateY(16px); } to { opacity:1; transform:none; } }
 .reveal { animation: rise .7s var(--ease) both; }
@@ -146,11 +135,11 @@ html.dark .logo-nav { filter: invert(1) hue-rotate(180deg); mix-blend-mode: scre
 
 .btn { transition: transform .4s var(--ease), opacity .3s, background .3s; }
 .btn:active { transform: scale(.96); }
-/* Bouton primaire = accent VERT (comme la landing), dégradé + texte foncé. */
-.btn-ink { background: linear-gradient(140deg, var(--c-accent-2), var(--c-accent)); color: var(--c-accent-ink); }
+/* Bouton primaire : l'encre pleine. */
+.btn-ink { background: var(--c-ink); color: var(--c-bg); }
 .btn-ink:hover { opacity:.92; }
 
-/* Utilitaires d'accent (marque verte) — réutilisables dans tous les templates. */
+/* Utilitaires d'accent — réutilisables dans tous les templates. */
 .text-accent { color: var(--c-accent) !important; }
 .bg-accent { background: var(--c-accent) !important; color: var(--c-accent-ink) !important; }
 .bg-accent-soft { background: var(--c-accent-soft) !important; }
@@ -158,67 +147,53 @@ html.dark .logo-nav { filter: invert(1) hue-rotate(180deg); mix-blend-mode: scre
 ::selection { background: var(--c-accent); color: var(--c-accent-ink); }
 :focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
 
-/* ----- Or « premium » : CTA d'upgrade (badge de plan Free, Passer à Pro, verrous) ----- */
-.btn-gold, .badge-gold {
-    background: linear-gradient(135deg, #f6df9c 0%, #d4af37 48%, #b8891f 100%);
-    color: #241a02;
-    border: 1px solid rgba(184, 137, 31, .55);
-}
-.btn-gold:hover { filter: brightness(1.07); }
+/* ----- Le surligneur : l'action à ne pas manquer (écran de salle, Passer à Pro, verrous) ----- */
+.btn-gold, .badge-gold { background: #f5a623; color: #081a38; border: 1px solid #f5a623; }
+.btn-gold:hover { background: #ffbe57; color: #081a38; }
 
+/* ----- Les onglets du classeur : à gauche sur grand écran, en bas sur téléphone ----- */
 .dock {
-    position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%);
-    display: flex; align-items: flex-end; gap: 10px; padding: 10px 14px;
-    border-radius: 26px; z-index: 60;
+    position: fixed; left: 0; top: 0; bottom: 0; width: 224px; z-index: 60;
+    display: flex; flex-direction: column; gap: 0; padding: 16px 0 24px; overflow-y: auto;
+    background: #0f2f5f; border: 0; color: #f6ecd9;
 }
+html.dark .dock { background: #05122a; }
 .dock-item {
-    --s: 46px; width: var(--s); height: var(--s);
-    display:flex; align-items:center; justify-content:center;
-    border-radius: 14px; position: relative; flex: 0 0 auto;
-    background: rgba(255,255,255,.5); border:1px solid rgba(255,255,255,.65);
-    color: var(--ink); transition: transform .18s var(--ease), background .3s;
-    transform-origin: bottom center;
+    display: flex; align-items: center; gap: 12px; min-height: 44px; width: 100%; flex: 0 0 auto;
+    padding: 0 16px 0 24px; position: relative; border: 0; background: none; color: inherit;
+    font-stretch: 75%; font-weight: 700; font-size: 18px; text-align: left; text-decoration: none;
+    transition: background .15s, color .15s;
 }
-.dock-item .material-symbols-rounded { font-size: 24px; }
-.dock-item:hover { background:#0a0a0a; color:#fff; }
-.dock-item.active::after {
-    content:''; position:absolute; bottom:-7px; left:50%; transform:translateX(-50%);
-    width:4px; height:4px; border-radius:50%; background: var(--ink);
-}
-.dock-tip {
-    position:absolute; bottom: calc(100% + 10px); left:50%; transform:translateX(-50%) scale(.9);
-    background:#0a0a0a; color:#fff; font-size:11px; padding:4px 9px; border-radius:8px;
-    white-space:nowrap; opacity:0; pointer-events:none; transition:opacity .2s, transform .2s var(--ease);
-    font-family:'Geist',sans-serif;
-}
-.dock-item:hover .dock-tip { opacity:1; transform:translateX(-50%) scale(1); }
-
-/* Mobile : le pill flottant garde son design mais se rétrécit pour tenir à l'écran
-   (sinon les ~9 icônes de 46px débordent). Le reste de l'admin est déjà responsive
-   via Tailwind (grilles md:, max-w-, tableaux en overflow-x-auto, titres clamp). */
-@media (max-width: 640px) {
+.dock-item .material-symbols-rounded { font-size: 20px; }
+.dock-item:hover { color: #ffbe57; }
+.dock-item.active { background: var(--c-bg); color: var(--c-ink); }
+.dock-item.active:hover { color: var(--c-ink); }
+.dock-tip { position: static; white-space: nowrap; }
+.dock .w-px { display: block; width: auto; height: 1px; margin: 12px 24px; background: #3a5684; }
+.dock-item .absolute { position: static; margin-left: auto; min-width: 22px; height: 22px; background: #f5a623; color: #081a38; font-size: 12px; }
+body:has(> #dock), body:has(> .dock) { padding-left: 224px; }
+@media (max-width: 900px) {
+    body:has(> #dock), body:has(> .dock) { padding-left: 0; }
     .dock {
-        gap: 4px; padding: 8px 9px; bottom: 12px;
-        max-width: calc(100vw - 16px); overflow-x: auto;
-        scrollbar-width: none;
+        top: auto; right: 0; width: auto; height: 64px; flex-direction: row; padding: 0;
+        overflow-x: auto; overflow-y: hidden; scrollbar-width: none;
     }
     .dock::-webkit-scrollbar { display: none; }
-    .dock-item { --s: 36px; border-radius: 12px; }
-    .dock-item .material-symbols-rounded { font-size: 20px; }
-    .dock-tip { display: none; } /* pas de survol au doigt */
+    .dock-item { width: auto; min-width: 76px; flex-direction: column; justify-content: center; gap: 2px; padding: 0 8px; font-stretch: 100%; font-size: 12px; font-weight: 600; min-height: 64px; }
+    .dock .w-px { width: 1px; height: 32px; margin: auto 4px; flex: none; }
+    .dock-item .absolute { position: absolute; top: 4px; right: 10px; }
 }
 
 .palette-overlay {
     position: fixed; inset: 0; z-index: 100; display:none;
     align-items: flex-start; justify-content: center; padding-top: 14vh;
-    background: rgba(10,10,12,.32); backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    background: rgba(8,26,56,.45);
 }
 .palette-overlay.open { display:flex; animation: rise .3s var(--ease) both; }
 .palette { width: min(92vw, 620px); border-radius: 20px; overflow: hidden; }
 .palette input {
     width:100%; border:0; outline:0; background:transparent;
-    font-family:'Geist',sans-serif; font-size:18px; color:var(--ink); padding: 18px 20px;
+    font-family:Archivo,Arial,sans-serif; font-size:18px; color:var(--ink); padding: 18px 20px;
 }
 .palette input::placeholder { color: var(--muted); }
 .palette-item {
@@ -228,7 +203,7 @@ html.dark .logo-nav { filter: invert(1) hue-rotate(180deg); mix-blend-mode: scre
 .palette-item[aria-selected="true"], .palette-item:hover { background: rgba(10,10,10,.07); }
 .palette-item .material-symbols-rounded { font-size:20px; color:var(--ink); }
 .kbd {
-    font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted);
+    font-family:'DM Mono',monospace; font-size:11px; color:var(--muted);
     border:1px solid rgba(10,10,10,0.10); border-radius:6px; padding:2px 6px; background:rgba(255,255,255,.5);
 }
 
@@ -249,9 +224,9 @@ table tbody tr:hover { background: rgba(10,10,10,.04); }
     .mtable thead { display: none; }
     .mtable, .mtable tbody { display: block; width: 100%; }
     .mtable tr {
-        display: block; margin: 0 12px 10px;
-        border: 1px solid #e6e7ea; border-radius: 14px;
-        background: rgba(255,255,255,.45); overflow: hidden;
+        display: block; margin: 0 0 12px;
+        border: 0; border-top: 2px solid var(--c-ink); border-bottom: 1px solid var(--c-line);
+        background: var(--c-surface); overflow: hidden;
     }
     .mtable td { display: block; }                 /* base (ex. ligne "Aucune donnée") */
     .mtable td[data-label] {
@@ -261,18 +236,16 @@ table tbody tr:hover { background: rgba(10,10,10,.04); }
     }
     .mtable td[data-label]::before {
         content: attr(data-label); flex: 0 0 auto; text-align: left;
-        font-family: 'JetBrains Mono', monospace; font-size: 10px;
-        text-transform: uppercase; letter-spacing: .06em; color: var(--muted);
+        font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted);
     }
     .mtable td[data-label].col-collapsible { display: none; }                 /* replié */
     .mtable tr.is-open td[data-label].col-collapsible { display: flex; }      /* déplié */
     .mtable td.row-toggle-cell { display: block; padding: 8px 14px; text-align: right; }
     .row-toggle {
         display: inline-flex; align-items: center; gap: 4px; cursor: pointer;
-        font-family: 'JetBrains Mono', monospace; font-size: 11px;
-        text-transform: uppercase; letter-spacing: .05em; color: var(--ink);
-        background: rgba(10,10,10,.05); border: 1px solid #e6e7ea;
-        border-radius: 10px; padding: 6px 12px;
+        font-family: 'DM Mono', monospace; font-size: 13px; color: var(--ink);
+        background: transparent; border: 1px solid var(--c-ink);
+        border-radius: 2px; padding: 6px 12px;
     }
 }
 
@@ -289,8 +262,7 @@ html.dark .bg-black\/5  { background-color: var(--c-track) !important; }
 html.dark .bg-black\/10 { background-color: var(--c-track) !important; }
 /* Chips / avatars « bg-ink text-white » : la surface devient claire → texte foncé */
 html.dark .bg-ink { color: var(--c-bg) !important; }
-/* .btn-ink est désormais l'accent VERT (texte foncé fixé) : ne pas le forcer en clair. */
-html.dark .btn-ink { color: var(--c-accent-ink) !important; }
+html.dark .btn-ink { color: var(--c-bg) !important; }
 /* Tableaux */
 html.dark .zebra:nth-child(even) { background: rgba(255,255,255,.045); }
 html.dark table tbody tr:hover { background: rgba(255,255,255,.05); }
@@ -298,8 +270,6 @@ html.dark table tbody tr:hover { background: rgba(255,255,255,.05); }
 html.dark ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.16); }
 html.dark ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.28); }
 /* Dock + palette */
-html.dark .dock-item { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.10); }
-html.dark .dock-item:hover { background: #e9e9ec; color: #0d0d11; }
 html.dark .palette-item[aria-selected="true"], html.dark .palette-item:hover { background: rgba(255,255,255,.07); }
 html.dark .kbd { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.12); }
 /* Cartes « mtable » mobile */
@@ -344,23 +314,7 @@ a:focus-visible, button:focus-visible, input:focus-visible,
 select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible {
     outline: 2px solid var(--c-accent);
     outline-offset: 2px;
-    border-radius: 8px;
-}
-
-/* ---- La profondeur se construit en couches -------------------------------
-   Une ombre unique et large fait « autocollant ». Deux ombres — un contact
-   court et net, une diffusion longue et douce — imitent la lumière réelle. */
-.glass-card:hover,
-.glass-strong:hover {
-    box-shadow:
-        0 1px 2px rgba(10,10,10,.06),
-        0 12px 28px -8px rgba(10,10,10,.14);
-}
-html.dark .glass-card:hover,
-html.dark .glass-strong:hover {
-    box-shadow:
-        0 1px 2px rgba(0,0,0,.4),
-        0 16px 36px -10px rgba(0,0,0,.55);
+    border-radius: 2px;
 }
 
 /* ---- Un bouton désactivé doit le dire ------------------------------------
@@ -403,3 +357,54 @@ input:hover:not(:focus), select:hover:not(:focus), textarea:hover:not(:focus) {
     tbody tr, input, select, textarea, .glass-card, .btn { transition: none; }
     .en-cours::after { animation: none; }
 }
+
+/* =========================================================================
+   LE REGISTRE : ce qui donne à toutes les pages la même main
+
+   Les gabarits gardent leurs classes utilitaires ; le dessin se décide ici, une
+   seule fois. Coins nets, pas d'étiquettes en capitales espacées, et aucun texte
+   en dessous de 12 px : ces pages se lisent toute la journée.
+   ========================================================================= */
+.rounded-lg, .rounded-xl, .rounded-2xl, .rounded-3xl, .btn.rounded-full, .glass.rounded-full,
+[class*="rounded-["], .palette, .palette-item, .kbd, .mtable tr, .row-toggle { border-radius: 2px; }
+.font-mono.uppercase, .uppercase[class*="tracking-"] { text-transform: none; letter-spacing: 0; }
+.text-\[9px\], .text-\[10px\], .text-\[11px\] { font-size: 12px; }
+.tracking-tight { letter-spacing: -.01em; }
+/* Seuls les avatars restent ronds : ce sont des pastilles d'initiales, pas des boutons. */
+span.rounded-full, a.rounded-full, button.rounded-full { border-radius: 2px; }
+
+/* Le surlignage marque une seule chose à la fois : une valeur, jamais un paragraphe. */
+.surligne { background: #f5a623; color: #081a38; padding: 0 .12em; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.manuscrit { font-family: 'Bodoni Moda', Didot, Georgia, serif; font-style: italic; font-weight: 500; font-stretch: 100%; }
+
+/* Les messages et cachets de statut */
+.visa {
+    display: inline-block; padding: 0 6px; border: 2px solid var(--c-ink); color: var(--c-ink);
+    font-stretch: 75%; font-weight: 800; font-size: 13px; line-height: 18px; letter-spacing: .08em;
+    transform: rotate(-4deg);
+}
+.visa-rouge { border-color: var(--c-cachet); color: var(--c-cachet); }
+
+/* Le tableau de bord */
+.phrase-du-jour {
+    margin: 16px 0 0; max-width: 1040px; font-stretch: 75%; font-weight: 900;
+    font-size: clamp(38px, 4.6vw, 66px); line-height: 1.06; letter-spacing: -.01em;
+}
+.phrase-du-jour .manuscrit { color: var(--c-cachet); }
+.chiffres-du-jour { display: flex; flex-wrap: wrap; gap: 4px 24px; margin-top: 16px; font: 13px 'DM Mono', monospace; color: var(--c-muted); }
+.chiffres-du-jour strong { color: var(--c-ink); font-weight: 500; }
+.ciel-du-jour { margin-top: 32px; padding: 24px clamp(16px, 2vw, 32px) 20px; background: #081a38; color: #d4dcea; }
+.ciel-du-jour svg { display: block; width: 100%; overflow: visible; }
+.ciel-du-jour .bornes { display: flex; justify-content: space-between; margin-top: 4px; font: 12px 'DM Mono', monospace; }
+html.dark .ciel-du-jour { background: #05122a; }
+.registre-du-jour { width: 100%; min-width: 640px; border-collapse: collapse; background: var(--c-surface); }
+.registre-du-jour th { padding: 8px; font: 500 12px 'DM Mono', monospace; text-align: left; border-bottom: 2px solid var(--c-ink); }
+.registre-du-jour td { padding: 10px 8px; height: 64px; border-bottom: 1px solid var(--c-line); }
+.registre-du-jour .petit { font: 12px 'DM Mono', monospace; color: var(--c-muted); }
+.titre-section { margin: 0 0 8px; font-stretch: 75%; font-weight: 800; font-size: 30px; line-height: 48px; }
+.a-traiter { display: block; padding: 14px 0; border-top: 2px solid var(--c-ink); text-decoration: none; }
+.a-traiter strong { display: block; font-stretch: 75%; font-weight: 900; font-size: 34px; line-height: 36px; }
+.a-traiter:hover strong { color: var(--c-cachet); }
+
+/* Le chevron de la liste ne doit pas recouvrir la valeur choisie. */
+select[class] { padding-right: 28px; }

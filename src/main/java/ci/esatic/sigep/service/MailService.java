@@ -149,6 +149,31 @@ public class MailService {
     }
 
     @Async
+    public void notifierRattachementEtablissement(String expediteur, String email, String prenom,
+                                                  String nomEtablissement) {
+        envoyer(expediteur, email, "SIGEP - Nouvel établissement",
+                "Bonjour " + (prenom == null ? "" : prenom) + ",\n\n"
+                + nomEtablissement + " vous a ajouté à ses enseignants.\n\n"
+                + "Vous gardez votre adresse et votre mot de passe : choisissez cet établissement "
+                + "depuis votre profil dans l'application. Si vous n'y enseignez pas, prévenez "
+                + "son administration.\n\n"
+                + "SIGEP");
+    }
+
+    @Async
+    public void notifierCompteAdministration(String expediteur, String email, String nomEtablissement,
+                                             String profil, String motDePasseProvisoire) {
+        envoyer(expediteur, email, "SIGEP - Votre accès " + profil,
+                "Bonjour,\n\n"
+                + nomEtablissement + " vous a créé un accès « " + profil + " » à SIGEP.\n\n"
+                + "Email : " + email + "\n"
+                + "Mot de passe provisoire : " + motDePasseProvisoire + "\n\n"
+                + "À la première connexion, vous recevrez un code par e-mail, puis vous choisirez "
+                + "votre mot de passe.\n\n"
+                + "SIGEP");
+    }
+
+    @Async
     public void envoyerCodeOtpAdmin(String email, String code) {
         envoyer(email, "SIGEP - Code de vérification",
                 "Bonjour,\n\nVotre code de vérification est : " + code + "\n\n"

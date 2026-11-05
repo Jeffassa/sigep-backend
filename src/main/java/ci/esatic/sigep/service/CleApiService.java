@@ -81,7 +81,7 @@ public class CleApiService {
         }).orElse(false);
     }
 
-    /** SHA-256 hexadécimal, comme pour le code de secours de l'administration. */
+    /** SHA-256 hexadécimal. */
     public static String empreinte(String valeur) {
         try {
             byte[] h = MessageDigest.getInstance("SHA-256")

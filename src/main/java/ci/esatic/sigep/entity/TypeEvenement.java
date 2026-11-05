@@ -19,7 +19,7 @@ public enum TypeEvenement {
     /** Code à 6 chiffres erroné. En rafale : quelqu'un tente de deviner le second facteur. */
     OTP_ECHOUE("Second facteur refusé"),
 
-    /** Ouverture par code de secours. Hors incident connu, c'est le signe d'une compromission. */
+    /** Ne se produit plus : conservé pour relire les évènements déjà au journal. */
     OTP_CODE_SECOURS("Code de secours utilisé"),
 
     /** Plafond de requêtes atteint : flood, balayage, ou force brute. */

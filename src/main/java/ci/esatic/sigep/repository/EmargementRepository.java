@@ -69,4 +69,8 @@ public interface EmargementRepository extends JpaRepository<Emargement, Long> {
     long countHorsLigneByEnseignantEtPeriode(@Param("enseignantId") Long enseignantId,
                                              @Param("debut") LocalDate debut,
                                              @Param("fin") LocalDate fin);
+
+    /** Vue de la plateforme : le dernier émargement de chaque établissement. */
+    @Query("SELECT e.etablissementId, MAX(e.dateHeure) FROM Emargement e GROUP BY e.etablissementId")
+    List<Object[]> dernierEmargementParEtablissement();
 }

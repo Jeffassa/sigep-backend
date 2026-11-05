@@ -29,7 +29,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @Controller
 @RequiredArgsConstructor
 @Slf4j
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN','DIRECTION','SCOLARITE','COMPTABILITE')")
 public class AbonnementWebController {
 
     @Value("${app.platform.owner-email:assalendahjeanfrancois@gmail.com}")

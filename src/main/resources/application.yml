@@ -11,7 +11,7 @@ spring:
     multipart:
       # Borne la taille des uploads (import Excel) pour éviter un épuisement mémoire.
       max-file-size: ${MULTIPART_MAX_FILE_SIZE:10MB}
-      max-request-size: ${MULTIPART_MAX_REQUEST_SIZE:12MB}
+      max-request-size: ${MULTIPART_MAX_REQUEST_SIZE:50MB}
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/sigep_db}
     username: ${DB_USERNAME:postgres}
@@ -138,6 +138,8 @@ springdoc:
     path: /swagger-ui.html
 
 app:
+  keep-alive:
+    url: ${APP_KEEP_ALIVE_URL:}
   jwt:
     # SECURITE : JWT_SECRET OBLIGATOIRE en variable d'environnement (min 256 bits, base64). Voir .env.example
     secret: ${JWT_SECRET}

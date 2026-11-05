@@ -21,6 +21,8 @@ public class EnseignantService {
     private final RefreshTokenService refreshTokenService;
     private final EtablissementCourantService etablissementCourantService;
     private final ci.esatic.sigep.mapper.EnseignantMapper enseignantMapper;
+    private final CompteEnseignantService compteEnseignantService;
+    private final ci.esatic.sigep.repository.EtablissementRepository etablissementRepository;
 
     public Page<EnseignantResponse> searchEnseignants(String search, String departement,
                                                        StatutEnseignant statut, Pageable pageable) {
@@ -56,7 +58,7 @@ public class EnseignantService {
         // toutes ses sessions en révoquant ses refresh tokens. L'access token restant
         // (JWT) expire seul sous 15 min.
         if (statut != StatutEnseignant.VALIDATED && saved.getUser() != null) {
-            refreshTokenService.revoquerTout(saved.getUser());
+            couperAcces(saved);
         }
 
         // Notifier l'enseignant par e-mail (validation / refus)
@@ -70,6 +72,28 @@ public class EnseignantService {
         return toResponse(saved);
     }
 
+    /**
+     * Le refus d'un établissement ne ferme que ses portes : un vacataire validé ailleurs bascule
+     * sur son autre établissement et garde ses sessions.
+     */
+    private void couperAcces(Enseignant enseignant) {
+        var compte = enseignant.getUser();
+        enseignantRepository.flush();
+        var ailleurs = compteEnseignantService.fiches(compte.getId()).stream()
+                .filter(f -> f.statut() == StatutEnseignant.VALIDATED)
+                .filter(f -> !java.util.Objects.equals(f.etablissementId(), enseignant.getEtablissementId()))
+                .findFirst();
+        if (ailleurs.isEmpty()) {
+            refreshTokenService.revoquerTout(compte);
+            return;
+        }
+        boolean travaillaitIci = compte.getEtablissement() != null
+                && compte.getEtablissement().getId().equals(enseignant.getEtablissementId());
+        if (travaillaitIci) {
+            compte.setEtablissement(etablissementRepository.findById(ailleurs.get().etablissementId()).orElseThrow());
+        }
+    }
+
     /** Expéditeur e-mail propre à l'établissement courant (E9), ou null (repli plateforme). */
     private String expediteurTenant() {
         var etab = etablissementCourantService.courant();
@@ -78,10 +102,12 @@ public class EnseignantService {
 
     @Transactional
     public void delete(Long id) {
-        if (!enseignantRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Enseignant", "id", id);
-        }
-        enseignantRepository.deleteById(id);
+        Enseignant enseignant = enseignantRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Enseignant", "id", id));
+        var compte = enseignant.getUser();
+        enseignantRepository.delete(enseignant);
+        enseignantRepository.flush();
+        compteEnseignantService.retirerSiPlusUtilise(compte);
     }
 
     private EnseignantResponse toResponse(Enseignant e) {

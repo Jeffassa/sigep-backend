@@ -7,47 +7,46 @@
 
 <main class="max-w-[1240px] mx-auto px-5 md:px-8 py-10 pb-36">
 
-    <div class="flex flex-col md:flex-row md:items-end justify-between gap-5 mb-8" data-reveal>
+    <div class="en-tete-page" data-reveal>
         <div>
-            <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mb-2">Corps enseignant</p>
-            <h1 class="font-serif text-[clamp(34px,5vw,52px)] leading-[1.02] tracking-tight">Enseignants</h1>
+            <p class="surtitre">Corps enseignant</p>
+            <h1 class="titre-page">Enseignants</h1>
         </div>
         <div class="flex flex-wrap items-center gap-2">
             <!-- Import en masse (Excel). EMAIL est facultative mais determinante : renseignee,
                  elle cree le compte et envoie un mot de passe provisoire a l'enseignant. -->
             <form th:action="@{/admin/enseignants/import}" method="post" enctype="multipart/form-data"
-                  class="glass rounded-2xl h-12 px-3 flex items-center gap-2"
+                  class="flex items-center gap-2"
                   title="Colonnes : MATRICULE | NOM | PRENOM | DEPARTEMENT | GRADE | EMAIL&#10;La colonne EMAIL est facultative. Si vous la remplissez, le compte est créé et les accès partent par courriel.">
                 <input type="file" name="fichier" accept=".xlsx,.xls" required
-                       class="text-[12px] max-w-[180px] file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:bg-ink file:text-white file:cursor-pointer"/>
-                <button type="submit" class="btn h-9 px-3 rounded-xl bg-ink text-white flex items-center gap-1 text-[13px]">
+                       class="text-[12px] max-w-[180px] file:mr-2 file:py-1 file:px-2 file:border-0 file:bg-ink file:text-white file:cursor-pointer"/>
+                <button type="submit" class="btn glass h-11 px-4 flex items-center gap-1 text-[14px] font-medium">
                     <span class="material-symbols-rounded text-[18px]">upload_file</span> Importer
                 </button>
             </form>
             <a th:href="@{/admin/enseignants/nouveau}"
-               class="btn btn-ink h-12 px-6 rounded-2xl flex items-center gap-2 text-[14px] font-medium w-fit">
+               class="btn btn-ink h-11 px-5 flex items-center gap-2 text-[14px] font-medium w-fit">
                 <span class="material-symbols-rounded text-[20px]">person_add</span> Ajouter
             </a>
         </div>
     </div>
 
-    <div data-flash th:if="${success}" class="glass rounded-2xl p-3.5 mb-5 flex items-center gap-2 text-[13px]" data-reveal
+    <div data-flash th:if="${success}" class="feuille mb-5 flex items-center gap-2 text-[13px]" data-reveal
          style="background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.35)">
         <svg th:replace="~{admin/fragments :: coche}"></svg><span th:text="${success}">OK</span>
     </div>
-    <div data-flash th:if="${error}" class="glass rounded-2xl p-3.5 mb-5 flex items-center gap-2 text-[13px]" data-reveal>
-        <span class="material-symbols-rounded text-[18px]">error</span><span th:text="${error}">Erreur</span>
+    <div data-flash th:if="${error}" class="feuille mb-5 flex items-center gap-2 text-[13px]" data-reveal>
+        <span th:text="${error}">Erreur</span>
     </div>
 
     <!-- Filtres -->
-    <form th:action="@{/admin/enseignants}" method="get" class="glass rounded-2xl p-2 mb-5 flex flex-col sm:flex-row gap-2" data-reveal>
+    <form th:action="@{/admin/enseignants}" method="get" class="barre-filtre" data-reveal>
         <div class="flex items-center gap-2 px-3 flex-grow">
             <span class="material-symbols-rounded text-muted">search</span>
             <input type="text" name="search" th:value="${search}" placeholder="Nom, prénom, matricule…"
-                   class="bg-transparent border-0 focus:ring-0 w-full text-[15px] py-2.5 placeholder:text-muted"/>
+                   class="bg-transparent border-0 w-full h-11 text-[15px] placeholder:text-muted"/>
         </div>
-        <select name="departement"
-                class="bg-white/50 border border-line rounded-xl px-3 text-[14px] focus:ring-0 focus:border-ink cursor-pointer">
+        <select name="departement" class="champ h-11 px-3 text-[14px] cursor-pointer">
             <option value="" th:selected="${departement == ''}">Tous les départements</option>
             <option th:each="dept : ${departements}" th:value="${dept}" th:text="${dept}" th:selected="${dept == departement}">Dépt</option>
         </select>
@@ -58,35 +57,34 @@
                    class="w-4 h-4 rounded border-line accent-current cursor-pointer"/>
             Voir les archivés
         </label>
-        <button type="submit" class="btn btn-ink rounded-xl px-5 h-11 flex items-center justify-center">
+        <button type="submit" class="btn btn-ink px-4 h-11 flex items-center justify-center" aria-label="Rechercher">
             <span class="material-symbols-rounded">search</span>
         </button>
     </form>
 
     <!-- Table -->
-    <div class="glass rounded-3xl overflow-hidden" data-reveal>
+    <div class="chapitre" data-reveal>
         <div class="overflow-x-auto">
-            <table class="w-full text-left">
+            <table class="registre">
                 <thead>
-                <tr class="border-b border-line">
-                    <th class="px-6 py-4 font-mono text-[10px] uppercase tracking-wider text-muted">Enseignant</th>
-                    <th class="px-6 py-4 font-mono text-[10px] uppercase tracking-wider text-muted">Département</th>
-                    <th class="px-6 py-4 font-mono text-[10px] uppercase tracking-wider text-muted">Grade</th>
-                    <th class="px-6 py-4 font-mono text-[10px] uppercase tracking-wider text-muted">Statut</th>
-                    <th class="px-6 py-4 font-mono text-[10px] uppercase tracking-wider text-muted text-right">Actions</th>
+                <tr>
+                    <th>Enseignant</th>
+                    <th>Département</th>
+                    <th>Grade</th>
+                    <th>Statut</th>
+                    <th class="text-right">Actions</th>
                 </tr>
                 </thead>
                 <tbody>
                 <tr th:if="${enseignants.isEmpty()}">
-                    <td colspan="5" class="px-6 py-16 text-center text-muted">
-                        <span class="material-symbols-rounded text-[40px] block mb-2 opacity-40">search_off</span>
+                    <td colspan="5" class="vide">
                         Aucun enseignant dans cette liste.
                     </td>
                 </tr>
-                <tr th:each="ens : ${enseignants.content}" class="zebra border-b border-line">
-                    <td class="px-6 py-4">
+                <tr th:each="ens : ${enseignants.content}">
+                    <td>
                         <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-full bg-ink text-white flex items-center justify-center font-serif text-[15px] shrink-0"
+                            <div class="pastille"
                                  th:text="${#strings.substring(ens.nom,0,1) + #strings.substring(ens.prenom,0,1)}">AB</div>
                             <div>
                                 <p class="text-[14px] font-medium" th:text="${ens.nom + ' ' + ens.prenom}">Nom</p>
@@ -94,24 +92,21 @@
                             </div>
                         </div>
                     </td>
-                    <td class="px-6 py-4 text-[14px] text-muted" th:text="${ens.departement ?: '—'}">Dépt</td>
-                    <td class="px-6 py-4 text-[14px] text-muted" th:text="${ens.grade ?: '—'}">Grade</td>
-                    <td class="px-6 py-4">
+                    <td class="discret" th:text="${ens.departement ?: '—'}">Dépt</td>
+                    <td class="discret" th:text="${ens.grade ?: '—'}">Grade</td>
+                    <td>
                         <span th:if="${ens.statut?.name() == 'VALIDATED'}"
-                              class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-ink text-white font-mono text-[10px] uppercase tracking-wider">
-                            <span class="material-symbols-rounded text-[13px] fill">check</span>Validé</span>
+                              class="visa">VALIDÉ</span>
                         <span th:if="${ens.statut?.name() == 'PENDING'}"
-                              class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-ink font-mono text-[10px] uppercase tracking-wider">
-                            <span class="material-symbols-rounded text-[13px]">schedule</span>Attente</span>
+                              class="etat">Attente</span>
                         <span th:if="${ens.statut?.name() == 'REJECTED'}"
-                              class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-line text-muted font-mono text-[10px] uppercase tracking-wider">
-                            <span class="material-symbols-rounded text-[13px]">block</span>Rejeté</span>
+                              class="etat etat-discret">Rejeté</span>
                         <span th:if="${ens.statut?.name() == 'ARCHIVE'}"
-                              class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-line text-muted font-mono text-[10px] uppercase tracking-wider"
+                              class="etat etat-discret"
                               title="A quitté l'établissement. Aucun accès, historique conservé.">
                             <span class="material-symbols-rounded text-[13px]">inventory_2</span>Archivé</span>
                     </td>
-                    <td class="px-6 py-4">
+                    <td>
                         <div class="flex items-center justify-end gap-2">
                             <form th:action="@{'/admin/enseignants/' + ${ens.id} + '/statut'}" method="post" class="flex items-center gap-1">
                                 <!-- La liste que l'administrateur a sous les yeux : recherche, département,
@@ -122,13 +117,13 @@
                                 <input type="hidden" name="departement" th:value="${departement}"/>
                                 <input type="hidden" name="archives" th:value="${archives}"/>
                                 <input type="hidden" name="page" th:value="${currentPage}"/>
-                                <select name="statut" class="bg-white/50 border border-line rounded-lg px-2 py-1 text-[12px] focus:ring-0 focus:border-ink">
+                                <select name="statut" class="champ h-9 px-2 text-[13px] w-[128px]">
                                     <option value="VALIDATED" th:selected="${ens.statut?.name() == 'VALIDATED'}">Valider</option>
                                     <option value="PENDING"   th:selected="${ens.statut?.name() == 'PENDING'}">Mettre en attente</option>
                                     <option value="REJECTED"  th:selected="${ens.statut?.name() == 'REJECTED'}">Rejeter</option>
                                     <option value="ARCHIVE"   th:selected="${ens.statut?.name() == 'ARCHIVE'}">Archiver</option>
                                 </select>
-                                <button type="submit" class="btn w-8 h-8 rounded-lg bg-ink text-white flex items-center justify-center" title="Appliquer">
+                                <button type="submit" class="bouton-ligne" title="Appliquer" aria-label="Appliquer le statut">
                                     <span class="material-symbols-rounded text-[16px]">check</span>
                                 </button>
                             </form>
@@ -139,7 +134,7 @@
                                 <input type="hidden" name="departement" th:value="${departement}"/>
                                 <input type="hidden" name="archives" th:value="${archives}"/>
                                 <input type="hidden" name="page" th:value="${currentPage}"/>
-                                <button type="submit" class="btn w-8 h-8 rounded-lg border border-line flex items-center justify-center hover:bg-ink hover:text-white" title="Renvoyer les accès par e-mail">
+                                <button type="submit" class="bouton-ligne" title="Renvoyer les accès par e-mail">
                                     <span class="material-symbols-rounded text-[16px]">forward_to_inbox</span>
                                 </button>
                             </form>
@@ -149,7 +144,7 @@
                                 <input type="hidden" name="departement" th:value="${departement}"/>
                                 <input type="hidden" name="archives" th:value="${archives}"/>
                                 <input type="hidden" name="page" th:value="${currentPage}"/>
-                                <button type="submit" class="btn w-8 h-8 rounded-lg border border-line flex items-center justify-center hover:bg-ink hover:text-white" title="Supprimer">
+                                <button type="submit" class="bouton-ligne" title="Supprimer">
                                     <span class="material-symbols-rounded text-[16px]">delete</span>
                                 </button>
                             </form>
@@ -160,7 +155,7 @@
             </table>
         </div>
         <!-- Pagination -->
-        <div class="px-6 py-4 border-t border-line flex items-center justify-between">
+        <div class="py-4 flex items-center justify-between">
             <p class="font-mono text-[11px] text-muted">
                 <span th:text="${enseignants.numberOfElements}">0</span> / <span th:text="${totalElements}">0</span>
             </p>

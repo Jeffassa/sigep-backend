@@ -54,6 +54,7 @@ public class EnseignantWebController {
     private final ci.esatic.sigep.repository.EmargementRepository emargementRepository;
     private final ci.esatic.sigep.repository.RapportPdfRepository rapportPdfRepository;
     private final ci.esatic.sigep.repository.DemandeRattrapageRepository demandeRattrapageRepository;
+    private final ci.esatic.sigep.service.CompteEnseignantService compteEnseignantService;
 
     @GetMapping("/admin/enseignants")
     public String enseignants(@RequestParam(defaultValue = "") String search,
@@ -126,9 +127,27 @@ public class EnseignantWebController {
             ra.addFlashAttribute("error", "Ce matricule existe deja : " + matricule);
             return "redirect:/admin/enseignants/nouveau";
         }
-        if (userRepository.existsByEmail(email)) {
-            ra.addFlashAttribute("error", "Cet email est deja utilise : " + email);
+        User compteExistant;
+        try {
+            compteExistant = compteEnseignantService
+                    .compteARattacher(email, etabCourant != null ? etabCourant.getId() : null).orElse(null);
+        } catch (IllegalArgumentException e) {
+            ra.addFlashAttribute("error", "Impossible d'utiliser " + email + " : " + e.getMessage() + ".");
             return "redirect:/admin/enseignants/nouveau";
+        }
+        // Vacataire déjà inscrit ailleurs : sa fiche rejoint ce compte, dont le mot de passe ne change pas.
+        if (compteExistant != null) {
+            enseignantRepository.save(Enseignant.builder()
+                    .matricule(matricule).nom(nom).prenom(prenom).departement(departement).grade(grade)
+                    .statut(StatutEnseignant.VALIDATED)
+                    .user(compteExistant)
+                    .build());
+            mailService.notifierRattachementEtablissement(
+                    etabCourant != null ? etabCourant.getEmailFrom() : null, email, prenom,
+                    etabCourant != null ? etabCourant.getNomEffectif() : "Un établissement");
+            ra.addFlashAttribute("success", "Enseignant " + prenom + " " + nom
+                    + " ajouté. Il a déjà un compte SIGEP et garde son mot de passe : il a été prévenu par e-mail.");
+            return "redirect:/admin/enseignants";
         }
 
         Role role = roleRepository.findByName(ERole.ROLE_ENSEIGNANT).orElseThrow();
@@ -296,8 +315,17 @@ public class EnseignantWebController {
                     "Cet enseignant n'a pas de compte : renseignez son e-mail en le recreant.");
             return retourListe(search, departement, archives, page);
         }
-        String secret = ci.esatic.sigep.security.SecurityUtils.genererMotDePasseProvisoire();
         var compte = enseignant.getUser();
+        // Compte partagé : seul l'établissement où l'enseignant travaille peut lui renvoyer des
+        // accès, pour qu'un autre ne puisse pas fermer ses sessions à répétition.
+        Long ici = enseignant.getEtablissementId();
+        boolean partage = compteEnseignantService.fiches(compte.getId()).size() > 1;
+        if (partage && (compte.getEtablissement() == null || !compte.getEtablissement().getId().equals(ici))) {
+            ra.addFlashAttribute("error", "Ce compte est partagé avec un autre établissement : "
+                    + "l'enseignant doit choisir le vôtre dans l'application, ou demander ses accès là où il travaille.");
+            return retourListe(search, departement, archives, page);
+        }
+        String secret = ci.esatic.sigep.security.SecurityUtils.genererMotDePasseProvisoire();
         compte.setPassword(passwordEncoder.encode(secret));
         // L'ancien secret devient caduc et le nouveau devra etre remplace a la connexion.
         compte.setMustChangePassword(true);
@@ -361,10 +389,12 @@ public class EnseignantWebController {
         }
 
         try {
-            enseignantRepository.delete(enseignant);   // emporte le compte de connexion (cascade)
+            var compte = enseignant.getUser();
+            enseignantRepository.delete(enseignant);
+            // Le compte de connexion part avec sa dernière fiche, pas avant.
+            compteEnseignantService.retirerSiPlusUtilise(compte);
             ra.addFlashAttribute("success",
-                    "Enseignant " + enseignant.getPrenom() + " " + enseignant.getNom()
-                    + " supprimé, ainsi que son compte de connexion.");
+                    "Enseignant " + enseignant.getPrenom() + " " + enseignant.getNom() + " supprimé.");
         } catch (org.springframework.dao.DataIntegrityViolationException e) {
             // Filet : une dépendance ajoutée plus tard et non comptée ci-dessus ne doit jamais
             // ressortir en erreur 500. Le comptage reste la voie normale, ceci est la ceinture.

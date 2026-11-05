@@ -7,7 +7,7 @@
     <meta name="description" content="Vos enseignants émargent en scannant un QR code affiché dans la salle. Vous voyez les heures faites séance par séance et vous sortez les états pour la paie."/>
     <link rel="icon" th:href="@{/favicon.ico}" href="/favicon.ico" sizes="any"/>
     <link rel="apple-touch-icon" th:href="@{/images/logo_sigep.png}" href="/images/logo_sigep.png"/>
-    <meta name="theme-color" content="#08080a"/>
+    <meta name="theme-color" content="#0f2f5f"/>
 
     <!-- Une seule adresse fait autorité. Le lien de ce produit circule par messagerie et revient
          chargé des paramètres de campagne ; sans canonique, chaque partage fabrique une page
@@ -30,1018 +30,407 @@
     <meta name="twitter:title" th:content="(${marque} ?: 'SIGEP') + ' · Émargement des enseignants par QR code'"/>
     <meta name="twitter:description" content="Émargement par QR code, planning et rapports d'heures pour écoles et universités."/>
     <meta name="twitter:image" th:content="${baseUrl} + '/images/og-sigep.png'"/>
+    <script th:if="${plausibleDomain}" defer th:data-domain="${plausibleDomain}"
+            src="https://plausible.io/js/script.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com"/>
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="crossorigin"/>
-    <!-- Les trois faces de SIGEP, identiques a celles de l'administration : la landing et
-         l'application parlaient jusqu'ici deux langues typographiques differentes. -->
-    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
-    <style>
-        :root {
-            /* Palette SOMBRE (défaut).
-               Les gris penchent très légèrement vers le vert de la marque plutôt que d'être
-               neutres : un gris parfaitement neutre à côté d'un accent saturé se lit comme une
-               valeur par défaut, pas comme un choix. Le fond n'est pas un noir pur non plus —
-               #000 sur un écran OLED mange les ombres et aplatit toute la profondeur. */
-            --bg: #0a0c0b;
-            --bg-2: #0e1110;
-            --surface: #131716;
-            --surface-2: #1a1f1d;
-            --border: rgba(236,245,241,.08);
-            --border-2: rgba(236,245,241,.15);
-            --text: #f1f3f1;
-            --muted: #98a09b;
-            --dim: #6c7470;
-            --accent: #34d399;
-            --accent-2: #10b981;
-            --accent-soft: rgba(52,211,153,.12);
-            --accent-ink: #04160e;
-            --nav-bg: #ffffff;
-            --nav-text: #0a0a0b;
-            --nav-muted: #52525b;
-            --nav-border: rgba(0,0,0,.06);
-            --shadow: 0 20px 60px rgba(0,0,0,.45);
-            --radius: 20px;
-            --font-display: 'Instrument Serif', 'Iowan Old Style', Georgia, serif;
-            --font-body: 'Geist', system-ui, -apple-system, sans-serif;
-            --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
-        }
-        html.light {
-            /* Papier tiède plutôt que gris froid : la page parle de registres et de feuilles
-               d'émargement, pas d'un tableau de bord d'ingénierie. */
-            --bg: #f7f7f4;
-            --bg-2: #ffffff;
-            --surface: #ffffff;
-            --surface-2: #f4f4f5;
-            --border: rgba(0,0,0,.08);
-            --border-2: rgba(0,0,0,.12);
-            --text: #0a0a0b;
-            --muted: #52525b;
-            --dim: #8a8a94;
-            --accent-soft: rgba(16,185,129,.12);
-            --nav-border: rgba(0,0,0,.08);
-            --shadow: 0 16px 44px rgba(0,0,0,.12);
-        }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
-        body {
-            background: var(--bg);
-            color: var(--text);
-            font-family: var(--font-body);
-            line-height: 1.5;
-            -webkit-font-smoothing: antialiased;
-            overflow-x: hidden;
-        }
-        a { color: inherit; text-decoration: none; }
-        img { max-width: 100%; display: block; }
-        ::selection { background: var(--accent); color: var(--accent-ink); }
-
-        .wrap { max-width: 1160px; margin: 0 auto; padding: 0 20px; }
-        .eyebrow {
-            font-family: var(--font-mono); font-size: 11px; font-weight: 500;
-            letter-spacing: .22em; text-transform: uppercase; color: var(--accent);
-        }
-        /* font-weight 400 : Instrument Serif n'est livré qu'en régulier. Demander 700
-           ferait synthétiser un faux gras par le navigateur — des contours épaissis
-           mécaniquement, que l'œil lit comme une police mal installée. Un serif en 400 pèse
-           moins qu'un grotesque en 700 : les corps montent d'un cran pour compenser. */
-        h1, h2, h3 { font-family: var(--font-display); font-weight: 400; letter-spacing: -.015em; line-height: 1.02; }
-        h1 em, h2 em { font-style: italic; }
-        .muted { color: var(--muted); }
-
-        /* ---------- NAVBAR (pilule blanche flottante) ---------- */
-        .nav-outer { position: sticky; top: 0; z-index: 100; padding: 16px 20px 0; }
-        .nav {
-            max-width: 1120px; margin: 0 auto;
-            background: var(--nav-bg); color: var(--nav-text);
-            border: 1px solid var(--nav-border);
-            border-radius: 999px;
-            box-shadow: var(--shadow);
-            height: 62px; padding: 0 12px 0 22px;
-            display: flex; align-items: center; justify-content: space-between;
-        }
-        .brand { display: flex; align-items: center; gap: 10px; }
-        .brand-mark {
-            width: 30px; height: 30px; border-radius: 9px;
-            background: linear-gradient(140deg, var(--accent), var(--accent-2));
-            display: grid; place-items: center; color: var(--accent-ink);
-            font-weight: 400; font-family: var(--font-display); font-size: 17px; flex: none;
-        }
-        /* Logo de marque (image). .brand-mark reste utilisee pour l'avatar d'etablissement du mockup. */
-        .brand-logo { width: 32px; height: 32px; border-radius: 9px; flex: none; display: block; }
-        .foot .brand-logo { width: 30px; height: 30px; }
-        .brand-name { font-family: var(--font-display); font-weight: 400; font-size: 24px; letter-spacing: -.01em; color: var(--nav-text); }
-        .nav-links { display: flex; align-items: center; gap: 4px; position: relative; }
-        .nav-links a.link {
-            padding: 9px 14px; border-radius: 999px; font-size: 14px; font-weight: 500;
-            color: var(--nav-muted); transition: color .18s; position: relative; z-index: 1;
-        }
-        .nav-links a.link:hover { color: var(--nav-text); }
-        .nav-links a.link[aria-current] { color: var(--nav-text); }
-
-        /* Le repère glissant.
-           Un lien actif qui change simplement de couleur se remarque à peine ; un repère qui
-           SE DÉPLACE d'un lien à l'autre raconte le déplacement, et l'on comprend où l'on est
-           sans avoir à lire. Il vit sous les liens (z-index) et n'existe pas tant que le
-           script n'a pas trouvé une section : sans JavaScript, rien ne clignote dans le vide. */
-        .nav-ind {
-            position: absolute; top: 50%; left: 0; height: 36px; width: 0;
-            transform: translateY(-50%); border-radius: 999px;
-            background: rgba(0,0,0,.06); opacity: 0; pointer-events: none; z-index: 0;
-            transition: transform .34s cubic-bezier(.32,.72,0,1), width .34s cubic-bezier(.32,.72,0,1), opacity .2s;
-        }
-        .nav-ind.on { opacity: 1; }
-        @media (prefers-reduced-motion: reduce) { .nav-ind { transition: opacity .2s; } }
-        .nav-cta { display: flex; align-items: center; gap: 8px; }
-        .icon-btn {
-            width: 40px; height: 40px; border-radius: 999px; border: 1px solid var(--nav-border);
-            background: transparent; color: var(--nav-muted); cursor: pointer;
-            display: grid; place-items: center; transition: background .15s, color .15s;
-        }
-        .icon-btn:hover { background: rgba(0,0,0,.05); color: var(--nav-text); }
-        .icon-btn svg { width: 18px; height: 18px; }
-
-        .btn {
-            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-            font-family: var(--font-body); font-weight: 600; font-size: 14px;
-            border-radius: 999px; padding: 0 20px; height: 44px; cursor: pointer;
-            border: 1px solid transparent; transition: transform .12s, background .15s, opacity .15s, border-color .15s;
-            white-space: nowrap;
-        }
-        .btn:active { transform: translateY(1px); }
-        .btn svg { width: 17px; height: 17px; }
-        .btn-accent { background: linear-gradient(140deg, var(--accent), var(--accent-2)); color: var(--accent-ink); }
-        .btn-accent:hover { opacity: .92; }
-        .btn-dark { background: var(--nav-text); color: var(--nav-bg); height: 40px; padding: 0 18px; }
-        .btn-ghost { background: transparent; border-color: var(--border-2); color: var(--text); }
-        .btn-ghost:hover { background: var(--surface-2); }
-        .nav .btn-ghost { color: var(--nav-muted); border-color: var(--nav-border); }
-        .nav .btn-ghost:hover { background: rgba(0,0,0,.05); color: var(--nav-text); }
-
-        .nav-toggle { display: none; }
-
-        /* ---------- HERO ----------
-           Aligné à gauche, sur une mesure courte. Tout centrer est le réflexe qui fait se
-           ressembler toutes les pages d'accueil : l'œil n'a plus d'arête à suivre, et chaque
-           ligne recommence ailleurs que la précédente. */
-        .hero { text-align: left; padding: 76px 0 20px; max-width: 1160px; }
-        .badge {
-            display: inline-flex; align-items: center; gap: 8px;
-            background: var(--surface); border: 1px solid var(--border-2);
-            color: var(--muted); border-radius: 999px; padding: 7px 15px; font-size: 13px; font-weight: 500;
-        }
-        .badge .dot { width: 7px; height: 7px; border-radius: 999px; background: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
-        h1.title { font-size: clamp(44px, 7.4vw, 88px); max-width: 17ch; margin: 20px 0 0; text-wrap: balance; }
-        /* L'emphase passe par l'italique du serif, pas par un dégradé découpé dans le texte.
-           Un dégradé sur un titre est devenu la signature des pages générées — et il abîme le
-           contraste, donc la lisibilité, pour un effet que la police porte mieux. */
-        h1.title em { font-style: italic; color: var(--text); }
-        .lead { font-size: clamp(16.5px, 2.2vw, 19px); color: var(--muted); max-width: 54ch; margin: 24px 0 0; line-height: 1.6; text-wrap: pretty; }
-        .hero-cta { display: flex; flex-wrap: wrap; gap: 12px; justify-content: flex-start; margin-top: 34px; }
-        .hero-note { font-size: 12.5px; color: var(--dim); margin-top: 18px; letter-spacing: .01em; }
-        /* Derrière tout le contenu, et jamais cliquable. L'opacité monte une fois la trame
-           prête : elle apparaît alors sans à-coup plutôt que de surgir d'un bloc. */
-        #trame { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0;
-                 pointer-events: none; opacity: 0; transition: opacity 1.2s ease; }
-        #trame.visible { opacity: 1; }
-        .nav-outer, main, .foot { position: relative; z-index: 1; }
-
-        .scroll-hint { margin-top: 40px; font-size: 12px; letter-spacing: .18em; text-transform: uppercase; color: var(--dim); display: inline-flex; align-items: center; gap: 8px; }
-        .scroll-hint .bounce { animation: bounce 1.8s infinite; }
-        @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(4px)} }
-
-        /* ---------- MOCKUP DASHBOARD ---------- */
-        /* Légèrement incliné et décalé : un aperçu parfaitement de face et parfaitement
-           centré se lit comme une capture d'écran collée là ; de biais, il se lit comme un
-           écran posé sur un bureau. L'inclinaison est minime — au-delà, le texte de
-           l'interface devient pénible à déchiffrer, et c'est lui qu'on vient regarder. */
-        .shot-wrap { max-width: 1060px; margin: 52px auto 0; padding: 0 20px; perspective: 1800px; }
-        .shot-wrap .shot { transform: rotateX(3.2deg) rotateZ(-.5deg); transform-origin: 50% 0; }
-        @media (prefers-reduced-motion: reduce) { .shot-wrap .shot { transform: none; } }
-        .shot {
-            background: var(--surface); border: 1px solid var(--border-2); border-radius: 24px;
-            box-shadow: var(--shadow); overflow: hidden; display: grid; grid-template-columns: 210px 1fr;
-        }
-        .shot-side { background: var(--bg-2); border-right: 1px solid var(--border); padding: 18px 14px; }
-        .shot-side .org { display: flex; align-items: center; gap: 9px; font-weight: 600; font-size: 13px; margin-bottom: 16px; }
-        .shot-side .org .brand-mark { width: 24px; height: 24px; font-size: 13px; border-radius: 7px; }
-        .shot-nav { display: flex; flex-direction: column; gap: 3px; }
-        .shot-nav span { font-size: 12.5px; color: var(--muted); padding: 8px 10px; border-radius: 9px; display: flex; align-items: center; gap: 9px; }
-        .shot-nav span.on { background: var(--surface-2); color: var(--text); font-weight: 600; }
-        .shot-nav .ic { width: 14px; height: 14px; border-radius: 4px; background: var(--border-2); flex: none; }
-        .shot-nav span.on .ic { background: var(--accent); }
-        .shot-main { padding: 20px; }
-        .shot-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-        .shot-head .t { font-family: var(--font-display); font-weight: 600; font-size: 15px; }
-        .shot-head .pill { font-size: 11px; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 4px 10px; }
-        .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
-        .kpi { background: var(--bg-2); border: 1px solid var(--border); border-radius: 14px; padding: 13px; }
-        .kpi .lab { font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); }
-        .kpi .val { font-family: var(--font-display); font-weight: 700; font-size: 26px; margin-top: 6px; }
-        .kpi .val small { font-size: 13px; color: var(--muted); font-weight: 500; }
-        .kpi .chg { font-size: 11px; margin-top: 4px; color: var(--accent); font-weight: 600; }
-        .kpi .chg.down { color: #f87171; }
-        .chart { background: var(--bg-2); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px 12px; }
-        .chart .lab { font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); margin-bottom: 12px; }
-        .bars { display: flex; align-items: flex-end; gap: 10px; height: 120px; }
-        .bars .bar { flex: 1; border-radius: 6px 6px 0 0; background: linear-gradient(180deg, var(--accent), var(--accent-2)); opacity: .9; }
-        .bars .bar.mut { background: var(--border-2); }
-
-        /* ---------- SECTIONS ---------- */
-        section.block { padding: 72px 0; }
-        .sec-head { text-align: left; max-width: 46ch; margin: 0 0 44px; }
-        .sec-head h2 { font-size: clamp(30px, 4.2vw, 48px); margin-top: 14px; text-wrap: balance; }
-        .sec-head p { color: var(--muted); margin-top: 12px; font-size: 16px; }
-
-        .features { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-        .feature { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; transition: border-color .2s, transform .2s; }
-        .feature:hover { border-color: var(--border-2); transform: translateY(-3px); }
-        .feature .fic { width: 42px; height: 42px; border-radius: 12px; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; margin-bottom: 16px; }
-        .feature .fic svg { width: 21px; height: 21px; }
-        .feature h3 { font-size: 18px; }
-        .feature p { color: var(--muted); font-size: 14px; margin-top: 8px; }
-
-        /* ---------- BENTO ---------- */
-        .bento { display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; }
-        .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; }
-        .card .k { font-family: var(--font-display); font-weight: 600; font-size: 16px; }
-        .card .s { color: var(--muted); font-size: 13px; margin-top: 4px; }
-        .b-qr { grid-column: span 2; }
-        .b-stats { grid-column: span 4; }
-        .b-people { grid-column: span 3; }
-        .b-plan { grid-column: span 3; }
-        /* Le motif est un SVG, et non plus un fond CSS. Le dégradé conique employé ici ne
-           produisait pas le damier attendu mais un aplat de la couleur du texte, et la grille
-           superposée se dessinait dans cette même couleur : du clair sur du clair. La carte
-           qui illustre la fonction principale du produit n'affichait donc qu'un carré vide.
-           Un code reste sombre sur fond clair, même en thème sombre : c'est ainsi qu'on le
-           reconnaît, et qu'un téléphone saurait le lire. */
-        .qr-box { display: block; margin: 16px auto 6px; width: 128px; height: 128px;
-            border-radius: 16px; border: 1px solid var(--border); padding: 9px;
-            background: #f8f8f8; }
-        .qr-timer { text-align: center; font-size: 12px; color: var(--accent); font-weight: 600; }
-        .mini-metrics { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-top: 16px; }
-        .mini-metrics .m { background: var(--bg-2); border: 1px solid var(--border); border-radius: 12px; padding: 11px; }
-        .mini-metrics .m .l { font-size: 10px; text-transform: uppercase; letter-spacing:.06em; color: var(--dim); }
-        .mini-metrics .m .v { font-family: var(--font-display); font-weight: 700; font-size: 20px; margin-top: 3px; }
-        .mini-metrics .m .c { font-size: 10.5px; color: var(--accent); font-weight: 600; }
-        .spark { display:flex; align-items:flex-end; gap:6px; height:70px; margin-top:14px; }
-        .spark i { flex:1; border-radius:4px 4px 0 0; background: var(--accent-soft); }
-        .spark i.on { background: linear-gradient(180deg, var(--accent), var(--accent-2)); }
-        .row { display:flex; align-items:center; gap:11px; padding:11px 0; border-top:1px solid var(--border); }
-        .row:first-of-type { border-top:0; }
-        .row .av { width:34px; height:34px; border-radius:9px; background: var(--accent-soft); color:var(--accent); display:grid; place-items:center; font-weight:700; font-size:13px; flex:none; }
-        .row .nm { font-weight:600; font-size:13.5px; }
-        .row .sub { font-size:12px; color: var(--muted); }
-        .row .tag { margin-left:auto; font-size:11px; color: var(--accent); font-weight:600; }
-        .row .tag.warn { color:#fbbf24; }
-
-        /* ---------- CTA band ---------- */
-        .cta-band { background: linear-gradient(140deg, var(--surface), var(--bg-2)); border: 1px solid var(--border-2); border-radius: 28px; padding: 48px 28px; text-align: center; }
-        .cta-band h2 { font-size: clamp(26px, 4vw, 38px); }
-        .cta-band p { color: var(--muted); margin: 12px auto 0; max-width: 520px; }
-
-        /* ---------- PRICING ---------- */
-        .prices { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; align-items: stretch; }
-        .price { background: var(--surface); border: 1px solid var(--border); border-radius: 24px; padding: 28px; display: flex; flex-direction: column; }
-        .price.pop { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), var(--shadow); position: relative; }
-        .price .plan { font-family: var(--font-display); font-weight: 700; font-size: 22px; }
-        .price .who { color: var(--muted); font-size: 13px; margin-top: 4px; }
-        .price .amt { font-family: var(--font-display); font-weight: 700; font-size: 40px; margin-top: 20px; line-height: 1; }
-        .price .amt small { font-size: 14px; color: var(--muted); font-weight: 500; }
-        .price ul { list-style: none; margin: 22px 0; display: flex; flex-direction: column; gap: 11px; flex: 1; }
-        .price li { display: flex; gap: 10px; font-size: 14px; color: var(--text); }
-        .price li svg { width: 18px; height: 18px; color: var(--accent); flex: none; margin-top: 1px; }
-        .tag-pop { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--accent); color: var(--accent-ink); font-size: 11px; font-weight: 700; padding: 5px 14px; border-radius: 999px; letter-spacing: .04em; }
-
-        /* ---------- FAQ ---------- */
-        .faq { max-width: 780px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
-        details.q { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 18px 20px; }
-        details.q summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 16px; font-weight: 600; font-size: 15px; }
-        details.q summary::-webkit-details-marker { display: none; }
-        details.q summary .chev { transition: transform .2s; color: var(--muted); flex: none; }
-        details.q[open] summary .chev { transform: rotate(180deg); }
-        details.q p { color: var(--muted); font-size: 14px; margin-top: 12px; }
-
-        /* ---------- FOOTER ---------- */
-        footer { border-top: 1px solid var(--border); background: var(--bg-2); margin-top: 40px; }
-        .foot { display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr; gap: 32px; padding: 56px 0 32px; }
-        .foot .col h4 { font-size: 12px; text-transform: uppercase; letter-spacing: .1em; color: var(--dim); margin-bottom: 14px; }
-        .foot .col a { display: block; color: var(--muted); font-size: 14px; padding: 5px 0; }
-        .foot .col a:hover { color: var(--text); }
-        .foot .about p { color: var(--muted); font-size: 14px; margin-top: 12px; max-width: 260px; }
-        .foot-bottom { border-top: 1px solid var(--border); padding: 20px 0; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
-        .foot-bottom p { color: var(--dim); font-size: 13px; }
-
-        /* Le contenu est VISIBLE par défaut ; c'est le script qui demande à l'animer, et non
-           l'inverse. Posé à opacity:0 dans la feuille de style, tout ce qui suit l'accroche —
-           soit vingt-trois blocs, la quasi-totalité de la page — disparaissait dès que le script
-           ne s'exécutait pas : rendu partiel, erreur en amont, budget d'exploration écourté.
-           Un moteur n'avait alors qu'une page d'accueil vide à indexer. */
-        html.anim-reveal .reveal { opacity: 0; transform: translateY(18px); transition: opacity .6s ease, transform .6s ease; }
-        html.anim-reveal .reveal.vis { opacity: 1; transform: none; }
-        @media (prefers-reduced-motion: reduce) { .reveal { opacity: 1; transform: none; transition: none; } .scroll-hint .bounce { animation: none; } html { scroll-behavior: auto; } }
-
-        /* ---------- RESPONSIVE ---------- */
-        @media (max-width: 900px) {
-            .features { grid-template-columns: repeat(2, 1fr); }
-            .prices { grid-template-columns: 1fr; max-width: 440px; margin: 0 auto; }
-            .bento { grid-template-columns: 1fr; }
-            .b-qr, .b-stats, .b-people, .b-plan { grid-column: auto; }
-            .shot { grid-template-columns: 1fr; }
-            .shot-side { display: none; }
-            .kpis { grid-template-columns: repeat(2, 1fr); }
-            .foot { grid-template-columns: 1fr 1fr; gap: 24px; }
-        }
-        @media (max-width: 640px) {
-            .nav-links { display: none; position: absolute; top: 78px; left: 20px; right: 20px;
-                flex-direction: column; align-items: stretch; gap: 4px; background: var(--nav-bg);
-                border: 1px solid var(--nav-border); border-radius: 18px; padding: 12px; box-shadow: var(--shadow); }
-            .nav-links.open { display: flex; }
-            .nav-links a.link { padding: 12px 14px; }
-            .nav-links .btn { width: 100%; margin-top: 4px; }
-            .nav-toggle { display: grid; }
-            .features { grid-template-columns: 1fr; }
-            .foot { grid-template-columns: 1fr; }
-            .hero { padding-top: 48px; }
-        }
-    </style>
-    <script>
-        /* L'animation d'apparition est un CONFORT : on ne l'arme que si le navigateur exécute
-           bien ce script, et un filet la désarme si la révélation n'a pas eu lieu. Le contenu
-           reste ainsi lisible dans tous les cas où le JavaScript manque à l'appel. */
-        (function () {
-            var racine = document.documentElement;
-            racine.classList.add('anim-reveal');
-            setTimeout(function () {
-                if (!document.querySelector('.reveal.vis')) racine.classList.remove('anim-reveal');
-            }, 2500);
-        })();
-    </script>
-    <noscript><style>.reveal { opacity: 1 !important; transform: none !important; }</style></noscript>
+    <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&amp;family=Bodoni+Moda:ital,opsz,wght@1,6..96,400..700&amp;family=DM+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" th:href="@{/css/registre.css}" href="/css/registre.css"/>
+    <noscript><style>.ligne-visiteur, .curseur, .jauge { display: none !important; } .trace { animation: none; stroke-dashoffset: 0; } .cachet { animation: none; }</style></noscript>
 </head>
 <body>
 
-<!-- ===================== NAVBAR ===================== -->
-<div class="nav-outer">
-    <nav class="nav">
-        <a th:href="@{/}" href="#" class="brand">
-            <img class="brand-logo" th:src="@{/images/logo_sigep.png}" src="/images/logo_sigep.png" alt="" width="32" height="32"/>
-            <span class="brand-name" th:text="${marque} ?: 'SIGEP'">SIGEP</span>
-        </a>
-        <div class="nav-links" id="navLinks">
-            <span class="nav-ind" id="navInd" aria-hidden="true"></span>
-            <a class="link" href="#fonctionnement">Fonctionnement</a>
-            <a class="link" href="#fonctionnalites">Fonctionnalités</a>
-            <a class="link" href="#tarifs">Tarifs</a>
-            <a class="link" href="#faq">FAQ</a>
-            <a class="btn btn-ghost" style="height:40px" th:href="@{/admin-login}" href="#">Connexion</a>
-            <a class="btn btn-dark" th:href="@{/inscription}" href="#">Démarrer</a>
-        </div>
-        <div class="nav-cta">
-            <button class="icon-btn" id="themeBtn" type="button" aria-label="Basculer le thème" title="Clair / sombre">
-                <svg id="iconMoon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-            </button>
-            <button class="icon-btn nav-toggle" id="navToggle" type="button" aria-label="Menu">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-            </button>
-        </div>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <filter id="encre"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" result="b"/><feDisplacementMap in="SourceGraphic" in2="b" scale="1.6"/></filter>
+</svg>
+
+<!-- ===================== LA PAGE DE CAHIER ===================== -->
+<div class="seyes" id="haut">
+    <nav class="nav marge" aria-label="Navigation principale">
+        <a class="marque" th:href="@{/}" href="/" th:text="${marque} ?: 'SIGEP'">SIGEP</a>
+        <a class="optionnel" href="#journee">La journée</a>
+        <a class="optionnel" href="#paie">La paie</a>
+        <a href="#tarifs">Tarifs</a>
+        <a class="optionnel" href="#questions">Questions</a>
+        <a th:href="@{/admin-login}" href="/admin-login">Connexion</a>
     </nav>
+
+    <header class="accroche marge">
+        <div class="accroche-texte">
+            <h1 class="titre">Chaque heure de cours,<br/><span class="it" style="font-size:1.12em">signée.</span> <span class="sur">Comptée.</span><br/>Prête pour la paie.</h1>
+            <p class="corps">L'enseignant scanne le QR code affiché dans la salle et signe sur son téléphone. La scolarité voit aussitôt qui a fait cours, combien d'heures, et sort l'état pour la paie sans rien ressaisir.</p>
+            <div class="appel">
+                <a class="bouton" th:href="@{/inscription}" href="/inscription">Démarrer gratuitement</a>
+                <span class="mono">Gratuit jusqu'à 10 enseignants<br/>Sans carte bancaire</span>
+            </div>
+        </div>
+
+        <aside class="fiche-qr" aria-label="Exemple de code affiché en salle">
+            <div class="qr-box">
+                <svg viewBox="0 0 25 25" role="img" aria-label="QR code d'illustration, renouvelé toutes les 15 secondes" shape-rendering="crispEdges">
+                    <path id="qr" fill="#081a38" d="M0 0h7v7h-7zM1 1v5h5v-5zM2 2h3v3h-3zM18 0h7v7h-7zM19 1v5h5v-5zM20 2h3v3h-3zM0 18h7v7h-7zM1 19v5h5v-5zM2 20h3v3h-3z" fill-rule="evenodd"/>
+                </svg>
+            </div>
+            <p class="mono">Salle B12 · nouveau code dans <strong><span id="secondes">15</span> s</strong></p>
+            <div class="jauge"><div id="jauge"></div></div>
+        </aside>
+    </header>
+
+    <!-- La démonstration EST le registre : le visiteur signe la dernière ligne. -->
+    <section class="registre marge" aria-label="Exemple de feuille d'émargement">
+        <p class="mono">Feuille du jour · exemple</p>
+        <div class="defile" tabindex="0" role="region" aria-label="Registre d'émargement d'exemple">
+            <div class="table-registre">
+                <div class="ligne entete"><span>Heure</span><span>Matière</span><span>Classe</span><span>Salle</span><span>Enseignant</span><span>Durée</span><span>Signature</span><span>Visa</span></div>
+
+                <div class="ligne">
+                    <span class="mono">08:00–10:00</span><span class="matiere">Algorithmique</span><span class="mono">L2 INFO</span><span class="mono">B12</span><span>K. Aké</span><span class="mono">2 h</span>
+                    <svg class="signature" viewBox="0 0 160 48" aria-hidden="true"><path class="trace" pathLength="1" style="animation-delay:.3s" fill="none" stroke="#143a86" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M6 34C14 8 22 6 24 20C26 34 16 42 20 30C26 14 38 12 40 24C41 32 46 32 52 22C56 16 60 20 60 26C60 34 70 30 78 20C88 8 92 14 88 28C86 36 96 34 110 24C124 16 140 22 154 16"/></svg>
+                    <span><span class="cachet" style="animation-delay:1.7s">ÉMARGÉ</span></span>
+                </div>
+                <div class="ligne">
+                    <span class="mono">10:15–12:15</span><span class="matiere">Bases de données</span><span class="mono">L3</span><span class="mono">A04</span><span>M. Bamba</span><span class="mono">2 h</span>
+                    <svg class="signature" viewBox="0 0 160 48" aria-hidden="true"><path class="trace" pathLength="1" style="animation-delay:1.9s" fill="none" stroke="#143a86" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M8 28C20 6 34 2 30 18C28 30 12 40 16 32C22 22 44 14 52 22C56 26 50 36 58 30C68 22 72 14 76 24C78 32 88 30 96 22C108 12 110 30 122 24C134 18 142 12 152 28"/></svg>
+                    <span><span class="cachet" style="animation-delay:3.3s">ÉMARGÉ</span></span>
+                </div>
+                <div class="ligne">
+                    <span class="mono">14:00–17:00</span><span class="matiere">Réseaux</span><span class="mono">M1</span><span class="mono">Amphi C</span><span>S. Diallo</span><span class="mono">3 h</span>
+                    <svg class="signature" viewBox="0 0 160 48" aria-hidden="true"><path class="trace" pathLength="1" style="animation-delay:3.5s" fill="none" stroke="#143a86" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="M10 18C24 40 34 8 44 18C50 26 42 38 50 34C60 28 62 12 72 14C82 16 72 36 84 32C98 26 104 10 116 14C124 18 118 30 130 26C140 22 146 20 156 22"/></svg>
+                    <span><span class="cachet" style="animation-delay:4.9s">ÉMARGÉ</span></span>
+                </div>
+
+                <div class="ligne ligne-visiteur">
+                    <span class="mono">17:15–19:15</span><span class="matiere">Votre séance</span><span class="mono">L3</span><span class="mono">B12</span><span>Vous</span><span class="mono">2 h</span>
+                    <div class="zone-signature" id="zone" role="img" aria-label="Zone où signer la ligne d'exemple">
+                        <span class="invite it" id="invite">Signez ici</span>
+                        <svg viewBox="0 0 220 64" preserveAspectRatio="none" aria-hidden="true"><path id="trait" fill="none" stroke="#143a86" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </div>
+                    <span id="visa"><span class="mono" style="font-size:12px;color:var(--encre-2)">à signer</span></span>
+                </div>
+
+                <div class="total">
+                    <span class="mono">Heures comptées aujourd'hui</span>
+                    <span class="total-droite">
+                        <button type="button" id="effacer" hidden>Effacer ma signature</button>
+                        <span class="total-nombre"><span class="sur" id="total">7 h 00</span></span>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </section>
 </div>
 
-<main>
+<!-- ===================== LA JOURNÉE ===================== -->
+<section class="journee" id="journee">
+    <div class="large">
+        <h2 class="titre2">Tout l'établissement, sur <span class="it">une seule courbe</span> : celle de la journée.</h2>
+        <p class="corps">Faites glisser l'heure. Les séances se signent au fil du soleil, et un oubli reste visible au lieu de disparaître dans un tableur.</p>
 
-    <!-- ===================== HERO ===================== -->
-    <!-- Trame de fond : une grille de points qu'une onde traverse, en écho au geste du
-         produit. Purement décorative, donc masquée aux lecteurs d'écran, et absente tant que
-         le script ne l'a pas jugée opportune (voir plus bas : réseau, écran, préférences). -->
-    <canvas id="trame" aria-hidden="true"></canvas>
-    <section class="hero wrap reveal">
-        
-        <h1 class="title">Suivez les heures de vos enseignants, <em>séance par séance.</em></h1>
-        <p class="lead">
-            L'enseignant scanne le QR code affiché dans la salle. Vous voyez aussitôt qui a fait cours,
-            combien d'heures, et vous sortez l'état pour la paie sans rien ressaisir.
-        </p>
-        <div class="hero-cta">
-            <a class="btn btn-accent" th:href="@{/inscription}" href="#">
-                Démarrer gratuitement
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-            </a>
-            <a class="btn btn-ghost" href="#fonctionnalites">Voir les fonctionnalités</a>
+        <div class="ciel" id="ciel">
+            <svg viewBox="0 0 1200 400" role="img" aria-label="Arc de la journée, de 7 heures à 18 heures, avec les séances d'exemple">
+                <path d="M40 380 Q600 -220 1160 380" fill="none" stroke="#3a5684" stroke-width="2"/>
+                <line x1="0" y1="380" x2="1200" y2="380" stroke="#3a5684"/>
+                <g id="arcs"></g>
+                <circle id="halo" cx="600" cy="80" r="30" fill="#f5a623" opacity=".2"/>
+                <circle id="soleil" cx="600" cy="80" r="15" fill="#ffbe57"/>
+            </svg>
         </div>
-        <p class="hero-note">Sans carte bancaire · Sans engagement · Mise en route en quelques minutes</p>
-        <div><span class="scroll-hint">Défiler pour explorer <span class="bounce">↓</span></span></div>
-    </section>
 
-    <!-- ===================== MOCKUP DASHBOARD ===================== -->
-    <div class="shot-wrap reveal">
-        <div class="shot">
-            <aside class="shot-side">
-                <div class="org"><span class="brand-mark">S</span> Groupe ESATIC</div>
-                <div class="shot-nav">
-                    <span class="on"><span class="ic"></span> Tableau de bord</span>
-                    <span><span class="ic"></span> Enseignants</span>
-                    <span><span class="ic"></span> Émargements</span>
-                    <span><span class="ic"></span> Statistiques</span>
-                    <span><span class="ic"></span> Rapports</span>
-                    <span><span class="ic"></span> Alertes</span>
-                </div>
-            </aside>
-            <div class="shot-main">
-                <div class="shot-head">
-                    <span class="t">Tableau de bord</span>
-                    <span class="pill">Cette semaine ▾</span>
-                </div>
-                <div class="kpis">
-                    <div class="kpi"><div class="lab">Taux d'émargement</div><div class="val">92%</div><div class="chg">▲ 4,5%</div></div>
-                    <div class="kpi"><div class="lab">Heures effectuées</div><div class="val">148<small>h</small></div><div class="chg">▲ 12%</div></div>
-                    <div class="kpi"><div class="lab">Enseignants</div><div class="val">37</div><div class="chg">▲ 2</div></div>
-                    <div class="kpi"><div class="lab">Alertes</div><div class="val">3</div><div class="chg down">▼ oublis</div></div>
-                </div>
-                <div class="chart">
-                    <div class="lab">Émargements par jour</div>
-                    <div class="bars">
-                        <div class="bar" style="height:62%"></div>
-                        <div class="bar" style="height:80%"></div>
-                        <div class="bar" style="height:48%"></div>
-                        <div class="bar" style="height:95%"></div>
-                        <div class="bar" style="height:70%"></div>
-                        <div class="bar mut" style="height:34%"></div>
-                        <div class="bar mut" style="height:22%"></div>
-                    </div>
-                </div>
+        <div class="curseur">
+            <label for="heure">Il est <strong id="heureTexte">15 h 15</strong></label>
+            <input id="heure" type="range" min="7" max="18" step="0.05" value="15.25"/>
+        </div>
+
+        <div class="defile" tabindex="0" role="region" aria-label="Séances de la journée d'exemple">
+            <div class="seances" id="seances">
+                <div class="seance" data-a="8" data-b="10"><span class="mono">08:00–10:00</span><span class="matiere">Algorithmique</span><span class="mono">B12</span><span class="prof">K. Aké</span><span class="mono etat">Émargé · 2 h comptées</span></div>
+                <div class="seance" data-a="8.5" data-b="10.5" data-oubli="1"><span class="mono">08:30–10:30</span><span class="matiere">Anglais</span><span class="mono">A11</span><span class="prof">A. Kouassi</span><span class="mono etat alerte">Oubli : à relancer</span></div>
+                <div class="seance" data-a="10.25" data-b="12.25"><span class="mono">10:15–12:15</span><span class="matiere">Bases de données</span><span class="mono">A04</span><span class="prof">M. Bamba</span><span class="mono etat">Émargé · 2 h comptées</span></div>
+                <div class="seance" data-a="12.5" data-b="14"><span class="mono">12:30–14:00</span><span class="matiere">Droit du numérique</span><span class="mono">A11</span><span class="prof">A. N'Guessan</span><span class="mono etat">Émargé · 1,5 h comptées</span></div>
+                <div class="seance" data-a="14" data-b="17"><span class="mono">14:00–17:00</span><span class="matiere">Réseaux</span><span class="mono">Amphi C</span><span class="prof">S. Diallo</span><span class="mono etat vif">Émargé · en cours</span></div>
+                <div class="seance" data-a="15" data-b="17"><span class="mono">15:00–17:00</span><span class="matiere">Électronique</span><span class="mono">Labo 2</span><span class="prof">I. Traoré</span><span class="mono etat vif">Émargé · en cours</span></div>
             </div>
         </div>
-        <p style="text-align:center" class="hero-note">Aperçu illustratif de l'interface d'administration</p>
+        <p class="bilan"><strong id="bilanEmarge">4</strong> émargées sur 6 · <strong id="bilanHeures">5,5 h</strong> comptées · <strong id="bilanOublis">1</strong> à relancer</p>
     </div>
+</section>
 
-    <!-- ===================== FONCTIONNEMENT ===================== -->
-    <section id="fonctionnement" class="block wrap">
-        <div class="sec-head reveal">
-            <span class="eyebrow">Fonctionnement</span>
-            <h2>Opérationnel en 3 étapes</h2>
-            <p>De l'emploi du temps au rapport de paie.</p>
-        </div>
-        <div class="features">
-            <div class="feature reveal">
-                <div class="fic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
-                <h3>1 · Importez le planning</h3>
-                <p>Chargez vos séances via Excel, ou laissez chaque enseignant proposer le sien, que vous validez. Matières, classes, salles.</p>
-            </div>
-            <div class="feature reveal">
-                <div class="fic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg></div>
-                <h3>2 · Affichez le QR en salle</h3>
-                <p>Un écran affiche un QR sécurisé qui se renouvelle en continu. L'enseignant le scanne depuis son mobile.</p>
-            </div>
-            <div class="feature reveal">
-                <div class="fic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 5-6"/></svg></div>
-                <h3>3 · Suivez &amp; exportez</h3>
-                <p>Tableau de bord temps réel, alertes sur les oublis et rapports PDF prêts pour la paie des vacataires.</p>
-            </div>
-            <div class="feature reveal">
-                <div class="fic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></div>
-                <h3>Difficile à truquer</h3>
-                <p>Le code change en continu : il faut être dans la salle au bon moment pour le scanner. Chaque établissement garde ses données à part.</p>
-            </div>
-        </div>
-    </section>
+<!-- ===================== TROIS GESTES ===================== -->
+<section class="seyes gestes">
+    <div class="marge">
+        <h2 class="titre2">Trois gestes, et le registre se tient seul.</h2>
 
-    <!-- ===================== FONCTIONNALITÉS ===================== -->
-    <section id="fonctionnalites" class="block wrap" style="padding-top:0;">
-        <div class="sec-head reveal">
-            <span class="eyebrow">La plateforme</span>
-            <h2>Tout pour piloter l'assiduité, au même endroit</h2>
-            <p>Les émargements du jour, les heures par enseignant, le planning et les rapports.</p>
-        </div>
-        <div class="bento">
-            <!-- QR -->
-            <div class="card b-qr reveal">
-                <div class="k">Émargement QR</div>
-                <div class="s">Scanné en salle, renouvelé en continu</div>
-                <svg class="qr-box" viewBox="0 0 25 25" role="img" aria-label="Exemple de QR code d'émargement" shape-rendering="crispEdges"><rect width="25" height="25" rx="1.6" fill="#f8f8f8"/><path d="M0 0h7v1h-7zM12 0h2v1h-2zM18 0h7v1h-7zM0 1h1v1h-1zM6 1h1v1h-1zM8 1h3v1h-3zM12 1h1v1h-1zM14 1h3v1h-3zM18 1h1v1h-1zM24 1h1v1h-1zM0 2h1v1h-1zM2 2h3v1h-3zM6 2h1v1h-1zM9 2h1v1h-1zM12 2h1v1h-1zM14 2h1v1h-1zM18 2h1v1h-1zM20 2h3v1h-3zM24 2h1v1h-1zM0 3h1v1h-1zM2 3h3v1h-3zM6 3h1v1h-1zM8 3h1v1h-1zM13 3h1v1h-1zM18 3h1v1h-1zM20 3h3v1h-3zM24 3h1v1h-1zM0 4h1v1h-1zM2 4h3v1h-3zM6 4h1v1h-1zM8 4h1v1h-1zM11 4h1v1h-1zM15 4h1v1h-1zM18 4h1v1h-1zM20 4h3v1h-3zM24 4h1v1h-1zM0 5h1v1h-1zM6 5h1v1h-1zM9 5h1v1h-1zM11 5h1v1h-1zM15 5h2v1h-2zM18 5h1v1h-1zM24 5h1v1h-1zM0 6h7v1h-7zM8 6h1v1h-1zM10 6h3v1h-3zM14 6h1v1h-1zM18 6h7v1h-7zM12 7h1v1h-1zM15 7h1v1h-1zM0 8h2v1h-2zM3 8h1v1h-1zM5 8h1v1h-1zM8 8h1v1h-1zM11 8h1v1h-1zM13 8h2v1h-2zM19 8h2v1h-2zM23 8h1v1h-1zM0 9h2v1h-2zM6 9h1v1h-1zM8 9h3v1h-3zM12 9h1v1h-1zM16 9h2v1h-2zM19 9h1v1h-1zM0 10h3v1h-3zM5 10h1v1h-1zM8 10h1v1h-1zM10 10h2v1h-2zM16 10h3v1h-3zM20 10h2v1h-2zM1 11h1v1h-1zM3 11h2v1h-2zM6 11h1v1h-1zM8 11h2v1h-2zM17 11h1v1h-1zM19 11h2v1h-2zM4 12h1v1h-1zM6 12h2v1h-2zM12 12h2v1h-2zM16 12h2v1h-2zM20 12h1v1h-1zM22 12h2v1h-2zM0 13h1v1h-1zM3 13h3v1h-3zM7 13h3v1h-3zM11 13h2v1h-2zM14 13h1v1h-1zM18 13h1v1h-1zM20 13h1v1h-1zM23 13h1v1h-1zM0 14h1v1h-1zM12 14h1v1h-1zM14 14h1v1h-1zM17 14h3v1h-3zM24 14h1v1h-1zM1 15h1v1h-1zM3 15h1v1h-1zM5 15h1v1h-1zM7 15h2v1h-2zM11 15h2v1h-2zM17 15h5v1h-5zM23 15h2v1h-2zM2 16h1v1h-1zM6 16h2v1h-2zM11 16h5v1h-5zM20 16h1v1h-1zM22 16h1v1h-1zM24 16h1v1h-1zM8 17h2v1h-2zM11 17h1v1h-1zM13 17h2v1h-2zM17 17h2v1h-2zM22 17h1v1h-1zM0 18h7v1h-7zM8 18h3v1h-3zM14 18h5v1h-5zM20 18h2v1h-2zM0 19h1v1h-1zM6 19h1v1h-1zM9 19h1v1h-1zM11 19h1v1h-1zM13 19h3v1h-3zM18 19h1v1h-1zM20 19h1v1h-1zM22 19h1v1h-1zM0 20h1v1h-1zM2 20h3v1h-3zM6 20h1v1h-1zM11 20h1v1h-1zM13 20h6v1h-6zM21 20h2v1h-2zM24 20h1v1h-1zM0 21h1v1h-1zM2 21h3v1h-3zM6 21h1v1h-1zM8 21h1v1h-1zM10 21h4v1h-4zM20 21h1v1h-1zM23 21h1v1h-1zM0 22h1v1h-1zM2 22h3v1h-3zM6 22h1v1h-1zM9 22h1v1h-1zM11 22h1v1h-1zM13 22h2v1h-2zM16 22h2v1h-2zM19 22h1v1h-1zM21 22h1v1h-1zM23 22h2v1h-2zM0 23h1v1h-1zM6 23h1v1h-1zM10 23h2v1h-2zM13 23h1v1h-1zM15 23h1v1h-1zM19 23h1v1h-1zM21 23h2v1h-2zM0 24h7v1h-7zM8 24h2v1h-2zM11 24h1v1h-1zM13 24h1v1h-1zM15 24h7v1h-7zM23 24h1v1h-1z" fill="#0a0a0b"/></svg>
-                <div class="qr-timer">Nouveau code dans 15 s</div>
-            </div>
-            <!-- Stats -->
-            <div class="card b-stats reveal">
-                <div class="k">Statistiques &amp; tendances</div>
-                <div class="s">Assiduité, heures et évolution en temps réel</div>
-                <div class="mini-metrics">
-                    <div class="m"><div class="l">Assiduité</div><div class="v">92%</div><div class="c">▲ 5,4%</div></div>
-                    <div class="m"><div class="l">Heures</div><div class="v">148h</div><div class="c">▲ 12%</div></div>
-                    <div class="m"><div class="l">Séances</div><div class="v">312</div><div class="c">▲ 8%</div></div>
-                    <div class="m"><div class="l">Retards</div><div class="v">2,1%</div><div class="c">▼ 1%</div></div>
-                </div>
-                <div class="spark">
-                    <i style="height:40%"></i><i class="on" style="height:65%"></i><i style="height:50%"></i>
-                    <i class="on" style="height:82%"></i><i style="height:60%"></i><i class="on" style="height:95%"></i>
-                    <i style="height:70%"></i><i class="on" style="height:88%"></i><i style="height:55%"></i>
-                    <i class="on" style="height:78%"></i><i style="height:48%"></i><i class="on" style="height:90%"></i>
-                </div>
-            </div>
-            <!-- Enseignants -->
-            <div class="card b-people reveal">
-                <div class="k">Gestion des enseignants</div>
-                <div class="s">37 enseignants · 4 départements</div>
-                <div style="margin-top:8px">
-                    <div class="row"><span class="av">KA</span><div><div class="nm">K. Aké</div><div class="sub">Mathématiques · 32h</div></div><span class="tag">à jour</span></div>
-                    <div class="row"><span class="av">MB</span><div><div class="nm">M. Bamba</div><div class="sub">Réseaux · 28h</div></div><span class="tag">à jour</span></div>
-                    <div class="row"><span class="av">SD</span><div><div class="nm">S. Diallo</div><div class="sub">Anglais · 19h</div></div><span class="tag warn">1 oubli</span></div>
-                </div>
-            </div>
-            <!-- Planning -->
-            <div class="card b-plan reveal">
-                <div class="k">Planning &amp; rapports</div>
-                <div class="s">Séances du jour · export PDF paie</div>
-                <div style="margin-top:8px">
-                    <div class="row"><span class="av">08</span><div><div class="nm">Algorithmique  L2 INFO</div><div class="sub">Salle B12 · 08:00–10:00</div></div><span class="tag">émargé</span></div>
-                    <div class="row"><span class="av">10</span><div><div class="nm">Bases de données  L3</div><div class="sub">Salle A04 · 10:15–12:15</div></div><span class="tag">émargé</span></div>
-                    <div class="row"><span class="av">14</span><div><div class="nm">Réseaux  M1</div><div class="sub">Amphi C · 14:00–17:00</div></div><span class="tag warn">en cours</span></div>
-                </div>
+        <div class="geste">
+            <span class="it" aria-hidden="true">1</span>
+            <div>
+                <h3>Déposez le planning</h3>
+                <p class="corps">Un fichier Excel ou CSV, et les séances, classes et salles sont en place. Un enseignant peut aussi proposer le sien, que vous validez.</p>
             </div>
         </div>
-    </section>
+        <div class="geste">
+            <span class="it" aria-hidden="true">2</span>
+            <div>
+                <h3>Affichez le code en salle</h3>
+                <p class="corps">Un écran affiche un QR qui se renouvelle en continu. Une photo du code expire en moins d'une minute, et un même code ne sert qu'une fois par enseignant.</p>
+            </div>
+        </div>
+        <div class="geste">
+            <span class="it" aria-hidden="true">3</span>
+            <div>
+                <h3>L'enseignant scanne et signe</h3>
+                <p class="corps">Depuis l'application Android. Pas de réseau ce matin ? Le scan attend dans le téléphone, part au retour de la connexion, et la scolarité le valide.</p>
+            </div>
+        </div>
+    </div>
+</section>
 
-    <!-- ===================== CTA BAND ===================== -->
-    <section class="block wrap" style="padding-top:0;">
-        <div class="cta-band reveal">
-            <span class="eyebrow">Gagnez du temps</span>
-            <h2 style="margin-top:12px">Arrêtez de recompter les heures à la main</h2>
-            <p>Plus de fiches de présence à ressaisir dans un tableur : les heures se totalisent au fil des séances.</p>
-            <div class="hero-cta" style="margin-top:26px">
-                <a class="btn btn-accent" th:href="@{/inscription}" href="#">Inscrire mon établissement</a>
-                <a class="btn btn-ghost" href="#tarifs">Voir les tarifs</a>
+<!-- ===================== LA PAIE ===================== -->
+<section class="paie" id="paie">
+    <div class="large">
+        <div class="paie-texte">
+            <h2 class="titre2">Fin du mois. <span class="it">Rien</span> à recompter.</h2>
+            <p class="corps">Les heures se totalisent au fil des séances. L'export sort en CSV ou Excel, et une séance oubliée au scan apparaît en clair : personne ne perd une heure en silence.</p>
+        </div>
+        <div class="feuille">
+            <div class="feuille-titre"><strong>État des heures · octobre</strong><span class="mono">Exemple</span></div>
+            <div class="defile" tabindex="0" role="region" aria-label="État des heures d'exemple">
+                <table>
+                    <thead><tr><th scope="col">Matricule</th><th scope="col">Enseignant</th><th scope="col">Séances</th><th scope="col" style="text-align:right">Heures</th><th scope="col">À vérifier</th></tr></thead>
+                    <tbody>
+                        <tr><td class="mono">MAT-101</td><td><strong>K. Aké</strong></td><td class="mono">16 / 16</td><td class="mono nombre">32,00</td><td></td></tr>
+                        <tr><td class="mono">RES-204</td><td><strong>M. Bamba</strong></td><td class="mono">14 / 14</td><td class="mono nombre">28,00</td><td></td></tr>
+                        <tr><td class="mono">ANG-118</td><td><strong>S. Diallo</strong></td><td class="mono">9 / 10</td><td class="mono nombre">19,00</td><td class="a-verifier">1 séance sans émargement</td></tr>
+                    </tbody>
+                </table>
             </div>
         </div>
-    </section>
+    </div>
+</section>
 
-    <!-- ===================== TARIFS ===================== -->
-    <section id="tarifs" class="block wrap">
-        <div class="sec-head reveal">
-            <span class="eyebrow">Tarifs</span>
-            <h2>Un plan pour chaque établissement</h2>
-            <p>Abonnement mensuel, sans engagement, résiliable à tout moment.</p>
-        </div>
-        <div class="prices">
-            <div class="price reveal">
-                <div class="plan">Free</div>
-                <div class="who">Pour démarrer et tester</div>
-                <!-- Le symbole vient de la configuration de facturation, comme les deux autres
-                     plans : une devise écrite en dur ici avait fini par afficher un montant en
-                     euros au-dessus de deux prix en francs. -->
-                <div class="amt">0 <small th:text="${symbole}">FCFA</small></div>
+<!-- ===================== LE BORDEREAU ===================== -->
+<section class="seyes tarifs" id="tarifs">
+    <div class="marge">
+        <h2 class="titre2">Le bordereau.</h2>
+        <p class="corps intro">Abonnement mensuel, sans engagement, résiliable à tout moment.</p>
+        <div class="bordereau">
+            <div class="offre">
+                <h3>Free</h3>
+                <p class="prix">0 <small th:text="${symbole}">FCFA</small></p>
                 <ul>
-                    <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="20 6 9 17 4 12"/></svg> Émargement QR + planning</li>
-                    <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="20 6 9 17 4 12"/></svg> Jusqu'à 10 enseignants</li>
-                    <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="20 6 9 17 4 12"/></svg> 1 établissement</li>
-                    <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="20 6 9 17 4 12"/></svg> Rapports de base</li>
+                    <li>Émargement QR et planning</li>
+                    <li>Jusqu'à 10 enseignants</li>
+                    <li>1 établissement</li>
+                    <li>Rapports de base</li>
                 </ul>
-                <a class="btn btn-ghost" style="width:100%" th:href="@{/inscription}" href="#">Commencer</a>
+                <a class="lien" th:href="@{/inscription}" href="/inscription">Commencer</a>
             </div>
-            <div class="price pop reveal">
-                <span class="tag-pop">Populaire</span>
-                <div class="plan">Pro</div>
-                <div class="who">Pour un établissement</div>
-                <div class="amt"><span th:text="${#numbers.formatInteger(prixPro,1,'WHITESPACE')}">13 000</span> <small th:text="${symbole} + ' / mois'">FCFA / mois</small></div>
+            <div class="offre offre-mise">
+                <h3>Pro</h3>
+                <p class="prix"><span th:text="${#numbers.formatInteger(prixPro,1,'WHITESPACE')}">13 000</span> <small th:text="${symbole} + ' / mois'">FCFA / mois</small></p>
                 <ul>
-                    <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="20 6 9 17 4 12"/></svg> Enseignants illimités</li>
-                    <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="20 6 9 17 4 12"/></svg> Multi-établissements</li>
-                    <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="20 6 9 17 4 12"/></svg> Analyse par IA</li>
-                    <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="20 6 9 17 4 12"/></svg> Rapports avancés + export</li>
-                    <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="20 6 9 17 4 12"/></svg> Export des heures pour la paie</li>
-                    <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="20 6 9 17 4 12"/></svg> Logo de l'établissement</li>
+                    <li>Enseignants illimités</li>
+                    <li>Plusieurs établissements</li>
+                    <li>Export des heures pour la paie</li>
+                    <li>Analyse par IA, rapports avancés</li>
+                    <li>Logo de l'établissement</li>
                 </ul>
-                <a class="btn btn-accent" style="width:100%" th:href="@{/inscription}" href="#">Essayer Pro</a>
+                <a class="bouton bouton-or" th:href="@{/inscription}" href="/inscription">Essayer Pro</a>
             </div>
-            <div class="price reveal">
-                <div class="plan">Enterprise</div>
-                <div class="who">Groupes &amp; universités</div>
-                <div class="amt"><span th:text="${#numbers.formatInteger(prixEnterprise,1,'WHITESPACE')}">96 000</span> <small th:text="${symbole} + ' / mois'">FCFA / mois</small></div>
+            <div class="offre">
+                <h3>Enterprise</h3>
+                <p class="prix"><span th:text="${#numbers.formatInteger(prixEnterprise,1,'WHITESPACE')}">96 000</span> <small th:text="${symbole} + ' / mois'">FCFA / mois</small></p>
                 <ul>
-                    <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="20 6 9 17 4 12"/></svg> Tout le plan Pro</li>
-                    <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="20 6 9 17 4 12"/></svg> Multi-établissements</li>
-                    <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="20 6 9 17 4 12"/></svg> SSO &amp; API</li>
-                    <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="20 6 9 17 4 12"/></svg> Support dédié &amp; SLA</li>
+                    <li>Tout le plan Pro</li>
+                    <li>Groupes et universités</li>
+                    <li>SSO et API</li>
+                    <li>Support dédié et SLA</li>
                 </ul>
-                <a class="btn btn-ghost" style="width:100%" th:href="'mailto:' + (${contactPlateforme} ?: 'contact@sigep.store')" href="mailto:contact@sigep.store">Nous contacter</a>
+                <a class="lien" th:href="'mailto:' + (${contactPlateforme} ?: 'contact@sigep.store')" href="mailto:contact@sigep.store">Nous contacter</a>
             </div>
         </div>
-    </section>
+    </div>
+</section>
 
-    <!-- ===================== FAQ ===================== -->
-    <section id="faq" class="block wrap">
-        <div class="sec-head reveal">
-            <span class="eyebrow">FAQ</span>
-            <h2>Questions fréquentes</h2>
+<!-- ===================== QUESTIONS ===================== -->
+<section class="seyes questions" id="questions">
+    <div class="marge">
+        <h2 class="titre2">Questions.</h2>
+        <div class="liste-questions">
+            <details><summary>L'enseignant doit-il installer une application ?<span class="signe" aria-hidden="true">+</span></summary><p class="corps">Oui. L'enseignant installe l'application Android pour scanner le QR et signer. Côté scolarité, tout se fait depuis le navigateur.</p></details>
+            <details><summary>Mes données sont-elles isolées des autres établissements ?<span class="signe" aria-hidden="true">+</span></summary><p class="corps">Oui. Chaque établissement dispose de son propre espace ; ses données ne sont ni partagées ni visibles par un autre.</p></details>
+            <details><summary>Peut-on commencer sans engagement ?<span class="signe" aria-hidden="true">+</span></summary><p class="corps">Oui. Le plan Free est gratuit et sans carte bancaire. Vous passez à un plan supérieur uniquement quand vous en avez besoin.</p></details>
+            <details><summary>Et s'il n'y a pas de réseau dans la salle ?<span class="signe" aria-hidden="true">+</span></summary><p class="corps">L'émargement est mis en file d'attente dans le téléphone, envoyé au retour du réseau, puis validé par la scolarité.</p></details>
         </div>
-        <div class="faq">
-            <details class="q reveal"><summary>L'enseignant doit-il installer une application ?<svg class="chev" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></summary><p>Oui. L'enseignant installe l'application Android pour scanner le QR et signer. Côté scolarité, tout se fait depuis le navigateur.</p></details>
-            <details class="q reveal"><summary>Mes données sont-elles isolées des autres établissements ?<svg class="chev" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></summary><p>Strictement. Chaque établissement dispose de son propre espace ; les données ne sont jamais partagées ni visibles entre établissements.</p></details>
-            <details class="q reveal"><summary>Peut-on commencer sans engagement ?<svg class="chev" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></summary><p>Oui. Le plan Free est gratuit et sans carte bancaire. Vous passez à un plan supérieur uniquement quand vous en avez besoin.</p></details>
-            <details class="q reveal"><summary>Comment se fait l'émargement hors connexion ?<svg class="chev" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></summary><p>L'application gère le mode hors-ligne : l'émargement est mis en file d'attente et envoyé automatiquement au retour du réseau.</p></details>
-        </div>
-    </section>
+    </div>
+</section>
 
-    <!-- ===================== CTA FINAL ===================== -->
-    <section class="block wrap" style="padding-top:0;">
-        <div class="cta-band reveal">
-            <h2>Passez à l'émargement par QR code</h2>
-            <p>Créez l'espace de votre établissement en quelques minutes. C'est gratuit et sans engagement.</p>
-            <div class="hero-cta" style="margin-top:26px">
-                <a class="btn btn-accent" th:href="@{/inscription}" href="#">
-                    Inscrire mon établissement
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-                </a>
-            </div>
-        </div>
-    </section>
-</main>
-
-<!-- ===================== FOOTER ===================== -->
-<footer>
-    <div class="wrap">
-        <div class="foot">
-            <div class="col about">
-                <a class="brand" href="#"><img class="brand-logo" th:src="@{/images/logo_sigep.png}" src="/images/logo_sigep.png" alt="" width="32" height="32"/><span class="brand-name" style="color:var(--text)" th:text="${marque} ?: 'SIGEP'">SIGEP</span></a>
-                <p>Système Intelligent de Gestion des Enseignements et du Pointage. Émargement fiable pour écoles &amp; universités.</p>
-            </div>
-            <div class="col">
-                <h4>Produit</h4>
-                <a href="#fonctionnalites">Fonctionnalités</a>
-                <a href="#tarifs">Tarifs</a>
-                <a href="#fonctionnement">Fonctionnement</a>
-                <a th:href="@{/admin-login}" href="#">Connexion</a>
-            </div>
-            <div class="col">
-                <h4>Ressources</h4>
-                <a href="#faq">FAQ</a>
-                <a th:href="@{/inscription}" href="#">Inscription</a>
+<!-- ===================== LA FIN ===================== -->
+<footer class="fin">
+    <div class="large">
+        <p class="titre2">Rangez la feuille de présence. <span class="it">Gardez la signature.</span></p>
+        <a class="bouton bouton-or" th:href="@{/inscription}" href="/inscription">Inscrire mon établissement</a>
+        <div class="pied">
+            <span>© 2026 <span th:text="${marque} ?: 'SIGEP'">SIGEP</span> · Système Intelligent de Gestion des Enseignements et du Pointage</span>
+            <nav aria-label="Informations légales">
                 <a th:href="'mailto:' + (${contactPlateforme} ?: 'contact@sigep.store')" href="mailto:contact@sigep.store">Contact</a>
-            </div>
-            <div class="col">
-                <h4>Entreprise</h4>
-                <a th:href="@{/mentions-legales}" href="#">Mentions légales</a>
-                <a th:href="@{/confidentialite}" href="#">Confidentialité</a>
-                <a th:href="@{/cgu}" href="#">CGU</a>
-            </div>
-        </div>
-        <div class="foot-bottom">
-            <p>© 2026 <span th:text="${marque} ?: 'SIGEP'">SIGEP</span>. Tous droits réservés.</p>
-            <p>Fait avec soin pour l'enseignement.</p>
+                <a th:href="@{/mentions-legales}" href="/mentions-legales">Mentions légales</a>
+                <a th:href="@{/confidentialite}" href="/confidentialite">Confidentialité</a>
+                <a th:href="@{/cgu}" href="/cgu">CGU</a>
+            </nav>
         </div>
     </div>
 </footer>
 
-<script>
-    (function () {
-        var root = document.documentElement;
-        /* Thème : sombre par défaut ; mémorisé. */
-        try {
-            var saved = localStorage.getItem('sigep-theme');
-            if (saved === 'light') root.classList.add('light');
-        } catch (e) {}
-        var btn = document.getElementById('themeBtn');
-        if (btn) btn.addEventListener('click', function () {
-            var light = root.classList.toggle('light');
-            try { localStorage.setItem('sigep-theme', light ? 'light' : 'dark'); } catch (e) {}
-        });
-        /* Menu mobile */
-        var tgl = document.getElementById('navToggle'), links = document.getElementById('navLinks');
-        if (tgl && links) {
-            tgl.addEventListener('click', function () { links.classList.toggle('open'); });
-            links.querySelectorAll('a').forEach(function (a) { a.addEventListener('click', function () { links.classList.remove('open'); }); });
-        }
-        /* Révélation au défilement */
-        var els = Array.prototype.slice.call(document.querySelectorAll('.reveal'));
-        if (!('IntersectionObserver' in window)) { els.forEach(function (el) { el.classList.add('vis'); }); return; }
-        var io = new IntersectionObserver(function (entries) {
-            entries.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('vis'); io.unobserve(e.target); } });
-        }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
-        els.forEach(function (el) { io.observe(el); });
-    })();
-</script>
-
-<!-- ===================== REPÈRE DE NAVIGATION =====================
-     Indique dans quelle section on se trouve. Sans bibliothèque, sans écouteur de défilement :
-     un IntersectionObserver coûte infiniment moins qu'un calcul de position à chaque pixel
-     parcouru, et ne bloque jamais le fil principal pendant qu'on fait défiler la page. -->
-<script>
+<script th:inline="none">
 (function () {
-    var liens = Array.prototype.slice.call(document.querySelectorAll('.nav-links a.link[href^="#"]'));
-    var repere = document.getElementById('navInd');
-    if (!liens.length || !repere || !('IntersectionObserver' in window)) return;
+    var calme = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    var parSection = {};
-    var sections = [];
-    liens.forEach(function (a) {
-        var el = document.getElementById(a.getAttribute('href').slice(1));
-        if (!el) return;                       // un lien sans cible ne doit rien casser
-        parSection[el.id] = a;
-        sections.push(el);
-    });
-    if (!sections.length) return;
-
-    var courant = null;
-
-    function placer(a) {
-        if (a === courant) return;
-        if (courant) courant.removeAttribute('aria-current');
-        courant = a;
-        if (!a) { repere.classList.remove('on'); return; }
-
-        // aria-current : l'information doit exister pour qui n'a que le lecteur d'écran, et
-        // pas seulement sous la forme d'un rectangle qui glisse.
-        a.setAttribute('aria-current', 'true');
-        var r = a.getBoundingClientRect();
-        var rp = repere.parentElement.getBoundingClientRect();
-        repere.style.width = r.width + 'px';
-        repere.style.transform = 'translateY(-50%) translateX(' + (r.left - rp.left) + 'px)';
-        repere.classList.add('on');
+    /* ----- Le registre se signe quand il entre dans le regard ----- */
+    var registre = document.querySelector('.registre');
+    if (!calme && 'IntersectionObserver' in window) {
+        registre.classList.add('en-attente');
+        new IntersectionObserver(function (entrees, obs) {
+            if (!entrees[0].isIntersecting) return;
+            registre.classList.remove('en-attente');
+            obs.disconnect();
+        }, { threshold: 0.4 }).observe(registre);
     }
 
-    // La bande observée couvre le tiers supérieur-central de l'écran : la section
-    // « courante » est celle qu'on lit, pas celle qui vient d'entrer par le bas. Elle doit
-    // rester LARGE — une bande trop fine laisse passer les frontières de section entre deux
-    // observations, et le repère reste alors accroché à la section précédente.
-    var vues = {};
-    var observateur = new IntersectionObserver(function (entrees) {
-        entrees.forEach(function (e) { vues[e.target.id] = e.isIntersecting; });
-        var trouvee = null;
-        for (var i = 0; i < sections.length; i++) {
-            if (vues[sections[i].id]) { trouvee = parSection[sections[i].id]; break; }
-        }
-        placer(trouvee);
-    }, { rootMargin: '-15% 0px -55% 0px', threshold: 0 });
-
-    sections.forEach(function (el) { observateur.observe(el); });
-
-    // Le repère est positionné en pixels : il doit être replacé quand la barre change de
-    // largeur, sinon il reste accroché à l'ancienne position du lien.
-    var minuteur;
-    window.addEventListener('resize', function () {
-        clearTimeout(minuteur);
-        minuteur = setTimeout(function () { var a = courant; courant = null; placer(a); }, 150);
-    }, { passive: true });
-})();
-</script>
-
-<!-- ===================== PARURE ANIMEE =====================
-     Chargée APRÈS le rendu, et seulement quand elle ne coûte rien au visiteur.
-
-     Ces bibliothèques pèsent plusieurs centaines de kilo-octets. Nos utilisateurs se
-     connectent souvent en 3G depuis un téléphone : les imposer à tous reviendrait à faire
-     payer la décoration par ceux qui ont le moins de débit. On les écarte donc dès qu'un
-     signal dit que le moment est mal choisi — économiseur de données, connexion lente, écran
-     étroit, animations réduites — et la page reste entière sans elles.
-     -->
-<script>
-(function () {
-    var racine = document.documentElement;
-
-    function inopportun() {
-        try {
-            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return true;
-            if (window.innerWidth < 900) return true;              // téléphone : batterie et débit
-            var c = navigator.connection;
-            if (c && (c.saveData || /2g|slow-2g|3g/.test(c.effectiveType || ''))) return true;
-            if (navigator.deviceMemory && navigator.deviceMemory < 4) return true;
-        } catch (e) { /* un navigateur sans ces API n'est pas une raison de renoncer */ }
-        return false;
-    }
-
-    /* Reste à charger : GSAP seul, pour la chorégraphie d'entrée. */
-    function charger(url) {
-        return new Promise(function (ok, ko) {
-            var el = document.createElement('script');
-            el.src = url; el.async = true; el.onload = ok; el.onerror = ko;
-            document.head.appendChild(el);
-        });
-    }
-
-    /* ---- Le fond : un champ de flux ------------------------------------------
-       Des milliers de particules suivent un champ de vecteurs qui se déforme lentement,
-       en laissant derrière elles une traînée qui s'efface. C'est un courant continu : ce
-       que la page raconte, des séances qui défilent sans qu'on ait à les compter.
-
-       Rendu en canvas 2D plutôt qu'en WebGL. L'ancienne version demandait Three.js —
-       130 Ko compressés — pour afficher une grille de points, et laissait sans rien les
-       navigateurs qui refusent le contexte WebGL. Ici : aucune bibliothèque, et le repli
-       est la page elle-même.
-
-       Le canevas est TRANSPARENT : il est posé derrière le contenu, sur le fond de la
-       page. L'effacement progressif se fait donc en 'destination-out' — on retire de
-       l'alpha — et non en repeignant un fond opaque par-dessus, qui masquerait la page. */
-    function fond() {
-        var canvas = document.getElementById('trame');
-        if (!canvas) return;
-        var ctx = canvas.getContext('2d');
-        if (!ctx) return;
-
-        var dpr = Math.min(window.devicePixelRatio || 1, 2);
-        var w = 0, h = 0, particules = [], temps = 0, boucleId = 0;
-
-        // Une seule teinte, celle de la marque. Les champs de flux colorés virent vite au
-        // fond d'écran : la variation reste dans la luminosité et l'alpha, pas dans la roue
-        // chromatique.
-        function teinte() {
-            return racine.classList.contains('light')
-                /* Réglé à l'œil, sur fond réel, puis redescendu : à pleine intensité le
-                   courant se lit comme un motif et concurrence le titre. Il doit se sentir,
-                   pas se regarder — on ne doit pas pouvoir le décrire après avoir quitté la
-                   page. */
-                ? { h: 162, s: 42, l: 38, a: 0.13, effacement: 0.016 }
-                : { h: 158, s: 64, l: 54, a: 0.26, effacement: 0.012 };
-        }
-        var couleur = teinte();
-
-        function angle(x, y, t) {
-            var e = 0.0022;
-            return Math.sin(x * e + t * 0.0006) * Math.PI
-                 + Math.cos(y * e + t * 0.00045) * Math.PI
-                 + Math.sin((x + y) * e * 0.55 + t * 0.0008) * Math.PI * 0.55;
-        }
-
-        function naitre() {
-            var vie = 220 + Math.floor(Math.random() * 320);
-            var x = Math.random() * w, y = Math.random() * h;
-            // px/py : la position précédente. C'est elle qui permet de tracer un SEGMENT
-            // plutôt qu'un point — et un champ de flux dessiné en points isolés ne ressemble
-            // pas à un courant, mais à de la poussière sur l'écran.
-            return { x: x, y: y, px: x, py: y,
-                     v: 0.75 + Math.random() * 1.5,
-                     age: Math.floor(Math.random() * vie), vie: vie };
-        }
-
-        function dimensionner() {
-            w = window.innerWidth;
-            h = window.innerHeight;
-            canvas.width = Math.round(w * dpr);
-            canvas.height = Math.round(h * dpr);
-            canvas.style.width = w + 'px';
-            canvas.style.height = h + 'px';
-            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-            ctx.clearRect(0, 0, w, h);
-
-            // Le nombre suit la surface, et reste borné : un écran 4K ne doit pas coûter
-            // quatre fois plus de calcul qu'un portable.
-            var n = Math.min(1100, Math.max(340, Math.round((w * h) / 1800)));
-            particules = [];
-            for (var k = 0; k < n; k++) particules.push(naitre());
-        }
-
-        var actif = true;
-        document.addEventListener('visibilitychange', function () {
-            var reprend = !document.hidden && !actif;
-            actif = !document.hidden;          // une page qu'on ne regarde pas ne coûte rien
-            if (reprend) dessiner();
-        });
-
-        function dessiner() {
-            if (!actif) return;
-            boucleId = requestAnimationFrame(dessiner);
-            temps++;
-
-            // Effacement par retrait d'alpha : la traînée s'estompe sans qu'aucun fond
-            // opaque ne vienne recouvrir la page.
-            ctx.globalCompositeOperation = 'destination-out';
-            ctx.fillStyle = 'rgba(0,0,0,' + couleur.effacement + ')';
-            ctx.fillRect(0, 0, w, h);
-            ctx.globalCompositeOperation = 'source-over';
-
-            ctx.lineWidth = 1;
-            ctx.lineCap = 'round';
-
-            for (var k = 0; k < particules.length; k++) {
-                var p = particules[k];
-                p.px = p.x; p.py = p.y;
-
-                var a = angle(p.x, p.y, temps);
-                p.x += Math.cos(a) * p.v;
-                p.y += Math.sin(a) * p.v;
-                p.age++;
-
-                if (p.age > p.vie) { particules[k] = naitre(); continue; }
-
-                // Au passage d'un bord, on replace AUSSI la position précédente : sans cela,
-                // le segment traverserait tout l'écran d'un trait.
-                var saute = false;
-                if (p.x < 0) { p.x += w; saute = true; } else if (p.x > w) { p.x -= w; saute = true; }
-                if (p.y < 0) { p.y += h; saute = true; } else if (p.y > h) { p.y -= h; saute = true; }
-                if (saute) { p.px = p.x; p.py = p.y; continue; }
-
-                // Apparition et disparition progressives : sans elles, les particules
-                // clignotent à chaque renaissance.
-                var t = p.age / p.vie;
-                var alpha = Math.min(t * 7, 1) * Math.min((1 - t) * 5, 1) * couleur.a;
-
-                ctx.strokeStyle = 'hsla(' + couleur.h + ',' + couleur.s + '%,' + couleur.l + '%,' + alpha + ')';
-                ctx.beginPath();
-                ctx.moveTo(p.px, p.py);
-                ctx.lineTo(p.x, p.y);
-                ctx.stroke();
+    /* ----- Le code de l'écran de salle : une illustration, jamais un vrai jeton ----- */
+    function dessinerCode(graine) {
+        var s = (graine * 2654435761) % 4294967296, N = 25, d = '';
+        function alea() { s ^= s << 13; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }
+        function case_(x, y) { d += 'M' + x + ' ' + y + 'h1v1h-1z'; }
+        [[0, 0], [N - 7, 0], [0, N - 7]].forEach(function (o) {
+            for (var y = 0; y < 7; y++) for (var x = 0; x < 7; x++) {
+                if (x === 0 || x === 6 || y === 0 || y === 6 || (x >= 2 && x <= 4 && y >= 2 && y <= 4)) case_(o[0] + x, o[1] + y);
             }
-        }
-
-        dimensionner();
-        dessiner();
-        canvas.classList.add('visible');
-
-        var minuteur;
-        window.addEventListener('resize', function () {
-            clearTimeout(minuteur);
-            minuteur = setTimeout(dimensionner, 180);   // redimensionner recrée tout : on attend la fin du geste
-        }, { passive: true });
-
-        // La bascule de thème change la couleur du courant, sinon il jure sur fond clair.
-        new MutationObserver(function () {
-            couleur = teinte();
-        }).observe(racine, { attributes: true, attributeFilter: ['class'] });
-    }
-
-    /* ---- Le mouvement : entrées séquencées et parallaxe ---------------------- */
-    function mouvement() {
-        if (!window.gsap || !window.ScrollTrigger) return;
-        gsap.registerPlugin(ScrollTrigger);
-
-        // Le hero s'installe en trois temps plutôt que d'apparaître d'un bloc : l'oeil suit
-        // le titre, puis la promesse, puis l'action.
-        //
-        // DEUX PRÉCAUTIONS, et elles ne sont pas décoratives.
-        //
-        // La portée d'abord : « .hero-cta > * » désignait TOUS les appels à l'action de la
-        // page — celui du hero, celui de la bande intermédiaire, celui du pied. Une entrée de
-        // hero mettait ainsi à zéro les cinq boutons du site.
-        //
-        // Le filet ensuite : gsap.from() pose opacity:0 à l'instant même, et ne le relève
-        // qu'en fin de tween. Si le tween ne finit jamais — onglet ouvert en arrière-plan,
-        // donc requestAnimationFrame gelé, appareil qui rame, script interrompu — le visiteur
-        // arrive sur une page dont tous les boutons sont invisibles. Une décoration ne doit
-        // jamais pouvoir effacer le contenu : on efface donc les styles posés, quoi qu'il
-        // arrive, au bout de trois secondes.
-        var entree = ['.hero .title', '.hero .lead', '.hero .hero-cta > *',
-                      '.hero .hero-note', '.hero .scroll-hint'];
-
-        function rendreVisible() {
-            entree.forEach(function (sel) {
-                document.querySelectorAll(sel).forEach(function (el) {
-                    gsap.set(el, { clearProps: 'all' });
-                });
-            });
-        }
-
-        // Un onglet en arrière-plan ne joue pas l'animation : on n'y touche donc pas du tout.
-        if (document.hidden) return;
-
-        var minuteurEntree = setTimeout(rendreVisible, 3000);
-        gsap.timeline({
-                defaults: { ease: 'power3.out' },
-                onComplete: function () { clearTimeout(minuteurEntree); rendreVisible(); }
-            })
-            .from('.hero .title', { y: 26, opacity: 0, duration: 0.9 })
-            .from('.hero .lead', { y: 18, opacity: 0, duration: 0.7 }, '-=0.55')
-            .from('.hero .hero-cta > *', { y: 14, opacity: 0, duration: 0.6, stagger: 0.09 }, '-=0.4')
-            .from('.hero .hero-note, .hero .scroll-hint', { opacity: 0, duration: 0.6, stagger: 0.08 }, '-=0.3');
-
-        // L'aperçu de l'interface s'élève doucement pendant qu'on descend vers lui.
-        var shot = document.querySelector('.shot-wrap');
-        if (shot) {
-            gsap.to(shot, {
-                yPercent: -6,
-                ease: 'none',
-                scrollTrigger: { trigger: shot, start: 'top bottom', end: 'bottom top', scrub: 0.6 }
-            });
-        }
-
-        // Les chiffres se comptent au lieu de s'afficher : on croit davantage ce qu'on voit
-        // se construire.
-        document.querySelectorAll('[data-compteur]').forEach(function (el) {
-            var cible = parseFloat(el.getAttribute('data-compteur'));
-            var suffixe = el.getAttribute('data-suffixe') || '';
-            var etat = { v: 0 };
-            gsap.to(etat, {
-                v: cible, duration: 1.4, ease: 'power2.out',
-                scrollTrigger: { trigger: el, start: 'top 85%', once: true },
-                onUpdate: function () { el.textContent = Math.round(etat.v) + suffixe; }
-            });
         });
+        for (var y = 0; y < N; y++) for (var x = 0; x < N; x++) {
+            var coin = (x < 8 && y < 8) || (x >= N - 8 && y < 8) || (x < 8 && y >= N - 8);
+            if (!coin && alea() > 0.52) case_(x, y);
+        }
+        var chemin = document.getElementById('qr');
+        chemin.removeAttribute('fill-rule');
+        chemin.setAttribute('d', d);
     }
+    var graine = 7, reste = 15;
+    var elSec = document.getElementById('secondes'), elJauge = document.getElementById('jauge');
+    dessinerCode(graine);
+    setInterval(function () {
+        reste = reste <= 1 ? 15 : reste - 1;
+        if (reste === 15) dessinerCode(++graine);
+        elSec.textContent = reste;
+        elJauge.style.width = (reste / 15 * 100) + '%';
+    }, 1000);
 
-    function demarrer() {
-        if (inopportun()) return;
-        charger('https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js')
-            .then(function () { return charger('https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js'); })
-            .then(mouvement)
-            .catch(function () { /* la page vit sans : rien a rattraper */ });
-
-        // Le fond ne demande rien à personne : ni bibliothèque, ni WebGL.
-        fond();
+    /* ----- La ligne que le visiteur signe ----- */
+    var zone = document.getElementById('zone'), trait = document.getElementById('trait'),
+        invite = document.getElementById('invite'), visa = document.getElementById('visa'),
+        total = document.getElementById('total'), effacer = document.getElementById('effacer');
+    var chemin = '', points = 0, enTrain = false;
+    function point(e) {
+        var r = zone.getBoundingClientRect();
+        return Math.round((e.clientX - r.left) / r.width * 220) + ' ' + Math.round((e.clientY - r.top) / r.height * 64);
     }
+    zone.addEventListener('pointerdown', function (e) {
+        e.preventDefault();
+        if (zone.setPointerCapture) zone.setPointerCapture(e.pointerId);
+        enTrain = true; invite.hidden = true;
+        chemin += 'M' + point(e); trait.setAttribute('d', chemin);
+    });
+    zone.addEventListener('pointermove', function (e) {
+        if (!enTrain) return;
+        points++; chemin += 'L' + point(e); trait.setAttribute('d', chemin);
+    });
+    function lever() {
+        if (!enTrain) return;
+        enTrain = false;
+        if (points > 12 && !effacer.hidden) return;
+        if (points > 12) {
+            visa.innerHTML = '<span class="cachet">ÉMARGÉ</span>';
+            total.textContent = '9 h 00';
+            effacer.hidden = false;
+        }
+    }
+    zone.addEventListener('pointerup', lever);
+    zone.addEventListener('pointercancel', lever);
+    effacer.addEventListener('click', function () {
+        chemin = ''; points = 0; trait.removeAttribute('d'); invite.hidden = false;
+        visa.innerHTML = '<span class="mono" style="font-size:12px;color:var(--encre-2)">à signer</span>';
+        total.textContent = '7 h 00'; effacer.hidden = true;
+    });
 
-    // Après le chargement complet : la parure ne doit jamais retarder le premier affichage.
-    if (document.readyState === 'complete') {
-        setTimeout(demarrer, 200);
+    /* ----- La journée : l'arc va de 7 h à 18 h ----- */
+    var NS = 'http://www.w3.org/2000/svg';
+    var curseur = document.getElementById('heure'), arcs = document.getElementById('arcs'), ciel = document.getElementById('ciel');
+    var lignes = Array.prototype.slice.call(document.querySelectorAll('.seance')).map(function (el) {
+        var trace = document.createElementNS(NS, 'path');
+        trace.setAttribute('fill', 'none'); trace.setAttribute('stroke-linecap', 'round');
+        arcs.appendChild(trace);
+        return { el: el, etat: el.querySelector('.etat'), trace: trace, a: +el.dataset.a, b: +el.dataset.b, oubli: !!el.dataset.oubli };
+    });
+    function pos(h) { var t = (h - 7) / 11; return { x: 40 + 1120 * t, y: 380 - 1200 * t * (1 - t) }; }
+    function troncon(a, b) {
+        var d = '';
+        for (var i = 0; i <= 14; i++) { var p = pos(a + (b - a) * i / 14); d += (i ? 'L' : 'M') + p.x.toFixed(1) + ' ' + p.y.toFixed(1); }
+        return d;
+    }
+    for (var g = 7; g <= 18; g++) {
+        var repere = document.createElement('span');
+        repere.className = 'heure';
+        repere.style.left = ((40 + 1120 * (g - 7) / 11) / 1200 * 100).toFixed(2) + '%';
+        repere.textContent = g + ' h';
+        ciel.appendChild(repere);
+    }
+    function appliquer(h) {
+        var emarge = 0, heures = 0, oublis = 0;
+        lignes.forEach(function (s) {
+            var texte, classe = '';
+            if (h < s.a) { texte = 'À venir'; classe = 'loin'; }
+            else if (s.oubli) {
+                if (h <= s.b) { texte = 'En cours, pas de scan'; classe = 'vif'; }
+                else { texte = 'Oubli : à relancer'; classe = 'alerte'; oublis++; }
+            }
+            else if (h <= s.a + 0.2) { texte = 'Code affiché'; classe = 'vif'; }
+            else if (h < s.b) { texte = 'Émargé · en cours'; classe = 'vif'; emarge++; }
+            else { texte = 'Émargé · ' + String(s.b - s.a).replace('.', ',') + ' h comptées'; emarge++; heures += s.b - s.a; }
+            s.etat.textContent = texte;
+            s.etat.className = 'mono etat ' + classe;
+            var fait = h >= s.a;
+            s.trace.setAttribute('d', troncon(s.a, fait ? Math.min(h, s.b) : s.b));
+            s.trace.setAttribute('stroke', !fait ? '#5b769f' : (s.oubli && h > s.b ? '#ff9d7e' : '#f5a623'));
+            s.trace.setAttribute('stroke-width', fait ? 7 : 4);
+        });
+        var p = pos(h);
+        ['soleil', 'halo'].forEach(function (id) {
+            var c = document.getElementById(id);
+            c.setAttribute('cx', p.x.toFixed(1)); c.setAttribute('cy', p.y.toFixed(1));
+        });
+        var hh = Math.floor(h), mm = Math.min(59, Math.round((h - hh) * 60));
+        document.getElementById('heureTexte').textContent = hh + ' h ' + String(mm).padStart(2, '0');
+        document.getElementById('bilanEmarge').textContent = emarge;
+        document.getElementById('bilanHeures').textContent = String(heures).replace('.', ',') + ' h';
+        document.getElementById('bilanOublis').textContent = oublis;
+    }
+    var touche = false;
+    curseur.addEventListener('input', function () { touche = true; appliquer(parseFloat(curseur.value)); });
+    if (calme || !('IntersectionObserver' in window)) {
+        appliquer(parseFloat(curseur.value));
     } else {
-        window.addEventListener('load', function () { setTimeout(demarrer, 200); });
+        /* Le soleil ne se lève que lorsqu'on regarde la section, puis la main passe au visiteur. */
+        appliquer(7.2); curseur.value = 7.2;
+        var lance = false;
+        new IntersectionObserver(function (entrees, obs) {
+            if (lance || !entrees[0].isIntersecting) return;
+            lance = true; obs.disconnect();
+            var h = 7.2;
+            var lever_ = setInterval(function () {
+                h += 0.05;
+                if (touche || h >= 15.25) { clearInterval(lever_); return; }
+                curseur.value = h; appliquer(h);
+            }, 60);
+        }, { threshold: 0.35 }).observe(ciel);
     }
 })();
 </script>
@@ -1049,6 +438,5 @@
 <div th:replace="~{admin/fragments :: cookieConsent}"></div>
 
 <th:block th:replace="~{public/fragments :: donneesStructurees}"></th:block>
-
 </body>
 </html>
