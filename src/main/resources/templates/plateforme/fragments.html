@@ -6,38 +6,7 @@
 <header th:fragment="topbar(active)"
         class="glass sticky top-0 z-50 border-x-0 border-t-0" style="border-radius:0;">
     <div class="max-w-[1240px] mx-auto h-16 px-5 md:px-8 flex items-center justify-between gap-3">
-        <a th:href="@{/plateforme}" class="flex items-baseline gap-2 shrink-0">
-            <span class="font-serif text-[30px] leading-none tracking-tight">SIGEP</span>
-            <span class="hidden sm:inline font-mono text-[10px] uppercase tracking-[0.2em] text-muted mb-[2px]">Plateforme</span>
-        </a>
-
-        <!-- Navigation propre au super admin -->
-        <nav class="flex items-center gap-1" aria-label="Navigation plateforme">
-            <a th:href="@{/plateforme}"
-               th:classappend="${active=='dashboard'} ? ' bg-ink text-white' : ' glass text-muted hover:text-ink'"
-               class="btn flex items-center gap-1.5 px-3.5 h-10 rounded-full text-[13px] font-medium">
-                <span class="material-symbols-rounded text-[18px]">space_dashboard</span>
-                <span class="hidden md:inline">Vue d'ensemble</span>
-            </a>
-            <a th:href="@{/plateforme/abonnements}"
-               th:classappend="${active=='abonnements'} ? ' bg-ink text-white' : ' glass text-muted hover:text-ink'"
-               class="btn flex items-center gap-1.5 px-3.5 h-10 rounded-full text-[13px] font-medium">
-                <span class="material-symbols-rounded text-[18px]">card_membership</span>
-                <span class="hidden md:inline">Abonnements</span>
-            </a>
-            <a th:href="@{/plateforme/paiements}"
-               th:classappend="${active=='paiements'} ? ' bg-ink text-white' : ' glass text-muted hover:text-ink'"
-               class="btn flex items-center gap-1.5 px-3.5 h-10 rounded-full text-[13px] font-medium">
-                <span class="material-symbols-rounded text-[18px]">receipt_long</span>
-                <span class="hidden md:inline">Paiements</span>
-            </a>
-            <a th:href="@{/plateforme/securite}"
-               th:classappend="${active=='securite'} ? ' bg-ink text-white' : ' glass text-muted hover:text-ink'"
-               class="btn flex items-center gap-1.5 px-3.5 h-10 rounded-full text-[13px] font-medium">
-                <span class="material-symbols-rounded text-[18px]">shield_person</span>
-                <span class="hidden md:inline">Sécurité</span>
-            </a>
-        </nav>
+        <span></span>
 
         <div class="flex items-center gap-3 shrink-0">
             <button type="button" onclick="window.__toggleTheme&&window.__toggleTheme()" title="Mode clair / sombre"
@@ -48,13 +17,10 @@
             <div class="flex items-center gap-2.5 pl-3 border-l border-line">
                 <div class="text-right hidden md:block leading-tight">
                     <p class="text-[13px] font-medium">Super administrateur</p>
-                    <p class="font-mono text-[10px] text-muted uppercase tracking-wider"
+                    <p class="font-mono text-[12px] text-muted"
                        th:text="${#authentication != null} ? ${#authentication.name} : ''">root</p>
                 </div>
-                <div class="w-9 h-9 rounded-full bg-ink text-white flex items-center justify-center">
-                    <span class="material-symbols-rounded text-[18px]">shield_person</span>
                 </div>
-            </div>
             <button type="button" onclick="window.__logout&&window.__logout()" title="Déconnexion"
                     class="btn glass flex items-center justify-center w-10 h-10 rounded-full text-muted hover:text-ink">
                 <span class="material-symbols-rounded text-[20px]">logout</span>
@@ -63,6 +29,23 @@
         </div>
     </div>
 </header>
+
+<!-- ================= RAIL DE LA PLATEFORME ================= -->
+<nav th:fragment="dock(active)" class="dock glass-strong" id="dock" aria-label="Navigation plateforme">
+    <a th:href="@{/plateforme}" class="dock-marque">SIGEP<small>Plateforme</small></a>
+    <a th:href="@{/plateforme}" class="dock-item" th:classappend="${active=='dashboard'}?'active':''">
+        <span class="material-symbols-rounded">space_dashboard</span><span class="dock-tip">Vue d'ensemble</span>
+    </a>
+    <a th:href="@{/plateforme/abonnements}" class="dock-item" th:classappend="${active=='abonnements'}?'active':''">
+        <span class="material-symbols-rounded">card_membership</span><span class="dock-tip">Abonnements</span>
+    </a>
+    <a th:href="@{/plateforme/paiements}" class="dock-item" th:classappend="${active=='paiements'}?'active':''">
+        <span class="material-symbols-rounded">receipt_long</span><span class="dock-tip">Paiements</span>
+    </a>
+    <a th:href="@{/plateforme/securite}" class="dock-item" th:classappend="${active=='securite'}?'active':''">
+        <span class="material-symbols-rounded">shield_person</span><span class="dock-tip">Sécurité</span>
+    </a>
+</nav>
 
 </body>
 </html>

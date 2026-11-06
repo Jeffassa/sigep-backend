@@ -9,14 +9,14 @@ import ci.esatic.sigep.entity.User;
 import ci.esatic.sigep.repository.EnseignantRepository;
 import ci.esatic.sigep.repository.RoleRepository;
 import ci.esatic.sigep.repository.UserRepository;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
@@ -42,7 +42,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Transactional
 class RefreshTokenIntegrationTest {
 
-    @MockBean private DataInitializer dataInitializer;
+    @MockitoBean private DataInitializer dataInitializer;
 
     @Autowired private MockMvc mockMvc;
     @Autowired private ObjectMapper objectMapper;
@@ -50,20 +50,15 @@ class RefreshTokenIntegrationTest {
     @Autowired private RoleRepository roleRepository;
     @Autowired private EnseignantRepository enseignantRepository;
     @Autowired private PasswordEncoder passwordEncoder;
+    @Autowired private ci.esatic.sigep.service.RefreshTokenService refreshTokenService;
 
-    private static final String EMAIL = "admin@esatic.ci";
+    private static final String EMAIL = "enseignant@esatic.ci";
     private static final String PASSWORD = "Admin@2026";
 
     @BeforeEach
     void setUp() {
-        Role admin = roleRepository.findByName(ERole.ROLE_ADMIN)
-                .orElseGet(() -> roleRepository.save(new Role(null, ERole.ROLE_ADMIN)));
         if (!userRepository.existsByEmail(EMAIL)) {
-            userRepository.save(User.builder()
-                    .email(EMAIL)
-                    .password(passwordEncoder.encode(PASSWORD))
-                    .roles(Set.of(admin))
-                    .build());
+            creerEnseignant(EMAIL, "ENS-RT-0", StatutEnseignant.VALIDATED);
         }
     }
 
@@ -140,6 +135,25 @@ class RefreshTokenIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void refresh_sessionAdministrationExistante_estFermee() throws Exception {
+        // Un refresh token délivré avant que l'API ne soit réservée aux enseignants ne doit
+        // pas continuer à produire des jetons sans second facteur.
+        Role admin = roleRepository.findByName(ERole.ROLE_ADMIN)
+                .orElseGet(() -> roleRepository.save(new Role(null, ERole.ROLE_ADMIN)));
+        User compte = userRepository.save(User.builder()
+                .email("ancien-admin@esatic.ci")
+                .password(passwordEncoder.encode(PASSWORD))
+                .roles(Set.of(admin))
+                .build());
+        String refresh = refreshTokenService.create(compte);
+
+        mockMvc.perform(post("/api/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("refreshToken", refresh))))
+                .andExpect(status().isForbidden());
     }
 
     @Test

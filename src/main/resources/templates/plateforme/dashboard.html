@@ -7,10 +7,13 @@
 
 <main class="max-w-[1240px] mx-auto px-5 md:px-8 py-10 pb-24">
 
-    <section class="mb-8 flex flex-wrap items-end justify-between gap-4" data-reveal>
+    <section class="en-tete-page" data-reveal>
         <div>
-            <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mb-2">Plateforme · Vue d'ensemble</p>
-            <h1 class="font-serif text-[clamp(34px,5vw,52px)] leading-[1.02] tracking-tight">Établissements</h1>
+            <p class="surtitre">Vue d'ensemble</p>
+            <h1 class="phrase-du-jour mt-0">
+                <span th:text="${nbEtablissements}">0</span> établissement<span th:if="${nbEtablissements > 1}">s</span>,
+                <span class="surligne"><span th:text="${#numbers.formatInteger(mrr, 1, 'WHITESPACE')}">0</span> <span th:text="${symbole}">FCFA</span></span> par mois.
+            </h1>
         </div>
         <a th:href="@{/plateforme/etablissements/nouveau}"
            class="btn btn-ink h-11 px-5 rounded-xl text-[13px] font-medium inline-flex items-center gap-1.5 shrink-0">
@@ -19,41 +22,37 @@
     </section>
 
     <!-- Messages -->
-    <div data-flash th:if="${ok}" class="flex items-center gap-2 p-3 mb-4 rounded-xl text-[13px]"
-         style="background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.35)">
+    <div data-flash th:if="${ok}" class="note note-ok">
         <svg th:replace="~{admin/fragments :: coche}"></svg><span th:text="${ok}"></span>
     </div>
-    <div data-flash th:if="${erreur}" class="flex items-center gap-2 p-3 mb-4 rounded-xl text-[13px]"
-         style="background:rgba(186,26,26,.08);color:#7a0010;border:1px solid rgba(186,26,26,.2)">
-        <span class="material-symbols-rounded text-[18px]">error</span><span th:text="${erreur}"></span>
+    <div data-flash th:if="${erreur}" class="note note-alerte">
+        <span th:text="${erreur}"></span>
     </div>
 
     <!-- SA-2 : dossiers d'inscription à valider -->
-    <section th:if="${!#lists.isEmpty(enAttente)}" class="glass rounded-3xl overflow-hidden mb-8" data-reveal
-             style="outline:2px solid var(--c-ink); outline-offset:-2px;">
-        <div class="px-7 py-5 border-b border-line flex items-center gap-2.5">
-            <span class="material-symbols-rounded">how_to_reg</span>
-            <h2 class="font-serif text-[22px]">Inscriptions à valider</h2>
-            <span class="ml-auto font-mono text-[11px] px-2.5 py-1 rounded-full bg-ink text-white"
-                  th:text="${#lists.size(enAttente)}">0</span>
+    <section th:if="${!#lists.isEmpty(enAttente)}" class="chapitre" data-reveal>
+        <div class="chapitre-tete">
+            
+            <h2 class="titre-section">Inscriptions à valider</h2>
+            <span class="etat etat-attente" th:text="${#lists.size(enAttente)}">0</span>
         </div>
         <div class="overflow-x-auto">
-            <table class="w-full text-left text-[14px]" data-mobile-keep="2">
-                <thead><tr class="border-b border-line font-mono text-[10px] uppercase tracking-wider text-muted">
-                    <th class="px-7 py-3">Établissement</th>
-                    <th class="px-4 py-3">Administrateur</th>
-                    <th class="px-4 py-3">Inscrit le</th>
-                    <th class="px-4 py-3 text-right">Décision</th>
+            <table class="registre" data-mobile-keep="2">
+                <thead><tr>
+                    <th>Établissement</th>
+                    <th>Administrateur</th>
+                    <th>Inscrit le</th>
+                    <th class="text-right">Décision</th>
                 </tr></thead>
                 <tbody>
-                <tr th:each="e : ${enAttente}" class="border-b border-line">
-                    <td class="px-7 py-3">
+                <tr th:each="e : ${enAttente}">
+                    <td>
                         <p class="font-medium" th:text="${e.nom}">Nom</p>
                         <p class="font-mono text-[11px] text-muted" th:text="${e.slug}">slug</p>
                     </td>
-                    <td class="px-4 py-3 font-mono text-[12px]" th:text="${adminParEtab[e.id]} ?: '—'">email</td>
-                    <td class="px-4 py-3" th:text="${#temporals.format(e.dateCreation,'dd/MM/yyyy HH:mm')}">--</td>
-                    <td class="px-4 py-3">
+                    <td class="code" th:text="${adminParEtab[e.id]} ?: '—'">email</td>
+                    <td th:text="${#temporals.format(e.dateCreation,'dd/MM/yyyy HH:mm')}">--</td>
+                    <td>
                         <div class="flex items-center justify-end gap-2">
                             <form th:action="@{/plateforme/etablissements/valider}" method="post">
                                 <input type="hidden" name="slug" th:value="${e.slug}"/>
@@ -75,201 +74,151 @@
         </div>
     </section>
 
-    <!-- KPIs -->
-    <section class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8" data-reveal>
-        <div class="glass rounded-3xl p-6">
-            <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Clients</p>
-            <p class="font-serif text-[38px] leading-none" th:text="${nbEtablissements}">0</p>
-        </div>
-        <div class="glass rounded-3xl p-6">
-            <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Actifs</p>
-            <p class="font-serif text-[38px] leading-none" th:text="${nbActifs}">0</p>
-        </div>
-        <div class="glass rounded-3xl p-6">
-            <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Expirés</p>
-            <p class="font-serif text-[38px] leading-none" th:text="${nbExpires}">0</p>
-        </div>
-        <div class="glass rounded-3xl p-6">
-            <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Inscrits ce mois</p>
-            <p class="font-serif text-[38px] leading-none" th:text="${inscriptionsMois}">0</p>
-        </div>
-        <div class="glass rounded-3xl p-6">
-            <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">MRR estimé</p>
-            <p class="font-serif text-[28px] leading-none mt-1.5">
-                <span th:text="${#numbers.formatInteger(mrr, 1, 'WHITESPACE')}">0</span>
-                <span class="text-[13px] text-muted" th:text="${symbole}">FCFA</span>
-            </p>
-        </div>
-        <div class="glass rounded-3xl p-6">
-            <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Encaissé (total)</p>
-            <p class="font-serif text-[28px] leading-none mt-1.5">
-                <span th:text="${#numbers.formatInteger(totalEncaisse, 1, 'WHITESPACE')}">0</span>
-                <span class="text-[13px] text-muted" th:text="${symbole}">FCFA</span>
-            </p>
-            <p class="text-[11px] text-muted mt-1" th:text="'dont ' + ${#numbers.formatInteger(encaisseMois,1,'WHITESPACE')} + ' ce mois'">—</p>
-        </div>
-        <div class="glass rounded-3xl p-6">
-            <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Par plan</p>
-            <div class="flex flex-wrap gap-x-3 gap-y-1 mt-1 font-mono text-[12px]">
-                <span>FREE&nbsp;<strong th:text="${parPlan['FREE']} ?: 0">0</strong></span>
-                <span>PRO&nbsp;<strong th:text="${parPlan['PRO']} ?: 0">0</strong></span>
-                <span>ENT&nbsp;<strong th:text="${parPlan['ENTERPRISE']} ?: 0">0</strong></span>
-            </div>
-        </div>
-    </section>
-
-    <!-- KPIs business complémentaires -->
-    <section class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8" data-reveal>
-        <div class="glass rounded-3xl p-6">
-            <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Conversion</p>
-            <p class="font-serif text-[32px] leading-none text-accent" th:text="${tauxConversion} + '%'">0%</p>
-            <p class="text-[11px] text-muted mt-1">Abonnés / inscrits</p>
-        </div>
-        <div class="glass rounded-3xl p-6">
-            <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Validation</p>
-            <p class="font-serif text-[32px] leading-none" th:text="${tauxValidation} + '%'">0%</p>
-            <p class="text-[11px] text-muted mt-1">Dossiers validés</p>
-        </div>
-        <div class="glass rounded-3xl p-6">
-            <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">ARPU (mensuel)</p>
-            <p class="font-serif text-[26px] leading-none mt-1.5">
-                <span th:text="${#numbers.formatInteger(arpu,1,'WHITESPACE')}">0</span>
-                <span class="text-[12px] text-muted" th:text="${symbole}">FCFA</span>
-            </p>
-            <p class="text-[11px] text-muted mt-1">Par client payant</p>
-        </div>
-        <div class="glass rounded-3xl p-6">
-            <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Expire bientôt</p>
-            <p class="font-serif text-[32px] leading-none" th:classappend="${expireBientot > 0} ? ' text-accent'"
-               th:text="${expireBientot}">0</p>
-            <p class="text-[11px] text-muted mt-1">À relancer (J-7)</p>
-        </div>
-        <div class="glass rounded-3xl p-6">
-            <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Dossiers</p>
-            <div class="flex gap-5 mt-2 font-mono text-[12px]">
-                <span>en&nbsp;attente&nbsp;<strong class="font-serif text-[22px]" th:text="${enAttente.size()}">0</strong></span>
-                <span class="text-muted">refusés&nbsp;<strong class="font-serif text-[22px]" th:text="${nbRefuses}">0</strong></span>
-            </div>
-        </div>
-    </section>
-
-    <!-- Synthèse graphique (données réelles du système) -->
-    <section class="mb-8" data-reveal>
-        <div class="glass rounded-3xl overflow-hidden mb-5">
-            <div class="px-7 py-5 border-b border-line flex items-center gap-2.5">
-                <span class="material-symbols-rounded">show_chart</span>
-                <h2 class="font-serif text-[22px]">Revenus &amp; croissance</h2>
-                <span class="ml-auto font-mono text-[10px] uppercase tracking-wider text-muted">8 derniers mois</span>
-            </div>
-            <div class="p-3 pt-4"><div id="chartLine" style="height:340px;width:100%"></div></div>
-        </div>
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            <div class="glass rounded-3xl overflow-hidden">
-                <div class="px-7 py-5 border-b border-line flex items-center gap-2.5">
-                    <span class="material-symbols-rounded">donut_large</span>
-                    <h2 class="font-serif text-[22px]">Répartition par plan</h2>
-                    <span class="ml-auto font-mono text-[11px] px-2.5 py-1 rounded-full glass"
-                          th:text="${nbEtablissements} + ' clients'">0</span>
-                </div>
-                <div class="p-3 pt-4"><div id="chartDonut" style="height:300px;width:100%"></div></div>
-                <div id="donutLegend" class="flex flex-wrap gap-x-5 gap-y-2 justify-center pb-5 pt-1"></div>
-            </div>
-            <div class="glass rounded-3xl overflow-hidden">
-                <div class="px-7 py-5 border-b border-line flex items-center gap-2.5">
-                    <span class="material-symbols-rounded">filter_alt</span>
-                    <h2 class="font-serif text-[22px]">Entonnoir d'onboarding</h2>
-                </div>
-                <div class="p-3 pt-4"><div id="chartFunnel" style="height:320px;width:100%"></div></div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Derniers paiements (activité récente) -->
-    <section class="glass rounded-3xl overflow-hidden mb-8" data-reveal th:if="${!#lists.isEmpty(derniersPaiements)}">
-        <div class="px-7 py-5 border-b border-line flex items-center gap-2.5">
-            <span class="material-symbols-rounded">receipt_long</span>
-            <h2 class="font-serif text-[22px]">Derniers paiements</h2>
-            <a th:href="@{/plateforme/paiements}" class="ml-auto text-[12px] text-muted hover:text-ink">Tout voir →</a>
+    <!-- Ce qui demande une action -->
+    <section class="releve" aria-label="À traiter">
+        <a href="#a-traiter" th:classappend="${aTraiter.size() > 0} ? 'releve-urgent'">
+            <p class="releve-libelle">À traiter</p>
+            <p class="releve-chiffre" th:text="${aTraiter.size()}">0</p>
+            <p class="releve-note">établissement(s) à contacter</p>
+        </a>
+        <div th:classappend="${revenuARisque > 0} ? 'releve-urgent'">
+            <p class="releve-libelle">Revenu à risque</p>
+            <p class="releve-chiffre"><span th:text="${#numbers.formatInteger(revenuARisque, 1, 'WHITESPACE')}">0</span><small th:text="${symbole} + ' / mois'">FCFA</small></p>
+            <p class="releve-note">clients payants expirés ou qui décrochent</p>
         </div>
         <div>
-            <div th:each="p : ${derniersPaiements}"
-                 class="px-7 py-3.5 flex items-center gap-4 text-[13px] border-b border-line last:border-0">
-                <span class="font-mono text-[11px] text-muted" th:text="${#temporals.format(p.datePaiement,'dd/MM HH:mm')}">--</span>
-                <span class="font-medium" th:text="${nomParEtab[p.etablissementId]} ?: ('#' + p.etablissementId)">Établissement</span>
-                <span th:if="${p.reference}" class="font-mono text-[11px] text-muted hidden sm:inline" th:text="${p.reference}">réf</span>
-                <span class="ml-auto font-mono text-accent"
-                      th:text="${#numbers.formatInteger(p.montant,1,'WHITESPACE') + ' ' + (p.devise != null ? p.devise : symbole)}">0</span>
-            </div>
+            <p class="releve-libelle">Encaissé ce mois</p>
+            <p class="releve-chiffre"><span th:text="${#numbers.formatInteger(encaisseMois, 1, 'WHITESPACE')}">0</span><small th:text="${symbole}">FCFA</small></p>
+            <p class="releve-note" th:text="'mois dernier : ' + ${#numbers.formatInteger(encaisseMoisPrecedent, 1, 'WHITESPACE')}">mois dernier : 0</p>
+        </div>
+        <div>
+            <p class="releve-libelle">Clients actifs</p>
+            <p class="releve-chiffre" th:text="${nbActifs}">0</p>
+            <p class="releve-note" th:text="${inscriptionsMois} + ' inscrit(s) ce mois, ' + ${tauxConversion} + ' % abonnés'">0</p>
         </div>
     </section>
 
-    <!-- Liste des établissements -->
-    <section class="glass rounded-3xl overflow-hidden" data-reveal>
-        <div class="px-7 py-5 border-b border-line flex flex-wrap items-center gap-3">
-            <span class="material-symbols-rounded">apartment</span>
-            <h2 class="font-serif text-[22px]">Tous les établissements</h2>
-            <!-- Recherche + filtres (GET, sans JS) -->
-            <form method="get" th:action="@{/plateforme}" class="ml-auto flex flex-wrap items-center gap-2">
-                <input type="text" name="q" th:value="${q}" placeholder="Rechercher…"
-                       class="h-9 px-3 rounded-lg bg-white/60 border border-line text-[13px] w-40"/>
-                <select name="plan" class="h-9 px-2 rounded-lg bg-white/60 border border-line text-[13px]">
-                    <option value="" th:selected="${fPlan == null or fPlan == ''}">Tous les plans</option>
-                    <option value="FREE" th:selected="${fPlan == 'FREE'}">Free</option>
-                    <option value="PRO" th:selected="${fPlan == 'PRO'}">Pro</option>
-                    <option value="ENTERPRISE" th:selected="${fPlan == 'ENTERPRISE'}">Enterprise</option>
-                </select>
-                <select name="statut" class="h-9 px-2 rounded-lg bg-white/60 border border-line text-[13px]">
-                    <option value="" th:selected="${fStatut == null or fStatut == ''}">Tous les statuts</option>
-                    <option value="VALIDE" th:selected="${fStatut == 'VALIDE'}">Validé</option>
-                    <option value="EN_ATTENTE" th:selected="${fStatut == 'EN_ATTENTE'}">En attente</option>
-                    <option value="REFUSE" th:selected="${fStatut == 'REFUSE'}">Refusé</option>
-                </select>
-                <button type="submit" class="btn btn-ink h-9 px-3 rounded-lg text-[12px] font-medium">Filtrer</button>
-            </form>
-        </div>
+    <section th:if="${!paiementsAVerifier.isEmpty()}" class="note note-alerte note-bloc mb-8" data-reveal>
+        <p class="font-medium" th:text="${paiementsAVerifier.size()} + ' paiement(s) à vérifier : le fournisseur n\'a pas donné de verdict clair. Contrôlez-les chez lui avant toute relance.'">Paiements à vérifier</p>
+        <p th:each="pi : ${paiementsAVerifier}" class="font-mono text-[13px] mt-1"
+           th:text="${pi.reference} + ' · ' + ${#numbers.formatInteger(pi.montantAttendu,1,'WHITESPACE')} + ' ' + ${pi.devise} + ' · ' + (${nomParEtab[pi.etablissementId]} ?: ('#' + ${pi.etablissementId}))">REF</p>
+    </section>
+
+    <section id="a-traiter" class="chapitre" th:if="${!aTraiter.isEmpty()}" data-reveal>
+        <div class="chapitre-tete"><h2 class="titre-section">À traiter en premier</h2></div>
         <div class="overflow-x-auto">
-            <table class="w-full text-left text-[14px]" data-mobile-keep="2">
-                <thead><tr class="border-b border-line font-mono text-[10px] uppercase tracking-wider text-muted">
-                    <th class="px-7 py-3">Établissement</th>
-                    <th class="px-4 py-3">Plan</th>
-                    <th class="px-4 py-3">Enseignants</th>
-                    <th class="px-4 py-3">Expiration</th>
-                    <th class="px-4 py-3">Statut</th>
-                </tr></thead>
+            <table class="registre" data-mobile-keep="2">
+                <thead><tr><th>Établissement</th><th>Pourquoi</th><th>Contact</th></tr></thead>
                 <tbody>
-                <tr th:each="e : ${etablissements}" class="border-b border-line hover:bg-white/40 transition">
-                    <td class="px-7 py-3">
-                        <a th:href="@{/plateforme/etablissements/{s}(s=${e.slug})}" class="group inline-flex items-center gap-1.5">
-                            <span class="font-medium group-hover:underline" th:text="${e.nom}">Nom</span>
-                            <span class="material-symbols-rounded text-[16px] text-muted">chevron_right</span>
-                        </a>
-                        <p class="font-mono text-[11px] text-muted" th:text="${e.slug}">slug</p>
-                    </td>
-                    <td class="px-4 py-3"><span class="font-mono text-[11px] uppercase tracking-wider px-2.5 py-1 rounded-full glass" th:text="${e.plan}">PLAN</span></td>
-                    <td class="px-4 py-3 font-mono" th:text="${enseignantsParEtab[e.id]} ?: 0">0</td>
-                    <td class="px-4 py-3" th:text="${e.dateExpiration != null} ? ${#temporals.format(e.dateExpiration,'dd/MM/yyyy')} : 'Illimité'">--</td>
-                    <td class="px-4 py-3">
-                        <span th:if="${e.statut.name() == 'EN_ATTENTE'}" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full badge-gold text-[12px]">
-                            <span class="material-symbols-rounded text-[14px]">hourglass_top</span>En attente</span>
-                        <span th:if="${e.statut.name() == 'REFUSE'}" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full glass text-muted text-[12px]">
-                            <span class="material-symbols-rounded text-[14px]">block</span>Refusé</span>
-                        <span th:if="${e.statut.name() == 'VALIDE' and expires.contains(e.id)}" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-ink text-white text-[12px]">
-                            <span class="material-symbols-rounded text-[14px]">lock</span>Expiré</span>
-                        <span th:if="${e.statut.name() == 'VALIDE' and !expires.contains(e.id) and e.actif}" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full glass text-[12px]">
-                            <span class="material-symbols-rounded text-[14px]">check_circle</span>Actif</span>
-                        <span th:if="${e.statut.name() == 'VALIDE' and !expires.contains(e.id) and !e.actif}" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full glass text-muted text-[12px]">
-                            <span class="material-symbols-rounded text-[14px]">pause_circle</span>Suspendu</span>
-                    </td>
-                </tr>
-                <tr th:if="${#lists.isEmpty(etablissements)}">
-                    <td colspan="5" class="px-7 py-8 text-center text-muted">Aucun établissement client pour le moment.</td>
+                <tr th:each="l : ${aTraiter}">
+                    <td class="fort"><a class="underline" th:href="@{/plateforme/etablissements/{s}(s=${l.e.slug})}" th:text="${l.e.nom}">Nom</a></td>
+                    <td class="discret" th:text="${l.motif}">Motif</td>
+                    <td class="code"><a th:if="${l.contact}" class="underline" th:href="'mailto:' + ${l.contact}" th:text="${l.contact}">contact</a></td>
                 </tr>
                 </tbody>
             </table>
         </div>
     </section>
+
+    <!-- L'usage réel, établissement par établissement -->
+    <section class="chapitre" data-reveal>
+        <div class="chapitre-tete">
+            <h2 class="titre-section">Santé des établissements</h2>
+            <form method="get" th:action="@{/plateforme}" class="flex flex-wrap items-center gap-2">
+                <input type="text" name="q" th:value="${q}" placeholder="Rechercher…" aria-label="Rechercher un établissement" class="h-9 px-3 champ text-[13px] w-40"/>
+                <select name="plan" aria-label="Plan" class="h-9 px-2 champ text-[13px]">
+                    <option value="" th:selected="${fPlan == null or fPlan == ''}">Tous les plans</option>
+                    <option value="FREE" th:selected="${fPlan == 'FREE'}">Free</option>
+                    <option value="PRO" th:selected="${fPlan == 'PRO'}">Pro</option>
+                    <option value="ENTERPRISE" th:selected="${fPlan == 'ENTERPRISE'}">Enterprise</option>
+                </select>
+                <select name="statut" aria-label="Statut" class="h-9 px-2 champ text-[13px]">
+                    <option value="" th:selected="${fStatut == null or fStatut == ''}">Tous les statuts</option>
+                    <option value="VALIDE" th:selected="${fStatut == 'VALIDE'}">Validé</option>
+                    <option value="EN_ATTENTE" th:selected="${fStatut == 'EN_ATTENTE'}">En attente</option>
+                    <option value="REFUSE" th:selected="${fStatut == 'REFUSE'}">Refusé</option>
+                </select>
+                <button type="submit" class="btn btn-ink h-9 px-3 text-[13px] font-medium">Filtrer</button>
+            </form>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="registre" data-mobile-keep="2">
+                <thead><tr><th>Établissement</th><th>État</th><th>Plan</th><th>Enseignants</th><th>Émargement · 30 j</th><th>Dernier émargement</th><th>Échéance</th></tr></thead>
+                <tbody>
+                <tr th:if="${lignes.isEmpty()}"><td colspan="7" class="vide">Aucun établissement client pour le moment.</td></tr>
+                <tr th:each="l : ${lignes}">
+                    <td class="fort"><a class="underline" th:href="@{/plateforme/etablissements/{s}(s=${l.e.slug})}" th:text="${l.e.nom}">Nom</a><span class="sous" th:text="${l.e.slug}">slug</span></td>
+                    <td><span class="etat" th:classappend="${l.priorite <= 2} ? 'etat-alerte' : (${l.priorite == 3} ? 'etat-attente' : (${l.priorite >= 6} ? 'etat-discret' : ''))" th:text="${l.etat}">Actif</span></td>
+                    <td class="code" th:text="${l.e.plan}">PLAN</td>
+                    <td class="code" th:text="${l.enseignants} + (${l.e.maxEnseignants > 0} ? ' / ' + ${l.e.maxEnseignants} : '')">0</td>
+                    <td>
+                        <span th:if="${l.seances30j == 0}" class="discret">Aucune séance</span>
+                        <div th:unless="${l.seances30j == 0}" class="flex items-center gap-2">
+                            <span class="jauge"><span th:style="'width:' + ${l.tauxPct} + '%'"></span></span>
+                            <span class="code" th:text="${l.tauxPct} + ' % · ' + ${l.seances30j} + ' séances'">0 %</span>
+                        </div>
+                    </td>
+                    <td class="code" th:text="${l.dernierEmargement != null} ? ${#temporals.format(l.dernierEmargement,'dd/MM/yyyy')} : '—'">—</td>
+                    <td class="code" th:text="${l.e.dateExpiration != null} ? ${#temporals.format(l.e.dateExpiration,'dd/MM/yyyy')} : 'Illimité'">—</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- Synthèse graphique (données réelles du système) -->
+    <section class="mb-8" data-reveal>
+        <div class="chapitre">
+            <div class="chapitre-tete">
+                
+                <h2 class="titre-section">Revenus &amp; croissance</h2>
+                <span class="etat etat-discret">8 derniers mois</span>
+            </div>
+            <div class="feuille px-3"><div id="chartLine" style="height:340px;width:100%"></div></div>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <div class="chapitre">
+                <div class="chapitre-tete">
+                    
+                    <h2 class="titre-section">Répartition par plan</h2>
+                    <span class="etat etat-discret"
+                          th:text="${nbEtablissements} + ' clients'">0</span>
+                </div>
+                <div class="feuille px-3"><div id="chartDonut" style="height:300px;width:100%"></div></div>
+                <div id="donutLegend" class="flex flex-wrap gap-x-5 gap-y-2 justify-center pb-5 pt-1"></div>
+            </div>
+            <div class="chapitre">
+                <div class="chapitre-tete">
+                    
+                    <h2 class="titre-section">Entonnoir d'onboarding</h2>
+                </div>
+                <div class="feuille px-3"><div id="chartFunnel" style="height:320px;width:100%"></div></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Derniers paiements (activité récente) -->
+    <section class="chapitre" data-reveal th:if="${!#lists.isEmpty(derniersPaiements)}">
+        <div class="chapitre-tete">
+            
+            <h2 class="titre-section">Derniers paiements</h2>
+            <a th:href="@{/plateforme/paiements}" class="underline text-[14px]">Tout voir</a>
+        </div>
+        <div class="feuille py-0">
+            <div th:each="p : ${derniersPaiements}"
+                 class="ligne-registre gap-4">
+                <span class="font-mono text-[11px] text-muted" th:text="${#temporals.format(p.datePaiement,'dd/MM HH:mm')}">--</span>
+                <span class="font-medium" th:text="${nomParEtab[p.etablissementId]} ?: ('#' + p.etablissementId)">Établissement</span>
+                <span th:if="${p.reference}" class="font-mono text-[11px] text-muted hidden sm:inline" th:text="${p.reference}">réf</span>
+                <span class="ml-auto font-mono"
+                      th:text="${#numbers.formatInteger(p.montant,1,'WHITESPACE') + ' ' + (p.devise != null ? p.devise : symbole)}">0</span>
+            </div>
+        </div>
+    </section>
+
 </main>
 
+<div th:replace="~{plateforme/fragments :: dock('dashboard')}"></div>
 <div th:replace="~{admin/fragments :: scripts}"></div>
 
 <!-- ECharts (data-viz de la vue d'ensemble) — chargé uniquement ici -->
@@ -288,7 +237,7 @@
         funNoms:  /*[[${funnelNoms}]]*/ [],
         funVals:  /*[[${funnelValeurs}]]*/ []
     };
-    var GOLD = '#d4af37', DUR = 1100, EASE = 'cubicInOut';
+    var GOLD = '#f5a623', DUR = 1100, EASE = 'cubicInOut';
     var css = function (n) { return getComputedStyle(root).getPropertyValue(n).trim(); };
     function pal() { return {
         ink: css('--c-ink'), muted: css('--c-muted'), line: css('--c-line'),
@@ -305,7 +254,7 @@
     var funnel = echarts.init(document.getElementById('chartFunnel'));
 
     function tip(p) { return { backgroundColor:p.surface, borderColor:p.line, borderWidth:1,
-        textStyle:{color:p.ink, fontFamily:'JetBrains Mono, monospace', fontSize:12},
+        textStyle:{color:p.ink, fontFamily:'DM Mono, monospace', fontSize:12},
         extraCssText:'border-radius:12px; box-shadow:0 10px 40px rgba(0,0,0,.15); backdrop-filter:blur(8px);' }; }
 
     function buildLine() {
@@ -316,20 +265,20 @@
             grid:{left:6,right:12,top:26,bottom:6,containLabel:true},
             tooltip:Object.assign({trigger:'axis',axisPointer:{type:'line',lineStyle:{color:p.muted,type:'dashed'}}}, tip(p)),
             xAxis:{type:'category',data:mois,boundaryGap:false,axisTick:{show:false},
-                axisLine:{lineStyle:{color:p.line}}, axisLabel:{color:p.muted,fontFamily:'JetBrains Mono, monospace',fontSize:11}},
+                axisLine:{lineStyle:{color:p.line}}, axisLabel:{color:p.muted,fontFamily:'DM Mono, monospace',fontSize:11}},
             yAxis:[
                 {type:'value',position:'left',splitNumber:4,axisLine:{show:false},axisTick:{show:false},
-                    axisLabel:{color:p.muted,fontFamily:'JetBrains Mono, monospace',fontSize:11,formatter:function(v){return kfmt(v);}},
+                    axisLabel:{color:p.muted,fontFamily:'DM Mono, monospace',fontSize:11,formatter:function(v){return kfmt(v);}},
                     splitLine:{lineStyle:{color:p.line,type:'dashed'}}},
                 {type:'value',position:'right',splitNumber:4,axisLine:{show:false},axisTick:{show:false},splitLine:{show:false},
-                    axisLabel:{color:p.muted,fontFamily:'JetBrains Mono, monospace',fontSize:11}}
+                    axisLabel:{color:p.muted,fontFamily:'DM Mono, monospace',fontSize:11}}
             ],
             series:[
                 {name:'Encaissé',type:'line',smooth:.5,showSymbol:false,z:3,
                     lineStyle:{color:p.ink,width:2.4},
                     areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:rgba(p.ink,.20)},{offset:1,color:rgba(p.ink,0)}])},
                     markLine:{silent:true,symbol:'none',lineStyle:{color:p.muted,type:'dashed',width:1},
-                        label:{show:true,position:'insideEndTop',color:p.muted,fontFamily:'JetBrains Mono, monospace',fontSize:10,formatter:'moy. '+kfmt(moy)},
+                        label:{show:true,position:'insideEndTop',color:p.muted,fontFamily:'DM Mono, monospace',fontSize:10,formatter:'moy. '+kfmt(moy)},
                         data:[{yAxis:moy}]},
                     markPoint:{symbol:'circle',symbolSize:9,itemStyle:{color:p.ink,borderColor:p.bg,borderWidth:2},label:{show:false},
                         data: enc.length ? [{coord:[mois.length-1, enc[enc.length-1]]}] : []},
@@ -357,7 +306,7 @@
                 data:noms.map(function(n,i){return {name:n,value:(+vals[i]||0)};})}],
             graphic:[
                 {type:'text',left:'center',top:'42%',style:{text:String(total),fill:p.ink,fontFamily:'Instrument Serif, serif',fontSize:46}},
-                {type:'text',left:'center',top:'59%',style:{text:'CLIENTS',fill:p.muted,fontFamily:'JetBrains Mono, monospace',fontSize:10,fontWeight:600}}
+                {type:'text',left:'center',top:'59%',style:{text:'CLIENTS',fill:p.muted,fontFamily:'DM Mono, monospace',fontSize:10,fontWeight:600}}
             ]
         }, true);
         var lg = document.getElementById('donutLegend');
@@ -376,7 +325,7 @@
             tooltip:Object.assign({trigger:'item',formatter:function(x){return x.name+' · <b>'+x.value+'</b> ('+Math.round(x.value/max*100)+'%)';}}, tip(p)),
             series:[{type:'funnel',top:14,bottom:14,left:'8%',right:'8%',min:0,max:max,minSize:'26%',maxSize:'100%',
                 sort:'descending',gap:4,funnelAlign:'center',
-                label:{position:'inside',color:p.bg,fontFamily:'JetBrains Mono, monospace',fontSize:12,fontWeight:600,
+                label:{position:'inside',color:p.bg,fontFamily:'DM Mono, monospace',fontSize:12,fontWeight:600,
                     formatter:function(x){return x.name+'  '+x.value+'  ·  '+Math.round(x.value/max*100)+'%';}},
                 labelLine:{show:false}, itemStyle:{borderWidth:0,borderRadius:6}, emphasis:{label:{fontSize:13}},
                 data:noms.map(function(n,i){ var t = noms.length>1 ? i/(noms.length-1) : 0;

@@ -123,6 +123,7 @@ public class ExportPaieService {
         for (Seance s : seanceRepository.findAllByDateBetweenOrdered(debut, fin)) {
             Enseignant reference = s.getEnseignant();
             if (reference == null) continue;   // séance orpheline : rien à payer à personne
+            if (s.getStatut() == StatutSeance.A_VALIDER) continue;   // pas encore acceptée : ni prévue, ni due
             // getId() sur un proxy rend l'identifiant sans déclencher le chargement.
             Long id = reference.getId();
             connus.putIfAbsent(id, tous.getOrDefault(id, reference));

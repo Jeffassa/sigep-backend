@@ -5,9 +5,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -28,7 +28,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 @ActiveProfiles("test")
 class ReferencementPagesPubliquesTest {
 
-    @MockBean private DataInitializer dataInitializer;
+    @MockitoBean private DataInitializer dataInitializer;
 
     @Autowired private MockMvc mockMvc;
 
@@ -99,7 +99,7 @@ class ReferencementPagesPubliquesTest {
         int ferme = html.indexOf("</script>", ouvre);
         String json = html.substring(ouvre, ferme).trim();
 
-        var noeud = new com.fasterxml.jackson.databind.ObjectMapper().readTree(json);
+        var noeud = new tools.jackson.databind.ObjectMapper().readTree(json);
 
         assertThat(noeud.path("@graph")).as("le graphe doit porter ses trois noeuds").hasSize(3);
         assertThat(json).as("aucune expression de template ne doit subsister").doesNotContain("${");
@@ -113,17 +113,10 @@ class ReferencementPagesPubliquesTest {
         String html = rendu("/");
 
         // Le contenu ne doit pas dépendre d'un script pour EXISTER : posé à opacity:0 dans la
-        // feuille de style, tout ce qui suit l'accroche disparaissait dès que le script ne
-        // s'exécutait pas, et un moteur n'avait qu'une page vide à indexer.
-        // Toute règle qui masque doit être portée par la classe d'armement : on compte les deux
-        // formes, et elles doivent coïncider. Chercher simplement l'absence de « .reveal
-        // { opacity: 0 » ne prouverait rien — la forme conditionnée contient cette sous-chaîne.
-        int masquages = compter(html, ".reveal { opacity: 0");
-        int masquagesArmes = compter(html, "html.anim-reveal .reveal { opacity: 0");
-        assertThat(masquages).as("au moins une regle de masquage doit exister").isPositive();
-        assertThat(masquagesArmes)
-                .as("tout masquage doit etre conditionne a l'armement du script")
-                .isEqualTo(masquages);
+        // feuille de style, tout ce qui suit l'accroche disparaîtrait dès que le script ne
+        // s'exécute pas, et un moteur n'aurait qu'une page vide à indexer.
+        assertThat(html).as("aucun masquage en attente d'un script").doesNotContain(".reveal");
+        assertThat(html).as("le contenu est dans le document").contains("Le bordereau").contains("Questions.");
         assertThat(html).as("filet pour les visiteurs sans JavaScript").contains("<noscript>");
     }
 

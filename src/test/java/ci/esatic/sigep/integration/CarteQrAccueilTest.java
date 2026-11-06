@@ -3,9 +3,9 @@ package ci.esatic.sigep.integration;
 import ci.esatic.sigep.config.DataInitializer;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -25,7 +25,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 @ActiveProfiles("test")
 class CarteQrAccueilTest {
 
-    @MockBean private DataInitializer dataInitializer;
+    @MockitoBean private DataInitializer dataInitializer;
 
     @Autowired private MockMvc mockMvc;
 
@@ -33,12 +33,11 @@ class CarteQrAccueilTest {
     void laCarteDAccueil_dessineUnCodeEtNonUnCarreVide() throws Exception {
         String html = mockMvc.perform(get("/")).andReturn().getResponse().getContentAsString();
 
-        int carte = html.indexOf("Émargement QR");
+        int carte = html.indexOf("class=\"qr-box\"");
         assertThat(carte).as("la carte doit exister").isNotNegative();
 
-        String bloc = html.substring(carte, Math.min(carte + 4000, html.length()));
-        assertThat(bloc).as("le motif doit etre dessine, pas laisse a un fond CSS")
-                .contains("qr-box").contains("<path");
+        String bloc = html.substring(carte, Math.min(carte + 1000, html.length()));
+        assertThat(bloc).as("le motif doit etre dessine, pas laisse a un fond CSS").contains("<path");
         assertThat(bloc).doesNotContain("<div class=\"qr-box\"></div>");
 
         // Le fond qui ne dessinait rien ne doit pas revenir.

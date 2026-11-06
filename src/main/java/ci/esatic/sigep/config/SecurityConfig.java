@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -64,9 +65,24 @@ public class SecurityConfig {
                         // règle, /admin-otp retombe sur anyRequest().hasRole("ADMIN") et le super
                         // administrateur — qui ne porte que ROLE_SUPER_ADMIN — reçoit un 403 sur la
                         // page même qui doit le laisser entrer.
-                        .requestMatchers("/admin-otp", "/admin-otp/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
+                        .requestMatchers("/admin-otp", "/admin-otp/**")
+                                .hasAnyRole("ADMIN", "SUPER_ADMIN", "DIRECTION", "SCOLARITE", "COMPTABILITE")
                         // Espace plateforme (super admin) : strictement séparé de l'admin établissement
                         .requestMatchers("/plateforme/**").hasRole("SUPER_ADMIN")
+                        .requestMatchers("/admin/logout", "/admin/mon-compte")
+                                .hasAnyRole("ADMIN", "DIRECTION", "SCOLARITE", "COMPTABILITE")
+                        // Tout ce qui n'est pas ouvert ci-dessous reste réservé à l'administrateur
+                        // principal : une page ajoutée plus tard n'est jamais ouverte par mégarde.
+                        .requestMatchers(HttpMethod.GET, ProfilsAdmin.LECTURE_COMMUNE)
+                                .hasAnyRole("ADMIN", "DIRECTION", "SCOLARITE", "COMPTABILITE")
+                        .requestMatchers(HttpMethod.POST, "/admin/rapports/generer")
+                                .hasAnyRole("ADMIN", "DIRECTION", "SCOLARITE", "COMPTABILITE")
+                        .requestMatchers(HttpMethod.GET, ProfilsAdmin.LECTURE_DIRECTION)
+                                .hasAnyRole("ADMIN", "DIRECTION", "SCOLARITE")
+                        .requestMatchers(HttpMethod.GET, "/admin/paie", "/admin/paie/**")
+                                .hasAnyRole("ADMIN", "DIRECTION", "COMPTABILITE")
+                        .requestMatchers(ProfilsAdmin.SCOLARITE).hasAnyRole("ADMIN", "SCOLARITE")
+                        .requestMatchers("/admin/abonnement/**").hasAnyRole("ADMIN", "COMPTABILITE")
                         .anyRequest().hasRole("ADMIN")
                 )
                 .formLogin(form -> form
@@ -128,9 +144,7 @@ public class SecurityConfig {
                 // Rate-limiting (anti-bruteforce du login admin + filet global) avant l'auth form.
                 .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class);
         appliquerHeadersSecurite(http);
-        if (requireHttps) {
-            http.requiresChannel(c -> c.anyRequest().requiresSecure());
-        }
+        exigerHttps(http);
         return http.build();
     }
 
@@ -163,9 +177,7 @@ public class SecurityConfig {
                             "{\"success\":false,\"message\":\"Clé d'API requise.\"}");
                 }));
         appliquerHeadersSecurite(http);
-        if (requireHttps) {
-            http.requiresChannel(c -> c.anyRequest().requiresSecure());
-        }
+        exigerHttps(http);
         return http.build();
     }
 
@@ -228,10 +240,34 @@ public class SecurityConfig {
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         appliquerHeadersSecurite(http);
-        if (requireHttps) {
-            http.requiresChannel(c -> c.anyRequest().requiresSecure());
-        }
+        exigerHttps(http);
         return http.build();
+    }
+
+    /**
+     * Redirige le trafic en clair vers HTTPS, quel que soit le port d'écoute.
+     *
+     * <p>Le filtre de Spring Security lève une exception — donc un 500 — pour tout port absent de
+     * sa table, qui ne connaît que 80 et 8080. Or l'hébergeur impose le sien ({@code ${PORT}}), et
+     * une requête interne sans {@code X-Forwarded-Proto}, comme une sonde de santé, y arrive
+     * directement. Le port public HTTPS, lui, est toujours 443 : c'est le proxy qui termine le TLS.
+     */
+    private void exigerHttps(HttpSecurity http) throws Exception {
+        if (!requireHttps) {
+            return;
+        }
+        http.portMapper(ports -> ports.portMapper(new org.springframework.security.web.PortMapper() {
+                    @Override
+                    public Integer lookupHttpPort(Integer httpsPort) {
+                        return 80;
+                    }
+
+                    @Override
+                    public Integer lookupHttpsPort(Integer httpPort) {
+                        return 443;
+                    }
+                }))
+                .redirectToHttps(Customizer.withDefaults());
     }
 
     /**
@@ -348,8 +384,7 @@ public class SecurityConfig {
      *  base sur UserDetailsService + PasswordEncoder (cf. authenticationManager), et chaque
      *  chaîne HTTP reçoit explicitement ce provider ci-dessous. */
     private AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        provider.setUserDetailsService(userDetailsService);
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
         provider.setPasswordEncoder(passwordEncoder());
         return provider;
     }

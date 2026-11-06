@@ -5,115 +5,118 @@
 
 <div th:replace="~{admin/fragments :: topbar('dashboard')}"></div>
 
-<main class="max-w-[1240px] mx-auto px-5 md:px-8 py-10 pb-36">
+<main class="max-w-[1240px] mx-auto px-5 md:px-8 py-8 pb-36">
 
-    <!-- Titre -->
-    <section class="mb-9" data-reveal>
-        <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mb-2">Vue d'ensemble</p>
-        <h1 class="font-serif text-[clamp(38px,6vw,60px)] leading-[1.02] tracking-tight">Tableau de bord</h1>
-        <p class="text-[15px] text-muted mt-2">Émargements, heures et rattrapages de l'établissement, en temps réel.</p>
+    <!-- Une phrase au lieu de quatre tuiles : ce qu'on vient chercher le matin, écrit en français. -->
+    <section data-reveal>
+        <p class="font-mono text-[13px] text-muted" th:text="${dateDuJour}">mardi 3 novembre</p>
+        <h1 class="phrase-du-jour" th:if="${seancesDuJour.isEmpty()}">Aucune séance prévue aujourd'hui.</h1>
+        <h1 class="phrase-du-jour" th:unless="${seancesDuJour.isEmpty()}">
+            <span th:text="${signeesDuJour}">0</span> séance<span th:if="${signeesDuJour > 1}">s</span> signée<span th:if="${signeesDuJour > 1}">s</span>
+            sur <span th:text="${seancesDuJour.size()}">0</span>,
+            <span class="surligne" th:text="${heuresDuJour}">0 h 00</span> déjà comptée<span th:if="${heuresDuJour != '0 h 00' and heuresDuJour != '1 h 00'}">s</span>,
+            <span th:if="${aRelancerDuJour == 0}">et rien à relancer.</span>
+            <span th:if="${aRelancerDuJour > 0}">et <span class="manuscrit" th:text="${aRelancerDuJour == 1 ? 'une à relancer' : aRelancerDuJour + ' à relancer'}">une à relancer</span>.</span>
+        </h1>
+        <p class="chiffres-du-jour">
+            <span><strong id="kpiTotalEnseignants" th:text="${totalEnseignants}">0</strong> enseignants</span>
+            <span><strong><span id="kpiTaux" th:text="${tauxEmargement}">0</span> %</strong> d'émargement cette semaine</span>
+            <span><strong id="kpiHeures" th:text="${heuresEffectuees}">0</strong> heures effectuées cette semaine</span>
+        </p>
     </section>
 
-    <!-- KPI -->
-    <section class="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5 mb-6">
-        <div class="glass glass-card rounded-3xl p-6" data-reveal>
-            <div class="flex items-center justify-between mb-6">
-                <span class="material-symbols-rounded text-ink">groups</span>
-                <span class="font-mono text-[10px] uppercase tracking-wider text-muted">Corps</span>
-            </div>
-            <p id="kpiTotalEnseignants" class="font-serif text-[46px] leading-none" th:text="${totalEnseignants}">0</p>
-            <p class="text-[13px] text-muted mt-1">Enseignants</p>
-        </div>
-        <div class="glass glass-card rounded-3xl p-6" data-reveal>
-            <div class="flex items-center justify-between mb-6">
-                <span class="material-symbols-rounded text-ink">check_circle</span>
-                <span class="font-mono text-[10px] uppercase tracking-wider text-muted">Semaine</span>
-            </div>
-            <p class="font-serif text-[46px] leading-none"><span id="kpiTaux" th:text="${tauxEmargement}">0</span>%</p>
-            <p class="text-[13px] text-muted mt-1">Taux d'émargement</p>
-        </div>
-        <div class="glass glass-card rounded-3xl p-6" data-reveal>
-            <div class="flex items-center justify-between mb-6">
-                <span class="material-symbols-rounded text-ink">history_toggle_off</span>
-                <span class="font-mono text-[10px] uppercase tracking-wider text-muted">À traiter</span>
-            </div>
-            <p id="kpiRattrapages" class="font-serif text-[46px] leading-none" th:text="${rattrapagesEnAttente}">0</p>
-            <p class="text-[13px] text-muted mt-1">Rattrapages en attente</p>
-        </div>
-        <div class="glass glass-card rounded-3xl p-6" data-reveal>
-            <div class="flex items-center justify-between mb-6">
-                <span class="material-symbols-rounded text-ink">schedule</span>
-                <span class="font-mono text-[10px] uppercase tracking-wider text-muted">Cumul</span>
-            </div>
-            <p class="font-serif text-[46px] leading-none"><span id="kpiHeures" th:text="${heuresEffectuees}">0</span></p>
-            <p class="text-[13px] text-muted mt-1">Heures effectuées</p>
-        </div>
+    <!-- La courbe de la journée, de 7 h à 18 h -->
+    <section class="ciel-du-jour" aria-label="Déroulement de la journée" data-reveal th:unless="${seancesDuJour.isEmpty()}">
+        <svg viewBox="0 0 1000 150" role="img" aria-label="Arc de la journée, de 7 heures à 18 heures, avec les séances du jour">
+            <path d="M20 140 Q500 -110 980 140" fill="none" stroke="#3a5684" stroke-width="1.5"/>
+            <g id="arcsDuJour"></g>
+            <circle id="haloDuJour" r="22" fill="#f5a623" opacity=".22"/>
+            <circle id="soleilDuJour" r="11" fill="#ffbe57"/>
+        </svg>
+        <div class="bornes"><span>7 h</span><span>12 h 30</span><span>18 h</span></div>
     </section>
 
-    <!-- Graphe + Activités -->
-    <section class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <!-- Tendance d'émargement (6 semaines) -->
-        <div class="lg:col-span-2 glass rounded-3xl p-7 flex flex-col" data-reveal>
-            <div class="flex items-center justify-between mb-5">
-                <div>
-                    <h2 class="font-serif text-[24px] leading-none">Tendance d'émargement</h2>
-                    <p class="text-[13px] text-muted mt-1">Taux de présence · 6 dernières semaines</p>
-                </div>
-                <span class="glass px-3 py-1 rounded-full font-mono text-[10px] uppercase tracking-wider text-muted flex items-center gap-1.5">
-                    <span class="w-1.5 h-1.5 rounded-full bg-ink inline-block" style="animation:rise 1s infinite alternate"></span>Live
-                </span>
+    <section class="flex flex-wrap gap-x-12 gap-y-8 mt-10 items-start" data-reveal>
+        <!-- Le registre -->
+        <div class="min-w-0" style="flex: 999 1 560px">
+            <h2 class="titre-section">Registre du jour</h2>
+            <p th:if="${seancesDuJour.isEmpty()}" class="text-[15px] text-muted">Rien au registre aujourd'hui. Le planning se dépose dans <a class="underline" th:href="@{/admin/rapports}">Rapports</a>.</p>
+            <div class="overflow-x-auto" th:unless="${seancesDuJour.isEmpty()}" tabindex="0" role="region" aria-label="Séances du jour">
+                <table class="registre-du-jour">
+                    <thead><tr><th scope="col">Heure</th><th scope="col">Séance</th><th scope="col">Enseignant</th><th scope="col">Visa</th></tr></thead>
+                    <tbody>
+                    <tr th:each="s : ${seancesDuJour}"
+                        th:with="signee=${s.statut.name() == 'EMARGE' or s.statut.name() == 'EN_RETARD'},
+                                 enValidation=${s.statut.name() == 'EN_ATTENTE_VALIDATION'},
+                                 finie=${s.heureFin.isBefore(heureCourante)},
+                                 commencee=${!s.heureDebut.isAfter(heureCourante)}"
+                        class="ligne-du-jour"
+                        th:attr="data-debut=${s.heureDebut.hour + s.heureDebut.minute / 60.0},data-fin=${s.heureFin.hour + s.heureFin.minute / 60.0},data-oubli=${!signee and !enValidation and finie}">
+                        <td class="font-mono text-[13px] whitespace-nowrap"><span th:text="${#temporals.format(s.heureDebut,'HH:mm')}">08:00</span>–<span th:text="${#temporals.format(s.heureFin,'HH:mm')}">10:00</span></td>
+                        <td><strong class="text-[16px]" th:text="${s.matiere.libelle}">Matière</strong><br/><span class="petit"><span th:text="${s.classe.libelle}">Classe</span> · <span th:text="${s.salle.libelle}">Salle</span></span></td>
+                        <td class="text-[15px]" th:text="${s.enseignant.prenom + ' ' + s.enseignant.nom}">Enseignant</td>
+                        <td class="whitespace-nowrap">
+                            <span th:if="${signee}" class="visa">ÉMARGÉ</span>
+                            <span th:if="${enValidation}" class="petit">En validation</span>
+                            <span th:if="${!signee and !enValidation and finie}" class="visa visa-rouge">SANS SCAN</span>
+                            <span th:if="${!signee and !enValidation and !finie and commencee}" class="petit">En cours</span>
+                            <span th:if="${!signee and !enValidation and !commencee}" class="petit">À venir</span>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
             </div>
+        </div>
+
+        <!-- La marge : ce qui attend une décision -->
+        <aside class="min-w-0" style="flex: 1 1 260px" aria-label="À traiter">
+            <h2 class="titre-section">À traiter</h2>
+            <a class="a-traiter" th:href="@{/admin/alertes}"><strong th:text="${seancesAValider}">0</strong>séance(s) importée(s) par les enseignants</a>
+            <a class="a-traiter" th:href="@{/admin/alertes}"><strong th:text="${emargementsHorsLigneCount}">0</strong>émargement(s) hors ligne à valider</a>
+            <a class="a-traiter" th:href="@{/admin/alertes}"><strong id="kpiRattrapages" th:text="${rattrapagesEnAttente}">0</strong>rattrapage(s) en attente</a>
+        </aside>
+    </section>
+
+    <!-- Tendance + activité -->
+    <section class="grid grid-cols-1 lg:grid-cols-3 gap-5 mt-12">
+        <div class="lg:col-span-2 feuille flex flex-col" data-reveal>
+            <h2 class="titre-section">Tendance d'émargement</h2>
+            <p class="text-[13px] text-muted mt-1 mb-5">Taux de présence · 6 dernières semaines</p>
             <div id="chartLine" class="flex-grow w-full" style="min-height:260px"></div>
         </div>
-
-        <!-- Activités récentes -->
-        <div class="glass rounded-3xl p-7 flex flex-col" data-reveal>
-            <h2 class="font-serif text-[24px] leading-none mb-5">Activité récente</h2>
+        <div class="feuille flex flex-col" data-reveal>
+            <h2 class="titre-section">Activité récente</h2>
             <div class="space-y-1 overflow-y-auto max-h-[340px] -mx-2 px-2">
                 <p th:if="${activitesRecentes.isEmpty()}" class="text-[14px] text-muted py-10 text-center">Aucune activité récente.</p>
-                <div th:each="a : ${activitesRecentes}" class="flex gap-3 p-2.5 rounded-2xl hover:bg-black/5 transition">
-                    <div class="shrink-0 w-9 h-9 rounded-full bg-ink text-white flex items-center justify-center font-serif text-[14px]"
-                         th:text="${#strings.substring(a.enseignant.nom,0,1) + #strings.substring(a.enseignant.prenom,0,1)}">AB</div>
+                <div th:each="a : ${activitesRecentes}" class="flex gap-3 p-2.5">
                     <div class="min-w-0 flex-grow">
                         <div class="flex items-baseline justify-between gap-2">
-                            <p class="text-[13px] font-medium truncate" th:text="${a.enseignant.prenom + ' ' + a.enseignant.nom}">Nom</p>
-                            <span class="font-mono text-[9px] text-muted uppercase whitespace-nowrap"
+                            <p class="text-[14px] font-medium truncate" th:text="${a.enseignant.prenom + ' ' + a.enseignant.nom}">Nom</p>
+                            <span class="font-mono text-[12px] text-muted whitespace-nowrap"
                                   th:text="${#temporals.format(a.dateCreation,'dd/MM HH:mm')}">--</span>
                         </div>
-                        <p class="text-[12px] text-muted truncate" th:text="${'Rattrapage · ' + a.matiere.libelle}">Rattrapage</p>
-                        <span class="inline-block mt-1 font-mono text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-full border border-line"
-                              th:text="${a.statut.name() == 'ACCEPTE'} ? 'Accepté' : (${a.statut.name() == 'REFUSE'} ? 'Refusé' : 'En attente')">statut</span>
+                        <p class="text-[13px] text-muted truncate"><span th:text="${'Rattrapage · ' + a.matiere.libelle}">Rattrapage</span> · <span th:text="${a.statut.name() == 'ACCEPTE'} ? 'Accepté' : (${a.statut.name() == 'REFUSE'} ? 'Refusé' : 'En attente')">statut</span></p>
                     </div>
                 </div>
             </div>
-            <a th:href="@{/admin/alertes}" class="btn glass mt-4 h-11 rounded-2xl flex items-center justify-center gap-2 text-[13px] font-medium hover:bg-ink hover:text-white">
+            <a th:href="@{/admin/alertes}" class="btn glass mt-4 h-11 flex items-center justify-center gap-2 text-[13px] font-medium">
                 Voir les alertes
                 <span id="apercuRattrapagesWrap" th:style="${alertesCount > 0} ? '' : 'display:none'"
-                      class="font-mono text-[11px]">(<span id="apercuRattrapages" th:text="${alertesCount}">0</span>)</span>
+                      class="font-mono text-[12px]">(<span id="apercuRattrapages" th:text="${alertesCount}">0</span>)</span>
             </a>
-            <div th:if="${emargementsHorsLigneCount > 0}" class="mt-3 p-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 flex items-center justify-between gap-2 text-amber-700 dark:text-amber-300" data-reveal>
-                <div class="flex items-center gap-2 text-[12px]">
-                    <span class="material-symbols-rounded text-[18px]">wifi_off</span>
-                    <span><strong th:text="${emargementsHorsLigneCount}">0</strong> émargement(s) hors-ligne</span>
-                </div>
-                <a th:href="@{/admin/alertes}" class="font-mono text-[10px] uppercase tracking-wider underline hover:opacity-80">Auditer</a>
-            </div>
             <span id="apercuTaux" class="hidden" th:text="${tauxEmargement + '%'}"></span>
         </div>
     </section>
 
     <!-- Profil hebdomadaire (radar) + Classement des enseignants (barres) -->
     <section class="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-5">
-        <!-- Profil de la semaine (radar Lun→Sam) -->
-        <div class="glass rounded-3xl p-7" data-reveal>
-            <h2 class="font-serif text-[24px] leading-none mb-1">Profil de la semaine</h2>
+        <div class="feuille" data-reveal>
+            <h2 class="titre-section">Profil de la semaine</h2>
             <p class="text-[13px] text-muted mb-2">Taux d'émargement par jour · lundi → samedi</p>
             <div id="chartRadar" class="w-full" style="height:300px"></div>
         </div>
-
-        <!-- Classement par assiduité (barres horizontales) -->
-        <div class="glass rounded-3xl p-7 flex flex-col" data-reveal>
-            <h2 class="font-serif text-[24px] leading-none mb-1">Classement</h2>
+        <div class="feuille flex flex-col" data-reveal>
+            <h2 class="titre-section">Classement</h2>
             <p class="text-[13px] text-muted mb-2">Assiduité par enseignant · 30 derniers jours</p>
             <div id="chartRanking" class="w-full" style="height:300px"></div>
             <p th:if="${classement.isEmpty()}" class="text-[14px] text-muted py-8 text-center">Aucune donnée.</p>
@@ -129,6 +132,34 @@
 <script data-page-script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.6.0/echarts.min.js"></script>
 <script data-page-script th:inline="javascript">
 /*<![CDATA[*/
+(function () {
+    // ---- La courbe du jour : l'arc va de 7 h à 18 h, l'heure est celle du navigateur ----
+    var groupe = document.getElementById('arcsDuJour');
+    if (!groupe) return;
+    var NS = 'http://www.w3.org/2000/svg';
+    function pos(h) { var t = Math.max(0, Math.min(1, (h - 7) / 11)); return { x: 20 + 960 * t, y: 140 - 500 * t * (1 - t) }; }
+    function troncon(a, b) {
+        var d = '';
+        for (var i = 0; i <= 12; i++) { var p = pos(a + (b - a) * i / 12); d += (i ? 'L' : 'M') + p.x.toFixed(1) + ' ' + p.y.toFixed(1); }
+        return d;
+    }
+    var maintenant = new Date(), h = maintenant.getHours() + maintenant.getMinutes() / 60;
+    document.querySelectorAll('.ligne-du-jour').forEach(function (l) {
+        var debut = parseFloat(l.dataset.debut), fin = parseFloat(l.dataset.fin), oubli = l.dataset.oubli === 'true';
+        var fait = h >= debut, trace = document.createElementNS(NS, 'path');
+        trace.setAttribute('d', troncon(debut, fait ? Math.min(h, fin) : fin));
+        trace.setAttribute('fill', 'none');
+        trace.setAttribute('stroke-linecap', 'round');
+        trace.setAttribute('stroke', oubli ? '#ff9d7e' : (fait ? '#f5a623' : '#5b769f'));
+        trace.setAttribute('stroke-width', fait ? 6 : 3);
+        groupe.appendChild(trace);
+    });
+    var soleil = pos(h);
+    ['soleilDuJour', 'haloDuJour'].forEach(function (id) {
+        var c = document.getElementById(id);
+        c.setAttribute('cx', soleil.x.toFixed(1)); c.setAttribute('cy', soleil.y.toFixed(1));
+    });
+})();
 (function () {
     // ---- KPIs en direct (poll léger toutes les 5 s) ----
     var setText = function (id, v) { var e = document.getElementById(id); if (e && e.textContent !== String(v)) e.textContent = String(v); };
@@ -148,7 +179,7 @@
     }, 5000);
 
     if (!window.echarts) return;
-    var root = document.documentElement, GOLD = '#d4af37', DUR = 1100, EASE = 'cubicInOut';
+    var root = document.documentElement, GOLD = '#f5a623', DUR = 1100, EASE = 'cubicInOut';
     var JOURS = ['Lun','Mar','Mer','Jeu','Ven','Sam'];
     var DATA = {
         semaines:   /*[[${tendanceSemaines}]]*/ [],
@@ -159,7 +190,7 @@
     function pal() { return { ink:css('--c-ink'), muted:css('--c-muted'), line:css('--c-line'), grey:css('--c-bar2'), surface:css('--c-surface'), bg:css('--c-bg') }; }
     function toRgb(h) { h=h.replace('#',''); if(h.length===3) h=h.split('').map(function(c){return c+c;}).join(''); return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)]; }
     function rgba(h,a) { var c=toRgb(h); return 'rgba('+c[0]+','+c[1]+','+c[2]+','+a+')'; }
-    function tip(p) { return { backgroundColor:p.surface, borderColor:p.line, borderWidth:1, textStyle:{color:p.ink,fontFamily:'JetBrains Mono, monospace',fontSize:12}, extraCssText:'border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.15);backdrop-filter:blur(8px);' }; }
+    function tip(p) { return { backgroundColor:p.surface, borderColor:p.line, borderWidth:1, textStyle:{color:p.ink,fontFamily:'DM Mono, monospace',fontSize:12}, extraCssText:'border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.15);backdrop-filter:blur(8px);' }; }
 
     var elLine=document.getElementById('chartLine'), elRadar=document.getElementById('chartRadar'), elRank=document.getElementById('chartRanking');
     var line = elLine && echarts.init(elLine);
@@ -173,8 +204,8 @@
         line.setOption({ animationDuration:DUR, animationEasing:EASE, animationDelay:function(i){return i*80;},
             grid:{left:6,right:14,top:24,bottom:6,containLabel:true},
             tooltip:Object.assign({trigger:'axis',valueFormatter:function(v){return v+'%';},axisPointer:{lineStyle:{color:p.muted,type:'dashed'}}}, tip(p)),
-            xAxis:{type:'category',data:lbls,boundaryGap:false,axisTick:{show:false},axisLine:{lineStyle:{color:p.line}},axisLabel:{color:p.muted,fontFamily:'JetBrains Mono, monospace',fontSize:11}},
-            yAxis:{type:'value',min:0,max:100,splitNumber:4,axisLine:{show:false},axisTick:{show:false},axisLabel:{color:p.muted,fontFamily:'JetBrains Mono, monospace',fontSize:11,formatter:'{value}%'},splitLine:{lineStyle:{color:p.line,type:'dashed'}}},
+            xAxis:{type:'category',data:lbls,boundaryGap:false,axisTick:{show:false},axisLine:{lineStyle:{color:p.line}},axisLabel:{color:p.muted,fontFamily:'DM Mono, monospace',fontSize:11}},
+            yAxis:{type:'value',min:0,max:100,splitNumber:4,axisLine:{show:false},axisTick:{show:false},axisLabel:{color:p.muted,fontFamily:'DM Mono, monospace',fontSize:11,formatter:'{value}%'},splitLine:{lineStyle:{color:p.line,type:'dashed'}}},
             series:[{name:'Taux',type:'line',smooth:.5,showSymbol:false,z:3,lineStyle:{color:p.ink,width:2.6},
                 areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:rgba(p.ink,.20)},{offset:1,color:rgba(p.ink,0)}])},
                 markPoint:{symbol:'circle',symbolSize:9,itemStyle:{color:p.ink,borderColor:p.bg,borderWidth:2},label:{show:false},data:vals.length?[{coord:[lbls.length-1,vals[vals.length-1]]}]:[]},
@@ -185,7 +216,7 @@
         radar.setOption({ animationDuration:DUR, animationEasing:EASE,
             tooltip:Object.assign({},tip(p)),
             radar:{indicator:JOURS.map(function(j){return {name:j,max:100};}),center:['50%','54%'],radius:'66%',
-                axisName:{color:p.muted,fontFamily:'JetBrains Mono, monospace',fontSize:11},
+                axisName:{color:p.muted,fontFamily:'DM Mono, monospace',fontSize:11},
                 splitLine:{lineStyle:{color:p.line}},splitArea:{areaStyle:{color:['transparent',rgba(p.ink,.03)]}},axisLine:{lineStyle:{color:p.line}}},
             series:[{type:'radar',data:[{value:JOURS.map(function(_,i){return Math.round((+vals[i]||0)*10)/10;}),name:'Taux %',
                 areaStyle:{color:rgba(GOLD,.18)},lineStyle:{color:GOLD,width:2},itemStyle:{color:GOLD},symbol:'circle',symbolSize:5}]}]}, true);
@@ -199,11 +230,11 @@
         rank.setOption({ animationDuration:DUR, animationEasing:EASE, animationDelay:function(i){return i*60;},
             grid:{left:6,right:38,top:8,bottom:6,containLabel:true},
             tooltip:Object.assign({trigger:'item',formatter:function(x){return x.name+' · <b>'+x.value+'%</b>';}}, tip(p)),
-            xAxis:{type:'value',min:0,max:100,axisLine:{show:false},axisTick:{show:false},splitLine:{lineStyle:{color:p.line,type:'dashed'}},axisLabel:{color:p.muted,fontFamily:'JetBrains Mono, monospace',fontSize:10,formatter:'{value}%'}},
+            xAxis:{type:'value',min:0,max:100,axisLine:{show:false},axisTick:{show:false},splitLine:{lineStyle:{color:p.line,type:'dashed'}},axisLabel:{color:p.muted,fontFamily:'DM Mono, monospace',fontSize:10,formatter:'{value}%'}},
             yAxis:{type:'category',data:noms,axisTick:{show:false},axisLine:{show:false},axisLabel:{color:p.ink,fontSize:12,width:120,overflow:'truncate'}},
             series:[{type:'bar',barWidth:'58%',
                 data:vals.map(function(v){return {value:v,itemStyle:{color:(v>=75?p.ink:(v>=50?p.grey:rgba(p.ink,.35))),borderRadius:[0,6,6,0]}};}),
-                label:{show:true,position:'right',color:p.muted,fontFamily:'JetBrains Mono, monospace',fontSize:11,formatter:'{c}%'}}]}, true);
+                label:{show:true,position:'right',color:p.muted,fontFamily:'DM Mono, monospace',fontSize:11,formatter:'{c}%'}}]}, true);
     }
     function buildAll() { buildLine(); buildRadar(); buildRank(); }
     buildAll();

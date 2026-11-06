@@ -27,8 +27,17 @@ public interface SeanceRepository extends JpaRepository<Seance, Long> {
 
     long countByEnseignantId(Long enseignantId);
 
+    // Les séances A_VALIDER, importées par un enseignant et pas encore acceptées, n'existent pour
+    // aucun calcul : ni taux, ni oubli, ni heures. Elles n'ont que leur file dans les alertes.
+    @Query("SELECT COUNT(s) FROM Seance s WHERE s.enseignant.id = :enseignantId AND s.statut <> 'A_VALIDER'")
+    long countPlanifieesParEnseignant(@Param("enseignantId") Long enseignantId);
+
+    List<Seance> findByStatutOrderByDateAscHeureDebutAsc(StatutSeance statut);
+
+    long countByStatut(StatutSeance statut);
+
     @Query("SELECT COUNT(s) FROM Seance s WHERE s.enseignant.id = :enseignantId " +
-           "AND s.date BETWEEN :debut AND :fin")
+           "AND s.date BETWEEN :debut AND :fin AND s.statut <> 'A_VALIDER'")
     long countByEnseignantIdAndPeriode(@Param("enseignantId") Long enseignantId,
                                        @Param("debut") LocalDate debut,
                                        @Param("fin") LocalDate fin);
@@ -40,13 +49,13 @@ public interface SeanceRepository extends JpaRepository<Seance, Long> {
                                      @Param("fin") LocalDate fin);
 
     // Requêtes globales (tous enseignants) — pour les statistiques admin
-    @Query("SELECT COUNT(s) FROM Seance s WHERE s.date BETWEEN :debut AND :fin")
+    @Query("SELECT COUNT(s) FROM Seance s WHERE s.date BETWEEN :debut AND :fin AND s.statut <> 'A_VALIDER'")
     long countAllByDateBetween(@Param("debut") LocalDate debut, @Param("fin") LocalDate fin);
 
     @Query("SELECT COUNT(s) FROM Seance s WHERE s.date BETWEEN :debut AND :fin AND s.statut = 'EMARGE'")
     long countAllEmargesByDateBetween(@Param("debut") LocalDate debut, @Param("fin") LocalDate fin);
 
-    @Query("SELECT COUNT(s) FROM Seance s WHERE s.date = :date")
+    @Query("SELECT COUNT(s) FROM Seance s WHERE s.date = :date AND s.statut <> 'A_VALIDER'")
     long countAllByDate(@Param("date") LocalDate date);
 
     @Query("SELECT COUNT(s) FROM Seance s WHERE s.date = :date AND s.statut = 'EMARGE'")
@@ -59,12 +68,12 @@ public interface SeanceRepository extends JpaRepository<Seance, Long> {
     // (aligné sur la relance e-mail qui couvre les oublis du jour même.)
     // Les séances EN_ATTENTE_VALIDATION (hors-ligne à valider) sont EXCLUES : elles ont leur
     // propre file dédiée et ne doivent pas être comptées comme des oublis à relancer.
-    @Query("SELECT s FROM Seance s WHERE s.statut NOT IN ('EMARGE', 'EN_ATTENTE_VALIDATION') " +
+    @Query("SELECT s FROM Seance s WHERE s.statut NOT IN ('EMARGE', 'EN_ATTENTE_VALIDATION', 'A_VALIDER') " +
            "AND (s.date < :date OR (s.date = :date AND s.heureFin < :heure)) " +
            "ORDER BY s.date DESC, s.heureDebut DESC")
     List<Seance> findSeancesNonEmargees(@Param("date") LocalDate date, @Param("heure") LocalTime heure);
 
-    @Query("SELECT COUNT(s) FROM Seance s WHERE s.statut NOT IN ('EMARGE', 'EN_ATTENTE_VALIDATION') " +
+    @Query("SELECT COUNT(s) FROM Seance s WHERE s.statut NOT IN ('EMARGE', 'EN_ATTENTE_VALIDATION', 'A_VALIDER') " +
            "AND (s.date < :date OR (s.date = :date AND s.heureFin < :heure))")
     long countSeancesNonEmargees(@Param("date") LocalDate date, @Param("heure") LocalTime heure);
 
@@ -76,13 +85,13 @@ public interface SeanceRepository extends JpaRepository<Seance, Long> {
     // ── Agrégats pour la page Statistiques admin ──
     @Query("SELECT s.classe.libelle, COUNT(s), " +
            "SUM(CASE WHEN s.statut = 'EMARGE' THEN 1 ELSE 0 END) " +
-           "FROM Seance s WHERE s.date BETWEEN :debut AND :fin " +
+           "FROM Seance s WHERE s.date BETWEEN :debut AND :fin AND s.statut <> 'A_VALIDER' " +
            "GROUP BY s.classe.libelle ORDER BY s.classe.libelle")
     List<Object[]> tauxParClasse(@Param("debut") LocalDate debut, @Param("fin") LocalDate fin);
 
     @Query("SELECT s.matiere.libelle, COUNT(s), " +
            "SUM(CASE WHEN s.statut = 'EMARGE' THEN 1 ELSE 0 END) " +
-           "FROM Seance s WHERE s.date BETWEEN :debut AND :fin " +
+           "FROM Seance s WHERE s.date BETWEEN :debut AND :fin AND s.statut <> 'A_VALIDER' " +
            "GROUP BY s.matiere.libelle ORDER BY s.matiere.libelle")
     List<Object[]> tauxParMatiere(@Param("debut") LocalDate debut, @Param("fin") LocalDate fin);
 
@@ -90,11 +99,29 @@ public interface SeanceRepository extends JpaRepository<Seance, Long> {
     // Ne renvoie que les enseignants ayant au moins une séance sur la période.
     @Query("SELECT s.enseignant.id, s.enseignant.prenom, s.enseignant.nom, s.enseignant.matricule, " +
            "COUNT(s), SUM(CASE WHEN s.statut = 'EMARGE' THEN 1 ELSE 0 END) " +
-           "FROM Seance s WHERE s.date BETWEEN :debut AND :fin " +
+           "FROM Seance s WHERE s.date BETWEEN :debut AND :fin AND s.statut <> 'A_VALIDER' " +
            "GROUP BY s.enseignant.id, s.enseignant.prenom, s.enseignant.nom, s.enseignant.matricule")
     List<Object[]> tauxParEnseignant(@Param("debut") LocalDate debut, @Param("fin") LocalDate fin);
 
+    // Vue de la plateforme : l'usage réel de chaque établissement sur une période.
+    @Query("SELECT s.etablissementId, COUNT(s), SUM(CASE WHEN s.statut = 'EMARGE' THEN 1 ELSE 0 END) " +
+           "FROM Seance s WHERE s.date BETWEEN :debut AND :fin AND s.statut <> 'A_VALIDER' " +
+           "GROUP BY s.etablissementId")
+    List<Object[]> activiteParEtablissement(@Param("debut") LocalDate debut, @Param("fin") LocalDate fin);
+
+    // Horaires des séances émargées : les heures se calculent sur leur durée réelle.
+    @Query("SELECT s.enseignant.id, s.heureDebut, s.heureFin FROM Seance s " +
+           "WHERE s.date BETWEEN :debut AND :fin AND s.statut = 'EMARGE'")
+    List<Object[]> horairesEmargees(@Param("debut") LocalDate debut, @Param("fin") LocalDate fin);
+
+    // Séances à retirer d'une fermeture : ni émargées, ni issues d'une demande de rattrapage.
+    @Query("SELECT s FROM Seance s WHERE s.date BETWEEN :debut AND :fin AND s.statut = 'A_FAIRE' " +
+           "AND NOT EXISTS (SELECT 1 FROM Emargement e WHERE e.seance = s) " +
+           "AND NOT EXISTS (SELECT 1 FROM DemandeRattrapage d WHERE d.seanceRattrapage = s)")
+    List<Seance> seancesRetirables(@Param("debut") LocalDate debut, @Param("fin") LocalDate fin);
+
     // Projection légère (date, heure de début, statut) pour la heatmap et les oublis
-    @Query("SELECT s.date, s.heureDebut, s.statut FROM Seance s WHERE s.date BETWEEN :debut AND :fin")
+    @Query("SELECT s.date, s.heureDebut, s.statut FROM Seance s " +
+           "WHERE s.date BETWEEN :debut AND :fin AND s.statut <> 'A_VALIDER'")
     List<Object[]> projectionPeriode(@Param("debut") LocalDate debut, @Param("fin") LocalDate fin);
 }

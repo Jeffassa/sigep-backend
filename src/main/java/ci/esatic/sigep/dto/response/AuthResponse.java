@@ -24,6 +24,11 @@ public class AuthResponse {
     private String prenom;
     /** Nom de l'établissement (tenant) — permet à l'app mobile d'afficher SON établissement (E14). */
     private String etablissementNom;
+    private Long etablissementId;
+    /** Établissements où ce compte peut travailler : plusieurs pour un vacataire. */
+    private List<EtablissementAccessible> etablissements;
     /** Indique qu'un secret provisoire doit être remplacé depuis le profil. */
     private boolean mustChangePassword;
+
+    public record EtablissementAccessible(Long id, String nom) {}
 }

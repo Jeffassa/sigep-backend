@@ -36,7 +36,7 @@ import java.util.Map;
 @Controller
 @RequiredArgsConstructor
 @Slf4j
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN','COMPTABILITE')")
 public class MobileMoneyWebController {
 
     private final MobileMoneyService mobileMoneyService;

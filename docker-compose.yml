@@ -11,7 +11,7 @@
       # SECURITE : jamais de mot de passe en dur — interpolé depuis .env (non versionné).
       POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD requis (voir .env.docker.example)}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT_HOTE:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
