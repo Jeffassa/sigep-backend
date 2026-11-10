@@ -41,6 +41,7 @@ public class TenantInterceptor implements HandlerInterceptor {
     @org.springframework.context.annotation.Lazy
     private final ci.esatic.sigep.service.JournalSecuriteService journalSecurite;
     private final ci.esatic.sigep.service.AbonnementService abonnementService;
+    private final ci.esatic.sigep.service.AlerteService alerteService;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
@@ -131,6 +132,11 @@ public class TenantInterceptor implements HandlerInterceptor {
     @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response,
                                Object handler, Exception ex) {
+        // Une action (tout sauf une lecture) a pu changer le nombre d'alertes de l'établissement.
+        String methode = request.getMethod();
+        if (!"GET".equals(methode) && !"HEAD".equals(methode) && !"OPTIONS".equals(methode)) {
+            alerteService.oublier(TenantContext.get());
+        }
         TenantContext.clear();
     }
 }

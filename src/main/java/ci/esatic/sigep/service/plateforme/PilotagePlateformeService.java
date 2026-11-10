@@ -5,7 +5,6 @@ import ci.esatic.sigep.entity.Plan;
 import ci.esatic.sigep.entity.StatutEtablissement;
 import ci.esatic.sigep.repository.EmargementRepository;
 import ci.esatic.sigep.repository.SeanceRepository;
-import ci.esatic.sigep.repository.UserRepository;
 import ci.esatic.sigep.service.AbonnementService;
 import ci.esatic.sigep.tenant.plan.PlanService;
 import lombok.RequiredArgsConstructor;
@@ -40,7 +39,6 @@ public class PilotagePlateformeService {
 
     private final SeanceRepository seanceRepository;
     private final EmargementRepository emargementRepository;
-    private final UserRepository userRepository;
     private final AbonnementService abonnementService;
     private final PlanService planService;
 
@@ -114,7 +112,7 @@ public class PilotagePlateformeService {
      */
     public List<MiseEnRoute> miseEnRoute(List<Etablissement> clients, Map<Long, Long> enseignants,
                                          Map<Long, Long> seances, Map<Long, LocalDateTime> dernierEmargement,
-                                         LocalDate jour) {
+                                         Map<Long, String> contacts, LocalDate jour) {
         List<MiseEnRoute> lignes = new ArrayList<>();
         for (Etablissement e : clients) {
             if (e.getStatut() != StatutEtablissement.VALIDE || !e.isActif()) continue;
@@ -130,8 +128,7 @@ public class PilotagePlateformeService {
                     : !aEmploiDuTemps ? "Emploi du temps non importé"
                     : !aEmarge ? "Aucun émargement encore"
                     : "Démarrage terminé";
-            String contact = terminee ? null
-                    : userRepository.findFirstByEtablissementIdOrderByIdAsc(e.getId()).map(u -> u.getEmail()).orElse(null);
+            String contact = terminee ? null : contacts.get(e.getId());
             lignes.add(new MiseEnRoute(e, age, aEnseignants, aEmploiDuTemps, aEmarge, blocage, contact));
         }
         lignes.sort(Comparator.comparing(MiseEnRoute::terminee)

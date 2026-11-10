@@ -81,7 +81,27 @@ public class AnalystesService {
                           Set<Long> expires, List<Long> nouveauxParMois, List<Long> encaisseParMois,
                           long gainPotentielQuotas) {}
 
+    /** Durée pendant laquelle une analyse déjà faite est resservie. */
+    static final long DUREE_MS = 5 * 60_000;
+
+    private volatile Rapport dernier;
+    private volatile long calculeA;
+
+    /**
+     * L'analyse lit plusieurs mois de données pour des constats qui ne bougent pas d'une minute
+     * à l'autre : elle est refaite au plus toutes les cinq minutes. Le tableau de bord, lui, est
+     * rouvert à chaque clic.
+     */
     public Rapport analyser(Entrees in) {
+        Rapport connu = dernier;
+        if (connu != null && System.currentTimeMillis() - calculeA < DUREE_MS) return connu;
+        Rapport neuf = calculer(in);
+        dernier = neuf;
+        calculeA = System.currentTimeMillis();
+        return neuf;
+    }
+
+    Rapport calculer(Entrees in) {
         LocalDate jour = in.jour();
         Map<Long, long[]> activiteAvant = new HashMap<>();
         for (Object[] l : seanceRepository.activiteParEtablissement(jour.minusDays(61), jour.minusDays(31))) {

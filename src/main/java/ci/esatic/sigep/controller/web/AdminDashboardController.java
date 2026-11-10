@@ -63,11 +63,15 @@ public class AdminDashboardController {
 
     @GetMapping("/admin/dashboard")
     public String dashboard(Model model) {
-        model.addAllAttributes(computeDashboardStats());
+        // Six semaines d'activité lues en une fois : elles servent à la semaine en cours, à la
+        // tendance et au taux par jour, qui demandaient chacun une requête par jour ou par semaine.
+        LocalDate lundi = LocalDate.now().with(DayOfWeek.MONDAY);
+        Map<LocalDate, long[]> parJour = activiteParJour(lundi.minusWeeks(5), lundi.plusDays(6));
+        model.addAllAttributes(computeDashboardStats(parJour));
         model.addAttribute("activitesRecentes",
                 rattrapageRepository.findAllByOrderByDateCreationDesc()
                         .stream().limit(6).toList());
-        model.addAttribute("tendanceSemaines", computeTendanceSemaines(6));
+        model.addAttribute("tendanceSemaines", computeTendanceSemaines(6, parJour));
         model.addAttribute("classement", computeClassement(30));
         ajouterRegistreDuJour(model);
         return "admin/dashboard";
@@ -172,17 +176,37 @@ public class AdminDashboardController {
     @GetMapping("/admin/api/stats")
     @ResponseBody
     public Map<String, Object> dashboardStats() {
-        return computeDashboardStats();
+        LocalDate lundi = LocalDate.now().with(DayOfWeek.MONDAY);
+        return computeDashboardStats(activiteParJour(lundi, lundi.plusDays(6)));
     }
 
-    private List<Map<String, Object>> computeTendanceSemaines(int nbSemaines) {
+    /** Séances prévues et émargées de l'établissement, jour par jour, en une seule requête. */
+    private Map<LocalDate, long[]> activiteParJour(LocalDate debut, LocalDate fin) {
+        Map<LocalDate, long[]> parJour = new HashMap<>();
+        for (Object[] l : seanceRepository.activiteParJour(debut, fin)) {
+            parJour.put((LocalDate) l[0], new long[] {((Number) l[1]).longValue(), ((Number) l[2]).longValue()});
+        }
+        return parJour;
+    }
+
+    /** Somme des séances prévues [0] et émargées [1] entre deux jours inclus. */
+    private static long[] cumul(Map<LocalDate, long[]> parJour, LocalDate debut, LocalDate fin) {
+        long[] total = new long[2];
+        for (LocalDate d = debut; !d.isAfter(fin); d = d.plusDays(1)) {
+            long[] v = parJour.get(d);
+            if (v != null) { total[0] += v[0]; total[1] += v[1]; }
+        }
+        return total;
+    }
+
+    private List<Map<String, Object>> computeTendanceSemaines(int nbSemaines, Map<LocalDate, long[]> parJour) {
         LocalDate lundiCourant = LocalDate.now().with(DayOfWeek.MONDAY);
         List<Map<String, Object>> out = new ArrayList<>();
         for (int i = nbSemaines - 1; i >= 0; i--) {
             LocalDate lundi = lundiCourant.minusWeeks(i);
-            LocalDate dimanche = lundi.plusDays(6);
-            long s = seanceRepository.countAllByDateBetween(lundi, dimanche);
-            long e = seanceRepository.countAllEmargesByDateBetween(lundi, dimanche);
+            long[] semaine = cumul(parJour, lundi, lundi.plusDays(6));
+            long s = semaine[0];
+            long e = semaine[1];
             Map<String, Object> m = new HashMap<>();
             m.put("label", lundi.format(DateTimeFormatter.ofPattern("dd/MM")));
             m.put("taux", s > 0 ? Math.round(e * 1000.0 / s) / 10.0 : 0.0);
@@ -195,12 +219,14 @@ public class AdminDashboardController {
         LocalDate fin = LocalDate.now();
         LocalDate debut = fin.minusDays(jours);
         List<Map<String, Object>> out = new ArrayList<>();
-        for (Enseignant e : enseignantRepository.findAll()) {
-            long total = seanceRepository.countByEnseignantIdAndPeriode(e.getId(), debut, fin);
+        // Une seule requête groupée : deux requêtes par enseignant faisaient d'un établissement
+        // de cinquante enseignants une page à cent requêtes.
+        for (Object[] l : seanceRepository.tauxParEnseignant(debut, fin)) {
+            long total = ((Number) l[4]).longValue();
             if (total == 0) continue;
-            long em = seanceRepository.countEmargeesParEnseignant(e.getId(), debut, fin);
+            long em = l[5] == null ? 0 : ((Number) l[5]).longValue();
             Map<String, Object> m = new HashMap<>();
-            m.put("nom", e.getPrenom() + " " + e.getNom());
+            m.put("nom", l[1] + " " + l[2]);
             m.put("taux", Math.round(em * 1000.0 / total) / 10.0);
             out.add(m);
         }
@@ -208,26 +234,28 @@ public class AdminDashboardController {
         return out;
     }
 
-    private Map<String, Object> computeDashboardStats() {
+    private Map<String, Object> computeDashboardStats(Map<LocalDate, long[]> parJour) {
         LocalDate today = LocalDate.now();
         LocalDate monday = today.with(DayOfWeek.MONDAY);
 
-        long seancesSemaine = seanceRepository.countAllByDateBetween(monday, monday.plusDays(6));
-        long emargesSemaine = seanceRepository.countAllEmargesByDateBetween(monday, monday.plusDays(6));
+        long[] semaine = cumul(parJour, monday, monday.plusDays(6));
+        long seancesSemaine = semaine[0];
+        long emargesSemaine = semaine[1];
         double tauxEmargement = seancesSemaine > 0
                 ? Math.round(emargesSemaine * 1000.0 / seancesSemaine) / 10.0 : 0.0;
 
         double[] tauxParJour = new double[6];
         for (int i = 0; i < 6; i++) {
             LocalDate day = monday.plusDays(i);
-            long s = seanceRepository.countAllByDate(day);
-            long e = seanceRepository.countAllEmargesByDate(day);
+            long[] v = parJour.getOrDefault(day, new long[] {0, 0});
+            long s = v[0];
+            long e = v[1];
             tauxParJour[i] = s > 0 ? Math.round(e * 1000.0 / s) / 10.0 : 0.0;
         }
 
         Map<String, Object> stats = new HashMap<>();
         stats.put("totalEnseignants", enseignantRepository.count());
-        stats.put("totalSeancesAujourdhui", seanceRepository.countAllByDate(today));
+        stats.put("totalSeancesAujourdhui", parJour.getOrDefault(today, new long[] {0, 0})[0]);
         stats.put("rattrapagesEnAttente", rattrapageRepository.countByStatut(StatutDemande.EN_ATTENTE));
         stats.put("emargementsHorsLigneCount", emargementRepository.countByHorsLigneTrueAndValideFalse());
         stats.put("tauxEmargement", tauxEmargement);

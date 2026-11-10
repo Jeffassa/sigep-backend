@@ -161,7 +161,7 @@
     });
 })();
 (function () {
-    // ---- KPIs en direct (poll léger toutes les 5 s) ----
+    // ---- KPIs en direct (poll léger toutes les 10 s) ----
     var setText = function (id, v) { var e = document.getElementById(id); if (e && e.textContent !== String(v)) e.textContent = String(v); };
     var minuterieKpi = setInterval(function () {
         fetch('/admin/api/stats', { credentials:'same-origin', headers:{'Accept':'application/json'} })
@@ -176,7 +176,7 @@
                 if (w) w.style.display = (Number(s.rattrapagesEnAttente) || 0) > 0 ? '' : 'none';
                 if (window.__updateRadar && Array.isArray(s.tauxParJour)) window.__updateRadar(s.tauxParJour);
             }).catch(function () {});
-    }, 5000);
+    }, 10000);
 
     if (!window.echarts) return;
     var root = document.documentElement, GOLD = '#f5a623', DUR = 1100, EASE = 'cubicInOut';

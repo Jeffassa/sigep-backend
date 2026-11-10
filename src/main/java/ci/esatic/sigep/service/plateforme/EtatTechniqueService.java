@@ -90,14 +90,25 @@ public class EtatTechniqueService {
         }
     }
 
+    /**
+     * Lue une seule fois. Interroger l'outil de migration coûte une quarantaine de requêtes, et
+     * la version du schéma ne change pas tant que l'application tourne : elle n'évolue qu'au
+     * démarrage. La relire à chaque affichage ralentissait tout le tableau de bord.
+     */
+    private volatile String schema;
+    private volatile boolean schemaLu;
+
     private String versionDuSchema() {
+        if (schemaLu) return schema;
         try {
             Flyway f = flyway.getIfAvailable();
-            if (f == null || f.info().current() == null) return null;
-            return f.info().current().getVersion().getVersion();
+            schema = (f == null || f.info().current() == null) ? null
+                    : f.info().current().getVersion().getVersion();
         } catch (Exception ex) {
-            return null;
+            schema = null;
         }
+        schemaLu = true;
+        return schema;
     }
 
     private Composant emails() {

@@ -366,7 +366,10 @@
                 })
                 .catch(function () {})
                 .finally(function () { __live = false; });
-        }, 1000);                                   // intervalle (augmenter si trop fréquent)
+        }, 15000);
+        // Quinze secondes, et non une : chaque tour redemande la page ENTIÈRE au serveur. À une
+        // seconde, un seul onglet ouvert l'occupait en permanence, et chaque clic attendait
+        // derrière ces rechargements que personne n'avait demandés.
     }
 
     /* ================= NAVIGATION INSTANTANÉE =================================
@@ -405,7 +408,72 @@
             }, 150); }
         };
 
-        var enCours = false;
+        /* --- Un clic doit répondre tout de suite ------------------------------------------
+           Trois mesures, parce que le temps du serveur ne se supprime pas depuis le navigateur :
+             · la page est demandée dès que le pointeur s'arrête sur un lien — le clic, qui vient
+               un quart de seconde plus tard, la trouve déjà en route ou déjà arrivée ;
+             · l'onglet cliqué se marque et le contenu s'estompe à l'instant du clic : on voit
+               que la demande est partie, sans attendre la réponse ;
+             · un second clic REMPLACE le premier au lieu d'être avalé. Avant, cliquer ailleurs
+               pendant un chargement ne faisait rien du tout, et la console semblait figée. */
+        var DUREE_PRECHARGE = 10000;
+        var prechargees = {};                    // adresse -> { promesse, quand }
+        var jeton = 0;                           // seule la dernière navigation demandée s'applique
+        var envoiEnCours = false;                // un formulaire part : lui ne s'interrompt pas
+
+        function demander(url) {
+            return fetch(url, { credentials: 'same-origin', headers: { 'X-Requested-With': 'fetch' } })
+                .then(function (r) {
+                    if (!r.ok) throw new Error('statut ' + r.status);
+                    return r.text().then(function (t) { return { html: t, url: r.url || url }; });
+                });
+        }
+        function precharger(url) {
+            var connue = prechargees[url];
+            if (connue && Date.now() - connue.quand < DUREE_PRECHARGE) return connue.promesse;
+            var promesse = demander(url);
+            prechargees[url] = { promesse: promesse, quand: Date.now() };
+            promesse.catch(function () { delete prechargees[url]; });
+            return promesse;
+        }
+        function prendre(url) {                  // une page préchargée ne sert qu'une fois
+            var connue = prechargees[url];
+            delete prechargees[url];
+            return (connue && Date.now() - connue.quand < DUREE_PRECHARGE) ? connue.promesse : demander(url);
+        }
+
+        /* Rend l'adresse d'un lien que la navigation instantanée prend en charge, sinon null. */
+        function adresseNavigable(a) {
+            if (!a) return null;
+            var href = a.getAttribute('href');
+            if (!href || href.charAt(0) === '#' || a.target || a.hasAttribute('download')) return null;
+            if (a.hasAttribute('data-no-boost')) return null;       // échappatoire explicite
+            var url;
+            try { url = new URL(a.href, location.href); } catch (err) { return null; }
+            if (url.origin !== location.origin) return null;        // lien externe
+            if (!dansPerimetre(url.pathname)) return null;          // hors administration
+            // Les téléchargements (rapports, modèles, exports) doivent rester des vraies
+            // navigations : un fetch les récupérerait en mémoire au lieu de les enregistrer.
+            if (/\.(pdf|csv|xlsx?|zip|png|jpe?g)$/i.test(url.pathname)
+                || /telecharger|modele|export/i.test(url.pathname)) return null;
+            return url;
+        }
+
+        function marquerDepart(url) {
+            var principal = document.querySelector('main');
+            if (principal) { principal.style.transition = 'opacity .15s'; principal.style.opacity = '.45'; }
+            var cible = url.pathname.replace(/\/+$/, '');
+            var onglets = document.querySelectorAll('#dock .dock-item');
+            var trouve = null;
+            onglets.forEach(function (o) {
+                try { if (new URL(o.href, location.href).pathname.replace(/\/+$/, '') === cible) trouve = o; } catch (e) {}
+            });
+            if (trouve) onglets.forEach(function (o) { o.classList.toggle('active', o === trouve); });
+        }
+        function finDepart() {
+            var principal = document.querySelector('main');
+            if (principal) principal.style.opacity = '';
+        }
 
         /* --- Rejoue les scripts propres à la page qui vient d'arriver ---------------------
            Un contenu posé par innerHTML n'exécute AUCUN script : le navigateur les recopie
@@ -535,33 +603,37 @@
             // cours — un POST lent — avalait le clic en silence, laissant l'administrateur
             // devant une palette qui ne répondait plus.
             if (window.__closePalette) window.__closePalette();
-            if (enCours) return;
-            enCours = true;
+            // Un formulaire en cours d'envoi ne s'interrompt pas : son action a pu s'exécuter.
+            if (envoiEnCours) return;
+            var moi = ++jeton;                   // un nouveau clic périme la navigation précédente
             progression('debut');
+            try { marquerDepart(new URL(url, location.href)); } catch (e) {}
             // On mémorise la position AVANT de partir : c'est elle que le retour arrière rendra.
             if (poussee) history.replaceState({ y: window.scrollY }, '', location.href);
 
-            fetch(url, { credentials: 'same-origin', headers: { 'X-Requested-With': 'fetch' } })
-                .then(function (r) {
-                    if (!r.ok) throw new Error('statut ' + r.status);
-                    return r.text().then(function (t) { return { html: t, url: r.url || url }; });
-                })
+            prendre(url)
                 .then(function (res) {
+                    if (moi !== jeton) return;           // l'utilisateur a cliqué ailleurs entre-temps
                     if (poussee) history.pushState({ y: 0 }, '', res.url);
                     if (!appliquer(res.html, null, { animer: true, urlReponse: res.url })) {
                         location.href = url; return;
                     }
                     window.scrollTo(0, 0);               // nouvelle page : on repart du haut
                 })
-                .catch(function () { location.href = url; })   // repli : navigation classique
-                .finally(function () { enCours = false; progression('fin'); });
+                .catch(function () { if (moi === jeton) location.href = url; })   // repli : navigation classique
+                .finally(function () {
+                    if (moi !== jeton) return;
+                    progression('fin'); finDepart();
+                });
         }
 
         /* --- Soumet un formulaire SANS perdre la position --- */
         function soumettre(form) {
-            if (enCours) return;
+            if (envoiEnCours) return;
             var y = window.scrollY;                      // ce qu'on veut retrouver après l'action
-            enCours = true;
+            ++jeton;                                     // une navigation en route ne s'appliquera plus
+            envoiEnCours = true;
+            prechargees = {};                            // l'action change l'état : rien de préchargé ne vaut plus
             progression('debut');
 
             // Le bouton montre qu'il travaille. Sans ce signe, une action lente passe pour une
@@ -595,7 +667,7 @@
                 })
                 .catch(echec)
                 .finally(function () {
-                    enCours = false; progression('fin');
+                    envoiEnCours = false; progression('fin'); finDepart();
                     if (bouton) bouton.classList.remove('en-cours');
                 });
 
@@ -611,22 +683,36 @@
         /* --- Interception des clics --- */
         document.addEventListener('click', function (e) {
             if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-            var a = e.target.closest ? e.target.closest('a') : null;
-            if (!a) return;
-            var href = a.getAttribute('href');
-            if (!href || href.charAt(0) === '#' || a.target || a.hasAttribute('download')) return;
-            if (a.hasAttribute('data-no-boost')) return;         // échappatoire explicite
-            var url;
-            try { url = new URL(a.href, location.href); } catch (err) { return; }
-            if (url.origin !== location.origin) return;          // lien externe
-            if (!dansPerimetre(url.pathname)) return;            // hors administration
-            // Les téléchargements (rapports, modèles, exports) doivent rester des vraies
-            // navigations : un fetch les récupérerait en mémoire au lieu de les enregistrer.
-            if (/\.(pdf|csv|xlsx?|zip|png|jpe?g)$/i.test(url.pathname)
-                || /telecharger|modele|export/i.test(url.pathname)) return;
+            var url = adresseNavigable(e.target.closest ? e.target.closest('a') : null);
+            if (!url) return;
             e.preventDefault();
             aller(url.href, true);
         });
+
+        /* --- Préchargement : la page part dès que l'intention se devine --- */
+        var attente = null;
+        function prechargeable(a) {
+            var url = adresseNavigable(a);
+            // Jamais la page où l'on est déjà, ni une adresse dont la simple lecture agit
+            // (ouverture de l'écran de salle, déconnexion).
+            if (!url || url.href === location.href || /ouvrir|deconnexion|logout/i.test(url.pathname)) return null;
+            return url;
+        }
+        document.addEventListener('mouseover', function (e) {
+            var a = e.target.closest ? e.target.closest('a') : null;
+            var url = prechargeable(a);
+            if (!url || envoiEnCours) return;
+            clearTimeout(attente);
+            // Un court délai : traverser le menu d'un geste ne doit pas demander toutes ses pages.
+            attente = setTimeout(function () { precharger(url.href); }, 80);
+        });
+        document.addEventListener('mouseout', function (e) {
+            if (e.target.closest && e.target.closest('a')) clearTimeout(attente);
+        });
+        document.addEventListener('touchstart', function (e) {
+            var url = prechargeable(e.target.closest ? e.target.closest('a') : null);
+            if (url && !envoiEnCours) precharger(url.href);
+        }, { passive: true });
 
         /* --- Interception des formulaires --- */
         document.addEventListener('submit', function (e) {
@@ -648,21 +734,21 @@
         window.addEventListener('popstate', function (e) {
             var y = (e.state && typeof e.state.y === 'number') ? e.state.y : 0;
             if (!dansPerimetre(location.pathname)) { location.reload(); return; }
-            enCours = true;
+            var moi = ++jeton;
             progression('debut');
-            fetch(location.href, { credentials: 'same-origin', headers: { 'X-Requested-With': 'fetch' } })
-                .then(function (r) {
-                    if (!r.ok) return null;
-                    return r.text().then(function (t) { return { html: t, url: r.url }; });
-                })
+            demander(location.href)
                 .then(function (res) {
-                    if (!res || !appliquer(res.html, null, { animer: true, urlReponse: res.url })) {
+                    if (moi !== jeton) return;
+                    if (!appliquer(res.html, null, { animer: true, urlReponse: res.url })) {
                         location.reload(); return;
                     }
                     window.scrollTo(0, y);               // on rend la position quittée
                 })
-                .catch(function () { location.reload(); })
-                .finally(function () { enCours = false; progression('fin'); });
+                .catch(function () { if (moi === jeton) location.reload(); })
+                .finally(function () {
+                    if (moi !== jeton) return;
+                    progression('fin'); finDepart();
+                });
         });
 
         // Position de départ, pour que le tout premier retour arrière retombe juste.
