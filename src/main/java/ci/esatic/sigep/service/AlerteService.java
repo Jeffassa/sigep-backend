@@ -25,32 +25,27 @@ public class AlerteService {
     private final EnseignantRepository enseignantRepository;
     private final ci.esatic.sigep.repository.EmargementRepository emargementRepository;
 
-    /** Durée pendant laquelle un compteur déjà calculé est resservi. */
-    private static final long DUREE_MS = 20_000;
-
-    /** Par établissement : { valeur, instant du calcul }. */
-    private final java.util.concurrent.ConcurrentHashMap<Long, long[]> memoire = new java.util.concurrent.ConcurrentHashMap<>();
-
     /**
      * Le compteur est affiché sur toutes les pages de l'administration : le recalculer à chaque
-     * affichage coûtait cinq requêtes par page. Il est donc gardé vingt secondes par
-     * établissement, et oublié dès qu'une action de cet établissement peut l'avoir changé
-     * ({@link #oublier}). Sans établissement en contexte, rien n'est gardé.
+     * affichage coûtait cinq requêtes par page. Il est gardé vingt secondes par établissement
+     * (cache {@link ci.esatic.sigep.config.CacheConfig#ALERTES}) et effacé dès qu'une action de
+     * cet établissement peut l'avoir changé ({@link #oublier}). Sans établissement en contexte,
+     * rien n'est gardé : la clé serait commune à tous.
      */
+    @org.springframework.cache.annotation.Cacheable(
+            cacheNames = ci.esatic.sigep.config.CacheConfig.ALERTES,
+            key = "T(ci.esatic.sigep.tenant.TenantContext).get()",
+            condition = "T(ci.esatic.sigep.tenant.TenantContext).get() != null")
     public long compter() {
-        Long tenant = ci.esatic.sigep.tenant.TenantContext.get();
-        if (tenant == null) return calculer();
-        long maintenant = System.currentTimeMillis();
-        long[] connu = memoire.get(tenant);
-        if (connu != null && maintenant - connu[1] < DUREE_MS) return connu[0];
-        long valeur = calculer();
-        memoire.put(tenant, new long[] {valeur, maintenant});
-        return valeur;
+        return calculer();
     }
 
     /** À appeler après toute action d'un établissement : son compteur sera recalculé. */
+    @org.springframework.cache.annotation.CacheEvict(
+            cacheNames = ci.esatic.sigep.config.CacheConfig.ALERTES,
+            key = "#p0", condition = "#p0 != null")
     public void oublier(Long tenant) {
-        if (tenant != null) memoire.remove(tenant);
+        // L'effacement est fait par l'annotation.
     }
 
     private long calculer() {

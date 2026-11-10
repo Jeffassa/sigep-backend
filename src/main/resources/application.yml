@@ -58,8 +58,9 @@ spring:
           auth: true
           starttls:
             enable: true
-  # Cache applicatif. OPTIONNEL : 'simple' (mémoire locale, défaut) tant que Redis n'est pas
-  # provisionné. Pour activer le cache distribué : CACHE_TYPE=redis + REDIS_URL (voir ci-dessous).
+  # Cache applicatif. 'simple' (défaut) = mémoire locale bornée, tant que Redis n'est pas
+  # provisionné. Pour le cache partagé : CACHE_TYPE=redis + SPRING_DATA_REDIS_URL (voir plus bas).
+  # Les caches, leurs durées et leurs règles sont déclarés dans CacheConfig.
   task:
     scheduling:
       # Plusieurs threads : sinon un seul cron lent (ex. appel réseau à un prestataire) gèle
@@ -76,7 +77,9 @@ spring:
       # Pour l'activer, définir la variable d'env SPRING_DATA_REDIS_URL (Spring la relie tout seul),
       # ex. rediss://default:<password>@<host>:<port> (Upstash/Render), + CACHE_TYPE=redis et/ou
       # RATE_LIMIT_REDIS_ENABLED=true. NE PAS déclarer d'url vide ici : Lettuce refuse "" au démarrage.
-      timeout: ${REDIS_TIMEOUT:2s}
+      # Délai d'une commande. Court exprès : le cache sert à gagner du temps, une lecture lente
+      # coûte plus cher que la requête qu'elle évite. Au-delà, l'application relit la base.
+      timeout: ${REDIS_TIMEOUT:1s}
       connect-timeout: ${REDIS_CONNECT_TIMEOUT:2s}
 
 server:
@@ -178,6 +181,10 @@ app:
     model: ${AI_MODEL:claude-opus-4-8}
     # Modèle standard (plans inférieurs) — maîtrise du coût par plan (E10).
     model-standard: ${AI_MODEL_STANDARD:claude-haiku-4-5}
+  cache:
+    # Préfixe de toutes les clés Redis. Le numéro de version se change quand le format d'une
+    # valeur change : les anciennes clés s'éteignent d'elles-mêmes à l'expiration.
+    prefixe: ${CACHE_PREFIXE:sigep:v1:}
   seo:
     # Codes de preuve de propriété (Google Search Console, Bing Webmaster Tools) : la valeur
     # « content » de la balise fournie par l'outil. Vides = aucune balise posée.

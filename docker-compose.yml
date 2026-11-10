@@ -32,7 +32,9 @@
       - "6379:6379"
     networks:
       - sigep_network
-    command: redis-server --appendonly yes
+    # Réglé comme un cache : mémoire bornée, les clés les moins utilisées sortent quand elle est
+    # pleine, et rien n'est écrit sur disque — tout ce qu'il contient se recalcule.
+    command: ["redis-server", "--maxmemory", "64mb", "--maxmemory-policy", "allkeys-lru", "--save", "", "--appendonly", "no"]
     volumes:
       - redis_data:/data
     healthcheck:
