@@ -8,7 +8,9 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Envoi d'e-mails de notification (asynchrone).
@@ -36,6 +38,21 @@ public class MailService {
 
     public MailService(ObjectProvider<JavaMailSender> mailSenderProvider) {
         this.mailSenderProvider = mailSenderProvider;
+    }
+
+    // ─── Suivi des envois, pour l'état technique de la plateforme ─────────────
+    // Compté en mémoire : repart de zéro à chaque redémarrage, ce que l'écran précise.
+    private final AtomicLong envoyes = new AtomicLong();
+    private final AtomicLong echecs = new AtomicLong();
+    private volatile LocalDateTime dernierEchec;
+
+    /** Ce que l'envoi d'e-mails a donné depuis le démarrage du service. */
+    public record BilanEnvois(boolean active, boolean configure, long envoyes, long echecs,
+                              LocalDateTime dernierEchec) {}
+
+    public BilanEnvois bilanEnvois() {
+        return new BilanEnvois(enabled, mailSenderProvider.getIfAvailable() != null,
+                envoyes.get(), echecs.get(), dernierEchec);
     }
 
     // ─── SA-2 : cycle de validation d'un établissement ────────────────────────
@@ -233,10 +250,13 @@ public class MailService {
         for (int tentative = 1; tentative <= MAX_TENTATIVES_MAIL; tentative++) {
             try {
                 sender.send(msg);
+                envoyes.incrementAndGet();
                 log.info("E-mail envoyé à {} : {}", destinataire, sujet);
                 return;
             } catch (Exception e) {
                 if (tentative >= MAX_TENTATIVES_MAIL) {
+                    echecs.incrementAndGet();
+                    dernierEchec = LocalDateTime.now();
                     log.error("Échec envoi e-mail à {} après {} tentatives : {}",
                             destinataire, tentative, e.getMessage());
                     return;

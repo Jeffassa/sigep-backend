@@ -73,4 +73,16 @@ public interface EmargementRepository extends JpaRepository<Emargement, Long> {
     /** Vue de la plateforme : le dernier émargement de chaque établissement. */
     @Query("SELECT e.etablissementId, MAX(e.dateHeure) FROM Emargement e GROUP BY e.etablissementId")
     List<Object[]> dernierEmargementParEtablissement();
+
+    /** Vue de la plateforme : combien d'enseignants différents ont émargé depuis cette date. */
+    @Query("SELECT COUNT(DISTINCT e.enseignant.id) FROM Emargement e WHERE e.dateHeure >= :depuis")
+    long enseignantsActifsDepuis(@Param("depuis") LocalDateTime depuis);
+
+    /** Vue de la plateforme : combien d'établissements différents ont émargé depuis cette date. */
+    @Query("SELECT COUNT(DISTINCT e.etablissementId) FROM Emargement e WHERE e.dateHeure >= :depuis")
+    long etablissementsActifsDepuis(@Param("depuis") LocalDateTime depuis);
+
+    long countByEnRetardTrueAndDateHeureBetween(LocalDateTime debut, LocalDateTime fin);
+
+    long countByHorsLigneTrueAndDateHeureBetween(LocalDateTime debut, LocalDateTime fin);
 }

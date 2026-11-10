@@ -65,6 +65,9 @@ public class PlateformeController {
     private final ci.esatic.sigep.repository.SeanceRepository seanceRepository;
     private final ci.esatic.sigep.repository.EmargementRepository emargementRepository;
     private final ci.esatic.sigep.repository.PaiementIntentRepository paiementIntentRepository;
+    private final ci.esatic.sigep.service.plateforme.PilotagePlateformeService pilotage;
+    private final ci.esatic.sigep.service.plateforme.EtatTechniqueService etatTechnique;
+    private final ci.esatic.sigep.service.plateforme.AnalystesService analystes;
 
     /** Sans émargement depuis ce nombre de jours, un client payant est en train de décrocher. */
     private static final int JOURS_AVANT_DECROCHAGE = 14;
@@ -239,6 +242,23 @@ public class PlateformeController {
                 .collect(Collectors.toMap(Etablissement::getId, Etablissement::getNomEffectif, (a, b) -> a)));
         model.addAttribute("derniersPaiements",
                 paiementRepository.findAllByOrderByDatePaiementDesc().stream().limit(5).toList());
+
+        // ===== Pilotage quotidien : usage du jour, mise en route, échéances, état technique =====
+        var echeances = pilotage.echeances(tous, enseignantsParEtab, expires);
+        model.addAttribute("pouls", pilotage.pouls(now));
+        model.addAttribute("aujourdHui", now);
+        model.addAttribute("miseEnRoute", pilotage.miseEnRoute(tous, enseignantsParEtab,
+                pilotage.seancesParEtablissement(), dernierEmargement, now));
+        model.addAttribute("echeances", echeances);
+        model.addAttribute("technique", etatTechnique.etat());
+
+        // ===== Cellule d'analyse : constats et prévisions calculés sur nos serveurs =====
+        var rapport = analystes.analyser(new ci.esatic.sigep.service.plateforme.AnalystesService.Entrees(
+                now, tous, enseignantsParEtab, activite, dernierEmargement, expires,
+                nouveauxParMois, encaisseParMois, echeances.gainPotentiel()));
+        model.addAttribute("analystes", rapport.analystes());
+        model.addAttribute("moisFuturs", rapport.moisFuturs());
+        model.addAttribute("nouveauxPrevus", rapport.nouveauxPrevus());
 
         return "plateforme/dashboard";
     }

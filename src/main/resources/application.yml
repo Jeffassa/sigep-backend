@@ -185,6 +185,10 @@ app:
     # C5 : auto-validation des inscriptions self-service. false = validation manuelle par le
     # super-admin (défaut, comportement actuel). true = espace actif immédiatement.
     auto-validation: ${ONBOARDING_AUTO_VALIDATION:false}
+  marche:
+    # Nombre d'établissements que SIGEP peut viser (source extérieure, renseignée par le gérant).
+    # Sert à l'analyste « Marché » du tableau de bord de la plateforme. 0 = part de marché non calculée.
+    etablissements-cibles: ${MARCHE_ETABLISSEMENTS_CIBLES:0}
   billing:
     # Devise de facturation (code ISO en minuscules). SOURCE UNIQUE : sert à l'affichage ET à
     # Stripe — les deux ne peuvent donc pas diverger.

@@ -109,6 +109,17 @@ public interface SeanceRepository extends JpaRepository<Seance, Long> {
            "GROUP BY s.etablissementId")
     List<Object[]> activiteParEtablissement(@Param("debut") LocalDate debut, @Param("fin") LocalDate fin);
 
+    // Vue de la plateforme : séances prévues et émargées, jour par jour, tous établissements confondus.
+    @Query("SELECT s.date, COUNT(s), SUM(CASE WHEN s.statut = 'EMARGE' THEN 1 ELSE 0 END) " +
+           "FROM Seance s WHERE s.date BETWEEN :debut AND :fin AND s.statut <> 'A_VALIDER' " +
+           "GROUP BY s.date ORDER BY s.date")
+    List<Object[]> activiteParJour(@Param("debut") LocalDate debut, @Param("fin") LocalDate fin);
+
+    // Vue de la plateforme : un établissement a-t-il déjà chargé son emploi du temps ?
+    @Query("SELECT s.etablissementId, COUNT(s) FROM Seance s WHERE s.statut <> 'A_VALIDER' " +
+           "GROUP BY s.etablissementId")
+    List<Object[]> countParEtablissement();
+
     // Horaires des séances émargées : les heures se calculent sur leur durée réelle.
     @Query("SELECT s.enseignant.id, s.heureDebut, s.heureFin FROM Seance s " +
            "WHERE s.date BETWEEN :debut AND :fin AND s.statut = 'EMARGE'")

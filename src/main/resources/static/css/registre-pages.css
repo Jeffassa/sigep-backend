@@ -175,3 +175,26 @@ body.porte { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr)
 /* Le chemin du retour, depuis les pages d'entrée */
 .retour-accueil { display: inline-flex; align-items: center; min-height: 44px; margin-bottom: 8px; font-size: 14px; color: var(--c-muted); text-decoration: underline; text-underline-offset: 3px; }
 .retour-accueil:hover { color: var(--c-ink); }
+
+/* La cellule d'analyse : une colonne par analyste, un trait entre deux, pas de carte. */
+.analystes {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    border-top: 2px solid var(--c-ink); background: var(--c-surface); overflow: hidden;
+}
+.analyste { padding: 18px 20px 20px; margin-right: -1px; border-right: 1px solid var(--c-line); border-bottom: 1px solid var(--c-line); min-width: 0; }
+.analyste-role { margin: 0 0 2px; font: 13px/18px 'DM Mono', monospace; color: var(--c-muted); }
+.analyste-nom { margin: 0 0 10px; font-stretch: 75%; font-weight: 900; font-size: 28px; line-height: 32px; }
+.analyste-verdict { margin: 0 0 12px; font-size: 16px; line-height: 24px; font-weight: 600; }
+.constats { list-style: none; margin: 0; padding: 0; }
+.constats li { position: relative; padding: 7px 0 7px 18px; border-top: 1px solid var(--c-line); font-size: 14px; line-height: 20px; }
+.constats li::before { content: ''; position: absolute; left: 0; top: 13px; width: 8px; height: 8px; background: var(--c-muted); }
+.constats .constat-alerte::before { background: var(--c-cachet); }
+.constats .constat-attention::before { background: var(--c-accent); }
+.constats .constat-bon::before { background: #1f7a6b; }
+html.dark .constats .constat-bon::before { background: #7fd8c4; }
+.analyste-pied { margin: 12px 0 0; font: 12px/18px 'DM Mono', monospace; color: var(--c-muted); }
+
+/* Les étapes d'une mise en route : un trait plein par étape faite. */
+.etapes { display: inline-flex; align-items: center; gap: 4px; vertical-align: middle; }
+.etapes > span { width: 18px; height: 8px; background: var(--c-track); }
+.etapes > span.faite { background: var(--c-ink); }

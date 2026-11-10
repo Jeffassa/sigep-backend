@@ -29,6 +29,13 @@
         <span th:text="${erreur}"></span>
     </div>
 
+    <!-- Un rouage en panne se dit en haut de page, pas seulement tout en bas -->
+    <div th:if="${!technique.enAlerte().isEmpty()}" class="note note-alerte note-bloc">
+        <p class="font-medium">État technique : <span th:text="${technique.enAlerte().size()}">1</span> rouage(s) en alerte.</p>
+        <p th:each="c : ${technique.enAlerte()}" class="mt-1" th:text="${c.nom} + ' : ' + ${c.detail}">Rouage : détail</p>
+        <p class="mt-1"><a class="underline" href="#etat-technique">Voir l'état technique</a></p>
+    </div>
+
     <!-- SA-2 : dossiers d'inscription à valider -->
     <section th:if="${!#lists.isEmpty(enAttente)}" class="chapitre" data-reveal>
         <div class="chapitre-tete">
@@ -98,6 +105,39 @@
         </div>
     </section>
 
+    <!-- L'usage du jour : le produit sert-il en ce moment ? -->
+    <section class="chapitre" data-reveal>
+        <div class="chapitre-tete">
+            <h2 class="titre-section">Aujourd'hui sur la plateforme</h2>
+            <span class="etat etat-discret" th:text="${#temporals.format(aujourdHui,'dd/MM/yyyy')}">01/01/2026</span>
+        </div>
+        <div class="releve" style="margin-bottom:0">
+            <div>
+                <p class="releve-libelle">Séances prévues</p>
+                <p class="releve-chiffre" th:text="${pouls.seancesPrevues}">0</p>
+                <p class="releve-note">tous établissements confondus</p>
+            </div>
+            <div>
+                <p class="releve-libelle">Séances émargées</p>
+                <p class="releve-chiffre"><span th:text="${pouls.seancesEmargees}">0</span><small th:if="${pouls.seancesPrevues > 0}" th:text="${pouls.tauxPct} + ' % du jour'">0 %</small></p>
+                <p class="releve-note" th:text="${pouls.emargementsDuJour} + ' émargement(s) enregistré(s)'">0</p>
+            </div>
+            <div>
+                <p class="releve-libelle">Enseignants actifs</p>
+                <p class="releve-chiffre" th:text="${pouls.enseignantsActifs7j}">0</p>
+                <p class="releve-note">ont émargé sur 7 jours</p>
+            </div>
+            <div>
+                <p class="releve-libelle">Établissements actifs</p>
+                <p class="releve-chiffre" th:text="${pouls.etablissementsActifs7j}">0</p>
+                <p class="releve-note" th:text="'sur ' + ${nbActifs} + ' en service, sur 7 jours'">sur 0</p>
+            </div>
+        </div>
+        <div class="feuille px-3" style="border-top:0">
+            <div id="chartPouls" style="height:220px;width:100%" role="img" aria-label="Séances prévues et émargées sur 14 jours"></div>
+        </div>
+    </section>
+
     <section th:if="${!paiementsAVerifier.isEmpty()}" class="note note-alerte note-bloc mb-8" data-reveal>
         <p class="font-medium" th:text="${paiementsAVerifier.size()} + ' paiement(s) à vérifier : le fournisseur n\'a pas donné de verdict clair. Contrôlez-les chez lui avant toute relance.'">Paiements à vérifier</p>
         <p th:each="pi : ${paiementsAVerifier}" class="font-mono text-[13px] mt-1"
@@ -114,6 +154,79 @@
                     <td class="fort"><a class="underline" th:href="@{/plateforme/etablissements/{s}(s=${l.e.slug})}" th:text="${l.e.nom}">Nom</a></td>
                     <td class="discret" th:text="${l.motif}">Motif</td>
                     <td class="code"><a th:if="${l.contact}" class="underline" th:href="'mailto:' + ${l.contact}" th:text="${l.contact}">contact</a></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- Ce qui arrive à terme, et les écoles prêtes pour le plan payant -->
+    <section class="chapitre" data-reveal>
+        <div class="chapitre-tete">
+            <h2 class="titre-section">Échéances et quotas</h2>
+            <span class="etat etat-discret" th:if="${echeances.montant30j > 0}"
+                  th:text="${#numbers.formatInteger(echeances.montant30j, 1, 'WHITESPACE')} + ' ' + ${symbole} + ' à renouveler sous 30 jours'">0</span>
+        </div>
+        <p class="chapitre-note" th:if="${echeances.vide()}">Aucun abonnement n'arrive à terme sous 30 jours, et aucune école n'approche de son quota d'enseignants.</p>
+        <div th:unless="${echeances.vide()}" class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <div class="overflow-x-auto">
+                <table class="registre" data-mobile-keep="2">
+                    <thead><tr><th>Abonnement à renouveler</th><th>Dans</th><th>Par mois</th></tr></thead>
+                    <tbody>
+                    <tr th:if="${echeances.sous7j.isEmpty() and echeances.sous30j.isEmpty()}"><td colspan="3" class="vide">Aucune échéance sous 30 jours.</td></tr>
+                    <tr th:each="x : ${echeances.sous7j}">
+                        <td class="fort"><a class="underline" th:href="@{/plateforme/etablissements/{s}(s=${x.e.slug})}" th:text="${x.e.nom}">Nom</a><span class="sous" th:text="${x.e.plan}">PLAN</span></td>
+                        <td><span class="etat etat-alerte" th:text="${x.jours == 0} ? 'ce jour' : ${x.jours} + ' jour(s)'">3 jours</span></td>
+                        <td class="code" th:text="${#numbers.formatInteger(x.montantMensuel, 1, 'WHITESPACE')} + ' ' + ${symbole}">0</td>
+                    </tr>
+                    <tr th:each="x : ${echeances.sous30j}">
+                        <td class="fort"><a class="underline" th:href="@{/plateforme/etablissements/{s}(s=${x.e.slug})}" th:text="${x.e.nom}">Nom</a><span class="sous" th:text="${x.e.plan}">PLAN</span></td>
+                        <td><span class="etat" th:text="${x.jours} + ' jours'">20 jours</span></td>
+                        <td class="code" th:text="${#numbers.formatInteger(x.montantMensuel, 1, 'WHITESPACE')} + ' ' + ${symbole}">0</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="registre" data-mobile-keep="2">
+                    <thead><tr><th>Proche de son quota</th><th>Enseignants</th><th>Gain possible</th></tr></thead>
+                    <tbody>
+                    <tr th:if="${echeances.quotas.isEmpty()}"><td colspan="3" class="vide">Aucune école n'approche de son quota.</td></tr>
+                    <tr th:each="x : ${echeances.quotas}">
+                        <td class="fort"><a class="underline" th:href="@{/plateforme/etablissements/{s}(s=${x.e.slug})}" th:text="${x.e.nom}">Nom</a><span class="sous" th:text="${x.e.plan}">PLAN</span></td>
+                        <td>
+                            <div class="flex items-center gap-2">
+                                <span class="jauge"><span th:style="'width:' + (${x.pct > 100} ? 100 : ${x.pct}) + '%'"></span></span>
+                                <span class="code" th:text="${x.enseignants} + ' / ' + ${x.max}">8 / 10</span>
+                            </div>
+                        </td>
+                        <td class="code" th:text="${x.gainMensuel > 0} ? '+ ' + ${#numbers.formatInteger(x.gainMensuel, 1, 'WHITESPACE')} + ' ' + ${symbole} + ' / mois' : '—'">0</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- Les écoles qui démarrent : à quelle étape chacune s'arrête -->
+    <section class="chapitre" th:if="${!miseEnRoute.isEmpty()}" data-reveal>
+        <div class="chapitre-tete"><h2 class="titre-section">Mise en route des nouvelles écoles</h2></div>
+        <p class="chapitre-note">Trois étapes font un démarrage : créer les enseignants, importer l'emploi du temps, obtenir un premier émargement.</p>
+        <div class="overflow-x-auto">
+            <table class="registre" data-mobile-keep="2">
+                <thead><tr><th>Établissement</th><th>Inscrit depuis</th><th>Étapes</th><th>Où elle en est</th><th>Contact</th></tr></thead>
+                <tbody>
+                <tr th:each="m : ${miseEnRoute}">
+                    <td class="fort"><a class="underline" th:href="@{/plateforme/etablissements/{s}(s=${m.e.slug})}" th:text="${m.e.nom}">Nom</a></td>
+                    <td class="code" th:text="${m.joursDepuisInscription} + ' jour(s)'">0 jour</td>
+                    <td>
+                        <span class="etapes" role="img" th:attr="aria-label=${m.etapesFaites()} + ' étape(s) sur 3'">
+                            <span th:classappend="${m.enseignants} ? 'faite'"></span><span th:classappend="${m.emploiDuTemps} ? 'faite'"></span><span th:classappend="${m.premierEmargement} ? 'faite'"></span>
+                        </span>
+                        <span class="code" th:text="${m.etapesFaites()} + ' / 3'">0 / 3</span>
+                    </td>
+                    <td><span class="etat" th:classappend="${m.terminee()} ? 'etat-discret' : (${m.joursDepuisInscription > 14} ? 'etat-alerte' : 'etat-attente')" th:text="${m.blocage}">Blocage</span></td>
+                    <td class="code"><a th:if="${m.contact}" class="underline" th:href="'mailto:' + ${m.contact}" th:text="${m.contact}">contact</a></td>
                 </tr>
                 </tbody>
             </table>
@@ -166,13 +279,33 @@
         </div>
     </section>
 
+    <!-- La cellule d'analyse : constats et prévisions calculés ici, sans service extérieur -->
+    <section class="chapitre" data-reveal>
+        <div class="chapitre-tete">
+            <h2 class="titre-section">Cellule d'analyse</h2>
+            <span class="etat etat-discret">calculs faits sur nos serveurs</span>
+        </div>
+        <p class="chapitre-note">Cinq analystes lisent les données de la plateforme et en tirent des constats et des prévisions. Chacun indique le crédit à accorder à ce qu'il avance ; aucune donnée ne quitte SIGEP.</p>
+        <div class="analystes">
+            <article class="analyste" th:each="a : ${analystes}">
+                <p class="analyste-role" th:text="${a.role}">Rôle</p>
+                <h3 class="analyste-nom" th:text="${a.nom}">Analyste</h3>
+                <p class="analyste-verdict" th:text="${a.verdict}">Verdict</p>
+                <ul class="constats">
+                    <li th:each="c : ${a.constats}" th:class="'constat-' + ${c.niveau}" th:text="${c.texte}">Constat</li>
+                </ul>
+                <p class="analyste-pied"><span th:text="'Fiabilité ' + ${a.fiabilite}">Fiabilité</span> · <span th:text="${a.methode}">Méthode</span></p>
+            </article>
+        </div>
+    </section>
+
     <!-- Synthèse graphique (données réelles du système) -->
     <section class="mb-8" data-reveal>
         <div class="chapitre">
             <div class="chapitre-tete">
                 
                 <h2 class="titre-section">Revenus &amp; croissance</h2>
-                <span class="etat etat-discret">8 derniers mois</span>
+                <span class="etat etat-discret">8 derniers mois · prévision à 3 mois</span>
             </div>
             <div class="feuille px-3"><div id="chartLine" style="height:340px;width:100%"></div></div>
         </div>
@@ -216,6 +349,28 @@
         </div>
     </section>
 
+    <!-- Les rouages dont dépend la plateforme -->
+    <section id="etat-technique" class="chapitre" data-reveal>
+        <div class="chapitre-tete">
+            <h2 class="titre-section">État technique</h2>
+            <span class="etat etat-discret" th:text="${technique.version} + ' · en service depuis ' + ${technique.enServiceDepuis}">Version</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="registre" data-mobile-keep="2">
+                <thead><tr><th>Rouage</th><th>État</th><th>Détail</th></tr></thead>
+                <tbody>
+                <tr th:each="c : ${technique.composants}">
+                    <td class="fort" th:text="${c.nom}">Rouage</td>
+                    <td><span class="etat" th:classappend="${c.etat == 'alerte'} ? 'etat-alerte' : (${c.etat == 'inactif'} ? 'etat-discret' : '')"
+                              th:text="${c.etat == 'alerte'} ? 'En alerte' : (${c.etat == 'inactif'} ? 'Inactif' : 'En marche')">En marche</span></td>
+                    <td class="discret" th:text="${c.detail}">Détail</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="chapitre-note" style="margin-top:12px">La date de la dernière sauvegarde de la base n'apparaît pas ici : elle se lit chez l'hébergeur.</p>
+    </section>
+
 </main>
 
 <div th:replace="~{plateforme/fragments :: dock('dashboard')}"></div>
@@ -235,7 +390,12 @@
         planNoms: /*[[${planNoms}]]*/ [],
         planVals: /*[[${planValeurs}]]*/ [],
         funNoms:  /*[[${funnelNoms}]]*/ [],
-        funVals:  /*[[${funnelValeurs}]]*/ []
+        funVals:  /*[[${funnelValeurs}]]*/ [],
+        futurs:   /*[[${moisFuturs}]]*/ [],
+        prevus:   /*[[${nouveauxPrevus}]]*/ [],
+        jours:    /*[[${pouls.jours}]]*/ [],
+        prevues:  /*[[${pouls.prevues}]]*/ [],
+        emargees: /*[[${pouls.emargees}]]*/ []
     };
     var GOLD = '#f5a623', DUR = 1100, EASE = 'cubicInOut';
     var css = function (n) { return getComputedStyle(root).getPropertyValue(n).trim(); };
@@ -252,6 +412,7 @@
     var line = echarts.init(document.getElementById('chartLine'));
     var donut = echarts.init(document.getElementById('chartDonut'));
     var funnel = echarts.init(document.getElementById('chartFunnel'));
+    var poulsGraphe = echarts.init(document.getElementById('chartPouls'));
 
     function tip(p) { return { backgroundColor:p.surface, borderColor:p.line, borderWidth:1,
         textStyle:{color:p.ink, fontFamily:'DM Mono, monospace', fontSize:12},
@@ -260,11 +421,16 @@
     function buildLine() {
         var p = pal(), enc = DATA.encaisse || [], nouv = DATA.nouveaux || [], mois = DATA.mois || [];
         var moy = enc.length ? Math.round(enc.reduce(function(s,x){return s+(+x||0);},0)/enc.length) : 0;
+        // La prévision prolonge la courbe des inscriptions : elle part du dernier mois connu.
+        var futurs = DATA.futurs || [], prevus = DATA.prevus || [];
+        var axe = mois.concat(futurs);
+        var vide = futurs.map(function(){ return null; });
+        var prevision = mois.map(function(_, i){ return i === mois.length - 1 ? nouv[i] : null; }).concat(prevus);
         line.setOption({
             animationDuration:DUR, animationEasing:EASE, animationDelay:function(i){return i*70;},
             grid:{left:6,right:12,top:26,bottom:6,containLabel:true},
             tooltip:Object.assign({trigger:'axis',axisPointer:{type:'line',lineStyle:{color:p.muted,type:'dashed'}}}, tip(p)),
-            xAxis:{type:'category',data:mois,boundaryGap:false,axisTick:{show:false},
+            xAxis:{type:'category',data:axe,boundaryGap:false,axisTick:{show:false},
                 axisLine:{lineStyle:{color:p.line}}, axisLabel:{color:p.muted,fontFamily:'DM Mono, monospace',fontSize:11}},
             yAxis:[
                 {type:'value',position:'left',splitNumber:4,axisLine:{show:false},axisTick:{show:false},
@@ -282,12 +448,15 @@
                         data:[{yAxis:moy}]},
                     markPoint:{symbol:'circle',symbolSize:9,itemStyle:{color:p.ink,borderColor:p.bg,borderWidth:2},label:{show:false},
                         data: enc.length ? [{coord:[mois.length-1, enc[enc.length-1]]}] : []},
-                    data:enc},
+                    data:enc.concat(vide)},
                 {name:'Nouveaux établissements',type:'line',yAxisIndex:1,smooth:.5,showSymbol:false,z:2,
                     lineStyle:{color:GOLD,width:2.4,type:[6,4]}, itemStyle:{color:GOLD},
                     markPoint:{symbol:'circle',symbolSize:8,itemStyle:{color:GOLD,borderColor:p.bg,borderWidth:2},label:{show:false},
                         data: nouv.length ? [{coord:[mois.length-1, nouv[nouv.length-1]]}] : []},
-                    data:nouv}
+                    data:nouv.concat(vide)},
+                {name:'Prévision des inscriptions',type:'line',yAxisIndex:1,smooth:.5,showSymbol:true,symbol:'emptyCircle',symbolSize:7,z:1,
+                    connectNulls:false, lineStyle:{color:GOLD,width:1.6,type:[2,5],opacity:.9}, itemStyle:{color:GOLD},
+                    data:prevision}
             ]
         }, true);
     }
@@ -332,9 +501,28 @@
                     return {name:n,value:(+vals[i]||0),itemStyle:{color:mix(p.ink,GOLD,t)}}; })}]
         }, true);
     }
-    function buildAll() { buildLine(); buildDonut(); buildFunnel(); }
+    function buildPouls() {
+        var p = pal();
+        poulsGraphe.setOption({
+            animationDuration:DUR, animationEasing:EASE,
+            grid:{left:6,right:12,top:30,bottom:6,containLabel:true},
+            legend:{top:0,right:8,itemWidth:10,itemHeight:10,icon:'rect',
+                textStyle:{color:p.muted,fontFamily:'DM Mono, monospace',fontSize:11}},
+            tooltip:Object.assign({trigger:'axis',axisPointer:{type:'shadow'}}, tip(p)),
+            xAxis:{type:'category',data:DATA.jours || [],axisTick:{show:false},
+                axisLine:{lineStyle:{color:p.line}}, axisLabel:{color:p.muted,fontFamily:'DM Mono, monospace',fontSize:11}},
+            yAxis:{type:'value',minInterval:1,splitNumber:3,axisLine:{show:false},axisTick:{show:false},
+                axisLabel:{color:p.muted,fontFamily:'DM Mono, monospace',fontSize:11},
+                splitLine:{lineStyle:{color:p.line,type:'dashed'}}},
+            series:[
+                {name:'Séances prévues',type:'bar',barGap:'-100%',barMaxWidth:26,itemStyle:{color:p.grey},data:DATA.prevues || []},
+                {name:'Séances émargées',type:'bar',barMaxWidth:26,itemStyle:{color:p.ink},data:DATA.emargees || []}
+            ]
+        }, true);
+    }
+    function buildAll() { buildLine(); buildDonut(); buildFunnel(); buildPouls(); }
     buildAll();
-    var surRedimensionnement = function(){ line.resize(); donut.resize(); funnel.resize(); };
+    var surRedimensionnement = function(){ line.resize(); donut.resize(); funnel.resize(); poulsGraphe.resize(); };
     window.addEventListener('resize', surRedimensionnement);
     // Suivre le thème clair/sombre de l'app (bascule via la classe .dark sur <html>).
     var observateurTheme = new MutationObserver(buildAll);
@@ -345,7 +533,7 @@
     if (window.__surDemontage) window.__surDemontage(function () {
         window.removeEventListener('resize', surRedimensionnement);
         observateurTheme.disconnect();
-        [line, donut, funnel].forEach(function (g) { if (g && g.dispose) g.dispose(); });
+        [line, donut, funnel, poulsGraphe].forEach(function (g) { if (g && g.dispose) g.dispose(); });
     });
 })();
 /*]]>*/
