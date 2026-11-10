@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title th:text="(${marque} ?: 'SIGEP') + ' · Émargement des enseignants par QR code'">SIGEP · Émargement des enseignants par QR code</title>
+    <title th:text="(${marque} ?: 'SIGEP') + ' · Émargement des enseignants par QR code et suivi des heures'">SIGEP · Émargement des enseignants par QR code et suivi des heures</title>
     <meta name="description" content="Vos enseignants émargent en scannant un QR code affiché dans la salle. Vous voyez les heures faites séance par séance et vous sortez les états pour la paie."/>
     <link rel="icon" th:href="@{/favicon.ico}" href="/favicon.ico" sizes="any"/>
     <link rel="apple-touch-icon" th:href="@{/images/logo_sigep.png}" href="/images/logo_sigep.png"/>
@@ -13,12 +13,16 @@
          chargé des paramètres de campagne ; sans canonique, chaque partage fabrique une page
          concurrente qui se partage les signaux au lieu de les additionner. -->
     <meta name="robots" content="index,follow,max-image-preview:large"/>
+    <!-- Preuve de propriété demandée par les outils des moteurs de recherche : absente tant
+         qu'aucun code n'est configuré. -->
+    <meta th:if="${verificationGoogle}" name="google-site-verification" th:content="${verificationGoogle}"/>
+    <meta th:if="${verificationBing}" name="msvalidate.01" th:content="${verificationBing}"/>
     <link rel="canonical" th:href="${canonicalUrl}" href="https://sigep.store/"/>
 
     <!-- Carte de partage : sans elle, un lien collé dans WhatsApp arrive en URL nue. -->
     <meta property="og:type" content="website"/>
     <meta property="og:site_name" th:content="${marque} ?: 'SIGEP'"/>
-    <meta property="og:title" th:content="(${marque} ?: 'SIGEP') + ' · Émargement des enseignants par QR code'"/>
+    <meta property="og:title" th:content="(${marque} ?: 'SIGEP') + ' · Émargement des enseignants par QR code et suivi des heures'"/>
     <meta property="og:description" content="Suivez les heures réellement effectuées par vos enseignants : émargement par QR code, planning, alertes et rapports de paie. Pour écoles et universités."/>
     <meta property="og:url" th:content="${canonicalUrl}"/>
     <meta property="og:locale" content="fr_FR"/>
@@ -27,7 +31,7 @@
     <meta property="og:image:height" content="630"/>
     <meta property="og:image:alt" content="SIGEP, émargement des enseignants par QR code"/>
     <meta name="twitter:card" content="summary_large_image"/>
-    <meta name="twitter:title" th:content="(${marque} ?: 'SIGEP') + ' · Émargement des enseignants par QR code'"/>
+    <meta name="twitter:title" th:content="(${marque} ?: 'SIGEP') + ' · Émargement des enseignants par QR code et suivi des heures'"/>
     <meta name="twitter:description" content="Émargement par QR code, planning et rapports d'heures pour écoles et universités."/>
     <meta name="twitter:image" th:content="${baseUrl} + '/images/og-sigep.png'"/>
     <script th:if="${plausibleDomain}" defer th:data-domain="${plausibleDomain}"
@@ -285,6 +289,43 @@
 (function () {
     var calme = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+    /* ----- Les sections apparaissent quand elles entrent dans le regard -----
+       Seul ce qui est SOUS la ligne de flottaison est masqué : ce qui est déjà à l'écran au
+       chargement ne doit ni clignoter ni attendre. Les blocs d'un même groupe se suivent à
+       quelques dixièmes de seconde, comme des lignes qu'on écrit l'une après l'autre. */
+    if (!calme && 'IntersectionObserver' in window) {
+        var cibles = document.querySelectorAll(
+            '.journee .titre2, .journee .large > .corps, .ciel, .curseur, .journee .defile, .bilan,' +
+            '.gestes .titre2, .geste,' +
+            '.paie-texte, .paie .feuille,' +
+            '.tarifs .titre2, .tarifs .intro, .offre,' +
+            '.questions .titre2, .liste-questions details,' +
+            '.fin .titre2, .fin .bouton, .fin .pied');
+        var veilleur = new IntersectionObserver(function (entrees) {
+            var rang = 0;
+            entrees.forEach(function (entree) {
+                if (!entree.isIntersecting) return;
+                var bloc = entree.target;
+                veilleur.unobserve(bloc);
+                bloc.style.transitionDelay = (rang++ * 90) + 'ms';
+                bloc.classList.add('visible');
+                // Une fois arrivé, le bloc redevient un bloc ordinaire : ni délai ni transition
+                // qui traîneraient sur ses propres effets de survol.
+                bloc.addEventListener('transitionend', function fini(e) {
+                    if (e.target !== bloc || e.propertyName !== 'opacity') return;
+                    bloc.removeEventListener('transitionend', fini);
+                    bloc.classList.remove('apparait', 'visible');
+                    bloc.style.transitionDelay = '';
+                });
+            });
+        }, { threshold: 0.12, rootMargin: '0px 0px -6% 0px' });
+        Array.prototype.forEach.call(cibles, function (bloc) {
+            if (bloc.getBoundingClientRect().top < window.innerHeight * 0.92) return;   // déjà visible
+            bloc.classList.add('apparait');
+            veilleur.observe(bloc);
+        });
+    }
+
     /* ----- Le registre se signe quand il entre dans le regard ----- */
     var registre = document.querySelector('.registre');
     if (!calme && 'IntersectionObserver' in window) {
@@ -438,5 +479,35 @@
 <div th:replace="~{admin/fragments :: cookieConsent}"></div>
 
 <th:block th:replace="~{public/fragments :: donneesStructurees}"></th:block>
+<!-- Les questions de la page, dites aussi aux moteurs. Mot pour mot celles affichées plus haut :
+     décrire en données ce que la page ne montre pas est sanctionné. -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "L'enseignant doit-il installer une application ?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Oui. L'enseignant installe l'application Android pour scanner le QR et signer. Côté scolarité, tout se fait depuis le navigateur." }
+    },
+    {
+      "@type": "Question",
+      "name": "Mes données sont-elles isolées des autres établissements ?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Oui. Chaque établissement dispose de son propre espace ; ses données ne sont ni partagées ni visibles par un autre." }
+    },
+    {
+      "@type": "Question",
+      "name": "Peut-on commencer sans engagement ?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Oui. Le plan Free est gratuit et sans carte bancaire. Vous passez à un plan supérieur uniquement quand vous en avez besoin." }
+    },
+    {
+      "@type": "Question",
+      "name": "Et s'il n'y a pas de réseau dans la salle ?",
+      "acceptedAnswer": { "@type": "Answer", "text": "L'émargement est mis en file d'attente dans le téléphone, envoyé au retour du réseau, puis validé par la scolarité." }
+    }
+  ]
+}
+</script>
 </body>
 </html>

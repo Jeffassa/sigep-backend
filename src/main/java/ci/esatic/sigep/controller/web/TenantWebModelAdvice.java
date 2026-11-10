@@ -73,6 +73,23 @@ public class TenantWebModelAdvice {
         return (plausibleDomain != null && !plausibleDomain.isBlank()) ? plausibleDomain : null;
     }
 
+    /** Codes de preuve de propriété fournis par les outils des moteurs — vides = balises absentes. */
+    @Value("${app.seo.google-site-verification:}")
+    private String verificationGoogle;
+
+    @Value("${app.seo.bing-site-verification:}")
+    private String verificationBing;
+
+    @ModelAttribute("verificationGoogle")
+    public String verificationGoogle() {
+        return (verificationGoogle != null && !verificationGoogle.isBlank()) ? verificationGoogle : null;
+    }
+
+    @ModelAttribute("verificationBing")
+    public String verificationBing() {
+        return (verificationBing != null && !verificationBing.isBlank()) ? verificationBing : null;
+    }
+
     @ModelAttribute("marque")
     public String marque() {
         return brandName;

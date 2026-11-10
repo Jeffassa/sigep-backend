@@ -272,3 +272,18 @@ details .corps { margin-bottom: 24px; max-width: 720px; }
     .cachet { animation: none; }
     .jauge > div, .signe { transition: none; }
 }
+
+/* =========================================================================
+   L'APPARITION AU DÉFILEMENT
+   Chaque bloc monte de quelques lignes et prend son encre quand il entre dans le regard.
+   La classe est posée par le script : sans script, ou si la personne a demandé moins de
+   mouvement, rien n'est jamais masqué.
+   « translate » et non « transform » : la feuille de paie est déjà inclinée par transform,
+   et l'un ne doit pas effacer l'autre.
+   La transition n'est posée que sur l'arrivée : masquer un bloc doit être instantané, sinon
+   il s'effacerait sous les yeux de qui défile vite.
+   ========================================================================= */
+.apparait { opacity: 0; translate: 0 28px; }
+.apparait.titre2 { translate: -28px 0; }
+.apparait.visible { opacity: 1; translate: 0 0; transition: opacity .7s ease, translate .7s cubic-bezier(.2, .7, .2, 1); }
+@media (prefers-reduced-motion: reduce) { .apparait { opacity: 1; translate: none; } .apparait.visible { transition: none; } }

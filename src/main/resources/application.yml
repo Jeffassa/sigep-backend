@@ -178,6 +178,11 @@ app:
     model: ${AI_MODEL:claude-opus-4-8}
     # Modèle standard (plans inférieurs) — maîtrise du coût par plan (E10).
     model-standard: ${AI_MODEL_STANDARD:claude-haiku-4-5}
+  seo:
+    # Codes de preuve de propriété (Google Search Console, Bing Webmaster Tools) : la valeur
+    # « content » de la balise fournie par l'outil. Vides = aucune balise posée.
+    google-site-verification: ${GOOGLE_SITE_VERIFICATION:}
+    bing-site-verification: ${BING_SITE_VERIFICATION:}
   analytics:
     # Analytics web sans cookie (Plausible). Vide = désactivé. Ex. PLAUSIBLE_DOMAIN=sigep.store
     plausible-domain: ${PLAUSIBLE_DOMAIN:}
