@@ -9,7 +9,7 @@
 
     <section class="mb-8" data-reveal>
         <p class="surtitre">Paiement en cours</p>
-        <h1 class="titre-page">Confirmez sur votre téléphone</h1>
+        <h1 class="titre-page" th:text="${viaJeko} ? 'Confirmation du paiement' : 'Confirmez sur votre téléphone'">Confirmez sur votre téléphone</h1>
     </section>
 
     <section class="feuille mb-6" data-reveal>
@@ -31,27 +31,29 @@
         </div>
 
         <div id="etat" class="note note-attention">
-            <span id="etatTexte">Demande envoyée à l'opérateur <strong th:text="${intent.provider}">opérateur</strong>
+            <span id="etatTexte" th:if="${viaJeko}">Nous attendons la confirmation de Jèko. Si vous n'avez pas
+                terminé le paiement, rouvrez la page de paiement ci-dessous.</span>
+            <span id="etatTexte" th:unless="${viaJeko}">Demande envoyée à l'opérateur <strong th:text="${intent.provider}">opérateur</strong>
                 sur le <strong th:text="${intent.msisdn}">numéro</strong>. Validez-la sur votre téléphone…</span>
         </div>
 
         <!-- Wave / NovaSend : lien de confirmation (uniquement si le tiers a bien fourni du HTTPS) -->
         <a th:if="${paymentUrlSure}" th:href="${paymentUrlSure}" target="_blank" rel="noopener"
            class="btn btn-ink inline-flex items-center gap-2 h-11 px-5 rounded-xl font-medium mb-5">
-            <span class="material-symbols-rounded text-[18px]">open_in_new</span> Ouvrir la page de confirmation
+            <span class="material-symbols-rounded text-[18px]">open_in_new</span> <span th:text="${viaJeko} ? 'Rouvrir la page de paiement' : 'Ouvrir la page de confirmation'">Ouvrir la page de confirmation</span>
         </a>
 
         <!-- Instructions spécifiques opérateur : sans elles, l'utilisateur reste bloqué -->
         <div class="text-[13px] text-muted space-y-2">
-            <p th:if="${intent.provider == 'MOMO'}">
+            <p th:if="${!viaJeko and intent.provider == 'MOMO'}">
                 Si aucune demande n'apparaît, composez <strong class="text-ink">*133#</strong> sur votre
                 téléphone MTN pour accéder au menu de validation.
             </p>
-            <p th:if="${intent.provider == 'MOOV'}">
+            <p th:if="${!viaJeko and intent.provider == 'MOOV'}">
                 Si aucune demande n'apparaît, composez <strong class="text-ink">*155#</strong> sur votre
                 téléphone Moov pour accéder au menu de validation.
             </p>
-            <p th:if="${intent.provider == 'ORANGE'}">
+            <p th:if="${!viaJeko and intent.provider == 'ORANGE'}">
                 Si aucune demande n'apparaît, composez <strong class="text-ink">#144*82#</strong> sur
                 votre téléphone Orange pour valider le paiement.
             </p>

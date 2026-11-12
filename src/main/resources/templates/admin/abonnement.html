@@ -33,7 +33,7 @@
          prolongé en base est bien réel. Sans ce repère, une mauvaise configuration créditerait
          des clients sans qu'aucun encaissement n'ait eu lieu. -->
     <div th:if="${momoSandbox}" class="note note-attention">
-        <span><strong>Mode test (sandbox)</strong> : les paiements Mobile Money sont simulés,
+        <span><strong>Mode test</strong> : les paiements Mobile Money sont simulés,
             aucun argent n'est débité. L'abonnement, lui, est bien prolongé.</span>
     </div>
     <!-- Retour de Stripe sans confirmation encore obtenue : le webhook finalisera. -->
@@ -72,7 +72,7 @@
     <!-- Paiement en ligne (Stripe) — choix du plan -->
     <section th:if="${stripeEnabled}" class="feuille mb-8" data-reveal>
         <div class="mb-2">
-            <h2 class="titre-section">Choisir un plan &amp; payer</h2>
+            <h2 class="titre-section">Choisir un plan et payer</h2>
         </div>
         <p class="text-[14px] text-muted mb-5">Paiement par carte bancaire. Votre plan est actif
             dès la confirmation.</p>
@@ -124,8 +124,70 @@
         </script>
     </section>
 
+    <!-- Mobile Money par JÈKO : l'administrateur paie sur la page sécurisée de Jèko, puis revient -->
+    <section th:if="${momoPasserelle == 'JEKO'}" class="feuille mb-6" data-reveal>
+        <div class="mb-2">
+            <h2 class="titre-section">Payer par Mobile Money</h2>
+        </div>
+        <p class="text-[14px] text-muted mb-5">Wave, Orange Money, MTN MoMo, Moov Money ou Djamo.
+            Vous validez le paiement sur la page sécurisée de Jèko, puis vous revenez ici : l'abonnement
+            est prolongé dès que Jèko confirme.</p>
+
+        <!-- Envoi classique, sans la navigation instantanée : la réponse est un départ vers Jèko. -->
+        <form th:action="@{/admin/abonnement/jeko}" method="post" data-no-boost class="flex flex-wrap items-end gap-3">
+            <div>
+                <label class="etiquette" for="jekoPlan">Plan</label>
+                <select name="plan" id="jekoPlan" class="h-11 px-3 champ text-[14px]">
+                    <option value="PRO" th:attr="data-prix=${prixPro}"
+                            th:text="'Pro : ' + ${#numbers.formatInteger(prixPro,1,'WHITESPACE')} + ' ' + ${symbole}">Pro</option>
+                    <option value="ENTERPRISE" th:if="${prixEnterprise > 0}" th:attr="data-prix=${prixEnterprise}"
+                            th:text="'Enterprise : ' + ${#numbers.formatInteger(prixEnterprise,1,'WHITESPACE')} + ' ' + ${symbole}">Enterprise</option>
+                </select>
+            </div>
+            <div>
+                <label class="etiquette" for="jekoMois">Durée</label>
+                <select name="mois" id="jekoMois" class="h-11 px-3 champ text-[14px]">
+                    <option value="1">1 mois</option>
+                    <option value="3">3 mois</option>
+                    <option value="12">12 mois</option>
+                </select>
+            </div>
+            <div>
+                <label class="etiquette" for="jekoMoyen">Payer avec</label>
+                <select name="moyen" id="jekoMoyen" class="h-11 px-3 champ text-[14px]">
+                    <option value="wave">Wave</option>
+                    <option value="orange">Orange Money</option>
+                    <option value="mtn">MTN MoMo</option>
+                    <option value="moov">Moov Money</option>
+                    <option value="djamo">Djamo</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-ink inline-flex items-center gap-2 h-11 px-5 rounded-xl font-medium">
+                <span class="material-symbols-rounded text-[18px]">lock</span>
+                Payer <span id="jekoTotal">—</span>
+            </button>
+        </form>
+        <p class="text-[12px] text-muted mt-3">Paiement traité par Jèko. SIGEP ne voit ni votre numéro
+            ni vos codes : il reçoit seulement la confirmation du paiement.</p>
+
+        <script data-page-script th:inline="javascript">
+            (function () {
+                var sym = /*[[${symbole}]]*/ 'FCFA';
+                var p = document.getElementById('jekoPlan'), m = document.getElementById('jekoMois'),
+                    t = document.getElementById('jekoTotal');
+                if (!p || !m || !t) return;
+                function maj() {
+                    var prix = parseInt(p.options[p.selectedIndex].getAttribute('data-prix') || '0', 10);
+                    t.textContent = (prix * parseInt(m.value, 10)).toLocaleString('fr-FR').replace(/ /g, ' ') + ' ' + sym;
+                }
+                p.addEventListener('change', maj); m.addEventListener('change', maj);
+                maj();
+            })();
+        </script>
+    </section>
+
     <!-- Mobile Money AUTOMATISÉ (NovaSend) : demande poussée sur le téléphone du client -->
-    <section th:if="${momoEnabled}" class="feuille mb-6" data-reveal>
+    <section th:if="${momoPasserelle == 'NOVASEND'}" class="feuille mb-6" data-reveal>
         <div class="mb-2">
             <h2 class="titre-section">Payer par Mobile Money</h2>
         </div>
@@ -166,7 +228,7 @@
                        class="h-11 px-3 champ text-[14px]"/>
             </div>
             <div id="momoOtpBloc" style="display:none">
-                <label class="etiquette">Code OTP</label>
+                <label class="etiquette">Code de paiement</label>
                 <input type="text" name="otp" inputmode="numeric" maxlength="8" placeholder="#144*82#"
                        class="h-11 px-3 champ text-[14px] w-[130px]"/>
             </div>

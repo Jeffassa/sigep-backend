@@ -64,6 +64,7 @@ public class AbonnementWebController {
         model.addAttribute("ownerEmail", ownerEmail);
         model.addAttribute("stripeEnabled", stripeService.isEnabled());
         model.addAttribute("momoEnabled", mobileMoneyService.isEnabled());
+        model.addAttribute("momoPasserelle", mobileMoneyService.passerelle());
         model.addAttribute("momoSandbox", mobileMoneyService.isEnabled() && mobileMoneyService.estSandbox());
         model.addAttribute("prixPro", planService.prixMensuel(Plan.PRO));
         model.addAttribute("prixEnterprise", planService.prixMensuel(Plan.ENTERPRISE));

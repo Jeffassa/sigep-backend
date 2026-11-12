@@ -206,6 +206,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/paiement/mobile-money/webhook").permitAll()
                         // Webhook NovaSend : public, protégé par signature HMAC-SHA256 du corps
                         .requestMatchers("/api/paiement/novasend/webhook").permitAll()
+                        // Webhook Jèko : public, protégé par signature HMAC-SHA256 du corps
+                        .requestMatchers("/api/paiement/jeko/webhook").permitAll()
                         // Sondes de supervision publiques ; le reste de l'actuator (metrics…)
                         // réservé aux admins — pas exposé aux enseignants authentifiés.
                         .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()

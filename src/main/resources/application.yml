@@ -252,6 +252,20 @@ app:
     # Webhook Mobile Money générique (C7). Secret partagé exigé (fail-closed si vide).
     # L'agrégateur (CinetPay/PayDunya/Wave/Orange) poste sur /api/paiement/mobile-money/webhook.
     webhook-secret: ${MOBILE_MONEY_WEBHOOK_SECRET:}
+  jeko:
+    # Encaissement Mobile Money via Jèko (page de paiement hébergée : Wave, Orange Money, MTN,
+    # Moov, Djamo). Prioritaire sur NovaSend quand les deux sont configurés.
+    # ATTENTION : Jèko n'a PAS de bac à sable — toute demande porte sur de l'argent réel.
+    enabled: ${JEKO_ENABLED:false}
+    base-url: ${JEKO_BASE_URL:https://api.jeko.africa}
+    # Jèko Business > Paramètres > API & Webhooks > Créer une clé API : la clé et son identifiant.
+    api-key: ${JEKO_API_KEY:}
+    api-key-id: ${JEKO_API_KEY_ID:}
+    # Identifiant du magasin qui reçoit les paiements (page Magasins, bouton copier).
+    store-id: ${JEKO_STORE_ID:}
+    # Secret du webhook, affiché UNE SEULE FOIS à sa création. Vide = webhook refusé ; le
+    # relanceur périodique confirme alors les paiements, un peu moins vite.
+    webhook-secret: ${JEKO_WEBHOOK_SECRET:}
   novasend:
     # Encaissement Mobile Money automatisé via NovaSend (WAVE / ORANGE / MOMO / MOOV).
     # Désactivé par défaut : activer avec NOVASEND_ENABLED=true + identifiants API.

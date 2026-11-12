@@ -77,6 +77,44 @@ public class MobileMoneyWebController {
         }
     }
 
+    /**
+     * Paiement par Jèko : la demande est créée, puis l'administrateur part sur la page de paiement
+     * de Jèko. Il revient sur {@code /admin/abonnement/momo/retour}, qui revérifie chez Jèko.
+     */
+    @PostMapping("/admin/abonnement/jeko")
+    public String payerAvecJeko(@AuthenticationPrincipal User user,
+                                @RequestParam(defaultValue = "PRO") String plan,
+                                @RequestParam(defaultValue = "1") int mois,
+                                @RequestParam String moyen,
+                                RedirectAttributes ra) {
+        Etablissement e = user == null ? null : user.getEtablissement();
+        if (e == null) {
+            ra.addFlashAttribute("erreurAbo", "Compte sans établissement.");
+            return "redirect:/admin/abonnement";
+        }
+        Plan choisi;
+        try {
+            choisi = Plan.valueOf(plan == null ? "PRO" : plan.trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            choisi = Plan.PRO;
+        }
+        try {
+            PaiementIntent intent = mobileMoneyService.initierJeko(e, choisi, mois, moyen);
+            if (ci.esatic.sigep.service.JekoService.adresseDePaiementSure(intent.getPaymentUrl())) {
+                return "redirect:" + intent.getPaymentUrl();
+            }
+            // Pas d'adresse sûre (demande reprise sans page, réponse inattendue) : on suit l'état ici.
+            return "redirect:/admin/abonnement/momo/attente?ref=" + intent.getReference();
+        } catch (ci.esatic.sigep.service.JekoService.JekoException ex) {
+            ra.addFlashAttribute("erreurAbo", ex.getMessage());
+            return "redirect:/admin/abonnement";
+        } catch (Exception ex) {
+            log.error("Paiement Jèko impossible : {}", ex.getMessage());
+            ra.addFlashAttribute("erreurAbo", "Paiement indisponible. Réessayez dans un instant.");
+            return "redirect:/admin/abonnement";
+        }
+    }
+
     /** Page d'attente : instructions par opérateur + sondage de l'état. */
     @GetMapping("/admin/abonnement/momo/attente")
     public String attente(@AuthenticationPrincipal User user,
@@ -94,6 +132,7 @@ public class MobileMoneyWebController {
         String url = intent.getPaymentUrl();
         model.addAttribute("paymentUrlSure",
                 (url != null && url.startsWith("https://")) ? url : null);
+        model.addAttribute("viaJeko", reference.startsWith(ci.esatic.sigep.service.JekoService.PREFIXE_REFERENCE));
         return "admin/momo-attente";
     }
 
