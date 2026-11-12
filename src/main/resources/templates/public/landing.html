@@ -40,6 +40,23 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="crossorigin"/>
     <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&amp;family=Bodoni+Moda:ital,opsz,wght@1,6..96,400..700&amp;family=DM+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
     <link rel="stylesheet" th:href="@{/css/registre.css}" href="/css/registre.css"/>
+    <!-- Mise en scène : l'en-tête ne se cache que si l'animation va réellement avoir lieu. Si le
+         script d'animation n'arrive pas, la classe est retirée et tout reste affiché. -->
+    <script>
+        (function () {
+            try {
+                if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+                var r = document.documentElement;
+                r.classList.add('mouvement');
+                setTimeout(function () { if (!window.__mouvementPret) r.classList.remove('mouvement'); }, 3000);
+            } catch (e) {}
+        })();
+    </script>
+    <!-- GSAP et Three.js sont servis par SIGEP lui-même : aucun appel à un site tiers. -->
+    <script defer th:src="@{/js/vendor/gsap.min.js}" src="/js/vendor/gsap.min.js"></script>
+    <script defer th:src="@{/js/vendor/ScrollTrigger.min.js}" src="/js/vendor/ScrollTrigger.min.js"></script>
+    <script defer th:src="@{/js/accueil-mouvement.js}" src="/js/accueil-mouvement.js"></script>
+    <script type="module" th:src="@{/js/accueil-qr.js}" src="/js/accueil-qr.js"></script>
     <noscript><style>.ligne-visiteur, .curseur, .jauge { display: none !important; } .trace { animation: none; stroke-dashoffset: 0; } .cachet { animation: none; }</style></noscript>
 </head>
 <body>
@@ -289,43 +306,6 @@
 (function () {
     var calme = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    /* ----- Les sections apparaissent quand elles entrent dans le regard -----
-       Seul ce qui est SOUS la ligne de flottaison est masqué : ce qui est déjà à l'écran au
-       chargement ne doit ni clignoter ni attendre. Les blocs d'un même groupe se suivent à
-       quelques dixièmes de seconde, comme des lignes qu'on écrit l'une après l'autre. */
-    if (!calme && 'IntersectionObserver' in window) {
-        var cibles = document.querySelectorAll(
-            '.journee .titre2, .journee .large > .corps, .ciel, .curseur, .journee .defile, .bilan,' +
-            '.gestes .titre2, .geste,' +
-            '.paie-texte, .paie .feuille,' +
-            '.tarifs .titre2, .tarifs .intro, .offre,' +
-            '.questions .titre2, .liste-questions details,' +
-            '.fin .titre2, .fin .bouton, .fin .pied');
-        var veilleur = new IntersectionObserver(function (entrees) {
-            var rang = 0;
-            entrees.forEach(function (entree) {
-                if (!entree.isIntersecting) return;
-                var bloc = entree.target;
-                veilleur.unobserve(bloc);
-                bloc.style.transitionDelay = (rang++ * 90) + 'ms';
-                bloc.classList.add('visible');
-                // Une fois arrivé, le bloc redevient un bloc ordinaire : ni délai ni transition
-                // qui traîneraient sur ses propres effets de survol.
-                bloc.addEventListener('transitionend', function fini(e) {
-                    if (e.target !== bloc || e.propertyName !== 'opacity') return;
-                    bloc.removeEventListener('transitionend', fini);
-                    bloc.classList.remove('apparait', 'visible');
-                    bloc.style.transitionDelay = '';
-                });
-            });
-        }, { threshold: 0.12, rootMargin: '0px 0px -6% 0px' });
-        Array.prototype.forEach.call(cibles, function (bloc) {
-            if (bloc.getBoundingClientRect().top < window.innerHeight * 0.92) return;   // déjà visible
-            bloc.classList.add('apparait');
-            veilleur.observe(bloc);
-        });
-    }
-
     /* ----- Le registre se signe quand il entre dans le regard ----- */
     var registre = document.querySelector('.registre');
     if (!calme && 'IntersectionObserver' in window) {
@@ -339,9 +319,9 @@
 
     /* ----- Le code de l'écran de salle : une illustration, jamais un vrai jeton ----- */
     function dessinerCode(graine) {
-        var s = (graine * 2654435761) % 4294967296, N = 25, d = '';
+        var s = (graine * 2654435761) % 4294967296, N = 25, d = '', cases = new Uint8Array(N * N);
         function alea() { s ^= s << 13; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }
-        function case_(x, y) { d += 'M' + x + ' ' + y + 'h1v1h-1z'; }
+        function case_(x, y) { d += 'M' + x + ' ' + y + 'h1v1h-1z'; cases[y * N + x] = 1; }
         [[0, 0], [N - 7, 0], [0, N - 7]].forEach(function (o) {
             for (var y = 0; y < 7; y++) for (var x = 0; x < 7; x++) {
                 if (x === 0 || x === 6 || y === 0 || y === 6 || (x >= 2 && x <= 4 && y >= 2 && y <= 4)) case_(o[0] + x, o[1] + y);
@@ -354,6 +334,9 @@
         var chemin = document.getElementById('qr');
         chemin.removeAttribute('fill-rule');
         chemin.setAttribute('d', d);
+        // Le même motif, case par case, pour la version en relief (accueil-qr.js).
+        window.__qrCode = cases;
+        document.dispatchEvent(new CustomEvent('sigep:qr', { detail: cases }));
     }
     var graine = 7, reste = 15;
     var elSec = document.getElementById('secondes'), elJauge = document.getElementById('jauge');
@@ -465,6 +448,17 @@
         new IntersectionObserver(function (entrees, obs) {
             if (lance || !entrees[0].isIntersecting) return;
             lance = true; obs.disconnect();
+            if (window.gsap) {
+                var etat = { h: 7.2 };
+                var lever_ = gsap.to(etat, {
+                    h: 15.25, duration: 4.2, ease: 'power1.inOut', delay: 0.6,
+                    onUpdate: function () {
+                        if (touche) { lever_.kill(); return; }
+                        curseur.value = etat.h; appliquer(etat.h);
+                    },
+                });
+                return;
+            }
             var h = 7.2;
             var lever_ = setInterval(function () {
                 h += 0.05;

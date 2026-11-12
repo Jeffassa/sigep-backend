@@ -15,8 +15,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 /**
  * Le mouvement de l'accueil ne doit jamais se payer sur le dos du visiteur.
  *
- * <p>Nos utilisateurs se connectent souvent en 3G depuis un téléphone. L'accueil se contente donc
- * de texte, de SVG et d'un script écrit à la main : ni bibliothèque d'animation, ni image décorative.
+ * <p>Nos utilisateurs se connectent souvent en 3G depuis un téléphone. L'accueil anime ses sections
+ * avec GSAP et montre un QR en relief avec Three.js, mais à trois conditions : les bibliothèques
+ * sont servies par SIGEP lui-même, elles ne bloquent jamais l'affichage, et Three.js n'est jamais
+ * demandé par la page — c'est le module du QR qui le charge, et seulement sur grand écran.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -32,11 +34,20 @@ class ParureAccueilTest {
     }
 
     @Test
-    void aucuneBibliotheque_nEstChargeeParLaPage() throws Exception {
-        assertThat(accueil())
+    void lesBibliotheques_viennentDuSite_etNeBloquentPasLAffichage() throws Exception {
+        String page = accueil();
+        // Aucun site tiers : ni CDN, ni dépendance à un service extérieur pour s'afficher.
+        assertThat(page)
                 .doesNotContain("cdnjs.cloudflare.com")
-                .doesNotContain("gsap")
-                .doesNotContain("three.min.js");
+                .doesNotContain("cdn.jsdelivr.net")
+                .doesNotContain("unpkg.com");
+        // GSAP est chargé en différé, depuis le site.
+        assertThat(page)
+                .contains("<script defer src=\"/js/vendor/gsap.min.js\"></script>")
+                .contains("<script defer src=\"/js/vendor/ScrollTrigger.min.js\"></script>");
+        // Three.js (le plus lourd) n'est jamais demandé par la page elle-même : sur téléphone,
+        // il n'est pas téléchargé du tout.
+        assertThat(page).doesNotContain("three.min.js");
     }
 
     @Test
