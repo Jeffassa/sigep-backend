@@ -320,7 +320,7 @@ app:
       # Plafond de clés en mémoire (garde anti-épuisement du limiteur lui-même).
       max-keys: ${RATE_LIMIT_MAX_KEYS:50000}
       # Rate-limit DISTRIBUÉ via Redis (partagé entre instances, survit aux redémarrages).
-      # Nécessite REDIS_URL. false = compteurs en mémoire locale (défaut, mono-instance).
+      # Nécessite SPRING_DATA_REDIS_URL (et non REDIS_URL). false = compteurs en mémoire locale.
       redis-enabled: ${RATE_LIMIT_REDIS_ENABLED:false}
       # Budget par UTILISATEUR authentifié (en plus du budget par IP) sur les endpoints coûteux
       # (génération de rapports, import Excel, analyse IA). Empêche un compte de saturer l'instance.
