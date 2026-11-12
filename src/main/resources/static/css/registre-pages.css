@@ -129,7 +129,7 @@ html.dark .btn-danger { color: #081a38; }
 /* La porte d'entrée : connexion, code, inscription, paiement. Deux parties : le nom et
    l'accroche à gauche, le formulaire à droite, toujours sur fond clair. */
 body.porte { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); min-height: 100vh; background: var(--c-bg); }
-.porte-nuit { display: flex; flex-direction: column; justify-content: space-between; gap: 24px; padding: 40px clamp(24px, 4vw, 64px); background: #081a38; color: #f6ecd9; }
+.porte-nuit { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 32px; text-align: center; padding: 40px clamp(24px, 4vw, 64px); background: #081a38; color: #f6ecd9; }
 .porte-nuit .marque { color: #fff; font-stretch: 75%; font-weight: 900; font-size: 34px; line-height: 40px; text-decoration: none; }
 .porte-nuit .accroche { margin: 0; color: #fff; font-stretch: 75%; font-weight: 900; font-size: clamp(44px, 5.4vw, 80px); line-height: 1.02; }
 .porte-nuit .accroche em { font-family: 'Bodoni Moda', Didot, Georgia, serif; font-weight: 500; font-stretch: 100%; color: #ffbe57; }
