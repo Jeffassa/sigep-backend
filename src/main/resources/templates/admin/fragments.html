@@ -107,7 +107,7 @@
          th:classappend="${abonnementExpire} ? ' bg-ink text-white' : ''">
         <span class="material-symbols-rounded text-[18px]">schedule</span>
         <span th:if="${abonnementExpire}">Votre abonnement a expiré.&nbsp;<a th:href="@{/admin/abonnement}" class="underline">Renouveler</a></span>
-        <span th:unless="${abonnementExpire}">Votre abonnement expire dans <strong th:text="${joursAvantExpiration}">0</strong>&nbsp;jour(s).&nbsp;<a th:href="@{/admin/abonnement}" class="underline">Renouveler</a></span>
+        <span th:unless="${abonnementExpire}">Votre abonnement expire dans <strong th:text="${joursAvantExpiration}">0</strong>&nbsp;<span th:text="${joursAvantExpiration == 1} ? 'jour.' : 'jours.'">jours.</span>&nbsp;<a th:href="@{/admin/abonnement}" class="underline">Renouveler</a></span>
     </div>
 </header>
 
@@ -172,7 +172,7 @@
         <div class="flex items-center gap-2 px-4 border-b border-line">
             <span class="material-symbols-rounded text-muted">search</span>
             <input id="paletteInput" type="text" placeholder="Rechercher une page, une action…" autocomplete="off"/>
-            <span class="kbd">ESC</span>
+            <span class="kbd">Échap</span>
         </div>
         <div id="paletteList" class="py-2 max-h-[52vh] overflow-y-auto">
             <a class="palette-item" th:href="@{/admin/dashboard}" data-key="tableau de bord dashboard accueil">
@@ -182,7 +182,7 @@
             <a th:if="${menu == null or menu.contains('messages')}" class="palette-item" th:href="@{/admin/enseignants/nouveau}" data-key="nouvel enseignant ajouter creer">
                 <span class="material-symbols-rounded">person_add</span><span>Nouvel enseignant</span></a>
             <a class="palette-item" th:href="@{/admin/rapports}" data-key="rapports pdf import generer">
-                <span class="material-symbols-rounded">description</span><span>Rapports &amp; import</span></a>
+                <span class="material-symbols-rounded">description</span><span>Rapports et import</span></a>
             <a th:if="${menu == null or menu.contains('paie')}" class="palette-item" th:href="@{/admin/paie}" data-key="paie heures export salaire remuneration vacataire csv excel">
                 <span class="material-symbols-rounded">payments</span><span>Paie (export des heures)</span></a>
             <a th:if="${menu == null or menu.contains('calendrier')}" class="palette-item" th:href="@{/admin/calendrier}" data-key="calendrier feries vacances semestres remplacement tolerance">
@@ -765,7 +765,7 @@
 <div th:fragment="cookieConsent" id="sigepCookie" class="sigep-cookie" hidden>
     <div class="sigep-cookie__card">
         <div class="sigep-cookie__txt">
-            <strong>Cookies &amp; confidentialité</strong>
+            <strong>Cookies et confidentialité</strong>
             Nous n'utilisons que des cookies essentiels (session, préférence d'affichage) ;
             notre mesure d'audience est sans cookie.
             <a th:href="@{/confidentialite}" href="/confidentialite">En savoir plus</a>.

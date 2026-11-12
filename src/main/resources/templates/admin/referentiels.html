@@ -126,7 +126,7 @@
         <section class="feuille">
             <h2 class="titre-section">Matières</h2>
             <form th:action="@{/admin/matieres}" method="post" class="space-y-2 mb-5">
-                <input type="text" name="libelle" required placeholder="Libellé (ex : Algorithmique)"
+                <input type="text" name="libelle" required placeholder="Libellé, par exemple Algorithmique"
                        class="w-full h-11 px-4 champ"/>
                 <button type="submit" class="btn btn-ink w-full h-11 rounded-xl font-medium flex items-center justify-center gap-2">
                     <span class="material-symbols-rounded text-[18px]">add</span> Ajouter</button>
@@ -148,7 +148,7 @@
         <section class="feuille">
             <h2 class="titre-section">Classes</h2>
             <form th:action="@{/admin/classes}" method="post" class="space-y-2 mb-5">
-                <input type="text" name="libelle" required placeholder="Libellé (ex : L3 Génie Logiciel)"
+                <input type="text" name="libelle" required placeholder="Libellé, par exemple L3 Génie logiciel"
                        class="w-full h-11 px-4 champ"/>
                 <div class="flex gap-2">
                     <input type="text" name="filiere" placeholder="Filière"
@@ -176,7 +176,7 @@
         <section class="feuille">
             <h2 class="titre-section">Salles</h2>
             <form th:action="@{/admin/salles}" method="post" class="space-y-2 mb-5">
-                <input type="text" name="libelle" required placeholder="Nom (ex : A101)" maxlength="20"
+                <input type="text" name="libelle" required placeholder="Nom, par exemple A101" maxlength="20"
                        class="w-full h-11 px-4 champ transition uppercase"/>
                 <div class="flex gap-2">
                     <input type="text" name="batiment" placeholder="Bâtiment"

@@ -17,7 +17,7 @@
                  elle cree le compte et envoie un mot de passe provisoire a l'enseignant. -->
             <form th:action="@{/admin/enseignants/import}" method="post" enctype="multipart/form-data"
                   class="flex items-center gap-2"
-                  title="Colonnes : MATRICULE | NOM | PRENOM | DEPARTEMENT | GRADE | EMAIL&#10;La colonne EMAIL est facultative. Si vous la remplissez, le compte est créé et les accès partent par courriel.">
+                  title="Colonnes : MATRICULE | NOM | PRENOM | DEPARTEMENT | GRADE | EMAIL&#10;La colonne EMAIL est facultative. Si vous la remplissez, le compte est créé et les accès partent par e-mail.">
                 <input type="file" name="fichier" accept=".xlsx,.xls" required
                        class="text-[12px] max-w-[180px] file:mr-2 file:py-1 file:px-2 file:border-0 file:bg-ink file:text-white file:cursor-pointer"/>
                 <button type="submit" class="btn glass h-11 px-4 flex items-center gap-1 text-[14px] font-medium">
@@ -98,7 +98,7 @@
                         <span th:if="${ens.statut?.name() == 'VALIDATED'}"
                               class="visa">VALIDÉ</span>
                         <span th:if="${ens.statut?.name() == 'PENDING'}"
-                              class="etat">Attente</span>
+                              class="etat">En attente</span>
                         <span th:if="${ens.statut?.name() == 'REJECTED'}"
                               class="etat etat-discret">Rejeté</span>
                         <span th:if="${ens.statut?.name() == 'ARCHIVE'}"

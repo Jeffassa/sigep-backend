@@ -5,13 +5,13 @@
 <aside class="porte-nuit">
     <a th:href="@{/}" class="marque">SIGEP</a>
     <p class="accroche">Une dernière <em>signature.</em></p>
-    <p class="bas">Système Intelligent de Gestion des Enseignements</p>
+    <p class="bas">Système Intelligent de Gestion des Enseignements et du Pointage</p>
 </aside>
 <div class="porte-page">
 <main>
   <p class="surtitre">Vérification administrateur</p>
   <h1 class="titre-page">Code envoyé</h1>
-  <p class="text-[15px] text-muted mb-6">Saisissez le code reçu par email pour accéder à votre espace.</p>
+  <p class="text-[15px] text-muted mb-6">Saisissez le code reçu par e-mail pour accéder à votre espace.</p>
   <div class="feuille">
     <div th:if="${error}" class="note note-alerte" th:text="${error}">Erreur</div>
     <div th:if="${info}" class="note note-ok" th:text="${info}">Information</div>

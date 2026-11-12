@@ -130,7 +130,7 @@
             <div class="flex items-center gap-2.5">
                 
                 <div>
-                    <h2 class="titre-section">Émargements hors-ligne (à valider)</h2>
+                    <h2 class="titre-section">Émargements hors ligne à valider</h2>
                     <p class="chapitre-note mb-0">Le QR a bien été scanné, mais sans réseau. La scolarité confirme avant que la séance soit comptée.</p>
                 </div>
             </div>
@@ -177,7 +177,7 @@
                             </form>
                             <!-- Refuser : séance à régulariser (émargement supprimé) -->
                             <form th:action="@{'/admin/emargements/hors-ligne/' + ${eh.id} + '/refuser'}" method="post"
-                                  onsubmit="return confirm('Refuser cet émargement hors-ligne ? La séance redeviendra à régulariser.');">
+                                  onsubmit="return confirm('Refuser cet émargement hors ligne ? La séance redeviendra à régulariser.');">
                                 <button type="submit"
                                         class="bouton-ligne">
                                     <span class="material-symbols-rounded text-[16px]">close</span> Refuser

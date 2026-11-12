@@ -71,9 +71,9 @@
         <!-- La marge : ce qui attend une décision -->
         <aside class="min-w-0" style="flex: 1 1 260px" aria-label="À traiter">
             <h2 class="titre-section">À traiter</h2>
-            <a class="a-traiter" th:href="@{/admin/alertes}"><strong th:text="${seancesAValider}">0</strong>séance(s) importée(s) par les enseignants</a>
-            <a class="a-traiter" th:href="@{/admin/alertes}"><strong th:text="${emargementsHorsLigneCount}">0</strong>émargement(s) hors ligne à valider</a>
-            <a class="a-traiter" th:href="@{/admin/alertes}"><strong id="kpiRattrapages" th:text="${rattrapagesEnAttente}">0</strong>rattrapage(s) en attente</a>
+            <a class="a-traiter" th:href="@{/admin/alertes}"><strong th:text="${seancesAValider}">0</strong><span th:text="${seancesAValider == 1} ? 'séance importée par un enseignant' : 'séances importées par les enseignants'">séances importées par les enseignants</span></a>
+            <a class="a-traiter" th:href="@{/admin/alertes}"><strong th:text="${emargementsHorsLigneCount}">0</strong><span th:text="${emargementsHorsLigneCount == 1} ? 'émargement hors ligne à valider' : 'émargements hors ligne à valider'">émargements hors ligne à valider</span></a>
+            <a class="a-traiter" th:href="@{/admin/alertes}"><strong id="kpiRattrapages" th:text="${rattrapagesEnAttente}">0</strong><span th:text="${rattrapagesEnAttente == 1} ? 'rattrapage en attente' : 'rattrapages en attente'">rattrapages en attente</span></a>
         </aside>
     </section>
 

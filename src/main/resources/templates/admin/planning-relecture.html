@@ -11,7 +11,7 @@
         <div>
             <p class="surtitre">Lecture du PDF</p>
             <h1 class="titre-page">Relire l'emploi du temps</h1>
-            <p class="chapeau"><span th:text="${#lists.size(lignes)}">0</span> séance(s) lue(s), rien n'est encore enregistré. La mise en page d'un PDF se reconstitue et peut être mal comprise : vérifiez ces séances, elles deviendront des heures payées.</p>
+            <p class="chapeau"><span th:text="${#lists.size(lignes)}">0</span> <span th:text="${#lists.size(lignes) == 1} ? 'séance lue' : 'séances lues'">séances lues</span>, rien n'est encore enregistré. La mise en page d'un PDF se reconstitue et peut être mal comprise : vérifiez ces séances, elles deviendront des heures payées.</p>
         </div>
     </div>
 

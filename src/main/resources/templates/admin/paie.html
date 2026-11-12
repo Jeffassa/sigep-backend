@@ -53,12 +53,12 @@
             <div class="tete">
                 <p class="releve-libelle">Heures à payer</p>
                 <p class="releve-chiffre"><span class="surligne" th:text="${#numbers.formatDecimal(totaux.heures, 1, 'POINT', 2, 'COMMA')}">0,00</span></p>
-                <p class="releve-note"><span th:text="${totaux.enseignantsActifs}">0</span> enseignant(s) en activité sur le mois</p>
+                <p class="releve-note"><span th:text="${totaux.enseignantsActifs}">0</span> <span th:text="${totaux.enseignantsActifs == 1} ? 'enseignant en activité' : 'enseignants en activité'">enseignants en activité</span> sur le mois</p>
             </div>
             <div>
                 <p class="releve-libelle">En attente de validation</p>
                 <p class="releve-chiffre" th:text="${#numbers.formatDecimal(totaux.heuresEnAttente, 1, 'POINT', 2, 'COMMA')}">0,00</p>
-                <p class="releve-note">Émargements hors-ligne à confirmer</p>
+                <p class="releve-note">Émargements hors ligne à confirmer</p>
             </div>
             <div>
                 <p class="releve-libelle">Sans émargement</p>

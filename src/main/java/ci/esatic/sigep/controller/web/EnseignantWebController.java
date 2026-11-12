@@ -117,14 +117,12 @@ public class EnseignantWebController {
         if (etabCourant != null
                 && planService.quotaEnseignantsAtteint(etabCourant,
                     enseignantRepository.countByEtablissementId(etabCourant.getId()))) {
-            ra.addFlashAttribute("error", "Quota d'enseignants atteint ("
-                    + etabCourant.getMaxEnseignants()
-                    + ") pour le plan " + etabCourant.getPlan()
-                    + ". Passez à un plan supérieur pour en ajouter davantage.");
+            ra.addFlashAttribute("error", "Votre plan permet " + etabCourant.getMaxEnseignants()
+                    + " enseignants, et ce nombre est atteint. Passez au plan Pro pour en ajouter d'autres.");
             return "redirect:/admin/enseignants";
         }
         if (enseignantRepository.existsByMatricule(matricule)) {
-            ra.addFlashAttribute("error", "Ce matricule existe deja : " + matricule);
+            ra.addFlashAttribute("error", "Le matricule " + matricule + " est déjà utilisé.");
             return "redirect:/admin/enseignants/nouveau";
         }
         User compteExistant;
@@ -185,7 +183,7 @@ public class EnseignantWebController {
             email, prenom, password);
 
         ra.addFlashAttribute("success",
-                "Enseignant " + prenom + " " + nom + " cree avec succes.");
+                prenom + " " + nom + " est ajouté : ses accès lui ont été envoyés par e-mail.");
         return "redirect:/admin/enseignants";
     }
 
@@ -241,7 +239,7 @@ public class EnseignantWebController {
                 envoyes = 1;
             }
         }
-        ra.addFlashAttribute("success", envoyes + " message(s) envoyé(s).");
+        ra.addFlashAttribute("success", envoyes == 1 ? "1 message envoyé." : envoyes + " messages envoyés.");
         return "redirect:/admin/messages";
     }
 
@@ -287,7 +285,7 @@ public class EnseignantWebController {
                                RedirectAttributes ra) {
         try {
             enseignantService.updateStatut(id, statut);
-            ra.addFlashAttribute("success", "Statut mis a jour.");
+            ra.addFlashAttribute("success", "Statut mis à jour.");
         } catch (Exception e) {
             ra.addFlashAttribute("error", "Mise à jour impossible.");
         }

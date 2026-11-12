@@ -52,7 +52,7 @@ public class AdminDashboardController {
                             @RequestParam(required = false) String logout,
                             Model model) {
         if (error != null) model.addAttribute("error", "Identifiants incorrects.");
-        if (logout != null) model.addAttribute("logout", "Deconnexion reussie.");
+        if (logout != null) model.addAttribute("logout", "Vous êtes déconnecté.");
         return "admin/login";
     }
 

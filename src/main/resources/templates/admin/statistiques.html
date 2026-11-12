@@ -43,7 +43,7 @@
         <div class="flex items-center justify-between gap-3 mb-4">
             <div class="flex items-center gap-2.5">
                 
-                <h2 class="titre-section">Analyse &amp; recommandations</h2>
+                <h2 class="titre-section">Analyse et recommandations</h2>
             </div>
             <!-- IA : actif pour les plans qui l'incluent (Pro/Enterprise) ; verrou premium sinon -->
             <button th:if="${aiEnabled and etablissementPlan != 'FREE'}" id="btnAnalyseIa"
@@ -79,7 +79,7 @@
             <p class="releve-chiffre" th:text="${#numbers.formatDecimal(taux,1,1)} + '%'">0%</p>
             <p class="releve-note" th:if="${tauxDelta != 0}"
                th:style="'color:' + (${tauxDelta} > 0 ? '#1f7a6b' : '#9c3f26')"
-               th:text="(${tauxDelta} > 0 ? '↑ +' : '↓ ') + ${#numbers.formatDecimal(tauxDelta,1,1)} + ' pts'">↑</p>
+               th:text="(${tauxDelta} > 0 ? '↑ +' : '↓ ') + ${#numbers.formatDecimal(tauxDelta,1,1)} + ' points'">↑</p>
             <p class="releve-note" th:if="${tauxDelta == 0}">= stable</p>
         </div>
         <div>
@@ -95,7 +95,7 @@
         <div>
             <p class="releve-libelle">Rattrapages en attente</p>
             <p class="releve-chiffre" th:text="${rattrapages}">0</p>
-            <p class="releve-note" th:text="${profsActifs} + ' enseignant(s)'">0</p>
+            <p class="releve-note" th:text="${profsActifs} + (${profsActifs == 1} ? ' enseignant' : ' enseignants')">0</p>
         </div>
     </section>
 
@@ -142,7 +142,7 @@
 
     <!-- Heatmap jour × créneau -->
     <section class="feuille mb-10 overflow-x-auto" data-reveal>
-        <h2 class="titre-section">Assiduité par jour &amp; créneau</h2>
+        <h2 class="titre-section">Assiduité par jour et par créneau</h2>
         <p class="text-[13px] text-muted mb-6">Taux d'émargement : plus la case est foncée, plus le taux est élevé</p>
         <table class="w-full text-center border-separate" style="border-spacing:4px">
             <thead>

@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{admin/fragments :: head('SIGEP | Rapports & Import')}"></head>
+<head th:replace="~{admin/fragments :: head('SIGEP | Rapports et import')}"></head>
 <body>
 
 <div th:replace="~{admin/fragments :: topbar('rapports')}"></div>
@@ -9,7 +9,7 @@
 
     <div class="mb-8" data-reveal>
         <p class="surtitre">Données</p>
-        <h1 class="titre-page">Rapports &amp; import</h1>
+        <h1 class="titre-page">Rapports et import</h1>
     </div>
 
     <div data-flash th:if="${success}" class="feuille mb-5 flex items-center gap-2 text-[13px]" data-reveal
@@ -26,13 +26,13 @@
         <ul class="list-disc pl-5">
             <li th:each="e, i : ${erreursImport}" th:if="${i.index < 20}" th:text="${e}">Ligne 3 : date invalide</li>
         </ul>
-        <p th:if="${erreursImport.size() > 20}" class="mt-1" th:text="'… et ' + ${erreursImport.size() - 20} + ' autre(s).'">… et 3 autres.</p>
+        <p th:if="${erreursImport.size() > 20}" class="mt-1" th:text="'… et ' + ${erreursImport.size() - 20} + ' autres.'">… et 3 autres.</p>
     </section>
 
     <!-- Emploi du temps -->
     <section th:if="${menu == null or menu.contains('messages')}" class="feuille mb-10" data-reveal>
         <h2 class="titre-section">Importer l'emploi du temps</h2>
-        <p class="chapitre-note">Vos fichiers tels qu'ils sont : Excel, CSV, Word ou PDF, en liste ou en grille (jours et créneaux croisés). Un emploi du temps par classe ou par professeur : le professeur se reconnaît au champ ci-dessous, à une ligne « Enseignant : … » en tête, au nom de l'onglet ou à celui du fichier. Dans une grille, chaque case donne la matière, la salle et, selon le cas, l'enseignant ou la classe. Pour une liste, SIGEP reconnaît les titres courants (cours, UE, module, professeur, intervenant, niveau, local, horaire…). L'enseignant se reconnaît à son matricule, son e-mail ou son nom. Un fichier réimporté ne crée pas de doublon.</p>
+        <p class="chapitre-note">Déposez vos fichiers tels quels : Excel, CSV, Word ou PDF, en liste ou en grille. Un fichier par classe ou par professeur : SIGEP reconnaît le professeur au champ ci-dessous, à une ligne « Enseignant : … » en tête, ou au nom de l'onglet ou du fichier. Les intitulés courants sont compris (cours, module, professeur, salle, horaire…), et l'enseignant est retrouvé par son matricule, son e-mail ou son nom. Réimporter un fichier ne crée pas de doublon.</p>
         <form th:action="@{/admin/planning/importer}" method="post" enctype="multipart/form-data" data-no-boost
               class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
             <div class="md:col-span-3">
@@ -70,7 +70,7 @@
     <!-- Génération -->
     <section class="feuille mb-10" data-reveal>
         <h2 class="titre-section">Générer les rapports</h2>
-        <p class="text-[13px] text-muted mb-5">Un PDF individuel (matricule + nom) par enseignant, sur la période choisie.</p>
+        <p class="text-[13px] text-muted mb-5">Un PDF par enseignant, à son nom et à son matricule, sur la période choisie.</p>
         <form th:action="@{/admin/rapports/generer}" method="post" id="formGenerer"
               class="ouvert-lecture grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
             <div>
@@ -94,7 +94,7 @@
         <div class="mb-4">
             <div class="chapitre-tete">
                 <h2 class="titre-section">Rapports générés</h2>
-                <span class="font-mono text-[11px] text-muted" th:text="${rapports.size()} + ' fichier(s)'">0</span>
+                <span class="font-mono text-[11px] text-muted" th:text="${rapports.size()} + (${rapports.size() == 1} ? ' fichier' : ' fichiers')">0</span>
             </div>
             <!-- Recherche : par enseignant et/ou période -->
             <form method="get" th:action="@{/admin/rapports}" id="formFiltre" class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
