@@ -5,13 +5,11 @@
 <aside class="porte-nuit">
     <a th:href="@{/}" class="marque">SIGEP</a>
     <p class="accroche">Chaque heure de cours, <em>signée.</em></p>
-    <p class="bas">Système Intelligent de Gestion des Enseignements et du Pointage</p>
 </aside>
 <div class="porte-page">
 <main>
     <a th:href="@{/}" class="retour-accueil">← Retour à l'accueil</a>
     <h1 class="titre-page">Connexion</h1>
-    <p class="text-[15px] text-muted mb-6">Réservé à l'administration de votre établissement.</p>
     <div class="feuille">
 
         <div th:if="${error}"
@@ -24,21 +22,18 @@
         </div>
         <div th:if="${param.registered}"
              class="note note-bloc">
-            <p class="font-medium text-[14px]">Dossier bien reçu</p>
-            <p class="text-muted mt-1">Votre inscription est en cours d'analyse par notre équipe.
-                Un e-mail de confirmation vient de vous être envoyé. Vous serez averti dès l'activation de votre espace.</p>
+            <p class="font-medium text-[14px]">Inscription reçue</p>
+            <p class="text-muted mt-1">Un e-mail vous préviendra dès l'activation de votre espace.</p>
         </div>
         <div th:if="${param.pending}"
              class="note note-bloc">
-            <p class="font-medium text-[14px]">Votre dossier est en cours de vérification</p>
-            <p class="text-muted mt-1">Notre équipe analyse votre inscription. Vous recevrez un e-mail
-                dès que votre espace sera activé.</p>
+            <p class="font-medium text-[14px]">Espace pas encore activé</p>
+            <p class="text-muted mt-1">Un e-mail vous préviendra dès son activation.</p>
         </div>
         <div th:if="${param.rejected}"
              class="note note-alerte note-bloc">
-            <p class="font-medium text-[14px]">Votre dossier n'a pas été retenu</p>
-            <p class="text-muted mt-1">Contactez-nous pour en discuter ou compléter votre dossier :
-                <a th:href="'mailto:' + ${contactPlateforme}" href="mailto:contact@sigep.store" class="underline">nous écrire</a>.</p>
+            <p class="font-medium text-[14px]">Inscription non retenue</p>
+            <p class="text-muted mt-1"><a th:href="'mailto:' + ${contactPlateforme}" href="mailto:contact@sigep.store" class="underline">Nous écrire</a></p>
         </div>
 
         <form th:action="@{/admin-login}" method="post" class="space-y-4">
@@ -47,7 +42,7 @@
                 <div class="relative">
                     <input id="username" name="username" type="email" required
                            class="w-full h-12 px-4 champ text-ink"
-                           placeholder="admin@votre-etablissement.com"/>
+                           autocomplete="username"/>
                 </div>
             </div>
             <div>
@@ -55,7 +50,7 @@
                 <div class="relative">
                     <input id="password" name="password" type="password" required
                            class="w-full h-12 pl-4 pr-12 champ text-ink"
-                           placeholder="••••••••"/>
+                           autocomplete="current-password"/>
                     <button type="button" id="togglePwd" aria-label="Afficher le mot de passe"
                             class="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-lg flex items-center justify-center text-muted hover:text-ink transition">
                         <span class="material-symbols-rounded text-[20px]" id="togglePwdIcon">visibility</span>

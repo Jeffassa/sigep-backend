@@ -5,7 +5,6 @@
 <aside class="porte-nuit">
     <a th:href="@{/}" class="marque">SIGEP</a>
     <p class="accroche">Votre registre, <em>ouvert en cinq minutes.</em></p>
-    <p class="bas">Système Intelligent de Gestion des Enseignements et du Pointage</p>
 </aside>
 <div class="porte-page">
 <main>
@@ -42,8 +41,7 @@
 
         <!-- Payé : l'espace est ouvert -->
         <div th:if="${statut == 'REUSSI'}">
-            <p class="text-[15px] mb-5">Votre paiement est confirmé. Connectez-vous avec l'adresse e-mail et
-                le mot de passe choisis à l'inscription ; un e-mail de confirmation vous a été envoyé.</p>
+            <p class="text-[15px] mb-5">Votre paiement est confirmé.</p>
             <a th:href="@{/admin-login}" class="btn btn-ink w-full h-12 rounded-xl font-medium flex items-center justify-center gap-2">
                 Se connecter à mon espace
                 <span class="material-symbols-rounded text-[20px]">arrow_forward</span>
@@ -52,8 +50,7 @@
 
         <!-- En attente : le client n'a peut-être pas terminé sur la page de Jèko -->
         <div th:if="${statut == 'EN_COURS'}">
-            <p class="text-[15px] mb-5" id="enAttente">Nous attendons la confirmation de Jèko. Cette page se met à
-                jour toute seule. Si vous n'avez pas terminé le paiement, rouvrez la page de paiement.</p>
+            <p class="text-[15px] mb-5" id="enAttente">Cette page se met à jour toute seule.</p>
             <a th:if="${paiementUrl}" th:href="${paiementUrl}"
                class="btn btn-ink w-full h-12 rounded-xl font-medium flex items-center justify-center gap-2">
                 <span class="material-symbols-rounded text-[20px]">lock</span>
@@ -72,8 +69,7 @@
 
         <!-- Échec : reprendre sans aide, avec le même moyen ou un autre -->
         <div th:if="${statut == 'ECHOUE' or statut == 'EXPIRE'}">
-            <p class="text-[15px] mb-5">Aucun montant n'a été encaissé. Votre espace est déjà créé : il vous reste à
-                payer pour l'activer.</p>
+            <p class="text-[15px] mb-5">Aucun montant n'a été encaissé.</p>
             <a th:if="${pagePaiement}" th:href="${pagePaiement}"
                class="btn btn-ink w-full h-12 rounded-xl font-medium flex items-center justify-center gap-2">
                 <span class="material-symbols-rounded text-[20px]">lock</span>
@@ -83,7 +79,7 @@
                 espace, ou <a th:href="'mailto:' + (${contactPlateforme} ?: 'contact@sigep.store')" class="underline">écrivez-nous</a>.</p>
         </div>
 
-        <p class="text-[12px] text-muted mt-6">Paiement traité par Jèko. SIGEP ne voit ni votre numéro ni vos codes.</p>
+        <p class="text-[12px] text-muted text-center mt-6">Paiement sécurisé par Jèko</p>
     </div>
 </main>
 </div>

@@ -175,7 +175,7 @@ class AchatEnLigneTest {
         assertThat(inscription).doesNotContain("96 000").doesNotContain("FCFA")
                 .doesNotContain("Durée").doesNotContain("Payer avec");
         // Un plan inconnu ramène à l'inscription gratuite, sans erreur.
-        assertThat(page("/inscription?plan=DIAMANT")).contains("Commencez gratuitement");
+        assertThat(page("/inscription?plan=DIAMANT")).doesNotContain("data-plan=\"").contains(">Créer mon espace<");
     }
 
     @Test

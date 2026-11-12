@@ -139,7 +139,7 @@ body.porte { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr)
 @media (max-width: 900px) {
     body.porte { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
     .porte-nuit { padding: 20px; gap: 12px; }
-    .porte-nuit .accroche { font-size: 36px; }
+    .porte-nuit .accroche { display: none; }
     .porte-nuit .bas { display: none; }
     .porte-page { align-items: flex-start; }
 }

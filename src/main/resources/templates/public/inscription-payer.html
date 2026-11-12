@@ -5,7 +5,6 @@
 <aside class="porte-nuit">
     <a th:href="@{/}" class="marque">SIGEP</a>
     <p class="accroche">Votre registre, <em>ouvert en cinq minutes.</em></p>
-    <p class="bas">Système Intelligent de Gestion des Enseignements et du Pointage</p>
 </aside>
 <div class="porte-page">
 <main>
@@ -15,8 +14,7 @@
 
     <!-- Espace déjà actif : rien à payer ici -->
     <div th:if="${dejaActif}" class="feuille">
-        <p class="text-[15px] mb-5">Votre paiement a déjà été confirmé. Connectez-vous pour utiliser votre espace ;
-            vous pourrez prolonger votre abonnement depuis la page Abonnement.</p>
+        <p class="text-[15px] mb-5">Votre paiement est confirmé.</p>
         <a th:href="@{/admin-login}" class="btn btn-ink w-full h-12 rounded-xl font-medium flex items-center justify-center gap-2">
             Se connecter à mon espace
             <span class="material-symbols-rounded text-[20px]">arrow_forward</span>
@@ -31,8 +29,6 @@
     </div>
 
     <th:block th:if="${ouvert}">
-        <p class="text-[15px] text-muted mb-6">Votre espace est créé. Choisissez votre offre : il sera activé dès que
-            le paiement sera confirmé.</p>
 
         <div th:if="${erreur}" class="note note-alerte"><span th:text="${erreur}">Erreur</span></div>
 
@@ -53,14 +49,12 @@
                         <span class="offre-choix-nom">Pro</span>
                         <span class="offre-choix-prix"><span th:text="${#numbers.formatInteger(prixPro,1,'WHITESPACE')}">13 000</span>
                             <span th:text="${symbole} + ' / mois'">FCFA / mois</span></span>
-                        <span class="offre-choix-detail">Enseignants illimités, export des heures pour la paie</span>
                     </label>
                     <label class="offre-choix" th:if="${prixEnterprise > 0}">
                         <input type="radio" name="plan" value="ENTERPRISE" th:checked="${planChoisi == 'ENTERPRISE'}" th:attr="data-prix=${prixEnterprise}"/>
                         <span class="offre-choix-nom">Enterprise</span>
                         <span class="offre-choix-prix"><span th:text="${#numbers.formatInteger(prixEnterprise,1,'WHITESPACE')}">96 000</span>
                             <span th:text="${symbole} + ' / mois'">FCFA / mois</span></span>
-                        <span class="offre-choix-detail">Tout Pro, plus l'API pour vos logiciels et un support dédié</span>
                     </label>
                 </div>
             </fieldset>
@@ -90,14 +84,12 @@
                 <span class="etiquette mb-0">Total</span>
                 <strong class="releve-chiffre" id="total" th:attr="data-symbole=${symbole}">—</strong>
             </div>
-            <p class="text-[13px] text-muted -mt-3">Payé d'avance, sans reconduction : rien ne se renouvelle sans vous.</p>
 
             <button type="submit" class="btn btn-ink w-full h-12 rounded-xl font-medium flex items-center justify-center gap-2">
                 <span class="material-symbols-rounded text-[20px]">lock</span>
                 Payer
             </button>
-            <p class="text-[12px] text-muted">Vous validez le paiement sur la page sécurisée de Jèko. SIGEP ne voit ni votre
-                numéro ni vos codes.</p>
+            <p class="text-[12px] text-muted text-center">Paiement sécurisé par Jèko</p>
         </form>
     </th:block>
 </main>

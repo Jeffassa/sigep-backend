@@ -5,18 +5,11 @@
 <aside class="porte-nuit">
     <a th:href="@{/}" class="marque">SIGEP</a>
     <p class="accroche">Votre registre, <em>ouvert en cinq minutes.</em></p>
-    <p class="bas">Système Intelligent de Gestion des Enseignements et du Pointage</p>
 </aside>
 <div class="porte-page">
 <main>
     <a th:href="@{/}" class="retour-accueil">← Retour à l'accueil</a>
-    <p class="surtitre">Créer l'espace de votre établissement</p>
-    <h1 class="titre-page">Bienvenue.</h1>
-    <p class="text-[15px] text-muted mb-6" th:if="${planChoisi == null}">Commencez gratuitement. Vous serez l'administrateur de l'espace.</p>
-    <p class="text-[15px] text-muted mb-6" th:if="${planChoisi != null and achatEnLigne}">Créez d'abord votre espace :
-        vous choisirez ensuite la durée et le moyen de paiement. Vous en serez l'administrateur.</p>
-    <p class="text-[15px] text-muted mb-6" th:if="${planChoisi != null and !achatEnLigne}">Le paiement en ligne ouvre très bientôt.
-        Créez votre espace dès maintenant : vous passerez au plan <span th:text="${planLibelle}">Pro</span> depuis votre espace.</p>
+    <h1 class="titre-page">Créer votre espace</h1>
     <div class="feuille">
 
         <div id="erreur" class="note note-alerte hidden">
@@ -25,10 +18,10 @@
 
         <form id="form" class="space-y-4" th:attr="data-plan=${planChoisi != null and achatEnLigne} ? ${planChoisi} : ''">
             <div>
-                <label class="etiquette">Nom de l'établissement</label>
+                <label class="etiquette" for="nomEtablissement">Établissement</label>
                 <input id="nomEtablissement" type="text" required list="ecolesList" autocomplete="off"
                        class="w-full h-12 px-4 champ text-ink"
-                       placeholder="Tapez les premières lettres du nom"/>
+                       placeholder="Nom de votre école"/>
                 <!-- Suggestions d'établissements (Côte d'Ivoire). Liste non exhaustive :
                      la saisie libre reste possible pour tout autre établissement. -->
                 <datalist id="ecolesList">
@@ -74,30 +67,18 @@
                 </div>
             </div>
             <div>
-                <label class="etiquette">Adresse e-mail de l&#39;administrateur</label>
+                <label class="etiquette" for="adminEmail">E-mail</label>
                 <input id="adminEmail" type="email" required
                        class="w-full h-12 px-4 champ text-ink"
-                       placeholder="vous@etablissement.ci"/>
+                       autocomplete="email"/>
             </div>
             <div>
                 <label class="etiquette">Mot de passe</label>
                 <div class="relative">
                     <input id="adminPassword" type="password" required minlength="8"
                            class="w-full h-12 px-4 pr-11 champ text-ink"
-                           placeholder="8 caractères minimum"/>
+                           placeholder="8 caractères minimum" autocomplete="new-password"/>
                     <button type="button" data-toggle="adminPassword" aria-label="Afficher le mot de passe"
-                            class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink transition">
-                        <span class="material-symbols-rounded text-[20px]">visibility</span>
-                    </button>
-                </div>
-            </div>
-            <div>
-                <label class="etiquette">Confirmer le mot de passe</label>
-                <div class="relative">
-                    <input id="adminPasswordConfirm" type="password" required minlength="8"
-                           class="w-full h-12 px-4 pr-11 champ text-ink"
-                           placeholder="Retapez le même mot de passe"/>
-                    <button type="button" data-toggle="adminPasswordConfirm" aria-label="Afficher le mot de passe"
                             class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink transition">
                         <span class="material-symbols-rounded text-[20px]">visibility</span>
                     </button>
@@ -111,7 +92,7 @@
         </form>
 
         <p class="text-center text-[13px] text-muted mt-6">
-            Déjà inscrit ? <a th:href="@{/admin-login}" class="text-ink underline underline-offset-2">Se connecter</a>
+            Déjà un espace ? <a th:href="@{/admin-login}" class="text-ink underline underline-offset-2">Se connecter</a>
         </p>
     </div>
 </main>
@@ -149,10 +130,6 @@
         box.classList.add('hidden');
         btn.disabled = true;
 
-        // Les deux mots de passe doivent correspondre.
-        var mdp = document.getElementById('adminPassword').value;
-        var mdp2 = document.getElementById('adminPasswordConfirm').value;
-        if (mdp !== mdp2) { erreur('Les deux mots de passe ne correspondent pas.'); return; }
 
         var payload = {
             nomEtablissement: document.getElementById('nomEtablissement').value.trim(),
