@@ -126,23 +126,18 @@ html.dark .btn-danger { color: #081a38; }
 .dock-marque small { display: block; font: 12px 'DM Mono', monospace; color: #d4dcea; }
 @media (max-width: 900px) { .dock-marque { display: none; } }
 
-/* La porte d'entrée : connexion, code, inscription */
-body.porte { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); min-height: 100vh; }
-.porte-nuit { display: flex; flex-direction: column; justify-content: space-between; gap: 24px; padding: 40px clamp(24px, 4vw, 64px); background: #081a38; color: #f6ecd9; }
-.porte-nuit .marque { color: #fff; font-stretch: 75%; font-weight: 900; font-size: 34px; line-height: 40px; text-decoration: none; }
-.porte-nuit .accroche { margin: 0; color: #fff; font-stretch: 75%; font-weight: 900; font-size: clamp(44px, 5.4vw, 80px); line-height: 1.02; }
-.porte-nuit .accroche em { font-family: 'Bodoni Moda', Didot, Georgia, serif; font-weight: 500; font-stretch: 100%; color: #ffbe57; }
-.porte-nuit .bas { margin: 0; font: 13px/20px 'DM Mono', monospace; color: #d4dcea; }
-.porte-page { display: flex; align-items: center; justify-content: center; padding: 40px 20px; min-width: 0; }
-.porte-page > main { width: 100%; max-width: 460px; }
-.porte-page .titre-page { font-size: clamp(38px, 4vw, 56px); margin-bottom: 8px; }
-@media (max-width: 900px) {
-    body.porte { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
-    .porte-nuit { padding: 20px; gap: 12px; }
-    .porte-nuit .accroche { display: none; }
-    .porte-nuit .bas { display: none; }
-    .porte-page { align-items: flex-start; }
+/* La porte d'entrée : connexion, code, inscription, paiement.
+   Toujours claire, une seule colonne : le nom, puis le formulaire. */
+body.porte {
+    min-height: 100vh; background-color: var(--c-bg);
+    background-image: linear-gradient(#e4eaf5 1px, transparent 1px);
+    background-size: 100% 32px;
 }
+.porte-tete { max-width: 500px; margin: 0 auto; padding: 32px 20px 0; }
+.porte-tete .marque { color: var(--c-ink); font-stretch: 75%; font-weight: 900; font-size: 30px; line-height: 32px; text-decoration: none; }
+.porte-page { display: flex; justify-content: center; padding: 32px 20px 64px; min-width: 0; }
+.porte-page > main { width: 100%; max-width: 460px; }
+.porte-page .titre-page { font-size: clamp(36px, 4vw, 48px); margin-bottom: 16px; }
 
 /* La barre du haut : la marque est dans le rail, il ne reste que les actions */
 .pastille-haute { width: 36px; height: 36px; font-size: 15px; }

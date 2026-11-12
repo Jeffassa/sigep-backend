@@ -15,8 +15,7 @@ public class HomeController {
     private final ci.esatic.sigep.tenant.plan.PlanService planService;
 
     @GetMapping("/")
-    public String accueil(org.springframework.ui.Model model) {
-        model.addAttribute("achatEnLigne", mobileMoneyService.achatEnLigne());
+    public String accueil() {
         return "public/landing";
     }
 

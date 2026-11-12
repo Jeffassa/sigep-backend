@@ -218,7 +218,6 @@ a:focus-visible, button:focus-visible, summary:focus-visible, input:focus-visibl
 .offre-mise .prix { color: var(--or-clair); }
 .offre-mise .prix small { color: var(--creme); }
 .offre .question { margin-top: 12px; font-size: 14px; line-height: 20px; color: var(--encre-2); }
-.paiement-note { margin-top: 24px; max-width: 760px; font-size: 15px; line-height: 24px; color: var(--encre-2); }
 
 /* ----- Questions ----- */
 .questions { padding: 0 0 96px; }

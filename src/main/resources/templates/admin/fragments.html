@@ -29,7 +29,7 @@
             try {
                 // Le papier par défaut : la nuit reste un choix explicite de la personne.
                 var t = localStorage.getItem('sigep-theme');
-                if (t === 'dark') document.documentElement.classList.add('dark');
+                if (t === 'dark' && !document.documentElement.hasAttribute('data-toujours-clair')) document.documentElement.classList.add('dark');
             } catch (e) {}
         })();
     </script>

@@ -164,7 +164,7 @@ class AchatEnLigneTest {
         assertThat(accueil)
                 .contains("href=\"/inscription?plan=PRO\"")
                 .contains("href=\"/inscription?plan=ENTERPRISE\"")
-                .contains("Paiement Mobile Money sécurisé par Jèko")
+                .doesNotContain("Paiement Mobile Money sécurisé par Jèko")
                 .doesNotContain("SSO")
                 .doesNotContain("Analyse par IA")
                 .doesNotContain("Essayer Pro");

@@ -1,11 +1,8 @@
 <!DOCTYPE html>
-<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<html lang="fr" xmlns:th="http://www.thymeleaf.org" data-toujours-clair>
 <head th:replace="~{public/fragments :: head('Inscrire mon établissement · SIGEP', 'Ouvrez gratuitement l’espace SIGEP de votre école ou université : émargement par QR code, planning des séances et rapports d’heures. Sans carte bancaire, sans engagement.', true)}"></head>
 <body class="porte">
-<aside class="porte-nuit">
-    <a th:href="@{/}" class="marque">SIGEP</a>
-    <p class="accroche">Votre registre, <em>ouvert en cinq minutes.</em></p>
-</aside>
+<header class="porte-tete"><a th:href="@{/}" class="marque">SIGEP</a></header>
 <div class="porte-page">
 <main>
     <a th:href="@{/}" class="retour-accueil">← Retour à l'accueil</a>
