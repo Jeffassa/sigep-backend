@@ -4,14 +4,9 @@
 <body class="min-h-screen flex items-center justify-center px-5">
 
 <main class="w-full max-w-[460px] text-center reveal">
-    <div class="glass-strong rounded-3xl p-10">
-        <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-ink text-white mb-6">
-            <span class="material-symbols-rounded fill"
-                  th:text="${status == 403 ? 'lock' : (status == 404 ? 'travel_explore' : 'error')}">error</span>
-        </div>
-
-        <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mb-2">Erreur</p>
-        <h1 class="font-serif text-[88px] leading-[0.9] tracking-tight" th:text="${status} ?: 'Oups'">500</h1>
+    <div class="feuille">
+        <p class="surtitre">Erreur</p>
+        <h1 class="titre-page" style="font-size:clamp(88px,14vw,160px)" th:text="${status} ?: 'Oups'">500</h1>
 
         <p class="text-[16px] text-muted mt-3 mb-8" th:switch="${status}">
             <span th:case="403">Vous n'avez pas les droits pour accéder à cette page.</span>
@@ -32,7 +27,7 @@
             </a>
         </div>
     </div>
-    <p class="font-mono text-[10px] uppercase tracking-[0.2em] text-muted mt-6">SIGEP · Solutions de Gestion</p>
+    <p class="font-mono text-[12px] text-muted mt-6">SIGEP</p>
 </main>
 
 </body>

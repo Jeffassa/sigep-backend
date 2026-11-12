@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -64,9 +65,24 @@ public class SecurityConfig {
                         // règle, /admin-otp retombe sur anyRequest().hasRole("ADMIN") et le super
                         // administrateur — qui ne porte que ROLE_SUPER_ADMIN — reçoit un 403 sur la
                         // page même qui doit le laisser entrer.
-                        .requestMatchers("/admin-otp", "/admin-otp/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
+                        .requestMatchers("/admin-otp", "/admin-otp/**")
+                                .hasAnyRole("ADMIN", "SUPER_ADMIN", "DIRECTION", "SCOLARITE", "COMPTABILITE")
                         // Espace plateforme (super admin) : strictement séparé de l'admin établissement
                         .requestMatchers("/plateforme/**").hasRole("SUPER_ADMIN")
+                        .requestMatchers("/admin/logout", "/admin/mon-compte")
+                                .hasAnyRole("ADMIN", "DIRECTION", "SCOLARITE", "COMPTABILITE")
+                        // Tout ce qui n'est pas ouvert ci-dessous reste réservé à l'administrateur
+                        // principal : une page ajoutée plus tard n'est jamais ouverte par mégarde.
+                        .requestMatchers(HttpMethod.GET, ProfilsAdmin.LECTURE_COMMUNE)
+                                .hasAnyRole("ADMIN", "DIRECTION", "SCOLARITE", "COMPTABILITE")
+                        .requestMatchers(HttpMethod.POST, "/admin/rapports/generer")
+                                .hasAnyRole("ADMIN", "DIRECTION", "SCOLARITE", "COMPTABILITE")
+                        .requestMatchers(HttpMethod.GET, ProfilsAdmin.LECTURE_DIRECTION)
+                                .hasAnyRole("ADMIN", "DIRECTION", "SCOLARITE")
+                        .requestMatchers(HttpMethod.GET, "/admin/paie", "/admin/paie/**")
+                                .hasAnyRole("ADMIN", "DIRECTION", "COMPTABILITE")
+                        .requestMatchers(ProfilsAdmin.SCOLARITE).hasAnyRole("ADMIN", "SCOLARITE")
+                        .requestMatchers("/admin/abonnement/**").hasAnyRole("ADMIN", "COMPTABILITE")
                         .anyRequest().hasRole("ADMIN")
                 )
                 .formLogin(form -> form
@@ -177,6 +193,10 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Pages publiques SaaS (accueil + inscription + pages légales) + SEO + statiques
                         .requestMatchers("/", "/inscription", "/error", "/favicon.ico").permitAll()
+                        // Suivi du paiement d'une inscription : la référence, imprévisible, en est la clé.
+                        .requestMatchers("/inscription/paiement", "/inscription/paiement/**").permitAll()
+                        // Page de paiement d'une inscription : le jeton signé en est la clé.
+                        .requestMatchers("/inscription/payer").permitAll()
                         .requestMatchers("/mentions-legales", "/confidentialite", "/cgu").permitAll()
                         .requestMatchers("/robots.txt", "/sitemap.xml").permitAll()
                         .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**").permitAll()
@@ -190,6 +210,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/paiement/mobile-money/webhook").permitAll()
                         // Webhook NovaSend : public, protégé par signature HMAC-SHA256 du corps
                         .requestMatchers("/api/paiement/novasend/webhook").permitAll()
+                        // Webhook Jèko : public, protégé par signature HMAC-SHA256 du corps
+                        .requestMatchers("/api/paiement/jeko/webhook").permitAll()
                         // Sondes de supervision publiques ; le reste de l'actuator (metrics…)
                         // réservé aux admins — pas exposé aux enseignants authentifiés.
                         .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()

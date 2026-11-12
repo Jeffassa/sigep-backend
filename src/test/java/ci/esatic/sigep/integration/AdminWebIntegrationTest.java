@@ -166,6 +166,15 @@ class AdminWebIntegrationTest {
 
     @Test
     @WithMockUser(username = "admin@esatic.ci", roles = "ADMIN")
+    void ecranEmargement_devraitSeRendreCorrectement() throws Exception {
+        // L'application y renvoie après chaque renouvellement de la clé d'écran.
+        mockMvc.perform(get("/admin/ecran-emargement"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Ouvrir l'écran de la salle")));
+    }
+
+    @Test
+    @WithMockUser(username = "admin@esatic.ci", roles = "ADMIN")
     void enseignants_devraitSeRendreCorrectement() throws Exception {
         mockMvc.perform(get("/admin/enseignants"))
                 .andExpect(status().isOk())

@@ -7,64 +7,59 @@
 
 <main class="max-w-[1240px] mx-auto px-5 md:px-8 py-10 pb-36">
 
-    <div class="mb-8" data-reveal>
-        <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mb-2">À traiter</p>
-        <h1 class="font-serif text-[clamp(34px,5vw,52px)] leading-[1.02] tracking-tight">Alertes</h1>
-    </div>
+    <section class="mb-8" data-reveal
+             th:with="total=${seancesNonEmargees.size() + rattrapagesEnAttente.size() + emargementsHorsLigne.size() + enseignantsEnAttente.size() + seancesAValider.size()}">
+        <p class="surtitre">Alertes</p>
+        <h1 class="phrase-du-jour mt-0" th:if="${total == 0}">Rien n'attend de décision.</h1>
+        <h1 class="phrase-du-jour mt-0" th:if="${total == 1}"><span class="surligne">Une chose</span> attend votre décision.</h1>
+        <h1 class="phrase-du-jour mt-0" th:if="${total > 1}"><span class="surligne" th:text="${total + ' choses'}">0 choses</span> attendent votre décision.</h1>
+    </section>
 
-    <!-- Résumé -->
-    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5 mb-8">
-        <div class="glass glass-card rounded-3xl p-6 flex items-center gap-4" data-reveal>
-            <span class="material-symbols-rounded text-[28px]">event_busy</span>
-            <div><p class="font-serif text-[40px] leading-none" th:text="${seancesNonEmargees.size()}">0</p>
-                <p class="font-mono text-[10px] uppercase tracking-wider text-muted mt-1">Émargements manquants</p></div>
-        </div>
-        <div class="glass glass-card rounded-3xl p-6 flex items-center gap-4" data-reveal>
-            <span class="material-symbols-rounded text-[28px]">history_toggle_off</span>
-            <div><p class="font-serif text-[40px] leading-none" th:text="${rattrapagesEnAttente.size()}">0</p>
-                <p class="font-mono text-[10px] uppercase tracking-wider text-muted mt-1">Rattrapages en attente</p></div>
-        </div>
-        <div class="glass glass-card rounded-3xl p-6 flex items-center gap-4" data-reveal>
-            <span class="material-symbols-rounded text-[28px] text-amber-600 dark:text-amber-400">wifi_off</span>
-            <div><p class="font-serif text-[40px] leading-none text-amber-600 dark:text-amber-400" th:text="${emargementsHorsLigne.size()}">0</p>
-                <p class="font-mono text-[10px] uppercase tracking-wider text-muted mt-1">Émargements hors-ligne</p></div>
-        </div>
-        <div class="glass glass-card rounded-3xl p-6 flex items-center gap-4" data-reveal>
-            <span class="material-symbols-rounded text-[28px]">person_alert</span>
-            <div><p class="font-serif text-[40px] leading-none" th:text="${enseignantsEnAttente.size()}">0</p>
-                <p class="font-mono text-[10px] uppercase tracking-wider text-muted mt-1">Enseignants à valider</p></div>
-        </div>
+    <section class="releve" aria-label="Résumé des alertes">
+        <a href="#manquants" th:classappend="${seancesNonEmargees.size() > 0} ? 'releve-urgent'">
+            <p class="releve-libelle">Émargements manquants</p>
+            <p class="releve-chiffre" th:text="${seancesNonEmargees.size()}">0</p>
+        </a>
+        <a href="#rattrapages">
+            <p class="releve-libelle">Rattrapages en attente</p>
+            <p class="releve-chiffre" th:text="${rattrapagesEnAttente.size()}">0</p>
+        </a>
+        <a href="#hors-ligne">
+            <p class="releve-libelle">Émargements hors ligne</p>
+            <p class="releve-chiffre" th:text="${emargementsHorsLigne.size()}">0</p>
+        </a>
+        <a href="#a-valider">
+            <p class="releve-libelle">Enseignants à valider</p>
+            <p class="releve-chiffre" th:text="${enseignantsEnAttente.size()}">0</p>
+        </a>
     </section>
 
     <!-- 1. Séances non émargées -->
-    <section class="glass rounded-3xl overflow-hidden mb-6" data-reveal>
-        <div class="px-7 py-5 border-b border-line flex items-center gap-2.5">
-            <span class="material-symbols-rounded">event_busy</span>
-            <h2 class="font-serif text-[22px]">Séances passées non émargées</h2>
+    <section id="manquants" class="chapitre" data-reveal>
+        <div class="chapitre-tete">
+            
+            <h2 class="titre-section">Séances passées non émargées</h2>
         </div>
-        <div class="overflow-x-auto">
-            <table class="w-full text-left">
-                <thead><tr class="border-b border-line">
-                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Date</th>
-                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Horaire</th>
-                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Matière</th>
-                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Classe</th>
-                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Salle</th>
-                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Enseignant</th>
+        <p class="ligne-vide" th:if="${seancesNonEmargees.isEmpty()}">Tout est à jour.</p>
+        <div class="overflow-x-auto" th:unless="${seancesNonEmargees.isEmpty()}">
+            <table class="registre">
+                <thead><tr>
+                    <th>Date</th>
+                    <th>Horaire</th>
+                    <th>Matière</th>
+                    <th>Classe</th>
+                    <th>Salle</th>
+                    <th>Enseignant</th>
                 </tr></thead>
                 <tbody>
-                <tr th:if="${seancesNonEmargees.isEmpty()}">
-                    <td colspan="6" class="px-6 py-12 text-center text-muted">
-                        <span class="material-symbols-rounded text-[36px] block mb-2 opacity-40">check_circle</span>Tout est à jour.</td>
-                </tr>
-                <tr th:each="s : ${seancesNonEmargees}" class="zebra border-b border-line">
-                    <td class="px-6 py-3.5 font-mono text-[12px] text-muted" th:text="${#temporals.format(s.date,'dd/MM/yy')}">--</td>
-                    <td class="px-6 py-3.5 font-mono text-[12px] text-muted">
+                <tr th:each="s : ${seancesNonEmargees}">
+                    <td class="code" th:text="${#temporals.format(s.date,'dd/MM/yy')}">--</td>
+                    <td class="code">
                         <span th:text="${#temporals.format(s.heureDebut,'HH:mm')}">--</span>–<span th:text="${#temporals.format(s.heureFin,'HH:mm')}">--</span></td>
-                    <td class="px-6 py-3.5 text-[14px] font-medium" th:text="${s.matiere.libelle}">Matière</td>
-                    <td class="px-6 py-3.5 text-[14px] text-muted" th:text="${s.classe.libelle}">Classe</td>
-                    <td class="px-6 py-3.5 text-[14px] text-muted" th:text="${s.salle.libelle}">Salle</td>
-                    <td class="px-6 py-3.5 text-[14px] text-muted" th:text="${s.enseignant.prenom + ' ' + s.enseignant.nom}">Ens.</td>
+                    <td class="fort" th:text="${s.matiere.libelle}">Matière</td>
+                    <td class="discret" th:text="${s.classe.libelle}">Classe</td>
+                    <td class="discret" th:text="${s.salle.libelle}">Salle</td>
+                    <td class="discret" th:text="${s.enseignant.prenom + ' ' + s.enseignant.nom}">Ens.</td>
                 </tr>
                 </tbody>
             </table>
@@ -72,13 +67,13 @@
     </section>
 
     <!-- Séances déclarées par les enseignants : à accepter avant tout émargement -->
-    <section th:if="${!seancesAValider.isEmpty()}" class="glass rounded-3xl overflow-hidden mb-6" data-reveal>
-        <div class="px-7 py-5 border-b border-line flex flex-wrap items-center justify-between gap-3">
+    <section th:if="${!seancesAValider.isEmpty()}" class="chapitre" data-reveal>
+        <div class="chapitre-tete">
             <div class="flex items-center gap-2.5">
-                <span class="material-symbols-rounded">edit_calendar</span>
+                
                 <div>
-                    <h2 class="font-serif text-[22px]">Séances importées par les enseignants</h2>
-                    <p class="text-[12px] text-muted mt-0.5">Elles ne peuvent être ni émargées ni comptées pour la paie tant que vous ne les avez pas acceptées.</p>
+                    <h2 class="titre-section">Séances importées par les enseignants</h2>
+                    <p class="chapitre-note mb-0">Elles ne peuvent être ni émargées ni comptées pour la paie tant que vous ne les avez pas acceptées.</p>
                 </div>
             </div>
             <form th:action="@{/admin/seances/valider-tout}" method="post"
@@ -89,26 +84,26 @@
             </form>
         </div>
         <div class="overflow-x-auto">
-            <table class="w-full text-left">
-                <thead><tr class="border-b border-line">
-                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Date</th>
-                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Horaire</th>
-                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Enseignant</th>
-                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Matière</th>
-                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Classe</th>
-                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Salle</th>
-                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted text-right">Action</th>
+            <table class="registre">
+                <thead><tr>
+                    <th>Date</th>
+                    <th>Horaire</th>
+                    <th>Enseignant</th>
+                    <th>Matière</th>
+                    <th>Classe</th>
+                    <th>Salle</th>
+                    <th class="text-right">Action</th>
                 </tr></thead>
                 <tbody>
-                <tr th:each="sv : ${seancesAValider}" class="zebra border-b border-line">
-                    <td class="px-6 py-3.5 font-mono text-[12px] font-medium" th:text="${#temporals.format(sv.date,'dd/MM/yyyy')}">--</td>
-                    <td class="px-6 py-3.5 font-mono text-[12px] text-muted">
+                <tr th:each="sv : ${seancesAValider}">
+                    <td class="code" th:text="${#temporals.format(sv.date,'dd/MM/yyyy')}">--</td>
+                    <td class="code">
                         <span th:text="${#temporals.format(sv.heureDebut,'HH:mm')}">--</span>–<span th:text="${#temporals.format(sv.heureFin,'HH:mm')}">--</span></td>
-                    <td class="px-6 py-3.5 text-[14px] font-medium" th:text="${sv.enseignant.prenom + ' ' + sv.enseignant.nom}">Ens.</td>
-                    <td class="px-6 py-3.5 text-[14px] text-muted" th:text="${sv.matiere.libelle}">Matière</td>
-                    <td class="px-6 py-3.5 text-[14px] text-muted" th:text="${sv.classe.libelle}">Classe</td>
-                    <td class="px-6 py-3.5 text-[14px] text-muted" th:text="${sv.salle.libelle}">Salle</td>
-                    <td class="px-6 py-3.5">
+                    <td class="fort" th:text="${sv.enseignant.prenom + ' ' + sv.enseignant.nom}">Ens.</td>
+                    <td class="discret" th:text="${sv.matiere.libelle}">Matière</td>
+                    <td class="discret" th:text="${sv.classe.libelle}">Classe</td>
+                    <td class="discret" th:text="${sv.salle.libelle}">Salle</td>
+                    <td>
                         <div class="flex items-center gap-2 justify-end">
                             <form th:action="@{'/admin/seances/' + ${sv.id} + '/valider'}" method="post">
                                 <button type="submit" class="btn btn-ink h-9 px-3 rounded-lg text-[12px] font-medium inline-flex items-center gap-1">
@@ -117,7 +112,7 @@
                             </form>
                             <form th:action="@{'/admin/seances/' + ${sv.id} + '/refuser'}" method="post"
                                   onsubmit="return confirm('Écarter cette séance ?');">
-                                <button type="submit" class="h-9 px-3 rounded-lg border border-line text-[12px] font-medium inline-flex items-center gap-1 hover:bg-ink hover:text-white transition">
+                                <button type="submit" class="bouton-ligne">
                                     <span class="material-symbols-rounded text-[16px]">close</span> Écarter
                                 </button>
                             </form>
@@ -130,52 +125,48 @@
     </section>
 
     <!-- 2. Émargements hors-ligne (Audit présence sans QR de salle) -->
-    <section class="glass rounded-3xl overflow-hidden mb-6" data-reveal>
-        <div class="px-7 py-5 border-b border-line flex items-center justify-between">
+    <section id="hors-ligne" class="chapitre" data-reveal>
+        <div class="chapitre-tete">
             <div class="flex items-center gap-2.5">
-                <span class="material-symbols-rounded text-amber-600 dark:text-amber-400">wifi_off</span>
+                
                 <div>
-                    <h2 class="font-serif text-[22px]">Émargements hors-ligne (à valider)</h2>
-                    <p class="text-[12px] text-muted mt-0.5">Le QR a bien été scanné, mais sans réseau. La scolarité confirme avant que la séance soit comptée.</p>
+                    <h2 class="titre-section">Émargements hors ligne à valider</h2>
+                    <p class="chapitre-note mb-0">Le QR a bien été scanné, mais sans réseau. La scolarité confirme avant que la séance soit comptée.</p>
                 </div>
             </div>
             <span th:if="${!emargementsHorsLigne.isEmpty()}"
-                  class="font-mono text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold"
+                  class="etat etat-attente"
                   th:text="${emargementsHorsLigne.size() + ' à vérifier'}">0</span>
         </div>
         <div class="overflow-x-auto">
-            <table class="w-full text-left">
-                <thead><tr class="border-b border-line">
-                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Date de la séance</th>
-                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Reçu le</th>
-                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Enseignant</th>
-                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Matière</th>
-                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Classe</th>
-                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Salle</th>
-                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Signature</th>
-                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted text-right">Action</th>
+            <table class="registre">
+                <thead><tr>
+                    <th>Date de la séance</th>
+                    <th>Reçu le</th>
+                    <th>Enseignant</th>
+                    <th>Matière</th>
+                    <th>Classe</th>
+                    <th>Salle</th>
+                    <th>Signature</th>
+                    <th class="text-right">Action</th>
                 </tr></thead>
                 <tbody>
-                <tr th:if="${emargementsHorsLigne.isEmpty()}">
-                    <td colspan="8" class="px-6 py-12 text-center text-muted">
-                        <span class="material-symbols-rounded text-[36px] block mb-2 opacity-40">check_circle</span>Aucun émargement hors-ligne à valider.</td>
-                </tr>
-                <tr th:each="eh : ${emargementsHorsLigne}" class="zebra border-b border-line">
-                    <td class="px-6 py-3.5 font-mono text-[12px] font-medium" th:text="${#temporals.format(eh.seance.date,'dd/MM/yyyy')}">--</td>
-                    <td class="px-6 py-3.5 font-mono text-[12px] text-muted" th:text="${#temporals.format(eh.dateHeure,'dd/MM HH:mm')}">--</td>
-                    <td class="px-6 py-3.5 text-[14px] font-medium" th:text="${eh.enseignant.prenom + ' ' + eh.enseignant.nom}">Ens.</td>
-                    <td class="px-6 py-3.5 text-[14px] text-muted" th:text="${eh.seance.matiere.libelle}">Matière</td>
-                    <td class="px-6 py-3.5 text-[14px] text-muted" th:text="${eh.seance.classe.libelle}">Classe</td>
-                    <td class="px-6 py-3.5 text-[14px] text-muted" th:text="${eh.seance.salle.libelle}">Salle</td>
-                    <td class="px-6 py-3.5">
+                <tr th:each="eh : ${emargementsHorsLigne}">
+                    <td class="code" th:text="${#temporals.format(eh.seance.date,'dd/MM/yyyy')}">--</td>
+                    <td class="code" th:text="${#temporals.format(eh.dateHeure,'dd/MM HH:mm')}">--</td>
+                    <td class="fort" th:text="${eh.enseignant.prenom + ' ' + eh.enseignant.nom}">Ens.</td>
+                    <td class="discret" th:text="${eh.seance.matiere.libelle}">Matière</td>
+                    <td class="discret" th:text="${eh.seance.classe.libelle}">Classe</td>
+                    <td class="discret" th:text="${eh.seance.salle.libelle}">Salle</td>
+                    <td>
                         <span th:if="${eh.signatureBase64 != null and !eh.signatureBase64.isBlank()}"
-                              class="inline-flex items-center gap-1 font-mono text-[11px] text-emerald-600 dark:text-emerald-400">
-                            <span class="material-symbols-rounded text-[14px]">draw</span> Présente
+                              class="etat">
+                            Présente
                         </span>
                         <span th:if="${eh.signatureBase64 == null or eh.signatureBase64.isBlank()}"
                               class="font-mono text-[11px] text-muted">—</span>
                     </td>
-                    <td class="px-6 py-3.5">
+                    <td>
                         <div class="flex items-center gap-2 justify-end">
                             <!-- Valider : présence confirmée => séance émargée (comptée) -->
                             <form th:action="@{'/admin/emargements/hors-ligne/' + ${eh.id} + '/valider'}" method="post">
@@ -186,9 +177,9 @@
                             </form>
                             <!-- Refuser : séance à régulariser (émargement supprimé) -->
                             <form th:action="@{'/admin/emargements/hors-ligne/' + ${eh.id} + '/refuser'}" method="post"
-                                  onsubmit="return confirm('Refuser cet émargement hors-ligne ? La séance redeviendra à régulariser.');">
+                                  onsubmit="return confirm('Refuser cet émargement hors ligne ? La séance redeviendra à régulariser.');">
                                 <button type="submit"
-                                        class="h-9 px-3 rounded-lg border border-line text-[12px] font-medium inline-flex items-center gap-1 hover:bg-ink hover:text-white transition">
+                                        class="bouton-ligne">
                                     <span class="material-symbols-rounded text-[16px]">close</span> Refuser
                                 </button>
                             </form>
@@ -201,40 +192,37 @@
     </section>
 
     <!-- 3. Rattrapages -->
-    <section class="glass rounded-3xl overflow-hidden mb-6" data-reveal>
-        <div class="px-7 py-5 border-b border-line flex items-center gap-2.5">
-            <span class="material-symbols-rounded">history_toggle_off</span>
-            <h2 class="font-serif text-[22px]">Demandes de rattrapage en attente</h2>
+    <section id="rattrapages" class="chapitre" data-reveal>
+        <div class="chapitre-tete">
+            
+            <h2 class="titre-section">Demandes de rattrapage en attente</h2>
         </div>
-        <div class="overflow-x-auto">
-            <table class="w-full text-left">
-                <thead><tr class="border-b border-line">
-                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Enseignant</th>
-                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Matière</th>
-                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Classe</th>
-                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Souhaitée</th>
-                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Motif</th>
-                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted text-right">Action</th>
+        <p class="ligne-vide" th:if="${rattrapagesEnAttente.isEmpty()}">Aucune demande.</p>
+        <div class="overflow-x-auto" th:unless="${rattrapagesEnAttente.isEmpty()}">
+            <table class="registre">
+                <thead><tr>
+                    <th>Enseignant</th>
+                    <th>Matière</th>
+                    <th>Classe</th>
+                    <th>Souhaitée</th>
+                    <th>Motif</th>
+                    <th class="text-right">Action</th>
                 </tr></thead>
                 <tbody>
-                <tr th:if="${rattrapagesEnAttente.isEmpty()}">
-                    <td colspan="6" class="px-6 py-12 text-center text-muted">
-                        <span class="material-symbols-rounded text-[36px] block mb-2 opacity-40">check_circle</span>Aucune demande.</td>
-                </tr>
-                <tr th:each="d : ${rattrapagesEnAttente}" class="zebra border-b border-line">
-                    <td class="px-6 py-3.5 text-[14px] font-medium" th:text="${d.enseignant.prenom + ' ' + d.enseignant.nom}">Ens.</td>
-                    <td class="px-6 py-3.5 text-[14px] text-muted" th:text="${d.matiere.libelle}">Matière</td>
-                    <td class="px-6 py-3.5 text-[14px] text-muted" th:text="${d.classe.libelle}">Classe</td>
-                    <td class="px-6 py-3.5 font-mono text-[12px] text-muted">
+                <tr th:each="d : ${rattrapagesEnAttente}">
+                    <td class="fort" th:text="${d.enseignant.prenom + ' ' + d.enseignant.nom}">Ens.</td>
+                    <td class="discret" th:text="${d.matiere.libelle}">Matière</td>
+                    <td class="discret" th:text="${d.classe.libelle}">Classe</td>
+                    <td class="code">
                         <span th:text="${#temporals.format(d.dateSouhaitee,'dd/MM/yy')}">--</span> <span th:text="${#temporals.format(d.heureSouhaitee,'HH:mm')}">--</span></td>
-                    <td class="px-6 py-3.5 text-[13px] text-muted max-w-[240px] truncate" th:text="${d.motif}">Motif</td>
-                    <td class="px-6 py-3.5">
+                    <td class="discret max-w-[240px] truncate" th:text="${d.motif}">Motif</td>
+                    <td>
                         <div class="flex items-center gap-2 justify-end">
                             <!-- Accepter : choisir une salle => crée la séance + email auto à l'enseignant -->
                             <form th:action="@{'/admin/rattrapages/' + ${d.id} + '/accepter'}" method="post"
                                   class="flex items-center gap-1.5">
                                 <select name="salleId" required
-                                        class="h-9 px-2 rounded-lg bg-white/55 border border-line text-[12px]">
+                                        class="h-9 px-2 champ text-[12px]">
                                     <option value="" disabled selected>Choisir la salle</option>
                                     <option th:each="s : ${salles}" th:value="${s.id}" th:text="${s.libelle}">A1</option>
                                 </select>
@@ -247,7 +235,7 @@
                             <form th:action="@{'/admin/rattrapages/' + ${d.id} + '/refuser'}" method="post"
                                   onsubmit="return confirm('Refuser cette demande de rattrapage ? L\'enseignant en sera informé par e-mail.');">
                                 <button type="submit"
-                                        class="h-9 px-3 rounded-lg border border-line text-[12px] font-medium inline-flex items-center gap-1 hover:bg-ink hover:text-white transition">
+                                        class="bouton-ligne">
                                     <span class="material-symbols-rounded text-[16px]">close</span> Refuser
                                 </button>
                             </form>
@@ -260,30 +248,27 @@
     </section>
 
     <!-- 3. Enseignants à valider -->
-    <section class="glass rounded-3xl overflow-hidden" data-reveal>
-        <div class="px-7 py-5 border-b border-line flex items-center justify-between">
-            <div class="flex items-center gap-2.5"><span class="material-symbols-rounded">person_alert</span>
-                <h2 class="font-serif text-[22px]">Enseignants à valider</h2></div>
-            <a th:href="@{/admin/enseignants}" class="inline-flex items-center gap-1 font-mono text-[11px] uppercase tracking-wider hover:underline">Gérer<span class="material-symbols-rounded text-[16px]">arrow_forward</span></a>
+    <section id="a-valider" class="chapitre" data-reveal>
+        <div class="chapitre-tete">
+            <div class="flex items-center gap-2.5">
+                <h2 class="titre-section">Enseignants à valider</h2></div>
+            <a th:href="@{/admin/enseignants}" class="underline text-[14px]">Gérer</a>
         </div>
-        <div class="overflow-x-auto">
-            <table class="w-full text-left">
-                <thead><tr class="border-b border-line">
-                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Matricule</th>
-                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Nom</th>
-                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Département</th>
-                    <th class="px-6 py-3.5 font-mono text-[10px] uppercase tracking-wider text-muted">Grade</th>
+        <p class="ligne-vide" th:if="${enseignantsEnAttente.isEmpty()}">Aucun enseignant en attente.</p>
+        <div class="overflow-x-auto" th:unless="${enseignantsEnAttente.isEmpty()}">
+            <table class="registre">
+                <thead><tr>
+                    <th>Matricule</th>
+                    <th>Nom</th>
+                    <th>Département</th>
+                    <th>Grade</th>
                 </tr></thead>
                 <tbody>
-                <tr th:if="${enseignantsEnAttente.isEmpty()}">
-                    <td colspan="4" class="px-6 py-12 text-center text-muted">
-                        <span class="material-symbols-rounded text-[36px] block mb-2 opacity-40">check_circle</span>Aucun enseignant en attente.</td>
-                </tr>
-                <tr th:each="e : ${enseignantsEnAttente}" class="zebra border-b border-line">
-                    <td class="px-6 py-3.5 font-mono text-[12px] font-medium" th:text="${e.matricule}">MAT</td>
-                    <td class="px-6 py-3.5 text-[14px] font-medium" th:text="${e.prenom + ' ' + e.nom}">Nom</td>
-                    <td class="px-6 py-3.5 text-[14px] text-muted" th:text="${e.departement}">—</td>
-                    <td class="px-6 py-3.5 text-[14px] text-muted" th:text="${e.grade}">—</td>
+                <tr th:each="e : ${enseignantsEnAttente}">
+                    <td class="code" th:text="${e.matricule}">MAT</td>
+                    <td class="fort" th:text="${e.prenom + ' ' + e.nom}">Nom</td>
+                    <td class="discret" th:text="${e.departement}">—</td>
+                    <td class="discret" th:text="${e.grade}">—</td>
                 </tr>
                 </tbody>
             </table>

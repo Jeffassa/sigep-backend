@@ -16,8 +16,18 @@ public interface EnseignantRepository extends JpaRepository<Enseignant, Long> {
     /** Tous les enseignants portant ce matricule (peut valoir >1 depuis V16 : matricule unique PAR
      *  établissement, pas globalement). Évite le NonUniqueResult de findByMatricule à l'inscription. */
     List<Enseignant> findAllByMatricule(String matricule);
+    /** À n'appeler que sous le filtre tenant : un vacataire a une fiche par établissement. */
     Optional<Enseignant> findByUserId(Long userId);
     boolean existsByMatricule(String matricule);
+
+    /**
+     * Fiches d'un compte dans TOUS ses établissements : etablissement_id, statut, nom, prénom.
+     * Native à dessein : le filtre tenant masquerait les autres établissements, et ces valeurs
+     * ne servent qu'au titulaire du compte.
+     */
+    @Query(value = "SELECT etablissement_id, statut, nom, prenom FROM enseignants WHERE user_id = :userId ORDER BY id",
+           nativeQuery = true)
+    List<Object[]> fichesDuCompte(@Param("userId") Long userId);
 
     @Query("SELECT DISTINCT e.departement FROM Enseignant e WHERE e.departement IS NOT NULL ORDER BY e.departement")
     List<String> findDistinctDepartements();

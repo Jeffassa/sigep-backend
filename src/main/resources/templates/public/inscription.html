@@ -1,35 +1,27 @@
 <!DOCTYPE html>
-<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<html lang="fr" xmlns:th="http://www.thymeleaf.org" data-toujours-clair>
 <head th:replace="~{public/fragments :: head('Inscrire mon établissement · SIGEP', 'Ouvrez gratuitement l’espace SIGEP de votre école ou université : émargement par QR code, planning des séances et rapports d’heures. Sans carte bancaire, sans engagement.', true)}"></head>
-<body class="min-h-screen flex items-center justify-center px-5 py-10">
+<body class="porte">
+<aside class="porte-nuit">
+    <a th:href="@{/}" class="marque">SIGEP</a>
+    <p class="accroche">Votre registre, <em>ouvert en cinq minutes.</em></p>
+</aside>
+<div class="porte-page">
+<main>
+    <a th:href="@{/}" class="retour-accueil">← Retour à l'accueil</a>
+    <h1 class="titre-page">Créer votre espace</h1>
+    <div class="feuille">
 
-<main class="w-full max-w-[460px]" data-reveal>
-
-    <!-- Marque -->
-    <div class="text-center mb-8">
-        <a th:href="@{/}" class="inline-flex items-baseline gap-2">
-            <span class="font-serif text-[44px] leading-none tracking-tight">SIGEP</span>
-        </a>
-        <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mt-2">Créer l'espace de votre établissement</p>
-    </div>
-
-    <!-- Carte -->
-    <div class="glass-strong rounded-3xl p-8">
-        <h2 class="font-serif text-[26px] mb-1">Bienvenue.</h2>
-        <p class="text-[14px] text-muted mb-6">Commencez gratuitement. Vous serez l'administrateur de l'espace.</p>
-
-        <div id="erreur" class="hidden items-center gap-2 p-3 mb-4 rounded-xl text-[13px]"
-             style="background:rgba(186,26,26,.08);color:#7a0010;border:1px solid rgba(186,26,26,.2)">
-            <span class="material-symbols-rounded text-[18px]">error</span>
+        <div id="erreur" class="note note-alerte hidden">
             <span id="erreurTexte">Erreur.</span>
         </div>
 
-        <form id="form" class="space-y-4">
+        <form id="form" class="space-y-4" th:attr="data-plan=${planChoisi != null and achatEnLigne} ? ${planChoisi} : ''">
             <div>
-                <label class="block font-mono text-[11px] uppercase tracking-wider text-muted mb-2">Nom de l'établissement</label>
+                <label class="etiquette" for="nomEtablissement">Établissement</label>
                 <input id="nomEtablissement" type="text" required list="ecolesList" autocomplete="off"
-                       class="w-full h-12 px-4 rounded-xl bg-white/60 border border-line text-ink focus:outline-none focus:border-ink focus:ring-1 focus:ring-ink transition"
-                       placeholder="Tapez les premières lettres du nom"/>
+                       class="w-full h-12 px-4 champ text-ink"
+                       placeholder="Nom de votre école"/>
                 <!-- Suggestions d'établissements (Côte d'Ivoire). Liste non exhaustive :
                      la saisie libre reste possible pour tout autre établissement. -->
                 <datalist id="ecolesList">
@@ -64,41 +56,29 @@
             </div>
             <div class="grid grid-cols-2 gap-3">
                 <div>
-                    <label class="block font-mono text-[11px] uppercase tracking-wider text-muted mb-2">Prénom</label>
+                    <label class="etiquette">Prénom</label>
                     <input id="adminPrenom" type="text"
-                           class="w-full h-12 px-4 rounded-xl bg-white/60 border border-line text-ink focus:outline-none focus:border-ink focus:ring-1 focus:ring-ink transition"/>
+                           class="w-full h-12 px-4 champ text-ink"/>
                 </div>
                 <div>
-                    <label class="block font-mono text-[11px] uppercase tracking-wider text-muted mb-2">Nom</label>
+                    <label class="etiquette">Nom</label>
                     <input id="adminNom" type="text"
-                           class="w-full h-12 px-4 rounded-xl bg-white/60 border border-line text-ink focus:outline-none focus:border-ink focus:ring-1 focus:ring-ink transition"/>
+                           class="w-full h-12 px-4 champ text-ink"/>
                 </div>
             </div>
             <div>
-                <label class="block font-mono text-[11px] uppercase tracking-wider text-muted mb-2">Adresse e-mail de l&#39;administrateur</label>
+                <label class="etiquette" for="adminEmail">E-mail</label>
                 <input id="adminEmail" type="email" required
-                       class="w-full h-12 px-4 rounded-xl bg-white/60 border border-line text-ink focus:outline-none focus:border-ink focus:ring-1 focus:ring-ink transition"
-                       placeholder="vous@etablissement.ci"/>
+                       class="w-full h-12 px-4 champ text-ink"
+                       autocomplete="email"/>
             </div>
             <div>
-                <label class="block font-mono text-[11px] uppercase tracking-wider text-muted mb-2">Mot de passe</label>
+                <label class="etiquette">Mot de passe</label>
                 <div class="relative">
                     <input id="adminPassword" type="password" required minlength="8"
-                           class="w-full h-12 px-4 pr-11 rounded-xl bg-white/60 border border-line text-ink focus:outline-none focus:border-ink focus:ring-1 focus:ring-ink transition"
-                           placeholder="8 caractères minimum"/>
+                           class="w-full h-12 px-4 pr-11 champ text-ink"
+                           placeholder="8 caractères minimum" autocomplete="new-password"/>
                     <button type="button" data-toggle="adminPassword" aria-label="Afficher le mot de passe"
-                            class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink transition">
-                        <span class="material-symbols-rounded text-[20px]">visibility</span>
-                    </button>
-                </div>
-            </div>
-            <div>
-                <label class="block font-mono text-[11px] uppercase tracking-wider text-muted mb-2">Confirmer le mot de passe</label>
-                <div class="relative">
-                    <input id="adminPasswordConfirm" type="password" required minlength="8"
-                           class="w-full h-12 px-4 pr-11 rounded-xl bg-white/60 border border-line text-ink focus:outline-none focus:border-ink focus:ring-1 focus:ring-ink transition"
-                           placeholder="Retapez le même mot de passe"/>
-                    <button type="button" data-toggle="adminPasswordConfirm" aria-label="Afficher le mot de passe"
                             class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink transition">
                         <span class="material-symbols-rounded text-[20px]">visibility</span>
                     </button>
@@ -106,16 +86,17 @@
             </div>
             <button id="submit" type="submit"
                     class="btn btn-ink w-full h-12 rounded-xl font-medium flex items-center justify-center gap-2 mt-2">
-                Créer mon espace
+                <span id="libelleBouton" th:text="${planChoisi != null and achatEnLigne} ? 'Créer mon espace et continuer' : 'Créer mon espace'">Créer mon espace</span>
                 <span class="material-symbols-rounded text-[20px]">arrow_forward</span>
             </button>
         </form>
 
         <p class="text-center text-[13px] text-muted mt-6">
-            Déjà inscrit ? <a th:href="@{/admin-login}" class="text-ink underline underline-offset-2">Se connecter</a>
+            Déjà un espace ? <a th:href="@{/admin-login}" class="text-ink underline underline-offset-2">Se connecter</a>
         </p>
     </div>
 </main>
+</div>
 
 <script th:inline="none">
 (function () {
@@ -134,6 +115,9 @@
         });
     });
 
+    // Plan payant choisi sur l'accueil : la suite se passe sur la page de paiement.
+    var plan = form.getAttribute('data-plan') || '';
+
     function erreur(message) {
         txt.textContent = message;
         box.classList.remove('hidden');
@@ -146,10 +130,6 @@
         box.classList.add('hidden');
         btn.disabled = true;
 
-        // Les deux mots de passe doivent correspondre.
-        var mdp = document.getElementById('adminPassword').value;
-        var mdp2 = document.getElementById('adminPasswordConfirm').value;
-        if (mdp !== mdp2) { erreur('Les deux mots de passe ne correspondent pas.'); return; }
 
         var payload = {
             nomEtablissement: document.getElementById('nomEtablissement').value.trim(),
@@ -158,13 +138,23 @@
             adminEmail: document.getElementById('adminEmail').value.trim(),
             adminPassword: document.getElementById('adminPassword').value
         };
+        if (plan) payload.plan = plan;
 
         fetch('/api/saas/etablissements', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
             body: JSON.stringify(payload)
         }).then(function (r) {
-            if (r.ok) { window.location = '/admin-login?registered=1'; return; }
+            if (r.ok) {
+                return r.json().catch(function () { return {}; }).then(function (j) {
+                    var d = (j && j.data) || {};
+                    // Plan payant : direction la page de paiement (offre, durée, moyen, total).
+                    if (d.paiementPage && d.paiementPage.indexOf('/inscription/payer?') === 0) {
+                        window.location = d.paiementPage; return;
+                    }
+                    window.location = '/admin-login?registered=1';
+                });
+            }
             if (r.status === 429) { erreur('Trop de tentatives. Réessayez dans une minute.'); return; }
             return r.json().then(function (j) {
                 erreur((j && j.message) ? j.message : 'L\'inscription n\'a pas abouti. Réessayez dans un instant.');

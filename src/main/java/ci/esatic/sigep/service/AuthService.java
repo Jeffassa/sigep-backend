@@ -41,6 +41,8 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final PlanService planService;
     private final AbonnementService abonnementService;
+    private final CompteEnseignantService compteEnseignantService;
+    private final MailService mailService;
 
     public AuthResponse login(LoginRequest request) {
         Authentication authentication = authenticationManager.authenticate(
@@ -52,52 +54,96 @@ public class AuthService {
         // Après la vérification du mot de passe, pour ne rien apprendre à qui n'en a pas.
         refuserCompteAdministration(user);
 
+        // Un vacataire dont l'établissement habituel est fermé travaille dans un autre.
+        List<CompteEnseignantService.Fiche> fiches = compteEnseignantService.fiches(user.getId());
+        choisirEtablissementUtilisable(user, fiches);
+
         // SA-2 : l'établissement doit avoir été validé par le super admin (dossier d'inscription).
         verifierEtablissementValide(user);
 
         // Un enseignant ne peut se connecter que si l'administration a validé son compte.
         // (Les comptes administrateurs n'ont pas de profil enseignant : ils ne sont pas concernés.)
-        var enseignantOpt = enseignantRepository.findByUserId(user.getId());
-        enseignantOpt.ifPresent(ens -> {
-            if (ens.getStatut() == StatutEnseignant.PENDING) {
-                throw new CompteNonValideException(
-                        "Votre compte est en attente de validation par l'administration.");
-            }
-            if (ens.getStatut() == StatutEnseignant.ARCHIVE) {
-                throw new CompteNonValideException(
-                        "Votre compte a été archivé. Veuillez contacter l'administration.");
-            }
-            if (ens.getStatut() == StatutEnseignant.REJECTED) {
-                throw new CompteNonValideException(
-                        "Votre compte a été refusé. Veuillez contacter l'administration.");
-            }
-        });
+        CompteEnseignantService.Fiche fiche = ficheActive(user, fiches);
+        verifierStatutFiche(fiche);
 
-        String token = jwtService.generateToken(user);
-        String refreshToken = refreshTokenService.create(user);
+        return reponse(user, fiche, fiches, jwtService.generateToken(user), refreshTokenService.create(user));
+    }
 
-        List<String> roles = user.getRoles().stream()
-                .map(role -> role.getName().name())
-                .collect(Collectors.toList());
-
-        // Récupérer nom/prenom si enseignant
-        String nom = "";
-        String prenom = "";
-        if (enseignantOpt.isPresent()) {
-            nom = enseignantOpt.get().getNom();
-            prenom = enseignantOpt.get().getPrenom();
+    /** Fait d'un autre établissement du compte l'établissement de travail. Effet immédiat. */
+    @Transactional
+    public AuthResponse changerEtablissement(String email, Long etablissementId) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new MetierException("UTILISATEUR_INTROUVABLE", "Compte introuvable"));
+        List<CompteEnseignantService.Fiche> fiches = compteEnseignantService.fiches(user.getId());
+        CompteEnseignantService.Fiche fiche = fiches.stream()
+                .filter(f -> java.util.Objects.equals(f.etablissementId(), etablissementId))
+                .findFirst()
+                .orElseThrow(() -> new MetierException("ETABLISSEMENT_INCONNU",
+                        "Vous n'enseignez pas dans cet établissement."));
+        if (!utilisable(fiche)) {
+            throw new CompteNonValideException("Cet établissement n'est pas accessible pour le moment.");
         }
+        user.setEtablissement(etablissementRepository.findById(etablissementId).orElseThrow());
+        userRepository.save(user);
+        return reponse(user, fiche, fiches, null, null);
+    }
 
+    private void choisirEtablissementUtilisable(User user, List<CompteEnseignantService.Fiche> fiches) {
+        if (fiches.size() < 2 || utilisable(ficheActive(user, fiches))) return;
+        fiches.stream().filter(this::utilisable).findFirst().ifPresent(f -> {
+            user.setEtablissement(etablissementRepository.findById(f.etablissementId()).orElseThrow());
+            userRepository.save(user);
+        });
+    }
+
+    private boolean utilisable(CompteEnseignantService.Fiche fiche) {
+        if (fiche == null || fiche.statut() != StatutEnseignant.VALIDATED || fiche.etablissementId() == null) {
+            return false;
+        }
+        Etablissement e = etablissementRepository.findById(fiche.etablissementId()).orElse(null);
+        return e != null && !abonnementService.accesSuspendu(e)
+                && (e.getStatut() == null || e.getStatut() == StatutEtablissement.VALIDE);
+    }
+
+    private CompteEnseignantService.Fiche ficheActive(User user, List<CompteEnseignantService.Fiche> fiches) {
+        if (fiches.size() < 2) return fiches.stream().findFirst().orElse(null);
+        Long actif = user.getEtablissement() == null ? null : user.getEtablissement().getId();
+        return fiches.stream().filter(f -> java.util.Objects.equals(f.etablissementId(), actif)).findFirst().orElse(null);
+    }
+
+    private void verifierStatutFiche(CompteEnseignantService.Fiche fiche) {
+        if (fiche == null) return;
+        if (fiche.statut() == StatutEnseignant.PENDING) {
+            throw new CompteNonValideException(
+                    "Votre compte est en attente de validation par l'administration.");
+        }
+        if (fiche.statut() == StatutEnseignant.ARCHIVE) {
+            throw new CompteNonValideException(
+                    "Votre compte a été archivé. Veuillez contacter l'administration.");
+        }
+        if (fiche.statut() == StatutEnseignant.REJECTED) {
+            throw new CompteNonValideException(
+                    "Votre compte a été refusé. Veuillez contacter l'administration.");
+        }
+    }
+
+    private AuthResponse reponse(User user, CompteEnseignantService.Fiche fiche,
+                                 List<CompteEnseignantService.Fiche> fiches, String token, String refreshToken) {
         return AuthResponse.builder()
                 .token(token)
                 .refreshToken(refreshToken)
                 .type("Bearer")
                 .id(user.getId())
                 .email(user.getEmail())
-                .roles(roles)
-                .nom(nom)
-                .prenom(prenom)
+                .roles(user.getRoles().stream().map(role -> role.getName().name()).collect(Collectors.toList()))
+                .nom(fiche == null ? "" : fiche.nom())
+                .prenom(fiche == null ? "" : fiche.prenom())
+                .etablissementId(user.getEtablissement() != null ? user.getEtablissement().getId() : null)
                 .etablissementNom(user.getEtablissement() != null ? user.getEtablissement().getNomEffectif() : null)
+                .etablissements(fiches.stream().filter(this::utilisable)
+                        .map(f -> new AuthResponse.EtablissementAccessible(f.etablissementId(),
+                                etablissementRepository.findById(f.etablissementId()).orElseThrow().getNomEffectif()))
+                        .toList())
                 .mustChangePassword(user.isMustChangePassword())
                 .build();
     }
@@ -114,31 +160,13 @@ public class AuthService {
         // SECURITE : le compte doit TOUJOURS être autorisé. Un enseignant rejeté/suspendu
         // ou un utilisateur désactivé après connexion ne doit pas pouvoir prolonger sa
         // session via le refresh (le gating de validation ne doit pas être contournable).
-        var enseignantOpt = enseignantRepository.findByUserId(user.getId());
-        verifierCompteToujoursAutorise(user, enseignantOpt.orElse(null));
+        List<CompteEnseignantService.Fiche> fiches = compteEnseignantService.fiches(user.getId());
+        choisirEtablissementUtilisable(user, fiches);
+        CompteEnseignantService.Fiche fiche = ficheActive(user, fiches);
+        verifierCompteToujoursAutorise(user, fiche);
 
         String nouveauRefresh = refreshTokenService.rotation(rt);
-        String token = jwtService.generateToken(user);
-
-        List<String> roles = user.getRoles().stream()
-                .map(role -> role.getName().name())
-                .collect(Collectors.toList());
-
-        String nom = enseignantOpt.map(Enseignant::getNom).orElse("");
-        String prenom = enseignantOpt.map(Enseignant::getPrenom).orElse("");
-
-        return AuthResponse.builder()
-                .token(token)
-                .refreshToken(nouveauRefresh)
-                .type("Bearer")
-                .id(user.getId())
-                .email(user.getEmail())
-                .roles(roles)
-                .nom(nom)
-                .prenom(prenom)
-                .etablissementNom(user.getEtablissement() != null ? user.getEtablissement().getNomEffectif() : null)
-                .mustChangePassword(user.isMustChangePassword())
-                .build();
+        return reponse(user, fiche, fiches, jwtService.generateToken(user), nouveauRefresh);
     }
 
     /** Déconnexion : révoque le refresh token fourni (l'access token expire seul, à court terme). */
@@ -186,26 +214,13 @@ public class AuthService {
      * effective des refresh tokens est faite au moment de la décision admin
      * ({@code EnseignantService.updateStatut}).
      */
-    private void verifierCompteToujoursAutorise(User user, Enseignant enseignant) {
+    private void verifierCompteToujoursAutorise(User user, CompteEnseignantService.Fiche fiche) {
         if (!user.isEnabled()) {
             throw new CompteNonValideException("Compte désactivé. Veuillez contacter l'administration.");
         }
         refuserCompteAdministration(user);
         verifierEtablissementValide(user);
-        if (enseignant != null) {
-            if (enseignant.getStatut() == StatutEnseignant.PENDING) {
-                throw new CompteNonValideException(
-                        "Votre compte est en attente de validation par l'administration.");
-            }
-            if (enseignant.getStatut() == StatutEnseignant.ARCHIVE) {
-                throw new CompteNonValideException(
-                        "Votre compte a été archivé. Veuillez contacter l'administration.");
-            }
-            if (enseignant.getStatut() == StatutEnseignant.REJECTED) {
-                throw new CompteNonValideException(
-                        "Votre compte a été refusé. Veuillez contacter l'administration.");
-            }
-        }
+        verifierStatutFiche(fiche);
     }
 
     /**
@@ -218,8 +233,7 @@ public class AuthService {
      */
     private void refuserCompteAdministration(User user) {
         boolean administration = user.getAuthorities().stream().anyMatch(a ->
-                ERole.ROLE_ADMIN.name().equals(a.getAuthority())
-                        || ERole.ROLE_SUPER_ADMIN.name().equals(a.getAuthority()));
+                !ERole.ROLE_ENSEIGNANT.name().equals(a.getAuthority()));
         if (administration) {
             throw new CompteNonValideException(
                     "Les comptes d'administration se connectent depuis l'espace web.");
@@ -308,9 +322,6 @@ public class AuthService {
 
     @Transactional
     public AuthResponse registerEnseignant(RegisterEnseignantRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new IllegalArgumentException("Email déjà utilisé : " + request.getEmail());
-        }
         if (enseignantRepository.existsByMatricule(request.getMatricule())) {
             throw new IllegalArgumentException("Matricule déjà utilisé : " + request.getMatricule());
         }
@@ -327,14 +338,16 @@ public class AuthService {
         Role role = roleRepository.findByName(ERole.ROLE_ENSEIGNANT)
                 .orElseThrow(() -> new RuntimeException("Rôle ENSEIGNANT non trouvé en base"));
 
-        User user = User.builder()
+        // Un vacataire déjà inscrit ailleurs garde son compte : le mot de passe reçu est ignoré.
+        User existant = compteEnseignantService
+                .compteARattacher(request.getEmail(), tenant != null ? tenant.getId() : null).orElse(null);
+        User user = existant != null ? existant : userRepository.save(User.builder()
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .mustChangePassword(false)
                 .roles(Set.of(role))
                 .etablissement(tenant)   // SECURITE : le nouvel utilisateur appartient au tenant courant
-                .build();
-        user = userRepository.save(user);
+                .build());
 
         Enseignant enseignant = Enseignant.builder()
                 .matricule(request.getMatricule())
@@ -349,6 +362,10 @@ public class AuthService {
                 .etablissementId(tenant != null ? tenant.getId() : null)
                 .build();
         enseignantRepository.save(enseignant);
+        if (existant != null && tenant != null) {
+            mailService.notifierRattachementEtablissement(tenant.getEmailFrom(), existant.getEmail(),
+                    request.getPrenom(), tenant.getNomEffectif());
+        }
 
         // Aucun token délivré ici : l'enseignant se connecte lui-même avec ses identifiants
         // (compte déjà validé, aucune étape d'attente).

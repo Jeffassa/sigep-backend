@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org" data-toujours-clair>
+<head th:replace="~{public/fragments :: head('Activation de votre espace · SIGEP', 'Suivi du paiement qui active votre espace SIGEP.', true)}"></head>
+<body class="porte">
+<aside class="porte-nuit">
+    <a th:href="@{/}" class="marque">SIGEP</a>
+    <p class="accroche">Votre registre, <em>ouvert en cinq minutes.</em></p>
+</aside>
+<div class="porte-page">
+<main>
+    <a th:href="@{/}" class="retour-accueil">← Retour à l'accueil</a>
+    <p class="surtitre" th:text="${etablissementNom}">Établissement</p>
+
+    <th:block th:switch="${statut}">
+        <h1 th:case="'REUSSI'" class="titre-page">Votre espace est activé.</h1>
+        <h1 th:case="'EN_COURS'" class="titre-page">Paiement en attente.</h1>
+        <h1 th:case="'A_VERIFIER'" class="titre-page">Paiement en vérification.</h1>
+        <h1 th:case="*" class="titre-page">Le paiement n'a pas abouti.</h1>
+    </th:block>
+
+    <div class="feuille">
+        <div th:if="${erreur}" class="note note-alerte"><span th:text="${erreur}">Erreur</span></div>
+
+        <!-- Le récapitulatif de ce qui est payé -->
+        <div class="flex flex-wrap items-baseline justify-between gap-3 mb-5">
+            <div>
+                <p class="releve-libelle">Montant</p>
+                <p class="releve-chiffre">
+                    <span th:text="${#numbers.formatInteger(intent.montantAttendu,1,'WHITESPACE')}">13 000</span>
+                    <small th:text="${symbole}">FCFA</small>
+                </p>
+            </div>
+            <div class="text-right">
+                <p class="releve-libelle">Offre</p>
+                <p class="text-[15px] font-medium">
+                    Plan <span th:text="${planLibelle}">Pro</span> ·
+                    <span th:text="${intent.mois == 1} ? '1 mois' : ${intent.mois} + ' mois'">1 mois</span>
+                </p>
+            </div>
+        </div>
+
+        <!-- Payé : l'espace est ouvert -->
+        <div th:if="${statut == 'REUSSI'}">
+            <p class="text-[15px] mb-5">Votre paiement est confirmé.</p>
+            <a th:href="@{/admin-login}" class="btn btn-ink w-full h-12 rounded-xl font-medium flex items-center justify-center gap-2">
+                Se connecter à mon espace
+                <span class="material-symbols-rounded text-[20px]">arrow_forward</span>
+            </a>
+        </div>
+
+        <!-- En attente : le client n'a peut-être pas terminé sur la page de Jèko -->
+        <div th:if="${statut == 'EN_COURS'}">
+            <p class="text-[15px] mb-5" id="enAttente">Cette page se met à jour toute seule.</p>
+            <a th:if="${paiementUrl}" th:href="${paiementUrl}"
+               class="btn btn-ink w-full h-12 rounded-xl font-medium flex items-center justify-center gap-2">
+                <span class="material-symbols-rounded text-[20px]">lock</span>
+                Ouvrir la page de paiement
+            </a>
+        </div>
+
+        <!-- En vérification : on n'affirme rien, l'argent est peut-être parti -->
+        <div th:if="${statut == 'A_VERIFIER'}">
+            <p class="text-[15px]">Nous n'avons pas encore pu confirmer ce paiement. Si votre compte a été débité,
+                votre espace sera activé dès la vérification : inutile de payer à nouveau.</p>
+            <p class="text-[13px] text-muted mt-4">Une question ?
+                <a th:href="'mailto:' + (${contactPlateforme} ?: 'contact@sigep.store')" class="underline">Écrivez-nous</a>
+                en rappelant la référence <span class="font-mono" th:text="${intent.reference}">JK-…</span>.</p>
+        </div>
+
+        <!-- Échec : reprendre sans aide, avec le même moyen ou un autre -->
+        <div th:if="${statut == 'ECHOUE' or statut == 'EXPIRE'}">
+            <p class="text-[15px] mb-5">Aucun montant n'a été encaissé.</p>
+            <a th:if="${pagePaiement}" th:href="${pagePaiement}"
+               class="btn btn-ink w-full h-12 rounded-xl font-medium flex items-center justify-center gap-2">
+                <span class="material-symbols-rounded text-[20px]">lock</span>
+                Payer à nouveau
+            </a>
+            <p th:unless="${pagePaiement}" class="text-[13px] text-muted">Pour reprendre, connectez-vous à votre
+                espace, ou <a th:href="'mailto:' + (${contactPlateforme} ?: 'contact@sigep.store')" class="underline">écrivez-nous</a>.</p>
+        </div>
+
+        <p class="text-[12px] text-muted text-center mt-6">Paiement sécurisé par Jèko</p>
+    </div>
+</main>
+</div>
+
+<!-- En attente : la page se recharge d'elle-même quand le verdict arrive -->
+<script th:if="${statut == 'EN_COURS'}" th:inline="javascript">
+(function () {
+    var ref = /*[[${intent.reference}]]*/ '';
+    var essais = 0;
+    var minuterie = setInterval(function () {
+        if (++essais > 120) { clearInterval(minuterie); return; }   // dix minutes, puis on s'arrête
+        fetch('/inscription/paiement/statut?ref=' + encodeURIComponent(ref), { headers: { 'Accept': 'application/json' } })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (j) { if (j && j.statut && j.statut !== 'EN_COURS') { clearInterval(minuterie); location.reload(); } })
+            .catch(function () {});
+    }, 5000);
+})();
+</script>
+
+</body>
+</html>

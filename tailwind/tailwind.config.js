@@ -16,9 +16,9 @@ module.exports = {
         paper: 'var(--c-bg)',
       },
       fontFamily: {
-        serif: ['"Instrument Serif"', 'ui-serif', 'Georgia', 'serif'],
-        sans: ['"Geist"', '"Geist Sans"', 'system-ui', '-apple-system', 'sans-serif'],
-        mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+        serif: ['Archivo', '"Arial Narrow"', 'sans-serif'],
+        sans: ['Archivo', 'Arial', 'sans-serif'],
+        mono: ['"DM Mono"', 'ui-monospace', 'monospace'],
       },
     },
   },
