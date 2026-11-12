@@ -195,6 +195,8 @@ public class SecurityConfig {
                         .requestMatchers("/", "/inscription", "/error", "/favicon.ico").permitAll()
                         // Suivi du paiement d'une inscription : la référence, imprévisible, en est la clé.
                         .requestMatchers("/inscription/paiement", "/inscription/paiement/**").permitAll()
+                        // Page de paiement d'une inscription : le jeton signé en est la clé.
+                        .requestMatchers("/inscription/payer").permitAll()
                         .requestMatchers("/mentions-legales", "/confidentialite", "/cgu").permitAll()
                         .requestMatchers("/robots.txt", "/sitemap.xml").permitAll()
                         .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**").permitAll()

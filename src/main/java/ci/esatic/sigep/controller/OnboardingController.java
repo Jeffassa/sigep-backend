@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * <p>Inscription gratuite : le dossier est examiné par la plateforme, comme avant. Plan payant
  * choisi sur la page d'accueil, avec un paiement en ligne disponible : l'espace est créé en
- * attente, le paiement est préparé chez Jèko, et la réponse donne l'adresse où payer. Le
+ * attente et la réponse mène à la page de paiement, où le client choisit durée et moyen. Le
  * paiement confirmé active l'espace, sans intervention.
  */
 @RestController
@@ -33,6 +33,7 @@ public class OnboardingController {
     private final ci.esatic.sigep.service.MobileMoneyService mobileMoneyService;
     private final ci.esatic.sigep.tenant.plan.PlanService planService;
     private final ci.esatic.sigep.service.MailService mailService;
+    private final ci.esatic.sigep.service.JetonPaiementInscription jetons;
 
     @org.springframework.beans.factory.annotation.Value("${app.base-url:https://sigep.store}")
     private String baseUrl;
@@ -50,36 +51,23 @@ public class OnboardingController {
                     + "dès la validation de votre espace.", inscription.reponse()));
         }
 
-        // L'espace existe (enregistré) : le paiement se prépare hors de la transaction d'inscription.
-        // S'il échoue, l'inscription n'est pas perdue : la page de suivi propose de réessayer.
-        int mois = request.getMois() == null ? 1 : request.getMois();
+        // L'espace existe : la suite se passe sur la page de paiement, où le client choisit la
+        // durée et son moyen de paiement. Il en reçoit aussi le lien, pour y revenir plus tard.
+        String page = pagePaiement(jetons.creer(inscription.etablissement().getId()), plan);
+        mailService.notifierPaiementAFinaliser(inscription.admin().getEmail(),
+                inscription.reponse().getPrenom(), inscription.etablissement().getNom(), baseUrl + page);
+
         java.util.Map<String, Object> donnees = new java.util.LinkedHashMap<>();
         donnees.put("email", inscription.admin().getEmail());
-        try {
-            var intent = mobileMoneyService.initierJeko(inscription.etablissement(), plan, mois,
-                    request.getMoyen(), SUIVI_PAIEMENT);
-            donnees.put("reference", intent.getReference());
-            if (ci.esatic.sigep.service.JekoService.adresseDePaiementSure(intent.getPaymentUrl())) {
-                donnees.put("paiementUrl", intent.getPaymentUrl());
-            }
-            envoyerLienDeSuivi(inscription, intent.getReference());
-        } catch (RuntimeException e) {
-            log.warn("Inscription {} : paiement non préparé ({})", inscription.etablissement().getId(), e.getMessage());
-            mobileMoneyService.derniereIntention(inscription.etablissement().getId())
-                    .ifPresent(i -> {
-                        donnees.put("reference", i.getReference());
-                        envoyerLienDeSuivi(inscription, i.getReference());
-                    });
-        }
+        donnees.put("paiementPage", page);
         return ResponseEntity.ok(ApiResponse.success(
                 "Votre espace est créé. Il sera activé dès que votre paiement sera confirmé.", donnees));
     }
 
-    /** L'administrateur garde par e-mail le chemin vers son paiement, s'il quitte la page. */
-    private void envoyerLienDeSuivi(OnboardingService.Inscription inscription, String reference) {
-        mailService.notifierPaiementAFinaliser(inscription.admin().getEmail(),
-                inscription.reponse().getPrenom(), inscription.etablissement().getNom(),
-                baseUrl + SUIVI_PAIEMENT + reference);
+    /** Adresse de la page de paiement d'une inscription. */
+    public static String pagePaiement(String jeton, ci.esatic.sigep.entity.Plan plan) {
+        return "/inscription/payer?jeton=" + java.net.URLEncoder.encode(jeton, java.nio.charset.StandardCharsets.UTF_8)
+                + (plan == null ? "" : "&plan=" + plan.name());
     }
 
     /** Plan payant achetable en ligne, sinon null (inscription gratuite). */

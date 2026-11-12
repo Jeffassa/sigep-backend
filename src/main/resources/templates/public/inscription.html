@@ -13,8 +13,8 @@
     <p class="surtitre">Créer l'espace de votre établissement</p>
     <h1 class="titre-page">Bienvenue.</h1>
     <p class="text-[15px] text-muted mb-6" th:if="${planChoisi == null}">Commencez gratuitement. Vous serez l'administrateur de l'espace.</p>
-    <p class="text-[15px] text-muted mb-6" th:if="${planChoisi != null and achatEnLigne}">Créez votre espace et payez en Mobile Money :
-        il est activé dès que le paiement est confirmé. Vous en serez l'administrateur.</p>
+    <p class="text-[15px] text-muted mb-6" th:if="${planChoisi != null and achatEnLigne}">Créez d'abord votre espace :
+        vous choisirez ensuite la durée et le moyen de paiement. Vous en serez l'administrateur.</p>
     <p class="text-[15px] text-muted mb-6" th:if="${planChoisi != null and !achatEnLigne}">Le paiement en ligne ouvre très bientôt.
         Créez votre espace dès maintenant : vous passerez au plan <span th:text="${planLibelle}">Pro</span> depuis votre espace.</p>
     <div class="feuille">
@@ -24,34 +24,6 @@
         </div>
 
         <form id="form" class="space-y-4" th:attr="data-plan=${planChoisi != null and achatEnLigne} ? ${planChoisi} : ''">
-            <!-- Le plan choisi sur l'accueil : rappel du prix, durée et moyen de paiement -->
-            <div th:if="${planChoisi != null and achatEnLigne}" class="note note-attention note-bloc">
-                <p class="font-medium">Plan <span th:text="${planLibelle}">Pro</span> ·
-                    <span th:text="${#numbers.formatInteger(prixPlan,1,'WHITESPACE')}">13 000</span>
-                    <span th:text="${symbole}">FCFA</span> par mois</p>
-                <div class="grid grid-cols-2 gap-3 mt-3">
-                    <div>
-                        <label class="etiquette" for="mois">Durée</label>
-                        <select id="mois" class="w-full h-12 px-3 champ text-ink" th:attr="data-prix=${prixPlan},data-symbole=${symbole}">
-                            <option value="1">1 mois</option>
-                            <option value="3">3 mois</option>
-                            <option value="12">12 mois</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="etiquette" for="moyen">Payer avec</label>
-                        <select id="moyen" class="w-full h-12 px-3 champ text-ink">
-                            <option value="wave">Wave</option>
-                            <option value="orange">Orange Money</option>
-                            <option value="mtn">MTN MoMo</option>
-                            <option value="moov">Moov Money</option>
-                            <option value="djamo">Djamo</option>
-                        </select>
-                    </div>
-                </div>
-                <p class="mt-3">Total : <strong id="total">—</strong>, réglé sur la page sécurisée de Jèko.</p>
-            </div>
-
             <div>
                 <label class="etiquette">Nom de l'établissement</label>
                 <input id="nomEtablissement" type="text" required list="ecolesList" autocomplete="off"
@@ -133,7 +105,7 @@
             </div>
             <button id="submit" type="submit"
                     class="btn btn-ink w-full h-12 rounded-xl font-medium flex items-center justify-center gap-2 mt-2">
-                <span id="libelleBouton" th:text="${planChoisi != null and achatEnLigne} ? 'Créer mon espace et payer' : 'Créer mon espace'">Créer mon espace</span>
+                <span id="libelleBouton" th:text="${planChoisi != null and achatEnLigne} ? 'Créer mon espace et continuer' : 'Créer mon espace'">Créer mon espace</span>
                 <span class="material-symbols-rounded text-[20px]">arrow_forward</span>
             </button>
         </form>
@@ -162,16 +134,8 @@
         });
     });
 
-    // Plan payant : le total suit la durée choisie.
+    // Plan payant choisi sur l'accueil : la suite se passe sur la page de paiement.
     var plan = form.getAttribute('data-plan') || '';
-    var selMois = document.getElementById('mois'), total = document.getElementById('total');
-    function majTotal() {
-        if (!selMois || !total) return;
-        var prix = parseInt(selMois.getAttribute('data-prix') || '0', 10);
-        total.textContent = (prix * parseInt(selMois.value, 10)).toLocaleString('fr-FR').replace(/\u202f|\s/g, '\u00a0')
-            + '\u00a0' + (selMois.getAttribute('data-symbole') || 'FCFA');
-    }
-    if (selMois) { selMois.addEventListener('change', majTotal); majTotal(); }
 
     function erreur(message) {
         txt.textContent = message;
@@ -197,11 +161,7 @@
             adminEmail: document.getElementById('adminEmail').value.trim(),
             adminPassword: document.getElementById('adminPassword').value
         };
-        if (plan) {
-            payload.plan = plan;
-            payload.mois = parseInt(selMois.value, 10);
-            payload.moyen = document.getElementById('moyen').value;
-        }
+        if (plan) payload.plan = plan;
 
         fetch('/api/saas/etablissements', {
             method: 'POST',
@@ -211,10 +171,10 @@
             if (r.ok) {
                 return r.json().catch(function () { return {}; }).then(function (j) {
                     var d = (j && j.data) || {};
-                    // Plan payant : direction la page de paiement de Jèko, ou la page de suivi si le
-                    // paiement n'a pas pu être préparé (elle propose de réessayer).
-                    if (d.paiementUrl) { window.location = d.paiementUrl; return; }
-                    if (d.reference) { window.location = '/inscription/paiement?ref=' + encodeURIComponent(d.reference); return; }
+                    // Plan payant : direction la page de paiement (offre, durée, moyen, total).
+                    if (d.paiementPage && d.paiementPage.indexOf('/inscription/payer?') === 0) {
+                        window.location = d.paiementPage; return;
+                    }
                     window.location = '/admin-login?registered=1';
                 });
             }

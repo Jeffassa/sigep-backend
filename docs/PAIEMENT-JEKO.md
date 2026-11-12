@@ -11,14 +11,19 @@ codes du payeur : il reçoit seulement la confirmation.
 Un nouveau client n'a besoin de personne :
 
 1. Sur le bordereau de l'accueil, il clique sur **Souscrire au plan Pro** (ou Enterprise).
-2. L'inscription récapitule le plan ; il choisit la durée (1, 3 ou 12 mois) et son moyen de paiement.
-3. **Créer mon espace et payer** crée l'espace (en attente) et l'envoie sur la page de Jèko.
+2. Il remplit l'inscription habituelle — aucun prix ni durée à cette étape — et clique sur
+   **Créer mon espace et continuer** : l'espace est créé, en attente.
+3. La **page de paiement** (`/inscription/payer`) lui présente les offres, la durée (1, 3 ou
+   12 mois), le moyen de paiement et le total. **Payer** l'envoie sur la page de Jèko.
 4. Dès que Jèko confirme, l'espace est **activé automatiquement** : plus d'examen pour qui a payé.
    Il reçoit l'e-mail « Votre espace est activé » et peut se connecter.
 
-Il revient sur `/inscription/paiement?ref=JK-…`, une page publique qui suit le paiement et
-permet de **payer à nouveau** après un échec, avec le même moyen ou un autre. Le lien lui est
-aussi envoyé par e-mail à l'inscription, pour reprendre plus tard.
+La page de paiement s'ouvre avec un jeton signé, valable 30 jours, qui ne donne accès qu'au
+paiement de cet établissement. Le lien est envoyé par e-mail à l'inscription, pour payer plus
+tard. Après Jèko, le client revient sur `/inscription/paiement?ref=JK-…`, qui suit le paiement ;
+après un échec, **Payer à nouveau** le ramène à la page de paiement. Il peut aussi changer de
+durée ou de moyen après avoir quitté la page de Jèko : une nouvelle demande est créée (si les
+deux étaient payées, les deux seraient créditées).
 
 - L'inscription **gratuite** reste examinée par la plateforme, comme avant.
 - Sans Jèko configuré, « Souscrire » mène à une inscription ordinaire : l'espace est créé, le

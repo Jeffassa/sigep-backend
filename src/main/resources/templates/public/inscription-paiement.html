@@ -74,24 +74,12 @@
         <div th:if="${statut == 'ECHOUE' or statut == 'EXPIRE'}">
             <p class="text-[15px] mb-5">Aucun montant n'a été encaissé. Votre espace est déjà créé : il vous reste à
                 payer pour l'activer.</p>
-            <form th:if="${peutReessayer}" th:action="@{/inscription/paiement/reessayer}" method="post" class="space-y-4">
-                <input type="hidden" name="ref" th:value="${intent.reference}"/>
-                <div>
-                    <label class="etiquette" for="moyen">Payer avec</label>
-                    <select id="moyen" name="moyen" class="w-full h-12 px-4 champ text-ink">
-                        <option value="wave" th:selected="${intent.provider == 'WAVE'}">Wave</option>
-                        <option value="orange" th:selected="${intent.provider == 'ORANGE'}">Orange Money</option>
-                        <option value="mtn" th:selected="${intent.provider == 'MTN'}">MTN MoMo</option>
-                        <option value="moov" th:selected="${intent.provider == 'MOOV'}">Moov Money</option>
-                        <option value="djamo" th:selected="${intent.provider == 'DJAMO'}">Djamo</option>
-                    </select>
-                </div>
-                <button type="submit" class="btn btn-ink w-full h-12 rounded-xl font-medium flex items-center justify-center gap-2">
-                    <span class="material-symbols-rounded text-[20px]">lock</span>
-                    Payer à nouveau
-                </button>
-            </form>
-            <p th:unless="${peutReessayer}" class="text-[13px] text-muted">Pour reprendre, connectez-vous à votre
+            <a th:if="${pagePaiement}" th:href="${pagePaiement}"
+               class="btn btn-ink w-full h-12 rounded-xl font-medium flex items-center justify-center gap-2">
+                <span class="material-symbols-rounded text-[20px]">lock</span>
+                Payer à nouveau
+            </a>
+            <p th:unless="${pagePaiement}" class="text-[13px] text-muted">Pour reprendre, connectez-vous à votre
                 espace, ou <a th:href="'mailto:' + (${contactPlateforme} ?: 'contact@sigep.store')" class="underline">écrivez-nous</a>.</p>
         </div>
 

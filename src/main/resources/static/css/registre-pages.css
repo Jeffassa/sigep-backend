@@ -198,3 +198,12 @@ html.dark .constats .constat-bon::before { background: #7fd8c4; }
 .etapes { display: inline-flex; align-items: center; gap: 4px; vertical-align: middle; }
 .etapes > span { width: 18px; height: 8px; background: var(--c-track); }
 .etapes > span.faite { background: var(--c-ink); }
+
+/* Le choix d'une offre sur la page de paiement : une case cochée se voit à son trait plein. */
+.offre-choix { position: relative; display: flex; flex-direction: column; gap: 2px; padding: 14px 44px 14px 16px;
+    border: 1px solid var(--c-line); background: var(--c-surface); cursor: pointer; }
+.offre-choix:has(input:checked) { border-color: var(--c-ink); box-shadow: inset 0 0 0 1px var(--c-ink); }
+.offre-choix input { position: absolute; top: 16px; right: 16px; width: 18px; height: 18px; accent-color: var(--c-ink); }
+.offre-choix-nom { font-stretch: 75%; font-weight: 800; font-size: 22px; line-height: 28px; }
+.offre-choix-prix { font: 14px 'DM Mono', monospace; }
+.offre-choix-detail { font-size: 13px; line-height: 18px; color: var(--c-muted); }

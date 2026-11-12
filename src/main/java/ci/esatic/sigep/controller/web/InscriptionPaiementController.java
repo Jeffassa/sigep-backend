@@ -3,12 +3,15 @@ package ci.esatic.sigep.controller.web;
 import ci.esatic.sigep.controller.OnboardingController;
 import ci.esatic.sigep.entity.Etablissement;
 import ci.esatic.sigep.entity.PaiementIntent;
+import ci.esatic.sigep.entity.Plan;
 import ci.esatic.sigep.entity.StatutEtablissement;
 import ci.esatic.sigep.entity.StatutIntent;
 import ci.esatic.sigep.repository.EtablissementRepository;
 import ci.esatic.sigep.repository.PaiementIntentRepository;
 import ci.esatic.sigep.service.JekoService;
+import ci.esatic.sigep.service.JetonPaiementInscription;
 import ci.esatic.sigep.service.MobileMoneyService;
+import ci.esatic.sigep.tenant.plan.PlanService;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,16 +23,22 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Suivi public du paiement d'une inscription : la page où Jèko renvoie le nouveau client, et
- * d'où il peut reprendre un paiement échoué. Il n'a pas encore de compte actif : la référence
- * du paiement, imprévisible et reçue par e-mail, fait office de clé.
+ * Les pages publiques qui suivent une inscription à un plan payant.
  *
- * <p>Comme partout, la page ne croit pas le retour du navigateur : elle relit l'état chez Jèko,
- * et c'est ce verdict qui active l'espace.
+ * <ul>
+ *   <li><b>La page de paiement</b> ({@code /inscription/payer}) : le client y choisit son plan, la
+ *       durée et son moyen de paiement, voit le total, et part payer chez Jèko. Il n'a pas encore
+ *       d'espace actif, donc pas de connexion : un jeton signé, reçu aussi par e-mail, lui ouvre le
+ *       paiement de son établissement, et de rien d'autre.</li>
+ *   <li><b>La page de suivi</b> ({@code /inscription/paiement}) : Jèko y renvoie le client. Elle relit
+ *       l'état chez Jèko — jamais la parole du navigateur — et c'est ce verdict qui active l'espace.
+ *       La référence du paiement, imprévisible, en est la clé.</li>
+ * </ul>
  */
 @Controller
 @RequiredArgsConstructor
@@ -40,11 +49,89 @@ public class InscriptionPaiementController {
      *  pas épuiser le quota d'appels de la plateforme. */
     private static final long INTERVALLE_MS = 4_000;
 
+    /** Un même choix renvoyé dans ce délai est un double clic : on reprend la demande déjà créée. */
+    private static final long DOUBLE_CLIC_SECONDES = 60;
+
     private final PaiementIntentRepository intentRepository;
     private final EtablissementRepository etablissementRepository;
     private final MobileMoneyService mobileMoneyService;
+    private final JetonPaiementInscription jetons;
+    private final PlanService planService;
 
     private final Map<String, Long> derniereLecture = new ConcurrentHashMap<>();
+
+    // ─── La page de paiement ─────────────────────────────────────────────────
+
+    @GetMapping("/inscription/payer")
+    public String pagePaiement(@RequestParam("jeton") String jeton,
+                               @RequestParam(required = false) String plan,
+                               Model model, HttpServletResponse reponse) {
+        reponse.setHeader("X-Robots-Tag", "noindex, nofollow");
+        Etablissement e = etablissementDuJeton(jeton);
+        if (e == null) {
+            return "redirect:/inscription";
+        }
+        Plan choisi = planAchetable(plan);
+        model.addAttribute("jeton", jeton);
+        model.addAttribute("etablissementNom", e.getNomEffectif());
+        model.addAttribute("dejaActif", e.getStatut() == StatutEtablissement.VALIDE);
+        model.addAttribute("ouvert", e.getStatut() == StatutEtablissement.EN_ATTENTE && mobileMoneyService.achatEnLigne());
+        model.addAttribute("planChoisi", choisi == null ? Plan.PRO.name() : choisi.name());
+        model.addAttribute("prixPro", planService.prixMensuel(Plan.PRO));
+        model.addAttribute("prixEnterprise", planService.prixMensuel(Plan.ENTERPRISE));
+        // Un paiement laissé en cours (page de Jèko quittée) : on propose de le reprendre.
+        mobileMoneyService.derniereIntention(e.getId())
+                .filter(i -> i.getStatut() == StatutIntent.EN_COURS)
+                .filter(i -> JekoService.adresseDePaiementSure(i.getPaymentUrl()))
+                .ifPresent(i -> model.addAttribute("enCours", i));
+        return "public/inscription-payer";
+    }
+
+    @PostMapping("/inscription/payer")
+    public String payer(@RequestParam("jeton") String jeton,
+                        @RequestParam(defaultValue = "PRO") String plan,
+                        @RequestParam(defaultValue = "1") int mois,
+                        @RequestParam(defaultValue = "") String moyen,
+                        RedirectAttributes ra) {
+        Etablissement e = etablissementDuJeton(jeton);
+        if (e == null) {
+            return "redirect:/inscription";
+        }
+        Plan choisi = planAchetable(plan);
+        String retourPage = OnboardingController.pagePaiement(jeton, choisi);
+        if (e.getStatut() != StatutEtablissement.EN_ATTENTE || choisi == null) {
+            return "redirect:" + retourPage;
+        }
+        int duree = (mois == 3 || mois == 12) ? mois : 1;   // seules les durées proposées
+
+        // Double clic : la même demande, toute récente, est reprise plutôt que doublée.
+        var recente = mobileMoneyService.derniereIntention(e.getId())
+                .filter(i -> i.getStatut() == StatutIntent.EN_COURS)
+                .filter(i -> i.getPlan() == choisi && i.getMois() == duree && moyen.equalsIgnoreCase(i.getProvider()))
+                .filter(i -> i.getDateCreation() != null
+                        && i.getDateCreation().isAfter(LocalDateTime.now().minusSeconds(DOUBLE_CLIC_SECONDES)))
+                .filter(i -> JekoService.adresseDePaiementSure(i.getPaymentUrl()));
+        if (recente.isPresent()) {
+            return "redirect:" + recente.get().getPaymentUrl();
+        }
+
+        try {
+            PaiementIntent intent = mobileMoneyService.initierJeko(e, choisi, duree, moyen,
+                    OnboardingController.SUIVI_PAIEMENT, false);
+            if (JekoService.adresseDePaiementSure(intent.getPaymentUrl())) {
+                return "redirect:" + intent.getPaymentUrl();
+            }
+            return "redirect:" + OnboardingController.SUIVI_PAIEMENT + intent.getReference();
+        } catch (JekoService.JekoException ex) {
+            ra.addFlashAttribute("erreur", ex.getMessage());
+        } catch (Exception ex) {
+            log.warn("Paiement d'inscription impossible (établissement {}) : {}", e.getId(), ex.getMessage());
+            ra.addFlashAttribute("erreur", "Le paiement n'a pas pu être préparé. Réessayez dans un instant.");
+        }
+        return "redirect:" + retourPage;
+    }
+
+    // ─── La page de suivi ────────────────────────────────────────────────────
 
     @GetMapping("/inscription/paiement")
     public String suivi(@RequestParam("ref") String reference, Model model, HttpServletResponse reponse) {
@@ -53,15 +140,20 @@ public class InscriptionPaiementController {
         if (intent == null) {
             return "redirect:/inscription";
         }
-        StatutIntent statut = verifier(intent);
+        StatutIntent lu = verifier(intent);
+        StatutIntent statut = lu == null ? intent.getStatut() : lu;
         Etablissement e = etablissementRepository.findById(intent.getEtablissementId()).orElse(null);
         model.addAttribute("intent", intent);
-        model.addAttribute("statut", statut == null ? intent.getStatut().name() : statut.name());
+        model.addAttribute("statut", statut.name());
         model.addAttribute("etablissementNom", e == null ? "" : e.getNomEffectif());
-        model.addAttribute("planLibelle", intent.getPlan() == ci.esatic.sigep.entity.Plan.PRO ? "Pro" : "Enterprise");
+        model.addAttribute("planLibelle", intent.getPlan() == Plan.PRO ? "Pro" : "Enterprise");
         model.addAttribute("paiementUrl",
                 JekoService.adresseDePaiementSure(intent.getPaymentUrl()) ? intent.getPaymentUrl() : null);
-        model.addAttribute("peutReessayer", peutReessayer(intent, e));
+        // Après un échec, retour à la page de paiement pour choisir à nouveau.
+        boolean peutReessayer = e != null && e.getStatut() == StatutEtablissement.EN_ATTENTE
+                && (statut == StatutIntent.ECHOUE || statut == StatutIntent.EXPIRE);
+        model.addAttribute("pagePaiement", peutReessayer
+                ? OnboardingController.pagePaiement(jetons.creer(e.getId()), intent.getPlan()) : null);
         return "public/inscription-paiement";
     }
 
@@ -75,43 +167,20 @@ public class InscriptionPaiementController {
         return Map.of("statut", statut == null ? intent.getStatut().name() : statut.name());
     }
 
-    /**
-     * Reprend un paiement : nouvel essai après un échec, ou retour sur la page Jèko d'un paiement
-     * resté en cours. Le plan et la durée restent ceux de l'inscription ; seul le moyen change.
-     */
-    @PostMapping("/inscription/paiement/reessayer")
-    public String reessayer(@RequestParam("ref") String reference,
-                            @RequestParam(required = false) String moyen,
-                            RedirectAttributes ra) {
-        PaiementIntent intent = intentPublique(reference);
-        if (intent == null) {
-            return "redirect:/inscription";
-        }
-        Etablissement e = etablissementRepository.findById(intent.getEtablissementId()).orElse(null);
-        if (intent.getStatut() == StatutIntent.EN_COURS && JekoService.adresseDePaiementSure(intent.getPaymentUrl())) {
-            return "redirect:" + intent.getPaymentUrl();
-        }
-        if (!peutReessayer(intent, e)) {
-            return "redirect:" + OnboardingController.SUIVI_PAIEMENT + reference;
-        }
-        String choisi = (moyen == null || moyen.isBlank()) ? intent.getProvider() : moyen;
+    // ─── Outils ──────────────────────────────────────────────────────────────
+
+    private Etablissement etablissementDuJeton(String jeton) {
+        return jetons.lire(jeton).flatMap(etablissementRepository::findById).orElse(null);
+    }
+
+    private Plan planAchetable(String saisie) {
+        if (saisie == null || saisie.isBlank()) return Plan.PRO;
         try {
-            PaiementIntent nouvelle = mobileMoneyService.initierJeko(e, intent.getPlan(), intent.getMois(),
-                    choisi == null ? "" : choisi.toLowerCase(), OnboardingController.SUIVI_PAIEMENT);
-            if (JekoService.adresseDePaiementSure(nouvelle.getPaymentUrl())) {
-                return "redirect:" + nouvelle.getPaymentUrl();
-            }
-            return "redirect:" + OnboardingController.SUIVI_PAIEMENT + nouvelle.getReference();
-        } catch (JekoService.JekoException ex) {
-            ra.addFlashAttribute("erreur", ex.getMessage());
-        } catch (Exception ex) {
-            log.warn("Reprise du paiement d'inscription impossible (ref={}) : {}", reference, ex.getMessage());
-            ra.addFlashAttribute("erreur", "Le paiement n'a pas pu être relancé. Réessayez dans un instant.");
+            Plan p = Plan.valueOf(saisie.trim().toUpperCase());
+            return planService.estAchetable(p) ? p : null;
+        } catch (IllegalArgumentException e) {
+            return null;
         }
-        // La nouvelle tentative a peut-être laissé une trace : on suit la plus récente.
-        String suite = mobileMoneyService.derniereIntention(intent.getEtablissementId())
-                .map(PaiementIntent::getReference).orElse(reference);
-        return "redirect:" + OnboardingController.SUIVI_PAIEMENT + suite;
     }
 
     /**
@@ -134,11 +203,5 @@ public class InscriptionPaiementController {
         derniereLecture.put(intent.getReference(), maintenant);
         if (derniereLecture.size() > 10_000) derniereLecture.clear();   // borne mémoire
         return mobileMoneyService.verifierEtCrediter(intent.getReference());
-    }
-
-    /** Un nouvel essai n'a de sens que pour un espace encore en attente, après un échec. */
-    private static boolean peutReessayer(PaiementIntent intent, Etablissement e) {
-        return e != null && e.getStatut() == StatutEtablissement.EN_ATTENTE
-                && (intent.getStatut() == StatutIntent.ECHOUE || intent.getStatut() == StatutIntent.EXPIRE);
     }
 }

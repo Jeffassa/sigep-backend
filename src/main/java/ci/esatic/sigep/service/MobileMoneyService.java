@@ -107,6 +107,18 @@ public class MobileMoneyService {
      * @param retour chemin de retour, auquel la référence du paiement est ajoutée.
      */
     public PaiementIntent initierJeko(Etablissement etab, Plan plan, int mois, String moyen, String retour) {
+        return initierJeko(etab, plan, mois, moyen, retour, true);
+    }
+
+    /**
+     * @param reprendreEnCours une demande déjà en cours est rendue au lieu d'en créer une autre
+     *                         (anti double-clic de l'espace d'administration). La page de paiement
+     *                         publique passe {@code false} : le client doit pouvoir changer de durée
+     *                         ou de moyen après avoir quitté la page de Jèko. Si les deux demandes
+     *                         étaient payées, les deux seraient créditées : rien n'est perdu.
+     */
+    public PaiementIntent initierJeko(Etablissement etab, Plan plan, int mois, String moyen, String retour,
+                                      boolean reprendreEnCours) {
         if (!jeko.isEnabled()) {
             throw new JekoService.JekoException("Le paiement par Jèko n'est pas activé.");
         }
@@ -119,7 +131,8 @@ public class MobileMoneyService {
 
         // Une demande déjà en cours est reprise plutôt que doublée : un second paiement serait un
         // second débit. Si elle a déjà une page de paiement, l'administrateur y retourne.
-        var dejaEnVol = store.enCoursPourEtablissement(etab.getId());
+        var dejaEnVol = reprendreEnCours ? store.enCoursPourEtablissement(etab.getId())
+                                         : java.util.Optional.<PaiementIntent>empty();
         if (dejaEnVol.isPresent()) {
             log.info("Jèko : une demande est déjà en cours (ref={}), elle est reprise", dejaEnVol.get().getReference());
             return dejaEnVol.get();
@@ -317,7 +330,13 @@ public class MobileMoneyService {
             return store.marquer(reference, StatutIntent.ECHOUE,
                     "Paiement non abouti" + (d.raisonEchec() == null ? "" : " (" + d.raisonEchec() + ")"));
         }
-        return sansVerdict(intent, NovaSendService.Etat.VERDICT);   // en attente chez Jèko
+        // Jèko répond « en attente » : la demande existe, personne ne l'a payée. Passé la fenêtre de
+        // suivi, c'est un abandon constaté, pas une incertitude : inutile de le faire arbitrer.
+        LocalDateTime creation = intent.getDateCreation();
+        if (creation != null && creation.isBefore(LocalDateTime.now().minusHours(suiviHeures))) {
+            return store.marquer(reference, StatutIntent.EXPIRE, "Paiement jamais finalisé chez Jèko");
+        }
+        return StatutIntent.EN_COURS;
     }
 
     /**

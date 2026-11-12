@@ -80,7 +80,7 @@ public class MailService {
                 bonjour + "\n\n"
                 + "L'espace de « " + nomEtablissement + " » est créé. Il sera activé dès que votre "
                 + "paiement sera confirmé.\n\n"
-                + "Suivre ou reprendre votre paiement :\n" + lien + "\n\n"
+                + "Payer ou reprendre votre paiement :\n" + lien + "\n\n"
                 + "Vous recevrez un e-mail de confirmation à l'activation.\n\n"
                 + "L'équipe SIGEP");
     }

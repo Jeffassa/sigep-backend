@@ -39,7 +39,6 @@ public class HomeController {
         model.addAttribute("planChoisi", choisi == null ? null : choisi.name());
         model.addAttribute("planLibelle", choisi == null ? null
                 : choisi == ci.esatic.sigep.entity.Plan.PRO ? "Pro" : "Enterprise");
-        model.addAttribute("prixPlan", choisi == null ? 0L : planService.prixMensuel(choisi));
         model.addAttribute("achatEnLigne", mobileMoneyService.achatEnLigne());
         return "public/inscription";
     }
