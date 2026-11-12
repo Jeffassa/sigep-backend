@@ -42,7 +42,10 @@ public class RedisRateLimitStore {
             }
             return count != null && count > max;
         } catch (Exception e) {
-            log.warn("Rate-limit Redis indisponible (fail-open) : {}", e.getMessage());
+            // La cause la plus profonde (adresse introuvable, refus, délai…) : « Unable to connect »
+            // seul ne permet pas de savoir quoi corriger.
+            log.warn("Rate-limit Redis indisponible (fail-open) : {} — cause : {}", e.getMessage(),
+                    org.springframework.core.NestedExceptionUtils.getMostSpecificCause(e).toString());
             return false;
         }
     }

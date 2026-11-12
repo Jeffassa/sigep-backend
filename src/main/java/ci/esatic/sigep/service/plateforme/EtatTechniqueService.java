@@ -136,8 +136,10 @@ public class EtatTechniqueService {
             connexion.ping();
             return new Composant("Cache", OK, "Redis répond");
         } catch (Exception ex) {
-            log.warn("État technique : Redis ne répond pas : {}", ex.getMessage());
-            return new Composant("Cache", ALERTE, "Redis ne répond pas : repli sur la mémoire locale");
+            Throwable cause = org.springframework.core.NestedExceptionUtils.getMostSpecificCause(ex);
+            log.warn("État technique : Redis ne répond pas : {} — cause : {}", ex.getMessage(), cause.toString());
+            return new Composant("Cache", ALERTE, "Redis ne répond pas (" + cause.getClass().getSimpleName()
+                    + (cause.getMessage() == null ? "" : " : " + cause.getMessage()) + ") : repli sur la mémoire locale");
         }
     }
 
