@@ -2,7 +2,10 @@
 <html lang="fr" xmlns:th="http://www.thymeleaf.org" data-toujours-clair>
 <head th:replace="~{admin/fragments :: head('SIGEP | Connexion')}"></head>
 <body class="porte">
-<header class="porte-tete"><a th:href="@{/}" class="marque">SIGEP</a></header>
+<aside class="porte-nuit">
+    <a th:href="@{/}" class="marque">SIGEP</a>
+    <p class="accroche">Chaque heure de cours, <em>signée.</em></p>
+</aside>
 <div class="porte-page">
 <main>
     <a th:href="@{/}" class="retour-accueil">← Retour à l'accueil</a>

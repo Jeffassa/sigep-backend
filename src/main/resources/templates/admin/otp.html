@@ -2,7 +2,10 @@
 <html lang="fr" xmlns:th="http://www.thymeleaf.org" data-toujours-clair>
 <head th:replace="~{admin/fragments :: head('SIGEP | Vérification')}" />
 <body class="porte">
-<header class="porte-tete"><a th:href="@{/}" class="marque">SIGEP</a></header>
+<aside class="porte-nuit">
+    <a th:href="@{/}" class="marque">SIGEP</a>
+    <p class="accroche">Une dernière <em>signature.</em></p>
+</aside>
 <div class="porte-page">
 <main>
   <h1 class="titre-page">Code envoyé</h1>
