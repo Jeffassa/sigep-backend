@@ -232,7 +232,7 @@
 <section class="seyes tarifs" id="tarifs">
     <div class="marge">
         <h2 class="titre2">Le bordereau.</h2>
-        <p class="corps intro">Abonnement mensuel, sans engagement, résiliable à tout moment.</p>
+        <p class="corps intro">Vous payez un mois, trois ou douze, d'avance. Sans engagement : rien ne se renouvelle sans vous.</p>
         <div class="bordereau">
             <div class="offre">
                 <h3>Free</h3>
@@ -243,7 +243,7 @@
                     <li>1 établissement</li>
                     <li>Rapports de base</li>
                 </ul>
-                <a class="lien" th:href="@{/inscription}" href="/inscription">Commencer</a>
+                <a class="lien" th:href="@{/inscription}" href="/inscription">Commencer gratuitement</a>
             </div>
             <div class="offre offre-mise">
                 <h3>Pro</h3>
@@ -252,10 +252,10 @@
                     <li>Enseignants illimités</li>
                     <li>Plusieurs établissements</li>
                     <li>Export des heures pour la paie</li>
-                    <li>Analyse par IA, rapports avancés</li>
+                    <li>Rapports avancés et synthèse Excel</li>
                     <li>Logo de l'établissement</li>
                 </ul>
-                <a class="bouton bouton-or" th:href="@{/inscription}" href="/inscription">Essayer Pro</a>
+                <a class="bouton bouton-or" th:href="@{/inscription(plan='PRO')}" href="/inscription?plan=PRO">Souscrire au plan Pro</a>
             </div>
             <div class="offre">
                 <h3>Enterprise</h3>
@@ -263,12 +263,19 @@
                 <ul>
                     <li>Tout le plan Pro</li>
                     <li>Groupes et universités</li>
-                    <li>SSO et API</li>
-                    <li>Support dédié et SLA</li>
+                    <li>API pour vos logiciels (paie, gestion)</li>
+                    <li>Support dédié</li>
                 </ul>
-                <a class="lien" th:href="'mailto:' + (${contactPlateforme} ?: 'contact@sigep.store')" href="mailto:contact@sigep.store">Nous contacter</a>
+                <a class="bouton" th:href="@{/inscription(plan='ENTERPRISE')}" href="/inscription?plan=ENTERPRISE">Souscrire au plan Enterprise</a>
+                <p class="question">Une question avant de souscrire ?
+                    <a th:href="'mailto:' + (${contactPlateforme} ?: 'contact@sigep.store')" href="mailto:contact@sigep.store">Écrivez-nous</a></p>
             </div>
         </div>
+        <!-- Ce qui se passe après le clic, dit avant le clic. -->
+        <p class="paiement-note" th:if="${achatEnLigne}">
+            Paiement Mobile Money sécurisé par Jèko : Wave, Orange Money, MTN MoMo, Moov Money ou Djamo.
+            Votre espace est activé dès que le paiement est confirmé, sans attendre personne.
+        </p>
     </div>
 </section>
 

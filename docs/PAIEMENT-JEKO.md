@@ -6,7 +6,29 @@ codes du payeur : il reçoit seulement la confirmation.
 
 > **Jèko n'a pas de bac à sable.** Toute demande créée avec les clés porte sur de l'argent réel.
 
-## Le parcours
+## Acheter depuis la page d'accueil, sans assistance
+
+Un nouveau client n'a besoin de personne :
+
+1. Sur le bordereau de l'accueil, il clique sur **Souscrire au plan Pro** (ou Enterprise).
+2. L'inscription récapitule le plan ; il choisit la durée (1, 3 ou 12 mois) et son moyen de paiement.
+3. **Créer mon espace et payer** crée l'espace (en attente) et l'envoie sur la page de Jèko.
+4. Dès que Jèko confirme, l'espace est **activé automatiquement** : plus d'examen pour qui a payé.
+   Il reçoit l'e-mail « Votre espace est activé » et peut se connecter.
+
+Il revient sur `/inscription/paiement?ref=JK-…`, une page publique qui suit le paiement et
+permet de **payer à nouveau** après un échec, avec le même moyen ou un autre. Le lien lui est
+aussi envoyé par e-mail à l'inscription, pour reprendre plus tard.
+
+- L'inscription **gratuite** reste examinée par la plateforme, comme avant.
+- Sans Jèko configuré, « Souscrire » mène à une inscription ordinaire : l'espace est créé, le
+  client passe au plan payant depuis son espace une fois validé.
+- Un dossier **refusé** n'est jamais rouvert par un paiement : l'argent est enregistré et signalé
+  dans les journaux (« dossier est REFUSÉ »), la décision reste à la plateforme.
+- Un espace en attente dont le paiement n'aboutit jamais reste dans « Inscriptions à valider » du
+  tableau de bord de la plateforme.
+
+## Le parcours depuis l'espace d'un établissement
 
 1. Sur **Abonnement**, l'administrateur choisit le plan, la durée et son moyen de paiement.
 2. SIGEP crée la demande chez Jèko (montant recalculé côté serveur) et l'envoie sur la page Jèko.

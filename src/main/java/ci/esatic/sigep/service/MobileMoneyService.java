@@ -70,6 +70,14 @@ public class MobileMoneyService {
         return jeko.isEnabled() || novaSend.isEnabled();
     }
 
+    /**
+     * Un visiteur peut-il souscrire et payer seul depuis la page d'accueil ? Il faut un paiement par
+     * page hébergée (Jèko) : NovaSend pousse la demande sur un téléphone et suppose un espace ouvert.
+     */
+    public boolean achatEnLigne() {
+        return jeko.isEnabled();
+    }
+
     /** Fournisseur proposé aux établissements : JEKO, NOVASEND, ou null si aucun n'est configuré. */
     public String passerelle() {
         if (jeko.isEnabled()) return "JEKO";
@@ -89,6 +97,16 @@ public class MobileMoneyService {
      * appel à Jèko : il ne doit jamais exister de paiement sans trace côté SIGEP.
      */
     public PaiementIntent initierJeko(Etablissement etab, Plan plan, int mois, String moyen) {
+        return initierJeko(etab, plan, mois, moyen, "/admin/abonnement/momo/retour?ref=");
+    }
+
+    /**
+     * Même chose, avec l'adresse de retour choisie par l'appelant : l'espace d'administration pour
+     * un établissement déjà ouvert, la page publique de suivi pour une inscription qui paie.
+     *
+     * @param retour chemin de retour, auquel la référence du paiement est ajoutée.
+     */
+    public PaiementIntent initierJeko(Etablissement etab, Plan plan, int mois, String moyen, String retour) {
         if (!jeko.isEnabled()) {
             throw new JekoService.JekoException("Le paiement par Jèko n'est pas activé.");
         }
@@ -123,9 +141,9 @@ public class MobileMoneyService {
                 .statut(StatutIntent.EN_COURS)
                 .build());
 
-        String retour = baseUrl + "/admin/abonnement/momo/retour?ref=" + reference;
+        String adresseRetour = baseUrl + retour + reference;
         try {
-            JekoService.Demande d = jeko.creerDemande(reference, montant, devise, moyen, retour);
+            JekoService.Demande d = jeko.creerDemande(reference, montant, devise, moyen, adresseRetour);
             store.majApresInitiation(reference, d.id(), d.redirectUrl(), d.statut());
             intent.setNovasendId(d.id());
             intent.setPaymentUrl(d.redirectUrl());
@@ -315,6 +333,11 @@ public class MobileMoneyService {
                     "Aucune confirmation obtenue du fournisseur : vérification manuelle requise.");
         }
         return StatutIntent.EN_COURS;
+    }
+
+    /** La plus récente intention de paiement d'un établissement, quel que soit son état. */
+    public java.util.Optional<PaiementIntent> derniereIntention(Long etablissementId) {
+        return store.derniere(etablissementId);
     }
 
     /** L'utilisateur doit-il cesser d'attendre devant sa page ? (le suivi, lui, continue) */

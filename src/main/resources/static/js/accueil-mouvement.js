@@ -196,6 +196,8 @@
             },
         });
 
+        aLaVue('.paiement-note', { opacity: 0, y: 20 });
+
         /* ----- Les questions ----- */
         aLaVue('.liste-questions details', { opacity: 0, x: -40 });
 

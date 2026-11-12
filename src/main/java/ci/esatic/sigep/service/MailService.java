@@ -69,6 +69,22 @@ public class MailService {
                 + "L'équipe SIGEP");
     }
 
+    /**
+     * Inscription avec un plan payant : l'espace sera activé par le paiement. L'e-mail garde le
+     * lien vers le paiement, pour le reprendre si la page a été fermée ou si le paiement a échoué.
+     */
+    @Async
+    public void notifierPaiementAFinaliser(String email, String prenom, String nomEtablissement, String lien) {
+        String bonjour = (prenom == null || prenom.isBlank()) ? "Bonjour," : "Bonjour " + prenom + ",";
+        envoyer(email, "SIGEP - Finalisez l'activation de votre espace",
+                bonjour + "\n\n"
+                + "L'espace de « " + nomEtablissement + " » est créé. Il sera activé dès que votre "
+                + "paiement sera confirmé.\n\n"
+                + "Suivre ou reprendre votre paiement :\n" + lien + "\n\n"
+                + "Vous recevrez un e-mail de confirmation à l'activation.\n\n"
+                + "L'équipe SIGEP");
+    }
+
     /** Le super admin a validé le dossier : l'espace est actif. */
     @Async
     public void notifierEtablissementValide(String email, String nomEtablissement) {

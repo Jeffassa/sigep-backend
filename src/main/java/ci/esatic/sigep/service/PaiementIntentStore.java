@@ -110,6 +110,11 @@ public class PaiementIntentStore {
         return repository.findByStatutOrderByDateCreationAsc(StatutIntent.EN_COURS);
     }
 
+    @Transactional(readOnly = true)
+    public Optional<PaiementIntent> derniere(Long etablissementId) {
+        return repository.findByEtablissementIdOrderByDateCreationDesc(etablissementId).stream().findFirst();
+    }
+
     /** Une initiation est-elle déjà en vol pour cet établissement ? (anti double-clic) */
     @Transactional(readOnly = true)
     public Optional<PaiementIntent> enCoursPourEtablissement(Long etablissementId) {

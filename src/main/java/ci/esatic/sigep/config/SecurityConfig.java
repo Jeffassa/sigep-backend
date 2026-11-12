@@ -193,6 +193,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Pages publiques SaaS (accueil + inscription + pages légales) + SEO + statiques
                         .requestMatchers("/", "/inscription", "/error", "/favicon.ico").permitAll()
+                        // Suivi du paiement d'une inscription : la référence, imprévisible, en est la clé.
+                        .requestMatchers("/inscription/paiement", "/inscription/paiement/**").permitAll()
                         .requestMatchers("/mentions-legales", "/confidentialite", "/cgu").permitAll()
                         .requestMatchers("/robots.txt", "/sitemap.xml").permitAll()
                         .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**").permitAll()
