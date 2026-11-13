@@ -12,54 +12,50 @@
     </a>
 
     <!-- Messages -->
-    <div data-flash th:if="${ok}" class="flex items-center gap-2 p-3 mb-4 rounded-xl text-[13px]"
-         style="background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.35)">
+    <div data-flash th:if="${ok}" class="note note-ok">
         <svg th:replace="~{admin/fragments :: coche}"></svg><span th:text="${ok}"></span>
     </div>
-    <div data-flash th:if="${erreur}" class="flex items-center gap-2 p-3 mb-4 rounded-xl text-[13px]"
-         style="background:rgba(186,26,26,.08);color:#7a0010;border:1px solid rgba(186,26,26,.2)">
-        <span class="material-symbols-rounded text-[18px]">error</span><span th:text="${erreur}"></span>
+    <div data-flash th:if="${erreur}" class="note note-alerte">
+        <span th:text="${erreur}"></span>
     </div>
 
     <section class="mb-8" data-reveal>
-        <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mb-2">Établissement</p>
-        <h1 class="font-serif text-[clamp(30px,4vw,44px)] leading-[1.05] tracking-tight" th:text="${e.nom}">Nom</h1>
+        <p class="surtitre">Établissement</p>
+        <h1 class="titre-page" th:text="${e.nom}">Nom</h1>
         <p class="font-mono text-[12px] text-muted mt-1" th:text="${e.slug}">slug</p>
     </section>
 
     <!-- Synthèse -->
-    <section class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" data-reveal>
-        <div class="glass rounded-2xl p-5">
-            <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Plan</p>
-            <p class="font-serif text-[24px]" th:text="${e.plan}">PLAN</p>
-            <p class="text-[11px] text-muted" th:if="${prixMensuel > 0}"
+    <section class="releve" data-reveal>
+        <div>
+            <p class="releve-libelle">Plan</p>
+            <p class="releve-chiffre releve-mot" th:text="${e.plan}">PLAN</p>
+            <p class="releve-note" th:if="${prixMensuel > 0}"
                th:text="${#numbers.formatInteger(prixMensuel,1,'WHITESPACE') + ' ' + symbole + ' / mois'}">—</p>
         </div>
-        <div class="glass rounded-2xl p-5">
-            <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Statut</p>
-            <p class="font-serif text-[24px]"
-               th:text="${e.statut.name() == 'EN_ATTENTE'} ? 'En attente' : (${e.statut.name() == 'REFUSE'} ? 'Refusé' : (${e.actif} ? 'Actif' : 'Suspendu'))">—</p>
+        <div>
+            <p class="releve-libelle">Statut</p>
+            <p class="releve-chiffre releve-mot" th:text="${e.statut.name() == 'EN_ATTENTE'} ? 'En attente' : (${e.statut.name() == 'REFUSE'} ? 'Refusé' : (${e.actif} ? 'Actif' : 'Suspendu'))">—</p>
         </div>
-        <div class="glass rounded-2xl p-5">
-            <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Enseignants</p>
-            <p class="font-serif text-[24px]" th:text="${nbEnseignants}">0</p>
-            <p class="text-[11px] text-muted" th:text="${e.maxEnseignants <= 0} ? 'quota illimité' : ('quota ' + ${e.maxEnseignants})">—</p>
+        <div>
+            <p class="releve-libelle">Enseignants</p>
+            <p class="releve-chiffre" th:text="${nbEnseignants}">0</p>
+            <p class="releve-note" th:text="${e.maxEnseignants <= 0} ? 'quota illimité' : ('quota ' + ${e.maxEnseignants})">—</p>
         </div>
-        <div class="glass rounded-2xl p-5">
-            <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-1">Abonnement</p>
-            <p class="font-serif text-[24px]"
-               th:text="${e.dateExpiration != null} ? ${#temporals.format(e.dateExpiration,'dd/MM/yyyy')} : 'Illimité'">—</p>
-            <p class="text-[11px]" th:if="${expire}" style="color:#7a0010">expiré</p>
-            <p class="text-[11px] text-muted" th:if="${!expire and joursAvantExpiration != null}"
+        <div>
+            <p class="releve-libelle">Abonnement</p>
+            <p class="releve-chiffre releve-mot" th:text="${e.dateExpiration != null} ? ${#temporals.format(e.dateExpiration,'dd/MM/yyyy')} : 'Illimité'">—</p>
+            <p class="releve-note" th:if="${expire}" style="color:var(--c-cachet)">expiré</p>
+            <p class="releve-note" th:if="${!expire and joursAvantExpiration != null}"
                th:text="${joursAvantExpiration} + ' j restants'">—</p>
         </div>
     </section>
 
     <!-- Administrateurs -->
-    <section class="glass rounded-3xl p-6 mb-6" data-reveal>
+    <section class="feuille mb-8" data-reveal>
         <div class="flex items-center gap-2.5 mb-3">
-            <span class="material-symbols-rounded">manage_accounts</span>
-            <h2 class="font-serif text-[20px]">Administrateur(s)</h2>
+            
+            <h2 class="titre-section">Administrateur(s)</h2>
         </div>
         <ul class="space-y-1.5">
             <li th:each="a : ${admins}" class="font-mono text-[13px]" th:text="${a.email}">email</li>
@@ -69,29 +65,29 @@
     </section>
 
     <!-- Historique des paiements -->
-    <section class="glass rounded-3xl overflow-hidden mb-6" data-reveal>
-        <div class="px-6 py-4 border-b border-line flex items-center gap-2.5">
-            <span class="material-symbols-rounded">receipt_long</span>
-            <h2 class="font-serif text-[20px]">Paiements</h2>
-            <span class="ml-auto font-mono text-[12px] text-muted">Total&nbsp;:&nbsp;
+    <section class="chapitre" data-reveal>
+        <div class="chapitre-tete">
+            
+            <h2 class="titre-section">Paiements</h2>
+            <span class="font-mono text-[13px] text-muted">Total&nbsp;:&nbsp;
                 <strong class="text-ink" th:text="${#numbers.formatInteger(totalPaye,1,'WHITESPACE') + ' ' + symbole}">0</strong></span>
         </div>
         <div class="overflow-x-auto">
-            <table class="w-full text-left text-[13px]" data-mobile-keep="2">
-                <thead><tr class="border-b border-line font-mono text-[10px] uppercase tracking-wider text-muted">
-                    <th class="px-6 py-2.5">Date</th><th class="px-4 py-2.5">Montant</th>
-                    <th class="px-4 py-2.5">Mois</th><th class="px-4 py-2.5">Référence</th><th class="px-4 py-2.5">Enregistré par</th>
+            <table class="registre" data-mobile-keep="2">
+                <thead><tr>
+                    <th>Date</th><th>Montant</th>
+                    <th>Mois</th><th>Référence</th><th>Enregistré par</th>
                 </tr></thead>
                 <tbody>
-                <tr th:each="p : ${paiements}" class="border-b border-line">
-                    <td class="px-6 py-2.5" th:text="${#temporals.format(p.datePaiement,'dd/MM/yyyy HH:mm')}">--</td>
-                    <td class="px-4 py-2.5 font-mono" th:text="${#numbers.formatInteger(p.montant,1,'WHITESPACE') + ' ' + (p.devise != null ? p.devise : symbole)}">0</td>
-                    <td class="px-4 py-2.5" th:text="'+' + ${p.moisCredites}">+1</td>
-                    <td class="px-4 py-2.5 font-mono text-[12px] text-muted" th:text="${p.reference} ?: '—'">—</td>
-                    <td class="px-4 py-2.5 font-mono text-[11px] text-muted" th:text="${p.enregistrePar} ?: '—'">—</td>
+                <tr th:each="p : ${paiements}">
+                    <td th:text="${#temporals.format(p.datePaiement,'dd/MM/yyyy HH:mm')}">--</td>
+                    <td class="code" th:text="${#numbers.formatInteger(p.montant,1,'WHITESPACE') + ' ' + (p.devise != null ? p.devise : symbole)}">0</td>
+                    <td th:text="'+' + ${p.moisCredites}">+1</td>
+                    <td class="code" th:text="${p.reference} ?: '—'">—</td>
+                    <td class="code" th:text="${p.enregistrePar} ?: '—'">—</td>
                 </tr>
                 <tr th:if="${#lists.isEmpty(paiements)}">
-                    <td colspan="5" class="px-6 py-6 text-center text-muted">
+                    <td colspan="5" class="vide">
                         Aucun paiement enregistré. <a th:href="@{/plateforme/abonnements}" class="underline">En enregistrer un</a>.
                     </td>
                 </tr>
@@ -101,16 +97,16 @@
     </section>
 
     <!-- Actions de gestion -->
-    <section class="glass rounded-3xl p-6 mb-6" data-reveal>
-        <h2 class="font-serif text-[20px] mb-5">Gestion</h2>
+    <section class="feuille mb-8" data-reveal>
+        <h2 class="titre-section">Gestion</h2>
         <div class="grid md:grid-cols-2 gap-5">
 
             <!-- Changer de plan -->
             <form th:action="@{/plateforme/etablissements/plan}" method="post" class="flex items-end gap-2">
                 <input type="hidden" name="slug" th:value="${e.slug}"/>
                 <div class="flex-1">
-                    <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-1.5">Plan</label>
-                    <select name="plan" class="w-full h-10 px-3 rounded-lg bg-white/60 border border-line text-[13px]">
+                    <label class="etiquette">Plan</label>
+                    <select name="plan" class="w-full h-10 px-3 champ text-[13px]">
                         <option value="FREE" th:selected="${e.plan.name() == 'FREE'}">Free</option>
                         <option value="PRO" th:selected="${e.plan.name() == 'PRO'}">Pro</option>
                         <option value="ENTERPRISE" th:selected="${e.plan.name() == 'ENTERPRISE'}">Enterprise</option>
@@ -123,9 +119,9 @@
             <form th:action="@{/plateforme/etablissements/quota}" method="post" class="flex items-end gap-2">
                 <input type="hidden" name="slug" th:value="${e.slug}"/>
                 <div class="flex-1">
-                    <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-1.5">Quota d'enseignants (0 = illimité)</label>
+                    <label class="etiquette">Quota d'enseignants (0 = illimité)</label>
                     <input type="number" name="maxEnseignants" min="0" th:value="${e.maxEnseignants}"
-                           class="w-full h-10 px-3 rounded-lg bg-white/60 border border-line text-[13px]"/>
+                           class="w-full h-10 px-3 champ text-[13px]"/>
                 </div>
                 <button type="submit" class="btn btn-ink h-10 px-4 rounded-lg text-[12px] font-medium">Enregistrer</button>
             </form>
@@ -134,7 +130,7 @@
             <form th:action="@{/plateforme/etablissements/actif}" method="post">
                 <input type="hidden" name="slug" th:value="${e.slug}"/>
                 <input type="hidden" name="actif" th:value="${!e.actif}"/>
-                <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-1.5">Accès</label>
+                <label class="etiquette">Accès</label>
                 <button type="submit" class="btn glass h-10 px-4 rounded-lg text-[13px] inline-flex items-center gap-1.5">
                     <span class="material-symbols-rounded text-[18px]" th:text="${e.actif} ? 'pause_circle' : 'play_circle'">pause_circle</span>
                     <span th:text="${e.actif} ? 'Suspendre l\'accès' : 'Réactiver l\'accès'">Suspendre</span>
@@ -143,7 +139,7 @@
 
             <!-- Validation (si en attente) -->
             <div th:if="${e.statut.name() == 'EN_ATTENTE'}">
-                <label class="block font-mono text-[10px] uppercase tracking-wider text-muted mb-1.5">Dossier d'inscription</label>
+                <label class="etiquette">Dossier d'inscription</label>
                 <div class="flex items-center gap-2">
                     <form th:action="@{/plateforme/etablissements/valider}" method="post">
                         <input type="hidden" name="slug" th:value="${e.slug}"/>
@@ -161,24 +157,24 @@
     </section>
 
     <!-- Zone dangereuse -->
-    <section class="rounded-3xl p-6" data-reveal style="border:1px solid rgba(186,26,26,.28)">
+    <section class="feuille feuille-danger" data-reveal>
         <div class="flex items-center gap-2.5 mb-2">
-            <span class="material-symbols-rounded" style="color:#7a0010">warning</span>
-            <h2 class="font-serif text-[20px]">Zone dangereuse</h2>
+            
+            <h2 class="titre-section">Zone dangereuse</h2>
         </div>
         <p class="text-[13px] text-muted mb-4">Supprime définitivement l'établissement et tout ce qu'il contient :
             comptes, enseignants, séances, émargements, rapports. Cette action est irréversible.</p>
         <form th:action="@{/plateforme/etablissements/supprimer}" method="post"
               onsubmit="return confirm('Supprimer définitivement cet établissement et tout ce qu il contient : comptes, enseignants, séances, émargements, paiements, rapports ? Cette action est irréversible.');">
             <input type="hidden" name="slug" th:value="${e.slug}"/>
-            <button type="submit" class="h-10 px-4 rounded-lg text-[13px] font-medium inline-flex items-center gap-1.5"
-                    style="background:#7a0010;color:#fff">
+            <button type="submit" class="btn btn-danger h-11 px-5 text-[14px] font-medium inline-flex items-center gap-1.5">
                 <span class="material-symbols-rounded text-[18px]">delete_forever</span>Supprimer l'établissement
             </button>
         </form>
     </section>
 </main>
 
+<div th:replace="~{plateforme/fragments :: dock('dashboard')}"></div>
 <div th:replace="~{admin/fragments :: scripts}"></div>
 
 </body>

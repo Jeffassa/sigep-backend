@@ -12,6 +12,7 @@ public class TenantWebConfig implements WebMvcConfigurer {
 
     private final TenantInterceptor tenantInterceptor;
     private final ci.esatic.sigep.controller.web.AbonnementInterceptor abonnementInterceptor;
+    private final ci.esatic.sigep.controller.web.CompteAdminInterceptor compteAdminInterceptor;
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
@@ -21,5 +22,7 @@ public class TenantWebConfig implements WebMvcConfigurer {
         // pour ne pas dépendre de l'ordre d'enregistrement des configurations.
         registry.addInterceptor(tenantInterceptor).order(1000);
         registry.addInterceptor(abonnementInterceptor).addPathPatterns("/admin/**").order(1100);
+        // Après le second facteur (AdminWebConfig) : le mot de passe se change une fois le code validé.
+        registry.addInterceptor(compteAdminInterceptor).addPathPatterns("/admin/**").order(1200);
     }
 }

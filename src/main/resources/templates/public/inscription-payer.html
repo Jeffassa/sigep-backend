@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org" data-toujours-clair>
+<head th:replace="~{public/fragments :: head('Paiement · SIGEP', 'Choisissez votre offre et payez en Mobile Money pour activer votre espace SIGEP.', true)}"></head>
+<body class="porte">
+<aside class="porte-nuit">
+    <a th:href="@{/}" class="marque">SIGEP</a>
+    <p class="accroche">Votre registre, <em>ouvert en cinq minutes.</em></p>
+</aside>
+<div class="porte-page">
+<main>
+    <a th:href="@{/}" class="retour-accueil">← Retour à l'accueil</a>
+    <p class="surtitre" th:text="${etablissementNom}">Établissement</p>
+    <h1 class="titre-page" th:text="${dejaActif} ? 'Votre espace est actif.' : 'Paiement.'">Paiement.</h1>
+
+    <!-- Espace déjà actif : rien à payer ici -->
+    <div th:if="${dejaActif}" class="feuille">
+        <p class="text-[15px] mb-5">Votre paiement est confirmé.</p>
+        <a th:href="@{/admin-login}" class="btn btn-ink w-full h-12 rounded-xl font-medium flex items-center justify-center gap-2">
+            Se connecter à mon espace
+            <span class="material-symbols-rounded text-[20px]">arrow_forward</span>
+        </a>
+    </div>
+
+    <!-- Paiement en ligne indisponible pour l'instant -->
+    <div th:if="${!dejaActif and !ouvert}" class="feuille">
+        <p class="text-[15px]">Le paiement en ligne n'est pas disponible pour le moment. Votre espace est créé :
+            <a th:href="'mailto:' + (${contactPlateforme} ?: 'contact@sigep.store')" class="underline">écrivez-nous</a>
+            pour l'activer.</p>
+    </div>
+
+    <th:block th:if="${ouvert}">
+
+        <div th:if="${erreur}" class="note note-alerte"><span th:text="${erreur}">Erreur</span></div>
+
+        <!-- Un paiement commencé puis quitté : on peut le reprendre tel quel -->
+        <div th:if="${enCours}" class="note note-attention note-bloc">
+            <p>Un paiement de <strong th:text="${#numbers.formatInteger(enCours.montantAttendu,1,'WHITESPACE')} + ' ' + ${symbole}">13 000 FCFA</strong>
+                est déjà commencé. <a th:href="${enCours.paymentUrl}" class="underline">Le reprendre</a>, ou faire un autre choix ci-dessous.</p>
+        </div>
+
+        <form th:action="@{/inscription/payer}" method="post" class="feuille space-y-5" id="paiement">
+            <input type="hidden" name="jeton" th:value="${jeton}"/>
+
+            <fieldset>
+                <legend class="etiquette">Offre</legend>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <label class="offre-choix">
+                        <input type="radio" name="plan" value="PRO" th:checked="${planChoisi == 'PRO'}" th:attr="data-prix=${prixPro}"/>
+                        <span class="offre-choix-nom">Pro</span>
+                        <span class="offre-choix-prix"><span th:text="${#numbers.formatInteger(prixPro,1,'WHITESPACE')}">13 000</span>
+                            <span th:text="${symbole} + ' / mois'">FCFA / mois</span></span>
+                    </label>
+                    <label class="offre-choix" th:if="${prixEnterprise > 0}">
+                        <input type="radio" name="plan" value="ENTERPRISE" th:checked="${planChoisi == 'ENTERPRISE'}" th:attr="data-prix=${prixEnterprise}"/>
+                        <span class="offre-choix-nom">Enterprise</span>
+                        <span class="offre-choix-prix"><span th:text="${#numbers.formatInteger(prixEnterprise,1,'WHITESPACE')}">96 000</span>
+                            <span th:text="${symbole} + ' / mois'">FCFA / mois</span></span>
+                    </label>
+                </div>
+            </fieldset>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="etiquette" for="mois">Durée</label>
+                    <select id="mois" name="mois" class="w-full h-12 px-3 champ text-ink">
+                        <option value="1">1 mois</option>
+                        <option value="3">3 mois</option>
+                        <option value="12">12 mois</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="etiquette" for="moyen">Payer avec</label>
+                    <select id="moyen" name="moyen" class="w-full h-12 px-3 champ text-ink">
+                        <option value="wave">Wave</option>
+                        <option value="orange">Orange Money</option>
+                        <option value="mtn">MTN MoMo</option>
+                        <option value="moov">Moov Money</option>
+                        <option value="djamo">Djamo</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex items-baseline justify-between gap-3 border-t pt-4" style="border-color: var(--c-line)">
+                <span class="etiquette mb-0">Total</span>
+                <strong class="releve-chiffre" id="total" th:attr="data-symbole=${symbole}">—</strong>
+            </div>
+
+            <button type="submit" class="btn btn-ink w-full h-12 rounded-xl font-medium flex items-center justify-center gap-2">
+                <span class="material-symbols-rounded text-[20px]">lock</span>
+                Payer
+            </button>
+            <p class="text-[12px] text-muted text-center">Paiement sécurisé par Jèko</p>
+        </form>
+    </th:block>
+</main>
+</div>
+
+<script th:inline="none">
+(function () {
+    var form = document.getElementById('paiement');
+    if (!form) return;
+    var total = document.getElementById('total'), mois = document.getElementById('mois');
+    var symbole = total.getAttribute('data-symbole') || 'FCFA';
+    function maj() {
+        var choisi = form.querySelector('input[name="plan"]:checked');
+        var prix = choisi ? parseInt(choisi.getAttribute('data-prix') || '0', 10) : 0;
+        total.textContent = (prix * parseInt(mois.value, 10)).toLocaleString('fr-FR').replace(/ |\s/g, ' ') + ' ' + symbole;
+    }
+    form.addEventListener('change', maj);
+    maj();
+    // Un seul envoi : un double clic préparerait deux paiements.
+    form.addEventListener('submit', function () {
+        var b = form.querySelector('button[type="submit"]');
+        setTimeout(function () { b.disabled = true; }, 0);
+    });
+})();
+</script>
+
+</body>
+</html>

@@ -2,8 +2,8 @@ package ci.esatic.sigep.controller;
 
 import ci.esatic.sigep.service.StripePaymentService;
 import ci.esatic.sigep.service.StripeService;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.stripe.net.Webhook;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -55,15 +55,15 @@ public class StripeWebhookController {
 
         try {
             JsonNode root = objectMapper.readTree(payload);
-            String type = root.path("type").asText();
+            String type = root.path("type").asString("");
             if (!"checkout.session.completed".equals(type)) {
                 log.info("Webhook Stripe : événement ignoré ({})", type);
                 return ResponseEntity.ok("");
             }
             JsonNode obj = root.path("data").path("object");
-            String paymentStatus = obj.path("payment_status").asText();
+            String paymentStatus = obj.path("payment_status").asString("");
             JsonNode md = obj.path("metadata");
-            String etabId = md.path("etablissementId").asText("");
+            String etabId = md.path("etablissementId").asString("");
             log.info("Webhook Stripe checkout.session.completed : status={} etablissementId={}", paymentStatus, etabId);
 
             if ("paid".equals(paymentStatus) && !etabId.isBlank()) {
@@ -83,7 +83,7 @@ public class StripeWebhookController {
                 // Plan acheté (métadonnée) : null si absent → comportement historique (Free → Pro).
                 ci.esatic.sigep.entity.Plan plan = null;
                 try {
-                    String p = md.path("plan").asText("");
+                    String p = md.path("plan").asString("");
                     if (!p.isBlank()) plan = ci.esatic.sigep.entity.Plan.valueOf(p);
                 } catch (IllegalArgumentException ignore) { /* métadonnée inconnue */ }
 
@@ -91,9 +91,9 @@ public class StripeWebhookController {
                         Long.valueOf(etabId),
                         md.path("mois").asInt(1),
                         montant,
-                        "Stripe " + obj.path("id").asText(),
+                        "Stripe " + obj.path("id").asString(""),
                         plan,
-                        md.path("devise").asText(null));
+                        md.path("devise").asString(null));
             }
         } catch (Exception e) {
             // 500 → Stripe réessaiera (le traitement est idempotent, donc sûr).

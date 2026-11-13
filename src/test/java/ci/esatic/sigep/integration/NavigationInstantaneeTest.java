@@ -5,9 +5,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
@@ -36,7 +36,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 class NavigationInstantaneeTest {
 
-    @MockBean private DataInitializer dataInitializer;
+    @MockitoBean private DataInitializer dataInitializer;
 
     @Autowired private MockMvc mockMvc;
 
@@ -245,11 +245,37 @@ class NavigationInstantaneeTest {
         String fragments = gabarit("admin/fragments.html");
 
         // Le chemin où l'on REFUSE de naviguer est justement celui où la palette resterait
-        // ouverte pour rien : une navigation déjà en cours avalait le clic en silence.
+        // ouverte pour rien. Le seul refus restant est l'envoi d'un formulaire en cours : un
+        // clic sur un autre lien, lui, remplace désormais la navigation précédente.
         int debut = fragments.indexOf("function aller(");
         int fermeture = fragments.indexOf("__closePalette", debut);
-        int garde = fragments.indexOf("if (enCours) return;", debut);
+        int garde = fragments.indexOf("if (envoiEnCours) return;", debut);
+        assertThat(garde).as("le garde de l'envoi en cours doit exister").isPositive();
         assertThat(fermeture).as("la fermeture doit preceder le garde").isLessThan(garde);
+    }
+
+    @Test
+    void unClicRepondToutDeSuite_etLeSecondRemplaceLePremier() throws Exception {
+        String fragments = gabarit("admin/fragments.html");
+        String aller = fragments.substring(fragments.indexOf("function aller("), fragments.indexOf("function soumettre("));
+
+        // Un clic pendant un chargement ne faisait rien : la console semblait figée.
+        assertThat(aller).as("un nouveau clic perime la navigation precedente").contains("var moi = ++jeton;");
+        assertThat(aller).as("une reponse perimee ne s'applique pas").contains("if (moi !== jeton) return;");
+        // L'onglet se marque et le contenu s'estompe à l'instant du clic.
+        assertThat(aller).contains("marquerDepart(");
+        // La page préchargée au survol est celle que le clic consomme.
+        assertThat(aller).contains("prendre(url)");
+        assertThat(fragments).contains("document.addEventListener('mouseover'").contains("precharger(url.href)");
+    }
+
+    @Test
+    void lAutoActualisation_neRechargePlusLaPageChaqueSeconde() throws Exception {
+        // À une seconde, un seul onglet ouvert occupait le serveur en permanence.
+        String fragments = gabarit("admin/fragments.html");
+        int debut = fragments.indexOf("function __liveAutorise()");
+        String bloc = fragments.substring(debut, fragments.indexOf("NAVIGATION INSTANTANÉE", debut));
+        assertThat(bloc).contains("}, 15000);").doesNotContain("}, 1000);");
     }
 
     @Test

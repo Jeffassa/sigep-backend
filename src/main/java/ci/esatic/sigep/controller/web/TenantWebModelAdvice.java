@@ -73,6 +73,23 @@ public class TenantWebModelAdvice {
         return (plausibleDomain != null && !plausibleDomain.isBlank()) ? plausibleDomain : null;
     }
 
+    /** Codes de preuve de propriété fournis par les outils des moteurs — vides = balises absentes. */
+    @Value("${app.seo.google-site-verification:}")
+    private String verificationGoogle;
+
+    @Value("${app.seo.bing-site-verification:}")
+    private String verificationBing;
+
+    @ModelAttribute("verificationGoogle")
+    public String verificationGoogle() {
+        return (verificationGoogle != null && !verificationGoogle.isBlank()) ? verificationGoogle : null;
+    }
+
+    @ModelAttribute("verificationBing")
+    public String verificationBing() {
+        return (verificationBing != null && !verificationBing.isBlank()) ? verificationBing : null;
+    }
+
     @ModelAttribute("marque")
     public String marque() {
         return brandName;
@@ -147,6 +164,35 @@ public class TenantWebModelAdvice {
     public String adminEmail() {
         User u = utilisateurCourant();
         return u != null ? u.getEmail() : null;
+    }
+
+    private ci.esatic.sigep.entity.ERole profilSecondaire() {
+        User u = utilisateurCourant();
+        if (u == null || u.getRoles().stream().anyMatch(r -> r.getName() == ci.esatic.sigep.entity.ERole.ROLE_ADMIN)) {
+            return null;
+        }
+        return u.getRoles().stream().map(r -> r.getName())
+                .filter(ci.esatic.sigep.config.ProfilsAdmin.LIBELLES::containsKey).findFirst().orElse(null);
+    }
+
+    /** Onglets du profil connecté ; null pour l'administrateur principal, qui les voit tous. */
+    @ModelAttribute("menu")
+    public java.util.Set<String> menu() {
+        return ci.esatic.sigep.config.ProfilsAdmin.menu(profilSecondaire());
+    }
+
+    @ModelAttribute("profilLibelle")
+    public String profilLibelle() {
+        var profil = profilSecondaire();
+        return profil == null ? null : ci.esatic.sigep.config.ProfilsAdmin.LIBELLES.get(profil);
+    }
+
+    @ModelAttribute("lectureSeule")
+    public boolean lectureSeule(jakarta.servlet.http.HttpServletRequest requete) {
+        var profil = profilSecondaire();
+        if (profil == ci.esatic.sigep.entity.ERole.ROLE_DIRECTION) return true;
+        return profil == ci.esatic.sigep.entity.ERole.ROLE_SCOLARITE
+                && requete.getRequestURI().startsWith("/admin/abonnement");
     }
 
     @ModelAttribute("abonnementExpire")

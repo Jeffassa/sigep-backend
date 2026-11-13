@@ -62,6 +62,22 @@ public class PlateformeController {
     private final PlanService planService;
     private final SuppressionEtablissementService suppressionEtablissementService;
     private final PaiementRepository paiementRepository;
+    private final ci.esatic.sigep.repository.SeanceRepository seanceRepository;
+    private final ci.esatic.sigep.repository.EmargementRepository emargementRepository;
+    private final ci.esatic.sigep.repository.PaiementIntentRepository paiementIntentRepository;
+    private final ci.esatic.sigep.service.plateforme.PilotagePlateformeService pilotage;
+    private final ci.esatic.sigep.service.plateforme.EtatTechniqueService etatTechnique;
+    private final ci.esatic.sigep.service.plateforme.AnalystesService analystes;
+
+    /** Sans émargement depuis ce nombre de jours, un client payant est en train de décrocher. */
+    private static final int JOURS_AVANT_DECROCHAGE = 14;
+
+    /** Une ligne du tableau : ce qu'un établissement fait réellement de SIGEP. */
+    public record SanteEtablissement(Etablissement e, long enseignants, long seances30j, long tauxPct,
+                                     java.time.LocalDateTime dernierEmargement, Long joursRestants,
+                                     String etat, int priorite, String motif, String contact) {
+        public boolean aTraiter() { return priorite <= 3; }
+    }
 
     /** Vue d'ensemble : dossiers à valider + KPIs (dont MRR) + liste filtrable des clients. */
     @GetMapping({"", "/"})
@@ -99,10 +115,22 @@ public class PlateformeController {
         List<Etablissement> enAttente = tous.stream()
                 .filter(e -> e.getStatut() == StatutEtablissement.EN_ATTENTE)
                 .toList();
+        // Le contact de chaque établissement, lu en une requête : il sert aux dossiers en attente,
+        // aux établissements à traiter et à la mise en route.
         Map<Long, String> adminParEtab = new HashMap<>();
-        for (Etablissement e : enAttente) {
-            userRepository.findFirstByEtablissementIdOrderByIdAsc(e.getId())
-                    .ifPresent(u -> adminParEtab.put(e.getId(), u.getEmail()));
+        for (Object[] l : userRepository.premierCompteParEtablissement()) {
+            if (l[0] != null) adminParEtab.put((Long) l[0], (String) l[1]);
+        }
+        // Les paiements, lus une fois : totaux, mois en cours, série mensuelle et derniers paiements.
+        List<Paiement> paiements = paiementRepository.findAllByOrderByDatePaiementDesc();
+        LocalDateTime debutMois = LocalDate.now().withDayOfMonth(1).atStartOfDay();
+        LocalDateTime debutMoisPrecedent = debutMois.minusMonths(1);
+        long totalEncaisse = 0, encaisseMois = 0, encaisseMoisPrecedent = 0;
+        for (Paiement p : paiements) {
+            totalEncaisse += p.getMontant();
+            if (p.getDatePaiement() == null) continue;
+            if (!p.getDatePaiement().isBefore(debutMois)) encaisseMois += p.getMontant();
+            else if (!p.getDatePaiement().isBefore(debutMoisPrecedent)) encaisseMoisPrecedent += p.getMontant();
         }
 
         // Recherche + filtres sur la liste principale.
@@ -115,6 +143,32 @@ public class PlateformeController {
                 .filter(e -> statut == null || statut.isBlank() || e.getStatut().name().equals(statut))
                 .toList();
 
+        // Ce que chaque établissement fait réellement de SIGEP, sur les 30 derniers jours.
+        Map<Long, long[]> activite = new HashMap<>();
+        for (Object[] l : seanceRepository.activiteParEtablissement(now.minusDays(30), now)) {
+            if (l[0] != null) activite.put((Long) l[0], new long[] {((Number) l[1]).longValue(), ((Number) l[2]).longValue()});
+        }
+        Map<Long, java.time.LocalDateTime> dernierEmargement = new HashMap<>();
+        for (Object[] l : emargementRepository.dernierEmargementParEtablissement()) {
+            if (l[0] != null) dernierEmargement.put((Long) l[0], (java.time.LocalDateTime) l[1]);
+        }
+        List<SanteEtablissement> sante = tous.stream()
+                .map(e -> sante(e, enseignantsParEtab, activite, dernierEmargement, expires, now, adminParEtab))
+                .sorted(java.util.Comparator.comparingInt(SanteEtablissement::priorite)
+                        .thenComparing(s -> s.e().getNom(), String.CASE_INSENSITIVE_ORDER))
+                .toList();
+        Set<Long> filtresIds = filtres.stream().map(Etablissement::getId).collect(Collectors.toSet());
+        model.addAttribute("lignes", sante.stream().filter(s -> filtresIds.contains(s.e().getId())).toList());
+        model.addAttribute("aTraiter", sante.stream().filter(SanteEtablissement::aTraiter).toList());
+        model.addAttribute("nbDecroches", sante.stream().filter(s -> "Décroche".equals(s.etat())).count());
+        model.addAttribute("nbJamaisUtilises", sante.stream().filter(s -> "Jamais utilisé".equals(s.etat())).count());
+        model.addAttribute("revenuARisque", sante.stream()
+                .filter(s -> s.priorite() <= 3 && s.e().getPlan() != Plan.FREE)
+                .mapToLong(s -> planService.prixMensuel(s.e().getPlan())).sum());
+        model.addAttribute("paiementsAVerifier", paiementIntentRepository
+                .findByStatutOrderByDateCreationAsc(ci.esatic.sigep.entity.StatutIntent.A_VERIFIER));
+        model.addAttribute("encaisseMoisPrecedent", encaisseMoisPrecedent);
+
         model.addAttribute("etablissements", filtres);
         model.addAttribute("enseignantsParEtab", enseignantsParEtab);
         model.addAttribute("expires", expires);
@@ -124,9 +178,8 @@ public class PlateformeController {
         model.addAttribute("nbExpires", (long) expires.size());
         model.addAttribute("mrr", mrr);
         model.addAttribute("inscriptionsMois", inscriptionsMois);
-        model.addAttribute("totalEncaisse", paiementRepository.totalEncaisse());
-        model.addAttribute("encaisseMois", paiementRepository.encaisseDepuis(
-                now.withDayOfMonth(1).atStartOfDay()));
+        model.addAttribute("totalEncaisse", totalEncaisse);
+        model.addAttribute("encaisseMois", encaisseMois);
         model.addAttribute("enAttente", enAttente);
         model.addAttribute("adminParEtab", adminParEtab);
         model.addAttribute("q", q);
@@ -154,7 +207,7 @@ public class PlateformeController {
         for (int i = 7; i >= 0; i--) derniersMois.add(courant.minusMonths(i));
 
         Map<YearMonth, Long> encParMois = new HashMap<>();
-        for (var p : paiementRepository.findAllByOrderByDatePaiementDesc()) {
+        for (var p : paiements) {
             if (p.getDatePaiement() != null) {
                 encParMois.merge(YearMonth.from(p.getDatePaiement()), p.getMontant(), Long::sum);
             }
@@ -196,10 +249,62 @@ public class PlateformeController {
         // Activité récente : 5 derniers paiements + noms d'établissement pour les afficher.
         model.addAttribute("nomParEtab", tous.stream()
                 .collect(Collectors.toMap(Etablissement::getId, Etablissement::getNomEffectif, (a, b) -> a)));
-        model.addAttribute("derniersPaiements",
-                paiementRepository.findAllByOrderByDatePaiementDesc().stream().limit(5).toList());
+        model.addAttribute("derniersPaiements", paiements.stream().limit(5).toList());
+
+        // ===== Pilotage quotidien : usage du jour, mise en route, échéances, état technique =====
+        var echeances = pilotage.echeances(tous, enseignantsParEtab, expires);
+        model.addAttribute("pouls", pilotage.pouls(now));
+        model.addAttribute("aujourdHui", now);
+        model.addAttribute("miseEnRoute", pilotage.miseEnRoute(tous, enseignantsParEtab,
+                pilotage.seancesParEtablissement(), dernierEmargement, adminParEtab, now));
+        model.addAttribute("echeances", echeances);
+        model.addAttribute("technique", etatTechnique.etat());
+
+        // ===== Cellule d'analyse : constats et prévisions calculés sur nos serveurs =====
+        var rapport = analystes.analyser(new ci.esatic.sigep.service.plateforme.AnalystesService.Entrees(
+                now, tous, enseignantsParEtab, activite, dernierEmargement, expires,
+                nouveauxParMois, encaisseParMois, echeances.gainPotentiel()));
+        model.addAttribute("analystes", rapport.analystes());
+        model.addAttribute("moisFuturs", rapport.moisFuturs());
+        model.addAttribute("nouveauxPrevus", rapport.nouveauxPrevus());
 
         return "plateforme/dashboard";
+    }
+
+    private SanteEtablissement sante(Etablissement e, Map<Long, Long> enseignantsParEtab, Map<Long, long[]> activite,
+                                     Map<Long, java.time.LocalDateTime> dernierEmargement, Set<Long> expires, LocalDate now,
+                                     Map<Long, String> contacts) {
+        long[] a = activite.getOrDefault(e.getId(), new long[] {0, 0});
+        long taux = a[0] == 0 ? 0 : Math.round(a[1] * 100.0 / a[0]);
+        java.time.LocalDateTime dernier = dernierEmargement.get(e.getId());
+        Long jours = abonnementService.joursAvantExpiration(e);
+        long enseignants = enseignantsParEtab.getOrDefault(e.getId(), 0L);
+
+        String etat;
+        int priorite;
+        String motif;
+        if (e.getStatut() == StatutEtablissement.EN_ATTENTE) {
+            etat = "Dossier à valider"; priorite = 0; motif = "Inscription en attente de votre décision";
+        } else if (e.getStatut() == StatutEtablissement.REFUSE) {
+            etat = "Refusé"; priorite = 7; motif = null;
+        } else if (!e.isActif()) {
+            etat = "Suspendu"; priorite = 6; motif = null;
+        } else if (expires.contains(e.getId())) {
+            etat = "Expiré"; priorite = 1; motif = "Abonnement expiré : accès coupé jusqu'au renouvellement";
+        } else if (jours != null && abonnementService.doitRappeler(e)) {
+            etat = "Expire bientôt"; priorite = 2; motif = "Abonnement à renouveler dans " + jours + " jour(s)";
+        } else if (dernier == null) {
+            etat = "Jamais utilisé"; priorite = 3;
+            motif = enseignants == 0 ? "Aucun enseignant enregistré : l'accompagner au démarrage"
+                    : "Aucun émargement encore : l'accompagner au démarrage";
+        } else if (dernier.isBefore(now.minusDays(JOURS_AVANT_DECROCHAGE).atStartOfDay())) {
+            etat = "Décroche"; priorite = 3;
+            motif = "Aucun émargement depuis le " + dernier.toLocalDate().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+        } else {
+            etat = "Actif"; priorite = 5; motif = null;
+        }
+        String contact = contacts.get(e.getId());
+        return new SanteEtablissement(e, enseignants, a[0], taux, dernier, jours, etat, priorite, motif, contact);
     }
 
     /** Fiche détaillée d'un établissement : infos, administrateurs, effectif + actions. */

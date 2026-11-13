@@ -169,3 +169,7 @@ Le backend de prod est en HTTPS ; l'appli doit pointer dessus et être signée.
 - [ ] Sauvegardes de la base testées (restauration vérifiée).
 - [ ] Mot de passe admin initial changé.
 - [ ] Keystore mobile sauvegardé hors ligne (sa perte empêche toute mise à jour de l'appli).
+
+## Maintien en éveil (plan gratuit Render)
+
+Renseigner `APP_KEEP_ALIVE_URL` avec l'adresse publique du service : il s'appelle lui-même toutes les 10 minutes et ne s'endort donc plus. Un service seul consomme alors environ 744 heures sur les 750 heures gratuites mensuelles de Render ; un second service gratuit sur le même compte les dépasserait. Sur un plan payant, laisser cette variable vide.

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('SIGEP | Relecture')}"></head>
+<body>
+
+<div th:replace="~{admin/fragments :: topbar('rapports')}"></div>
+
+<main class="max-w-[1240px] mx-auto px-5 md:px-8 py-10 pb-36">
+
+    <div class="en-tete-page">
+        <div>
+            <p class="surtitre">Lecture du PDF</p>
+            <h1 class="titre-page">Relire l'emploi du temps</h1>
+            <p class="chapeau"><span th:text="${#lists.size(lignes)}">0</span> <span th:text="${#lists.size(lignes) == 1} ? 'séance lue' : 'séances lues'">séances lues</span>, rien n'est encore enregistré. La mise en page d'un PDF se reconstitue et peut être mal comprise : vérifiez ces séances, elles deviendront des heures payées.</p>
+        </div>
+    </div>
+
+    <div data-flash th:if="${success}" class="feuille mb-5 text-[13px]" th:text="${success}">OK</div>
+    <div th:if="${!#lists.isEmpty(erreursImport)}" class="feuille mb-5 text-[13px]">
+        <strong>Non compris :</strong>
+        <ul class="mt-2 flex flex-col gap-1"><li th:each="e : ${erreursImport}" th:text="${e}">Erreur</li></ul>
+    </div>
+
+    <form id="formRelecture" th:action="@{/admin/planning/confirmer}" method="post" data-no-boost class="feuille">
+        <input type="hidden" name="lignes" id="lignesRelues"/>
+        <div class="overflow-x-auto">
+            <table class="registre text-[13px]">
+                <thead>
+                <tr><th>Garder</th><th>Date</th><th>Début</th><th>Fin</th><th>Matière</th><th>Enseignant</th><th>Classe</th><th>Salle</th></tr>
+                </thead>
+                <tbody>
+                <tr th:each="l, n : ${lignes}" class="ligne-relue">
+                    <td><input type="checkbox" data-garder checked th:aria-label="'Garder la séance ' + ${n.count}"/></td>
+                    <td><input type="date" data-champ="date" class="champ h-9 px-2 w-36" aria-label="Date" th:value="${l.date}"/></td>
+                    <td><input data-champ="debut" class="champ h-9 px-2 w-20" aria-label="Début" th:value="${l.debut}"/></td>
+                    <td><input data-champ="fin" class="champ h-9 px-2 w-20" aria-label="Fin" th:value="${l.fin}"/></td>
+                    <td><input data-champ="matiere" class="champ h-9 px-2 w-44" aria-label="Matière" th:value="${l.matiere}"/></td>
+                    <td>
+                        <select data-champ="enseignantId" class="champ h-9 px-2 w-48" aria-label="Enseignant">
+                            <option th:each="e : ${enseignants}" th:value="${e.id}" th:selected="${e.id == l.enseignantId}"
+                                    th:text="${e.prenom + ' ' + e.nom}">Enseignant</option>
+                        </select>
+                    </td>
+                    <td><input data-champ="classe" class="champ h-9 px-2 w-28" aria-label="Classe" th:value="${l.classe}"/></td>
+                    <td><input data-champ="salle" class="champ h-9 px-2 w-24" aria-label="Salle" th:value="${l.salle}"/></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-4 mt-6">
+            <button type="submit" class="btn btn-ink h-11 px-5 rounded-xl font-medium">Enregistrer les séances gardées</button>
+            <a th:href="@{/admin/rapports}" class="underline text-[14px]">Annuler</a>
+        </div>
+    </form>
+</main>
+
+<div th:replace="~{admin/fragments :: dock('rapports')}"></div>
+<div th:replace="~{admin/fragments :: palette}"></div>
+<div th:replace="~{admin/fragments :: scripts}"></div>
+<script th:inline="none">
+    // Tout part dans un seul champ : le serveur limite le nombre de paramètres d'une requête, et un
+    // long emploi du temps en perdrait sans le dire.
+    document.getElementById('formRelecture').addEventListener('submit', function () {
+        var lignes = [];
+        document.querySelectorAll('tr.ligne-relue').forEach(function (tr) {
+            if (!tr.querySelector('[data-garder]').checked) return;
+            var v = function (nom) { return tr.querySelector('[data-champ="' + nom + '"]').value.trim(); };
+            lignes.push({
+                date: v('date'), debut: v('debut'), fin: v('fin'), matiere: v('matiere'),
+                enseignantId: v('enseignantId') ? Number(v('enseignantId')) : null,
+                classe: v('classe'), salle: v('salle')
+            });
+        });
+        document.getElementById('lignesRelues').value = JSON.stringify(lignes);
+    });
+</script>
+</body>
+</html>

@@ -7,13 +7,13 @@ import ci.esatic.sigep.entity.User;
 import ci.esatic.sigep.repository.EtablissementRepository;
 import ci.esatic.sigep.repository.RoleRepository;
 import ci.esatic.sigep.repository.UserRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -35,7 +35,7 @@ class OnboardingIntegrationTest {
 
     // Mocké pour ne pas commiter l'admin/établissement par défaut dans la base H2
     // partagée entre contextes de test (sinon collision avec d'autres tests).
-    @MockBean private DataInitializer dataInitializer;
+    @MockitoBean private DataInitializer dataInitializer;
 
     @Autowired private MockMvc mockMvc;
     @Autowired private ObjectMapper objectMapper;
@@ -75,6 +75,22 @@ class OnboardingIntegrationTest {
         User admin = userRepository.findByEmail("admin@atlantique.ci").orElseThrow();
         assertThat(admin.getEtablissement()).isNotNull();
         assertThat(admin.getEtablissement().getNom()).isEqualTo("Université Atlantique");
+    }
+
+    @Test
+    void planPayant_sansPaiementEnLigne_devientUneInscriptionGratuite() throws Exception {
+        // Jèko n'est pas configuré ici : un plan payant choisi sur l'accueil ne doit ni échouer ni
+        // promettre un paiement, mais créer l'espace comme une inscription ordinaire.
+        String corps = objectMapper.writeValueAsString(Map.of(
+                "nomEtablissement", "Collège Sans Paiement", "adminEmail", "sans-paiement@college.ci",
+                "adminPassword", "Secret@2026", "plan", "PRO"));
+        mockMvc.perform(post("/api/saas/etablissements").contentType(MediaType.APPLICATION_JSON).content(corps))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("en cours d'analyse")))
+                .andExpect(jsonPath("$.data.paiementPage").doesNotExist());
+        var etab = etablissementRepository.findBySlug("college-sans-paiement").orElseThrow();
+        assertThat(etab.getStatut()).isEqualTo(ci.esatic.sigep.entity.StatutEtablissement.EN_ATTENTE);
+        assertThat(etab.getPlan()).isEqualTo(ci.esatic.sigep.entity.Plan.FREE);
     }
 
     @Test

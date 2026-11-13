@@ -43,14 +43,13 @@ class StatsServiceTest {
         Enseignant ens = Enseignant.builder().id(5L).prenom("Awa").nom("Kone").build();
         when(enseignantRepository.findByUserId(userId)).thenReturn(Optional.of(ens));
 
-        when(seanceRepository.countByEnseignantId(5L)).thenReturn(10L);
+        when(seanceRepository.countPlanifieesParEnseignant(5L)).thenReturn(10L);
 
         Emargement e1 = Emargement.builder().seance(seance2h(LocalTime.of(8, 0))).enRetard(false).build();
         Emargement e2 = Emargement.builder().seance(seance2h(LocalTime.of(10, 0))).enRetard(true).build();
         when(emargementRepository.findByEnseignantId(5L)).thenReturn(List.of(e1, e2));
 
-        when(seanceRepository.findByEnseignantIdAndDateBetween(eq(5L), any(), any()))
-                .thenReturn(List.of(seance2h(LocalTime.of(8, 0))));
+        when(seanceRepository.countByEnseignantIdAndPeriode(eq(5L), any(), any())).thenReturn(1L);
         when(seanceRepository.countEmargeesParEnseignant(eq(5L), any(), any())).thenReturn(1L);
 
         StatsResponse r = statsService.getStatsEnseignant(userId);
@@ -69,9 +68,9 @@ class StatsServiceTest {
     void getStatsEnseignant_tauxZeroSansSeance() {
         Enseignant ens = Enseignant.builder().id(5L).prenom("Awa").nom("Kone").build();
         when(enseignantRepository.findByUserId(1L)).thenReturn(Optional.of(ens));
-        when(seanceRepository.countByEnseignantId(5L)).thenReturn(0L);
+        when(seanceRepository.countPlanifieesParEnseignant(5L)).thenReturn(0L);
         when(emargementRepository.findByEnseignantId(5L)).thenReturn(List.of());
-        when(seanceRepository.findByEnseignantIdAndDateBetween(eq(5L), any(), any())).thenReturn(List.of());
+        when(seanceRepository.countByEnseignantIdAndPeriode(eq(5L), any(), any())).thenReturn(0L);
         when(seanceRepository.countEmargeesParEnseignant(eq(5L), any(), any())).thenReturn(0L);
 
         StatsResponse r = statsService.getStatsEnseignant(1L);

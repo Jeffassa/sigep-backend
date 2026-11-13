@@ -22,4 +22,10 @@ public class InscriptionEtablissementRequest {
 
     private String adminNom;
     private String adminPrenom;
+
+    /**
+     * Plan souscrit depuis la page d'accueil : vide ou FREE = inscription gratuite. La durée et le
+     * moyen de paiement se choisissent ensuite, sur la page de paiement.
+     */
+    private String plan;
 }

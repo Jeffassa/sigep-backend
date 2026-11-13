@@ -83,7 +83,9 @@ class ImportServicePlanningExcelTest {
                 Mockito.mock(ci.esatic.sigep.repository.UserRepository.class),
                 Mockito.mock(ci.esatic.sigep.repository.RoleRepository.class),
                 Mockito.mock(org.springframework.security.crypto.password.PasswordEncoder.class),
-                Mockito.mock(MailService.class));
+                Mockito.mock(MailService.class),
+                org.mockito.Mockito.mock(ci.esatic.sigep.repository.PeriodeCalendrierRepository.class),
+                org.mockito.Mockito.mock(CompteEnseignantService.class));
     }
 
     @Test

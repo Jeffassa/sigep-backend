@@ -26,6 +26,7 @@ public class QrController {
     private final QrCodeService qrCodeService;
     private final EtablissementRepository etablissementRepository;
     private final ClientIpResolver clientIpResolver;
+    private final ci.esatic.sigep.service.AbonnementService abonnementService;
 
     // SECURITE : l'affichage du QR est une PREUVE DE PRESENCE → ne doit jamais être public
     // sur internet. Au moins l'un des deux doit être défini, sinon l'affichage renvoie 403.
@@ -84,7 +85,8 @@ public class QrController {
     private Etablissement tenantKiosqueAutorise(String slug, String key) {
         if (slug == null || slug.isBlank() || key == null || key.isBlank()) return null;
         Etablissement e = etablissementRepository.findBySlug(slug.trim()).orElse(null);
-        if (e == null || !e.isActif() || e.getKioskKey() == null || e.getKioskKey().isBlank()) return null;
+        if (e == null || abonnementService.accesSuspendu(e)
+                || e.getKioskKey() == null || e.getKioskKey().isBlank()) return null;
         return SecurityUtils.constantTimeEquals(e.getKioskKey(), key) ? e : null;
     }
 
@@ -201,7 +203,8 @@ public class QrController {
 
     private String buildUniversalQrPage(String nomEtablissement, String couleur,
                                         String imageBase64, long refreshSeconds) {
-        String bg = (couleur != null && couleur.matches("#[0-9a-fA-F]{3,8}")) ? couleur : "#000666";
+        // Fond clair exclu : le texte de l'écran est clair, et la couleur vient d'un réglage client.
+        String bg = (couleur != null && couleur.matches("#[0-9a-fA-F]{6}") && estSombre(couleur)) ? couleur : "#081a38";
         String titre = htmlEscape(nomEtablissement == null || nomEtablissement.isBlank() ? "SIGEP" : nomEtablissement);
         return """
                 <!DOCTYPE html>
@@ -210,57 +213,62 @@ public class QrController {
                     <meta charset="UTF-8"/>
                     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
                     <title>%s - Émargement</title>
+                    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+                    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="crossorigin"/>
+                    <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&amp;family=Bodoni+Moda:ital,opsz,wght@1,6..96,400..700&amp;family=DM+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
                     <style>
                         * { margin: 0; padding: 0; box-sizing: border-box; }
+                        html, body { height: 100%%; }
                         body {
                             background: %s;
-                            color: white;
-                            font-family: 'Inter', sans-serif;
+                            color: #f6ecd9;
+                            font-family: Archivo, Arial, sans-serif;
                             display: flex;
-                            flex-direction: column;
                             align-items: center;
                             justify-content: center;
-                            height: 100vh;
-                            gap: 16px;
+                            gap: clamp(24px, 5vw, 72px);
+                            padding: 4vh 5vw;
                             overflow: hidden;
                         }
-                        h1 { font-size: 2rem; font-weight: 900; letter-spacing: -0.02em; }
-                        .subtitle { color: #bdc2ff; font-size: 0.95rem; }
-                        .qr-container {
-                            background: white;
-                            padding: 16px;
-                            border-radius: 12px;
-                            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
-                            line-height: 0;
+                        /* Le blanc franc autour du code : un lecteur de QR a besoin de cette marge. */
+                        .code { flex: none; background: #fff; padding: 2.5vmin; line-height: 0; }
+                        img { display: block; width: min(78vh, 46vw); height: min(78vh, 46vw); image-rendering: pixelated; }
+                        .texte { min-width: 0; max-width: 620px; }
+                        .etablissement { font-stretch: 75%%; font-weight: 800; font-size: clamp(20px, 3.4vh, 34px); line-height: 1.2; }
+                        h1 { margin-top: 2vh; font-stretch: 75%%; font-weight: 900; font-size: clamp(56px, 14vh, 136px); line-height: .92; letter-spacing: -.015em; color: #fff; }
+                        h1 em { font-family: 'Bodoni Moda', Didot, Georgia, serif; font-style: italic; font-weight: 500; font-stretch: 100%%; color: #ffbe57; }
+                        .consigne { margin-top: 3vh; font-size: clamp(18px, 3.2vh, 30px); line-height: 1.35; }
+                        .jauge { margin-top: 4vh; height: 8px; background: rgba(255,255,255,.18); }
+                        .jauge div { height: 8px; width: 100%%; background: #f5a623; transition: width 1s linear; }
+                        .delai { margin-top: 1.5vh; font-family: 'DM Mono', ui-monospace, Consolas, monospace; font-size: clamp(16px, 2.8vh, 26px); font-variant-numeric: tabular-nums; }
+                        @media (max-aspect-ratio: 1/1) {
+                            body { flex-direction: column; text-align: center; }
+                            img { width: min(82vw, 58vh); height: min(82vw, 58vh); }
+                            h1 br { display: none; }
                         }
-                        img {
-                            display: block;
-                            width: min(70vh, 70vw);
-                            height: min(70vh, 70vw);
-                            image-rendering: pixelated;
-                        }
-                        .timer { font-size: 1.4rem; font-weight: 700; color: #fec330; }
-                        .timer.urgent { color: #ff4d4d; animation: pulse 0.5s infinite alternate; }
-                        @keyframes pulse { from { opacity: 1; } to { opacity: 0.5; } }
-                        .footer { color: #8690ee; font-size: 0.8rem; }
+                        @media (prefers-reduced-motion: reduce) { .jauge div { transition: none; } }
                     </style>
                 </head>
                 <body>
-                    <h1>%s</h1>
-                    <p class="subtitle">Scannez ce code pour émarger votre séance</p>
-                    <div class="qr-container">
-                        <img src="data:image/png;base64,%s" alt="QR Code" fetchpriority="high"/>
+                    <div class="code">
+                        <img src="data:image/png;base64,%s" alt="QR code d'émargement" fetchpriority="high"/>
                     </div>
-                    <div class="timer" id="timer">Nouveau code dans : <span id="countdown">%d</span>s</div>
-                    <p class="footer">Ce QR code se renouvelle automatiquement</p>
+                    <div class="texte">
+                        <p class="etablissement">%s</p>
+                        <h1>Scannez,<br/> <em>signez.</em></h1>
+                        <p class="consigne">Ouvrez l'application SIGEP et visez ce code pour émarger votre séance.</p>
+                        <div class="jauge"><div id="jauge"></div></div>
+                        <p class="delai">Nouveau code dans <span id="countdown">%d</span> s</p>
+                    </div>
                     <script>
-                        let seconds = %d;
+                        const duree = %d;
+                        let seconds = duree;
                         const el = document.getElementById('countdown');
-                        const timer = document.getElementById('timer');
+                        const jauge = document.getElementById('jauge');
                         const interval = setInterval(() => {
                             seconds--;
                             el.textContent = seconds;
-                            if (seconds <= 5) timer.classList.add('urgent');
+                            jauge.style.width = (seconds / duree * 100) + '%%';
                             if (seconds <= 0) {
                                 clearInterval(interval);
                                 location.reload();
@@ -269,7 +277,15 @@ public class QrController {
                     </script>
                 </body>
                 </html>
-                """.formatted(titre, bg, titre, imageBase64, refreshSeconds, refreshSeconds);
+                """.formatted(titre, bg, imageBase64, titre, refreshSeconds, refreshSeconds);
+    }
+
+    /** Luminance perçue d'une couleur #rrggbb déjà validée : assez sombre pour porter du texte clair. */
+    private static boolean estSombre(String couleur) {
+        int r = Integer.parseInt(couleur.substring(1, 3), 16);
+        int g = Integer.parseInt(couleur.substring(3, 5), 16);
+        int b = Integer.parseInt(couleur.substring(5, 7), 16);
+        return 0.299 * r + 0.587 * g + 0.114 * b < 110;
     }
 
     /** Échappe le texte injecté dans le HTML de la page kiosque (nom d'établissement). */

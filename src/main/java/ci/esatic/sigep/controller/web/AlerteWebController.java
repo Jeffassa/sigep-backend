@@ -32,6 +32,7 @@ public class AlerteWebController {
     private final RattrapageService rattrapageService;
     private final ci.esatic.sigep.repository.EmargementRepository emargementRepository;
     private final ci.esatic.sigep.service.EmargementService emargementService;
+    private final ci.esatic.sigep.service.SeanceService seanceService;
 
     @GetMapping("/admin/alertes")
     public String alertes(Model model) {
@@ -43,8 +44,41 @@ public class AlerteWebController {
                 enseignantRepository.findByStatutOrderByNomAsc(StatutEnseignant.PENDING));
         model.addAttribute("emargementsHorsLigne",
                 emargementRepository.findEmargementsHorsLigneEnAttente().stream().limit(50).toList());
+        model.addAttribute("seancesAValider", seanceService.getSeancesAValider());
         model.addAttribute("salles", salleRepository.findAll());
         return "admin/alertes";
+    }
+
+    /** Accepte une séance importée par un enseignant : elle devient émargeable. */
+    @PostMapping("/admin/seances/{id}/valider")
+    public String validerSeance(@PathVariable Long id, RedirectAttributes ra) {
+        try {
+            seanceService.validerImport(id);
+            ra.addFlashAttribute("success", "Séance acceptée : l'enseignant peut l'émarger.");
+        } catch (Exception e) {
+            ra.addFlashAttribute("error", raison(e));
+        }
+        return "redirect:/admin/alertes";
+    }
+
+    /** Accepte toutes les séances en attente : un emploi du temps importé en compte souvent des dizaines. */
+    @PostMapping("/admin/seances/valider-tout")
+    public String validerToutesLesSeances(RedirectAttributes ra) {
+        int n = seanceService.validerTousLesImports();
+        ra.addFlashAttribute("success", n == 1 ? "1 séance acceptée." : n + " séances acceptées.");
+        return "redirect:/admin/alertes";
+    }
+
+    /** Écarte une séance importée par un enseignant. */
+    @PostMapping("/admin/seances/{id}/refuser")
+    public String refuserSeance(@PathVariable Long id, RedirectAttributes ra) {
+        try {
+            seanceService.refuserImport(id);
+            ra.addFlashAttribute("success", "Séance écartée.");
+        } catch (Exception e) {
+            ra.addFlashAttribute("error", raison(e));
+        }
+        return "redirect:/admin/alertes";
     }
 
     /** Accepte une demande de rattrapage : crée la séance dans la salle choisie + email à l'enseignant. */
@@ -52,12 +86,12 @@ public class AlerteWebController {
     public String accepterRattrapage(@PathVariable Long id, @RequestParam Long salleId, RedirectAttributes ra) {
         try {
             Salle salle = salleRepository.findById(salleId)
-                    .orElseThrow(() -> new IllegalArgumentException("Salle introuvable"));
+                    .orElseThrow(() -> new IllegalArgumentException("Cette salle n'existe plus. Choisissez-en une autre."));
             rattrapageService.accepterAvecSalle(id, salle);
             ra.addFlashAttribute("success",
-                    "Demande acceptee : seance de rattrapage creee, enseignant notifie par email.");
+                    "Rattrapage accepté : la séance est créée et l'enseignant est prévenu par e-mail.");
         } catch (Exception e) {
-            ra.addFlashAttribute("error", "Erreur : " + e.getMessage());
+            ra.addFlashAttribute("error", raison(e));
         }
         return "redirect:/admin/alertes";
     }
@@ -67,9 +101,9 @@ public class AlerteWebController {
     public String refuserRattrapage(@PathVariable Long id, RedirectAttributes ra) {
         try {
             rattrapageService.refuser(id);
-            ra.addFlashAttribute("success", "Demande refusee : enseignant notifie par email.");
+            ra.addFlashAttribute("success", "Rattrapage refusé : l'enseignant est prévenu par e-mail.");
         } catch (Exception e) {
-            ra.addFlashAttribute("error", "Erreur : " + e.getMessage());
+            ra.addFlashAttribute("error", raison(e));
         }
         return "redirect:/admin/alertes";
     }
@@ -79,9 +113,9 @@ public class AlerteWebController {
     public String validerHorsLigne(@PathVariable Long id, RedirectAttributes ra) {
         try {
             emargementService.validerHorsLigne(id);
-            ra.addFlashAttribute("success", "Emargement hors-ligne valide : presence confirmee.");
+            ra.addFlashAttribute("success", "Émargement hors ligne validé : la présence est confirmée.");
         } catch (Exception e) {
-            ra.addFlashAttribute("error", "Erreur : " + e.getMessage());
+            ra.addFlashAttribute("error", raison(e));
         }
         return "redirect:/admin/alertes";
     }
@@ -91,10 +125,22 @@ public class AlerteWebController {
     public String refuserHorsLigne(@PathVariable Long id, RedirectAttributes ra) {
         try {
             emargementService.refuserHorsLigne(id);
-            ra.addFlashAttribute("success", "Emargement hors-ligne refuse : seance a regulariser.");
+            ra.addFlashAttribute("success", "Émargement hors ligne refusé : la séance reste à régulariser.");
         } catch (Exception e) {
-            ra.addFlashAttribute("error", "Erreur : " + e.getMessage());
+            ra.addFlashAttribute("error", raison(e));
         }
         return "redirect:/admin/alertes";
+    }
+
+    /**
+     * Ce qu'on dit quand une action échoue. Les refus métier portent déjà une phrase écrite pour
+     * l'administrateur ; une panne technique, elle, ne doit pas lui montrer son message brut.
+     */
+    private static String raison(Exception e) {
+        if ((e instanceof IllegalArgumentException || e instanceof IllegalStateException)
+                && e.getMessage() != null && !e.getMessage().isBlank()) {
+            return e.getMessage();
+        }
+        return "L'action n'a pas pu aboutir. Réessayez dans un instant.";
     }
 }

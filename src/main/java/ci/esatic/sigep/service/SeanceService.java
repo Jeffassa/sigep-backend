@@ -36,8 +36,47 @@ public class SeanceService {
         return seanceRepository
                 .findByEnseignantIdAndDateOrderByHeureDebutAsc(enseignantId, date)
                 .stream()
-                .filter(s -> s.getStatut() != StatutSeance.EMARGE)
+                .filter(s -> s.getStatut() != StatutSeance.EMARGE && s.getStatut() != StatutSeance.A_VALIDER)
                 .map(this::toResponse).collect(Collectors.toList());
+    }
+
+    // ── Séances importées par un enseignant : décision de la scolarité ──
+
+    public List<Seance> getSeancesAValider() {
+        return seanceRepository.findByStatutOrderByDateAscHeureDebutAsc(StatutSeance.A_VALIDER);
+    }
+
+    /** Accepte la séance : elle devient émargeable, et entre dans les calculs. */
+    @Transactional
+    public void validerImport(Long id) {
+        Seance seance = seanceAValider(id);
+        seance.setStatut(StatutSeance.A_FAIRE);
+        seanceRepository.save(seance);
+    }
+
+    /** Accepte d'un coup toutes les séances en attente de l'établissement courant. */
+    @Transactional
+    public int validerTousLesImports() {
+        List<Seance> seances = getSeancesAValider();
+        seances.forEach(s -> s.setStatut(StatutSeance.A_FAIRE));
+        seanceRepository.saveAll(seances);
+        return seances.size();
+    }
+
+    /** Écarte la séance. Elle n'a pu être ni émargée ni comptée : rien ne dépend d'elle. */
+    @Transactional
+    public void refuserImport(Long id) {
+        seanceRepository.delete(seanceAValider(id));
+    }
+
+    private Seance seanceAValider(Long id) {
+        Seance seance = seanceRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Seance", "id", id));
+        if (seance.getStatut() != StatutSeance.A_VALIDER) {
+            throw new ci.esatic.sigep.exception.MetierException("ETAT_INVALIDE",
+                    "Cette séance n'attend plus de validation.");
+        }
+        return seance;
     }
 
     public List<SeanceResponse> getSeancesSemaine(Long enseignantId, LocalDate date) {

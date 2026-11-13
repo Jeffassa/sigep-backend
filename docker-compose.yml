@@ -11,7 +11,7 @@
       # SECURITE : jamais de mot de passe en dur — interpolé depuis .env (non versionné).
       POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD requis (voir .env.docker.example)}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT_HOTE:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -32,7 +32,9 @@
       - "6379:6379"
     networks:
       - sigep_network
-    command: redis-server --appendonly yes
+    # Réglé comme un cache : mémoire bornée, les clés les moins utilisées sortent quand elle est
+    # pleine, et rien n'est écrit sur disque — tout ce qu'il contient se recalcule.
+    command: ["redis-server", "--maxmemory", "64mb", "--maxmemory-policy", "allkeys-lru", "--save", "", "--appendonly", "no"]
     volumes:
       - redis_data:/data
     healthcheck:

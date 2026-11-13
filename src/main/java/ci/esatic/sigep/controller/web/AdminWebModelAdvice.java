@@ -14,7 +14,9 @@ import org.springframework.web.bind.annotation.ModelAttribute;
         AlerteWebController.class,
         ReferentielWebController.class,
         EnseignantWebController.class,
-        RapportWebController.class
+        RapportWebController.class,
+        CalendrierWebController.class,
+        EquipeWebController.class
 })
 @RequiredArgsConstructor
 public class AdminWebModelAdvice {
@@ -24,6 +26,10 @@ public class AdminWebModelAdvice {
     /** Compteur d'alertes exposé à toutes les vues admin (badge de la barre supérieure). */
     @ModelAttribute("alertesCount")
     public long alertesCount() {
+        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !(auth.getPrincipal() instanceof ci.esatic.sigep.entity.User)) {
+            return 0;   // page de connexion : personne à qui montrer un compteur
+        }
         return alerteService.compter();
     }
 }

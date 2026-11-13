@@ -33,7 +33,7 @@ public class StatsService {
                 .orElseThrow(() -> new ResourceNotFoundException("Enseignant", "userId", userId));
         Long id = ens.getId();
 
-        long total = seanceRepository.countByEnseignantId(id);
+        long total = seanceRepository.countPlanifieesParEnseignant(id);
 
         List<Emargement> emargements = emargementRepository.findByEnseignantId(id);
         long emargees = emargements.size();
@@ -46,7 +46,7 @@ public class StatsService {
         LocalDate today = LocalDate.now();
         LocalDate lundi = today.with(DayOfWeek.MONDAY);
         LocalDate dimanche = lundi.plusDays(6);
-        long seancesSemaine = seanceRepository.findByEnseignantIdAndDateBetween(id, lundi, dimanche).size();
+        long seancesSemaine = seanceRepository.countByEnseignantIdAndPeriode(id, lundi, dimanche);
         long emargeesSemaine = seanceRepository.countEmargeesParEnseignant(id, lundi, dimanche);
 
         return StatsResponse.builder()

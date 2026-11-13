@@ -11,7 +11,7 @@ spring:
     multipart:
       # Borne la taille des uploads (import Excel) pour éviter un épuisement mémoire.
       max-file-size: ${MULTIPART_MAX_FILE_SIZE:10MB}
-      max-request-size: ${MULTIPART_MAX_REQUEST_SIZE:12MB}
+      max-request-size: ${MULTIPART_MAX_REQUEST_SIZE:50MB}
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/sigep_db}
     username: ${DB_USERNAME:postgres}
@@ -24,10 +24,10 @@ spring:
       maximum-pool-size: ${DB_POOL_MAX:25}
       minimum-idle: ${DB_POOL_MIN:5}
   jackson:
-    serialization:
-      write-dates-as-timestamps: false
-    deserialization:
-      fail-on-unknown-properties: false
+    # Jackson 3 (Boot 4) change ses défauts : ordre des champs, null sur un type primitif,
+    # énumérations. Ceci garde le contrat de l'API inchangé pour le mobile : dates en ISO-8601,
+    # propriétés inconnues ignorées. Adopter les défauts stricts serait une décision à part.
+    use-jackson2-defaults: true
   # Le schéma est géré par Flyway (db/migration). Hibernate se contente de valider.
   flyway:
     enabled: ${FLYWAY_ENABLED:true}
@@ -58,8 +58,9 @@ spring:
           auth: true
           starttls:
             enable: true
-  # Cache applicatif. OPTIONNEL : 'simple' (mémoire locale, défaut) tant que Redis n'est pas
-  # provisionné. Pour activer le cache distribué : CACHE_TYPE=redis + REDIS_URL (voir ci-dessous).
+  # Cache applicatif. 'simple' (défaut) = mémoire locale bornée, tant que Redis n'est pas
+  # provisionné. Pour le cache partagé : CACHE_TYPE=redis + SPRING_DATA_REDIS_URL (voir plus bas).
+  # Les caches, leurs durées et leurs règles sont déclarés dans CacheConfig.
   task:
     scheduling:
       # Plusieurs threads : sinon un seul cron lent (ex. appel réseau à un prestataire) gèle
@@ -76,7 +77,9 @@ spring:
       # Pour l'activer, définir la variable d'env SPRING_DATA_REDIS_URL (Spring la relie tout seul),
       # ex. rediss://default:<password>@<host>:<port> (Upstash/Render), + CACHE_TYPE=redis et/ou
       # RATE_LIMIT_REDIS_ENABLED=true. NE PAS déclarer d'url vide ici : Lettuce refuse "" au démarrage.
-      timeout: ${REDIS_TIMEOUT:2s}
+      # Délai d'une commande. Court exprès : le cache sert à gagner du temps, une lecture lente
+      # coûte plus cher que la requête qu'elle évite. Au-delà, l'application relit la base.
+      timeout: ${REDIS_TIMEOUT:1s}
       connect-timeout: ${REDIS_CONNECT_TIMEOUT:2s}
 
 server:
@@ -138,6 +141,8 @@ springdoc:
     path: /swagger-ui.html
 
 app:
+  keep-alive:
+    url: ${APP_KEEP_ALIVE_URL:}
   jwt:
     # SECURITE : JWT_SECRET OBLIGATOIRE en variable d'environnement (min 256 bits, base64). Voir .env.example
     secret: ${JWT_SECRET}
@@ -176,6 +181,15 @@ app:
     model: ${AI_MODEL:claude-opus-4-8}
     # Modèle standard (plans inférieurs) — maîtrise du coût par plan (E10).
     model-standard: ${AI_MODEL_STANDARD:claude-haiku-4-5}
+  cache:
+    # Préfixe de toutes les clés Redis. Le numéro de version se change quand le format d'une
+    # valeur change : les anciennes clés s'éteignent d'elles-mêmes à l'expiration.
+    prefixe: ${CACHE_PREFIXE:sigep:v1:}
+  seo:
+    # Codes de preuve de propriété (Google Search Console, Bing Webmaster Tools) : la valeur
+    # « content » de la balise fournie par l'outil. Vides = aucune balise posée.
+    google-site-verification: ${GOOGLE_SITE_VERIFICATION:}
+    bing-site-verification: ${BING_SITE_VERIFICATION:}
   analytics:
     # Analytics web sans cookie (Plausible). Vide = désactivé. Ex. PLAUSIBLE_DOMAIN=sigep.store
     plausible-domain: ${PLAUSIBLE_DOMAIN:}
@@ -183,6 +197,10 @@ app:
     # C5 : auto-validation des inscriptions self-service. false = validation manuelle par le
     # super-admin (défaut, comportement actuel). true = espace actif immédiatement.
     auto-validation: ${ONBOARDING_AUTO_VALIDATION:false}
+  marche:
+    # Nombre d'établissements que SIGEP peut viser (source extérieure, renseignée par le gérant).
+    # Sert à l'analyste « Marché » du tableau de bord de la plateforme. 0 = part de marché non calculée.
+    etablissements-cibles: ${MARCHE_ETABLISSEMENTS_CIBLES:0}
   billing:
     # Devise de facturation (code ISO en minuscules). SOURCE UNIQUE : sert à l'affichage ET à
     # Stripe — les deux ne peuvent donc pas diverger.
@@ -234,6 +252,20 @@ app:
     # Webhook Mobile Money générique (C7). Secret partagé exigé (fail-closed si vide).
     # L'agrégateur (CinetPay/PayDunya/Wave/Orange) poste sur /api/paiement/mobile-money/webhook.
     webhook-secret: ${MOBILE_MONEY_WEBHOOK_SECRET:}
+  jeko:
+    # Encaissement Mobile Money via Jèko (page de paiement hébergée : Wave, Orange Money, MTN,
+    # Moov, Djamo). Prioritaire sur NovaSend quand les deux sont configurés.
+    # ATTENTION : Jèko n'a PAS de bac à sable — toute demande porte sur de l'argent réel.
+    enabled: ${JEKO_ENABLED:false}
+    base-url: ${JEKO_BASE_URL:https://api.jeko.africa}
+    # Jèko Business > Paramètres > API & Webhooks > Créer une clé API : la clé et son identifiant.
+    api-key: ${JEKO_API_KEY:}
+    api-key-id: ${JEKO_API_KEY_ID:}
+    # Identifiant du magasin qui reçoit les paiements (page Magasins, bouton copier).
+    store-id: ${JEKO_STORE_ID:}
+    # Secret du webhook, affiché UNE SEULE FOIS à sa création. Vide = webhook refusé ; le
+    # relanceur périodique confirme alors les paiements, un peu moins vite.
+    webhook-secret: ${JEKO_WEBHOOK_SECRET:}
   novasend:
     # Encaissement Mobile Money automatisé via NovaSend (WAVE / ORANGE / MOMO / MOOV).
     # Désactivé par défaut : activer avec NOVASEND_ENABLED=true + identifiants API.
@@ -288,7 +320,7 @@ app:
       # Plafond de clés en mémoire (garde anti-épuisement du limiteur lui-même).
       max-keys: ${RATE_LIMIT_MAX_KEYS:50000}
       # Rate-limit DISTRIBUÉ via Redis (partagé entre instances, survit aux redémarrages).
-      # Nécessite REDIS_URL. false = compteurs en mémoire locale (défaut, mono-instance).
+      # Nécessite SPRING_DATA_REDIS_URL (et non REDIS_URL). false = compteurs en mémoire locale.
       redis-enabled: ${RATE_LIMIT_REDIS_ENABLED:false}
       # Budget par UTILISATEUR authentifié (en plus du budget par IP) sur les endpoints coûteux
       # (génération de rapports, import Excel, analyse IA). Empêche un compte de saturer l'instance.
