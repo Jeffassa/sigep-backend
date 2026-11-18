@@ -40,6 +40,11 @@ spring:
     properties:
       hibernate:
         format_sql: false
+        # Les relations paresseuses d'une liste (enseignant, matière, classe, salle d'une séance)
+        # se chargent par lots au lieu d'une requête par ligne. En production, chaque requête
+        # coûte 60 à 80 ms de trajet jusqu'à la base : les alertes en faisaient 85, le tableau
+        # de bord 68.
+        default_batch_fetch_size: 100
         # Dialecte volontairement non spécifié : Hibernate le détecte tout seul
         # (sinon avertissement HHH90000025 "does not need to be specified explicitly").
   output:

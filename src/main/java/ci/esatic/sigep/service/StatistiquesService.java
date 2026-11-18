@@ -185,12 +185,23 @@ public class StatistiquesService {
 
     private List<Map<String, Object>> tendance(int nbSemaines) {
         LocalDate lundi = LocalDate.now().with(DayOfWeek.MONDAY);
+        LocalDate premierLundi = lundi.minusWeeks(nbSemaines - 1L);
+        // Une seule requête groupée par jour, ventilée ensuite par semaine : deux comptages par
+        // semaine coûtaient seize trajets jusqu'à la base, soit plus d'une seconde en production.
+        long[] prevues = new long[nbSemaines];
+        long[] emargees = new long[nbSemaines];
+        for (Object[] r : seanceRepository.activiteParJour(premierLundi, lundi.plusDays(6))) {
+            int semaine = (int) (java.time.temporal.ChronoUnit.DAYS.between(premierLundi, (LocalDate) r[0]) / 7);
+            if (semaine < 0 || semaine >= nbSemaines) continue;
+            prevues[semaine] += ((Number) r[1]).longValue();
+            emargees[semaine] += r[2] == null ? 0 : ((Number) r[2]).longValue();
+        }
         List<Map<String, Object>> out = new ArrayList<>();
         for (int i = nbSemaines - 1; i >= 0; i--) {
             LocalDate l = lundi.minusWeeks(i);
-            LocalDate dim = l.plusDays(6);
-            long s = seanceRepository.countAllByDateBetween(l, dim);
-            long e = seanceRepository.countAllEmargesByDateBetween(l, dim);
+            int k = nbSemaines - 1 - i;
+            long s = prevues[k];
+            long e = emargees[k];
             Map<String, Object> mm = new HashMap<>();
             mm.put("label", l.format(SEM_FMT));
             mm.put("taux", pct(e, s));
