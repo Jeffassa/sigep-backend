@@ -16,7 +16,7 @@
     <div th:if="${param.regenere}" class="feuille mb-5 flex items-center gap-2 text-[13px]" data-reveal
          style="background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.35)">
         <svg th:replace="~{admin/fragments :: coche}"></svg>
-        <span>Nouvelle clé générée. L'ancien lien d'écran ne fonctionne plus.</span>
+        <span>Nouvelle clé générée. Les écrans déjà installés sont désactivés : rouvrez-les depuis cette page.</span>
     </div>
     <div th:if="${param.indispo}" class="feuille mb-5 flex items-center gap-2 text-[13px]" data-reveal
          style="background:rgba(178,74,46,.12);border-color:rgba(178,74,46,.35)">
@@ -28,8 +28,8 @@
             <div>
                 <h2 class="titre-section">Ouvrir l'écran de la salle</h2>
                 <p class="text-muted text-[13px] mt-1">
-                    S'ouvre dans un nouvel onglet, prêt à projeter. Le QR se renouvelle automatiquement.
-                    La clé d'accès reste côté serveur : elle n'apparaît sur aucune page.
+                    Ouvrez-le une fois depuis l'ordinateur de la salle : cet appareil reste autorisé,
+                    même après votre déconnexion. Le QR se renouvelle automatiquement.
                 </p>
             </div>
         </div>
@@ -45,8 +45,8 @@
             <div>
                 <h2 class="titre-section">Sécurité de la clé d'écran</h2>
                 <p class="text-muted text-[13px] mt-1">
-                    Si un lien d'écran a pu fuiter (capture, partage), régénérez la clé : tout ancien
-                    lien cessera immédiatement de fonctionner. Il faudra rouvrir l'écran sur chaque salle.
+                    Si un écran a pu être copié, régénérez la clé : tous les écrans installés cessent
+                    immédiatement d'afficher le QR. Il faudra rouvrir l'écran dans chaque salle.
                 </p>
             </div>
         </div>

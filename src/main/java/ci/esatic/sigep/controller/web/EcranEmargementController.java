@@ -3,7 +3,11 @@ package ci.esatic.sigep.controller.web;
 import ci.esatic.sigep.entity.Etablissement;
 import ci.esatic.sigep.repository.EtablissementRepository;
 import ci.esatic.sigep.service.EtablissementCourantService;
+import ci.esatic.sigep.service.JetonEcranSalle;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,9 +22,9 @@ import java.nio.charset.StandardCharsets;
  * dans le HTML des pages (C4 durci, cf. audit).
  *
  * <ul>
- *   <li>{@code GET /admin/ecran-emargement/ouvrir} : résout la clé kiosque du tenant CÔTÉ SERVEUR
- *       et redirige (302) vers la page QR publique. La clé n'apparaît que dans l'onglet cible,
- *       jamais dans le DOM des pages admin. C'est la cible du bouton « Écran d'émargement ».</li>
+ *   <li>{@code GET /admin/ecran-emargement/ouvrir} : pose sur l'appareil un cookie signé à partir
+ *       de la clé kiosque, puis redirige (302) vers la page QR. La clé n'apparaît ni dans le DOM
+ *       des pages admin, ni dans l'adresse de l'écran. Cible du bouton « Écran d'émargement ».</li>
  *   <li>{@code GET /admin/ecran-emargement} : petite page de gestion (ouvrir + régénérer la clé).</li>
  *   <li>{@code POST /admin/ecran-emargement/regenerer-cle} : révoque la clé fuitée en en générant
  *       une nouvelle (rend la capacité réellement révocable depuis l'admin).</li>
@@ -34,6 +38,7 @@ public class EcranEmargementController {
 
     private final EtablissementCourantService etablissementCourantService;
     private final EtablissementRepository etablissementRepository;
+    private final JetonEcranSalle jetonEcranSalle;
 
     @GetMapping("/admin/ecran-emargement")
     public String page(Model model) {
@@ -42,15 +47,18 @@ public class EcranEmargementController {
         return "admin/ecran-emargement";
     }
 
-    /** Redirige vers la page QR du tenant, clé injectée côté serveur (jamais dans le DOM admin). */
+    /**
+     * Autorise cet appareil par un cookie, puis ouvre la page QR du tenant. La clé n'apparaît ni
+     * dans les pages admin, ni dans l'adresse de l'écran, ni dans son historique.
+     */
     @GetMapping("/admin/ecran-emargement/ouvrir")
-    public RedirectView ouvrir() {
+    public RedirectView ouvrir(HttpServletRequest request, HttpServletResponse response) {
         Etablissement e = assurerCle();
         if (e == null) {
             return new RedirectView("/admin/ecran-emargement?indispo=1");
         }
-        String url = "/api/qr/display?etab=" + enc(e.getSlug()) + "&key=" + enc(e.getKioskKey());
-        return new RedirectView(url);
+        response.addHeader(HttpHeaders.SET_COOKIE, jetonEcranSalle.cookie(e, request.isSecure()).toString());
+        return new RedirectView("/api/qr/display?etab=" + enc(e.getSlug()));
     }
 
     /** Régénère la clé kiosque (révocation d'une clé potentiellement fuitée). */

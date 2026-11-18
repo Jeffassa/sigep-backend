@@ -6,15 +6,19 @@ import ci.esatic.sigep.entity.Etablissement;
 import ci.esatic.sigep.repository.EtablissementRepository;
 import ci.esatic.sigep.security.ClientIpResolver;
 import ci.esatic.sigep.security.SecurityUtils;
+import ci.esatic.sigep.service.JetonEcranSalle;
 import ci.esatic.sigep.service.QrCodeService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 
@@ -27,6 +31,7 @@ public class QrController {
     private final EtablissementRepository etablissementRepository;
     private final ClientIpResolver clientIpResolver;
     private final ci.esatic.sigep.service.AbonnementService abonnementService;
+    private final JetonEcranSalle jetonEcranSalle;
 
     // SECURITE : l'affichage du QR est une PREUVE DE PRESENCE → ne doit jamais être public
     // sur internet. Au moins l'un des deux doit être défini, sinon l'affichage renvoie 403.
@@ -60,34 +65,46 @@ public class QrController {
     }
 
     // Page HTML du QR UNIVERSEL d'émargement, PROPRE À UN ÉTABLISSEMENT (C3 + C4).
-    // Accès par clé kiosque PAR TENANT (en base, révocable, aucune variable d'ENV ni redéploiement) :
-    //   /api/qr/display?etab=<slug>&key=<kioskKey>
+    // L'appareil est autorisé par un cookie posé à l'ouverture depuis l'administration :
+    //   /api/qr/display?etab=<slug>   (la clé n'apparaît pas dans l'adresse)
+    // Un ancien lien portant encore ?key= est accepté une fois : il pose le cookie, puis redirige
+    // vers l'adresse sans clé, pour que les écrans déjà installés continuent de fonctionner.
     // Le QR généré porte l'etablissementId : un enseignant ne peut émarger qu'avec le QR de SON établissement.
     @GetMapping(value = "/display", produces = MediaType.TEXT_HTML_VALUE)
     public ResponseEntity<String> displayUniversalQrPage(@RequestParam(required = false) String etab,
-                                                         @RequestParam(required = false) String key) {
-        Etablissement tenant = tenantKiosqueAutorise(etab, key);
-        if (tenant == null) {
-            return reponseRefus("Écran non autorisé. Paramètres requis : 'etab' (identifiant de l'établissement) "
-                    + "et 'key' (clé kiosque, disponible dans l'espace admin).");
+                                                         @RequestParam(required = false) String key,
+                                                         @CookieValue(name = JetonEcranSalle.COOKIE, required = false) String jeton,
+                                                         HttpServletRequest request) {
+        Etablissement tenant = tenantActif(etab);
+        if (tenant != null && key != null && !key.isBlank()) {
+            if (!SecurityUtils.constantTimeEquals(tenant.getKioskKey(), key)) return refusEcran();
+            return ResponseEntity.status(HttpStatus.SEE_OTHER)
+                    .header(HttpHeaders.SET_COOKIE, jetonEcranSalle.cookie(tenant, request.isSecure()).toString())
+                    .header(HttpHeaders.LOCATION, "/api/qr/display?etab="
+                            + URLEncoder.encode(tenant.getSlug(), StandardCharsets.UTF_8))
+                    .build();
         }
+        if (tenant == null || !jetonEcranSalle.valide(tenant, jeton)) return refusEcran();
         QrCodeResponse qr = qrCodeService.generateUniversalQr(tenant.getId());
-        return ResponseEntity.ok(buildUniversalQrPage(
-                tenant.getNomEffectif(), tenant.getCouleurPrincipale(),
+        return ResponseEntity.ok(buildUniversalQrPage(tenant.getNomEffectif(), tenant.getCouleurPrincipale(),
                 qr.getQrImageBase64(), qr.getExpiresInSeconds()));
     }
 
+    private ResponseEntity<String> refusEcran() {
+        return reponseRefus("Cet écran n'est pas autorisé. Ouvrez-le depuis l'espace d'administration, "
+                + "page Écran d'émargement.");
+    }
+
     /**
-     * Autorise l'affichage du QR d'un établissement via sa clé kiosque (C4).
-     * Renvoie l'établissement si le couple (slug, clé) est valide et le tenant actif, sinon null.
-     * La clé vit en base (kiosk_key) : régénérable/révocable depuis l'admin, sans redéploiement.
+     * L'établissement désigné, s'il existe, a une clé d'écran et n'est pas suspendu ; sinon null.
+     * La clé vit en base (kiosk_key) : régénérable depuis l'admin, sans redéploiement.
      */
-    private Etablissement tenantKiosqueAutorise(String slug, String key) {
-        if (slug == null || slug.isBlank() || key == null || key.isBlank()) return null;
+    private Etablissement tenantActif(String slug) {
+        if (slug == null || slug.isBlank()) return null;
         Etablissement e = etablissementRepository.findBySlug(slug.trim()).orElse(null);
         if (e == null || abonnementService.accesSuspendu(e)
                 || e.getKioskKey() == null || e.getKioskKey().isBlank()) return null;
-        return SecurityUtils.constantTimeEquals(e.getKioskKey(), key) ? e : null;
+        return e;
     }
 
     // Seuls alphanumériques, tirets et underscores autorisés — prévient XSS et path traversal
