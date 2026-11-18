@@ -3,7 +3,9 @@ package ci.esatic.sigep.config;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import io.lettuce.core.ClientOptions;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.cache.autoconfigure.RedisCacheManagerBuilderCustomizer;
 import org.springframework.boot.data.redis.autoconfigure.LettuceClientOptionsBuilderCustomizer;
@@ -11,16 +13,21 @@ import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CachingConfigurer;
 import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.cache.caffeine.CaffeineCache;
 import org.springframework.cache.caffeine.CaffeineCacheManager;
 import org.springframework.cache.interceptor.CacheErrorHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
+import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.serializer.JacksonJsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext.SerializationPair;
 
 import java.time.Duration;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -43,8 +50,8 @@ import java.util.concurrent.atomic.AtomicLong;
  *       n'est que le filet, pour les changements que personne ne déclenche.</li>
  *   <li><b>Une panne du cache n'est jamais une panne de l'application.</b> Une erreur de
  *       lecture vaut une absence, et la donnée est relue en base ({@link #errorHandler}).
- *       Redis injoignable : les commandes échouent tout de suite au lieu d'attendre leur délai
- *       ({@link #echecImmediatSiRedisEstCoupe}).</li>
+ *       Redis qui ne répond plus : le {@link DisjoncteurRedis} l'écarte dès le premier échec,
+ *       et chaque cache passe sur sa copie en mémoire locale ({@link CacheAvecSecours}).</li>
  * </ul>
  *
  * <p>Ce qui n'y est pas, exprès : l'analyse de la plateforme et la version du schéma sont
@@ -110,6 +117,51 @@ public class CacheConfig implements CachingConfigurer {
                     .build());
         }
         return gestionnaire;
+    }
+
+    /**
+     * Chaque cache Redis reçoit une copie en mémoire locale qui prend le relais quand Redis ne
+     * répond plus ({@link CacheAvecSecours}, {@link DisjoncteurRedis}).
+     */
+    @Bean
+    @ConditionalOnProperty(name = "spring.cache.type", havingValue = "redis")
+    static BeanPostProcessor cachesRedisAvecSecours(ObjectProvider<DisjoncteurRedis> disjoncteur) {
+        return new BeanPostProcessor() {
+            @Override
+            public Object postProcessAfterInitialization(Object bean, String nom) {
+                return bean instanceof RedisCacheManager redis ? new GestionnaireAvecSecours(redis, disjoncteur) : bean;
+            }
+        };
+    }
+
+    /** Le gestionnaire Redis, dont chaque cache est doublé de sa copie locale. */
+    static final class GestionnaireAvecSecours implements CacheManager {
+        private final CacheManager redis;
+        private final ObjectProvider<DisjoncteurRedis> disjoncteur;
+        private final Map<String, Cache> caches = new ConcurrentHashMap<>();
+
+        GestionnaireAvecSecours(CacheManager redis, ObjectProvider<DisjoncteurRedis> disjoncteur) {
+            this.redis = redis;
+            this.disjoncteur = disjoncteur;
+        }
+
+        @Override
+        public Cache getCache(String nom) {
+            Cache existant = caches.get(nom);
+            if (existant != null) return existant;
+            Cache cacheRedis = redis.getCache(nom);
+            if (cacheRedis == null) return null;            // cache non déclaré : refusé, comme sans Redis
+            Declaration d = CACHES.stream().filter(c -> c.nom().equals(nom)).findFirst().orElse(null);
+            if (d == null) return cacheRedis;
+            Cache secours = new CaffeineCache(nom, Caffeine.newBuilder()
+                    .expireAfterWrite(d.duree()).maximumSize(ENTREES_MAX).build());
+            return caches.computeIfAbsent(nom, n -> new CacheAvecSecours(cacheRedis, secours, disjoncteur.getObject()));
+        }
+
+        @Override
+        public Collection<String> getCacheNames() {
+            return redis.getCacheNames();
+        }
     }
 
     /**

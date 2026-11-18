@@ -214,7 +214,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
      *  Délègue à Redis (distribué) si activé, sinon compteur mémoire local (fenêtre glissante). */
     private boolean estBloque(String cle, int max) {
         if (redisEnabled && redisStore != null) {
-            return redisStore.overLimit(cle, max, WINDOW_MS);
+            Boolean bloque = redisStore.overLimit(cle, max, WINDOW_MS);
+            if (bloque != null) return bloque;
+            // Redis ne répond pas : on continue de compter, ici, en mémoire.
         }
         long now = System.currentTimeMillis();
         // Garde mémoire : au plafond, ne pas créer de nouvelle clé (fail-open borné).
