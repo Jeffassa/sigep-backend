@@ -39,6 +39,7 @@ public class AbonnementWebController {
     private final StripePaymentService stripePaymentService;
     private final PlanService planService;
     private final ci.esatic.sigep.service.MobileMoneyService mobileMoneyService;
+    private final MobileMoneyWebController mobileMoneyWeb;
 
     @GetMapping("/admin/abonnement")
     public String abonnement(@AuthenticationPrincipal User user,
@@ -73,6 +74,26 @@ public class AbonnementWebController {
         model.addAttribute("plansPayants", planService.plansPayants());
         model.addAttribute("paiementReconcilie", paiementReconcilie);
         return "admin/abonnement";
+    }
+
+    /**
+     * Le formulaire unique de la page : la carte part chez Stripe, tout autre moyen est un
+     * opérateur Mobile Money confié à Jèko. Chaque prestataire garde sa route et ses contrôles.
+     */
+    @PostMapping("/admin/abonnement/regler")
+    public String regler(@AuthenticationPrincipal User user,
+                         @RequestParam(defaultValue = "PRO") String plan,
+                         @RequestParam(defaultValue = "1") int mois,
+                         @RequestParam(required = false) String moyen,
+                         RedirectAttributes ra) {
+        if (moyen == null || moyen.isBlank()) {
+            ra.addFlashAttribute("erreurAbo", "Choisissez un moyen de paiement.");
+            return "redirect:/admin/abonnement";
+        }
+        if ("carte".equalsIgnoreCase(moyen.trim())) {
+            return payer(user, plan, mois, ra);
+        }
+        return mobileMoneyWeb.payerAvecJeko(user, plan, mois, moyen.trim(), ra);
     }
 
     /**

@@ -130,7 +130,7 @@ class PaiementJekoWebTest {
     void laPageDAbonnement_proposeJeko_enEnvoiClassique() throws Exception {
         mockMvc.perform(get("/admin/abonnement").with(user(admin)))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("action=\"/admin/abonnement/jeko\"")))
+                .andExpect(content().string(containsString("action=\"/admin/abonnement/regler\"")))
                 .andExpect(content().string(containsString("data-no-boost")))
                 .andExpect(content().string(containsString("Djamo")));
     }
@@ -194,6 +194,29 @@ class PaiementJekoWebTest {
                         .param("plan", "PRO").param("mois", "1").param("moyen", "bitcoin"))
                 .andExpect(redirectedUrl("/admin/abonnement"))
                 .andExpect(flash().attributeExists("erreurAbo"));
+        assertThat(DERNIERE_CREATION.get()).isNull();
+    }
+
+    @Test
+    void leFormulaireUnique_envoieLeMobileMoneyChezJeko() throws Exception {
+        mockMvc.perform(post("/admin/abonnement/regler").with(user(admin)).with(csrf())
+                        .param("plan", "PRO").param("mois", "3").param("moyen", "wave"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("https://pay.jeko.africa/pay_request/pr/pr-1"));
+        assertThat(DERNIERE_CREATION.get()).contains("\"amountCents\":" + (planService.prixMensuel(Plan.PRO) * 3 * 100));
+    }
+
+    @Test
+    void leFormulaireUnique_carteSansStripe_ouSansMoyen_restentSurLaPage() throws Exception {
+        DERNIERE_CREATION.set(null);
+        mockMvc.perform(post("/admin/abonnement/regler").with(user(admin)).with(csrf())
+                        .param("plan", "PRO").param("mois", "1").param("moyen", "carte"))
+                .andExpect(redirectedUrl("/admin/abonnement"))
+                .andExpect(flash().attributeExists("erreurAbo"));
+        mockMvc.perform(post("/admin/abonnement/regler").with(user(admin)).with(csrf())
+                        .param("plan", "PRO").param("mois", "1"))
+                .andExpect(redirectedUrl("/admin/abonnement"))
+                .andExpect(flash().attribute("erreurAbo", "Choisissez un moyen de paiement."));
         assertThat(DERNIERE_CREATION.get()).isNull();
     }
 }

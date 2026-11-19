@@ -69,118 +69,122 @@
         </div>
     </section>
 
-    <!-- Paiement en ligne (Stripe) — choix du plan -->
-    <section th:if="${stripeEnabled}" class="feuille mb-8" data-reveal>
+    <!-- Un seul parcours : le plan, la durée, puis le moyen de paiement (Mobile Money par Jèko ou
+         carte bancaire par Stripe). Le serveur oriente vers le bon prestataire. -->
+    <section th:if="${stripeEnabled or momoPasserelle == 'JEKO'}" class="feuille mb-6" data-reveal>
         <div class="mb-2">
-            <h2 class="titre-section">Choisir un plan et payer</h2>
+            <h2 class="titre-section">Payer l'abonnement</h2>
         </div>
-        <p class="text-[14px] text-muted mb-5">Paiement par carte bancaire. Votre plan est actif
-            dès la confirmation.</p>
+        <p class="text-[14px] text-muted mb-5">Choisissez votre plan, la durée et votre moyen de paiement.
+            L'abonnement est prolongé dès que le paiement est confirmé.</p>
 
-        <form th:action="@{/admin/abonnement/payer}" method="post" class="flex flex-wrap items-end gap-3">
-            <div>
-                <label class="etiquette">Plan</label>
-                <select name="plan" id="planSel" class="h-11 px-3 champ text-[14px]">
-                    <option value="PRO" th:attr="data-prix=${prixPro}"
-                            th:text="'Pro : ' + ${#numbers.formatInteger(prixPro,1,'WHITESPACE')} + ' ' + ${symbole} + ' / mois'">Pro</option>
-                    <option value="ENTERPRISE" th:if="${prixEnterprise > 0}" th:attr="data-prix=${prixEnterprise}"
-                            th:text="'Enterprise : ' + ${#numbers.formatInteger(prixEnterprise,1,'WHITESPACE')} + ' ' + ${symbole} + ' / mois'">Enterprise</option>
-                </select>
+        <!-- Envoi classique, sans la navigation instantanée : la réponse est un départ vers le prestataire. -->
+        <form th:action="@{/admin/abonnement/regler}" method="post" data-no-boost id="paiementAbo" class="space-y-6">
+            <fieldset>
+                <legend class="etiquette">1. Plan</legend>
+                <div class="choix-grille choix-2">
+                    <label class="offre-choix">
+                        <input type="radio" name="plan" value="PRO" th:attr="data-prix=${prixPro}"
+                               th:checked="${etablissementPlan != 'ENTERPRISE'}"/>
+                        <span class="offre-choix-nom">Pro</span>
+                        <span class="offre-choix-prix" th:text="${#numbers.formatInteger(prixPro,1,'WHITESPACE')} + ' ' + ${symbole} + ' / mois'">13 000 FCFA / mois</span>
+                    </label>
+                    <label class="offre-choix" th:if="${prixEnterprise > 0}">
+                        <input type="radio" name="plan" value="ENTERPRISE" th:attr="data-prix=${prixEnterprise}"
+                               th:checked="${etablissementPlan == 'ENTERPRISE'}"/>
+                        <span class="offre-choix-nom">Enterprise</span>
+                        <span class="offre-choix-prix" th:text="${#numbers.formatInteger(prixEnterprise,1,'WHITESPACE')} + ' ' + ${symbole} + ' / mois'">96 000 FCFA / mois</span>
+                    </label>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend class="etiquette">2. Durée</legend>
+                <div class="choix-grille choix-3">
+                    <label class="offre-choix offre-choix-court">
+                        <input type="radio" name="mois" value="1" checked/>
+                        <span class="offre-choix-nom">1 mois</span>
+                    </label>
+                    <label class="offre-choix offre-choix-court">
+                        <input type="radio" name="mois" value="3"/>
+                        <span class="offre-choix-nom">3 mois</span>
+                    </label>
+                    <label class="offre-choix offre-choix-court">
+                        <input type="radio" name="mois" value="12"/>
+                        <span class="offre-choix-nom">12 mois</span>
+                    </label>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend class="etiquette">3. Moyen de paiement</legend>
+                <div class="choix-grille choix-moyens">
+                    <th:block th:if="${momoPasserelle == 'JEKO'}">
+                        <label class="offre-choix offre-choix-court">
+                            <input type="radio" name="moyen" value="wave" checked/>
+                            <span class="offre-choix-nom">Wave</span><span class="offre-choix-detail">Mobile Money</span>
+                        </label>
+                        <label class="offre-choix offre-choix-court">
+                            <input type="radio" name="moyen" value="orange"/>
+                            <span class="offre-choix-nom">Orange Money</span><span class="offre-choix-detail">Mobile Money</span>
+                        </label>
+                        <label class="offre-choix offre-choix-court">
+                            <input type="radio" name="moyen" value="mtn"/>
+                            <span class="offre-choix-nom">MTN MoMo</span><span class="offre-choix-detail">Mobile Money</span>
+                        </label>
+                        <label class="offre-choix offre-choix-court">
+                            <input type="radio" name="moyen" value="moov"/>
+                            <span class="offre-choix-nom">Moov Money</span><span class="offre-choix-detail">Mobile Money</span>
+                        </label>
+                        <label class="offre-choix offre-choix-court">
+                            <input type="radio" name="moyen" value="djamo"/>
+                            <span class="offre-choix-nom">Djamo</span><span class="offre-choix-detail">Mobile Money</span>
+                        </label>
+                    </th:block>
+                    <label class="offre-choix offre-choix-court" th:if="${stripeEnabled}">
+                        <input type="radio" name="moyen" value="carte" th:checked="${momoPasserelle != 'JEKO'}"/>
+                        <span class="offre-choix-nom">Carte bancaire</span><span class="offre-choix-detail">Visa, Mastercard</span>
+                    </label>
+                </div>
+            </fieldset>
+
+            <div class="flex items-baseline justify-between gap-3 border-t pt-5" style="border-color: var(--c-line)">
+                <span class="etiquette mb-0">Total</span>
+                <strong class="releve-chiffre" id="aboTotal">—</strong>
             </div>
-            <div>
-                <label class="etiquette">Durée</label>
-                <select name="mois" id="moisSel" class="h-11 px-3 champ text-[14px]">
-                    <option value="1">1 mois</option>
-                    <option value="3">3 mois</option>
-                    <option value="12">12 mois</option>
-                </select>
-            </div>
-            <button type="submit" class="btn btn-ink inline-flex items-center gap-2 h-11 px-5 rounded-xl font-medium">
+
+            <button type="submit" class="btn btn-ink w-full inline-flex items-center justify-center gap-2 h-12 px-6 rounded-xl font-medium">
                 <span class="material-symbols-rounded text-[18px]">lock</span>
-                Payer <span id="totalPaye"></span>
+                Payer <span id="aboTotalBouton"></span>
             </button>
+            <p class="text-[12px] text-muted" id="aboPrestataire">Vous validez le paiement sur la page sécurisée de
+                Jèko, puis vous revenez ici. SIGEP ne voit ni votre numéro ni vos codes.</p>
         </form>
-        <p class="text-[12px] text-muted mt-3">
-            Le montant total est recalculé par le serveur avant le paiement.
-        </p>
 
         <script data-page-script th:inline="javascript">
             (function () {
                 var sym = /*[[${symbole}]]*/ 'FCFA';
-                var p = document.getElementById('planSel'),
-                    m = document.getElementById('moisSel'),
-                    t = document.getElementById('totalPaye');
-                if (!p || !m || !t) return;
+                var f = document.getElementById('paiementAbo');
+                if (!f) return;
+                var t = document.getElementById('aboTotal'), tb = document.getElementById('aboTotalBouton'),
+                    info = document.getElementById('aboPrestataire');
+                function coche(nom) { return f.querySelector('input[name="' + nom + '"]:checked'); }
                 function maj() {
-                    var prix = parseInt(p.options[p.selectedIndex].getAttribute('data-prix') || '0', 10);
-                    var total = prix * parseInt(m.value, 10);
-                    // Séparateur de milliers (insécable) : 96 000 FCFA se lit mieux que 96000.
-                    t.textContent = total.toLocaleString('fr-FR').replace(/ /g, ' ') + ' ' + sym;
+                    var p = coche('plan'), m = coche('mois'), moyen = coche('moyen');
+                    var prix = p ? parseInt(p.getAttribute('data-prix') || '0', 10) : 0;
+                    var total = (prix * (m ? parseInt(m.value, 10) : 1)).toLocaleString('fr-FR').replace(/\s/g, ' ') + ' ' + sym;
+                    t.textContent = total;
+                    tb.textContent = total;
+                    info.textContent = moyen && moyen.value === 'carte'
+                        ? 'Vous saisissez votre carte sur la page sécurisée de Stripe, puis vous revenez ici. SIGEP ne voit jamais votre numéro de carte.'
+                        : 'Vous validez le paiement sur la page sécurisée de Jèko, puis vous revenez ici. SIGEP ne voit ni votre numéro ni vos codes.';
                 }
-                p.addEventListener('change', maj);
-                m.addEventListener('change', maj);
-                maj();
-            })();
-        </script>
-    </section>
-
-    <!-- Mobile Money par JÈKO : l'administrateur paie sur la page sécurisée de Jèko, puis revient -->
-    <section th:if="${momoPasserelle == 'JEKO'}" class="feuille mb-6" data-reveal>
-        <div class="mb-2">
-            <h2 class="titre-section">Payer par Mobile Money</h2>
-        </div>
-        <p class="text-[14px] text-muted mb-5">Wave, Orange Money, MTN MoMo, Moov Money ou Djamo.
-            Vous validez le paiement sur la page sécurisée de Jèko, puis vous revenez ici : l'abonnement
-            est prolongé dès que Jèko confirme.</p>
-
-        <!-- Envoi classique, sans la navigation instantanée : la réponse est un départ vers Jèko. -->
-        <form th:action="@{/admin/abonnement/jeko}" method="post" data-no-boost class="flex flex-wrap items-end gap-3">
-            <div>
-                <label class="etiquette" for="jekoPlan">Plan</label>
-                <select name="plan" id="jekoPlan" class="h-11 px-3 champ text-[14px]">
-                    <option value="PRO" th:attr="data-prix=${prixPro}"
-                            th:text="'Pro : ' + ${#numbers.formatInteger(prixPro,1,'WHITESPACE')} + ' ' + ${symbole}">Pro</option>
-                    <option value="ENTERPRISE" th:if="${prixEnterprise > 0}" th:attr="data-prix=${prixEnterprise}"
-                            th:text="'Enterprise : ' + ${#numbers.formatInteger(prixEnterprise,1,'WHITESPACE')} + ' ' + ${symbole}">Enterprise</option>
-                </select>
-            </div>
-            <div>
-                <label class="etiquette" for="jekoMois">Durée</label>
-                <select name="mois" id="jekoMois" class="h-11 px-3 champ text-[14px]">
-                    <option value="1">1 mois</option>
-                    <option value="3">3 mois</option>
-                    <option value="12">12 mois</option>
-                </select>
-            </div>
-            <div>
-                <label class="etiquette" for="jekoMoyen">Payer avec</label>
-                <select name="moyen" id="jekoMoyen" class="h-11 px-3 champ text-[14px]">
-                    <option value="wave">Wave</option>
-                    <option value="orange">Orange Money</option>
-                    <option value="mtn">MTN MoMo</option>
-                    <option value="moov">Moov Money</option>
-                    <option value="djamo">Djamo</option>
-                </select>
-            </div>
-            <button type="submit" class="btn btn-ink inline-flex items-center gap-2 h-11 px-5 rounded-xl font-medium">
-                <span class="material-symbols-rounded text-[18px]">lock</span>
-                Payer <span id="jekoTotal">—</span>
-            </button>
-        </form>
-        <p class="text-[12px] text-muted mt-3">Paiement traité par Jèko. SIGEP ne voit ni votre numéro
-            ni vos codes : il reçoit seulement la confirmation du paiement.</p>
-
-        <script data-page-script th:inline="javascript">
-            (function () {
-                var sym = /*[[${symbole}]]*/ 'FCFA';
-                var p = document.getElementById('jekoPlan'), m = document.getElementById('jekoMois'),
-                    t = document.getElementById('jekoTotal');
-                if (!p || !m || !t) return;
-                function maj() {
-                    var prix = parseInt(p.options[p.selectedIndex].getAttribute('data-prix') || '0', 10);
-                    t.textContent = (prix * parseInt(m.value, 10)).toLocaleString('fr-FR').replace(/ /g, ' ') + ' ' + sym;
-                }
-                p.addEventListener('change', maj); m.addEventListener('change', maj);
+                f.addEventListener('change', maj);
+                // Un seul envoi : un double clic préparerait deux paiements.
+                f.addEventListener('submit', function () {
+                    var b = f.querySelector('button[type="submit"]');
+                    setTimeout(function () { b.disabled = true; }, 0);
+                });
                 maj();
             })();
         </script>

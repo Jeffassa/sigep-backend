@@ -214,3 +214,15 @@ html.dark .constats .constat-bon::before { background: #7fd8c4; }
 .annonce-maintenance { background: var(--c-accent); color: var(--c-accent-ink); }
 .annonce-fermer { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 999px; color: inherit; opacity: .7; }
 .annonce-fermer:hover { opacity: 1; background: rgba(0,0,0,.06); }
+
+/* Choix courts (durée, moyen de paiement) : même case que l'offre, en plus compact. */
+.offre-choix-court { padding: 12px 40px 12px 14px; }
+.offre-choix-court input { top: 14px; right: 14px; }
+.offre-choix-court .offre-choix-nom { font-size: 16px; line-height: 22px; }
+.choix-grille { display: grid; gap: 12px; grid-template-columns: 1fr; }
+.choix-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.choix-moyens { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (min-width: 640px) {
+    .choix-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .choix-moyens { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}

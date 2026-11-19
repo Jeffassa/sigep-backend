@@ -38,12 +38,12 @@
                 est déjà commencé. <a th:href="${enCours.paymentUrl}" class="underline">Le reprendre</a>, ou faire un autre choix ci-dessous.</p>
         </div>
 
-        <form th:action="@{/inscription/payer}" method="post" class="feuille space-y-5" id="paiement">
+        <form th:action="@{/inscription/payer}" method="post" class="feuille space-y-6" id="paiement">
             <input type="hidden" name="jeton" th:value="${jeton}"/>
 
             <fieldset>
                 <legend class="etiquette">Offre</legend>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div class="choix-grille choix-2">
                     <label class="offre-choix">
                         <input type="radio" name="plan" value="PRO" th:checked="${planChoisi == 'PRO'}" th:attr="data-prix=${prixPro}"/>
                         <span class="offre-choix-nom">Pro</span>
@@ -80,7 +80,7 @@
                 </div>
             </div>
 
-            <div class="flex items-baseline justify-between gap-3 border-t pt-4" style="border-color: var(--c-line)">
+            <div class="flex items-baseline justify-between gap-3 border-t pt-5" style="border-color: var(--c-line)">
                 <span class="etiquette mb-0">Total</span>
                 <strong class="releve-chiffre" id="total" th:attr="data-symbole=${symbole}">—</strong>
             </div>
