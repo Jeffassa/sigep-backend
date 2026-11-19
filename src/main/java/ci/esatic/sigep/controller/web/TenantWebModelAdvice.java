@@ -225,6 +225,15 @@ public class TenantWebModelAdvice {
         return abonnementService.estExpire(etablissementCourant());
     }
 
+    /**
+     * Accès suspendu (abonnement expiré ou établissement désactivé) : la console n'offre plus
+     * que l'abonnement et la déconnexion, les seules pages que le serveur laisse ouvertes.
+     */
+    @ModelAttribute("accesSuspendu")
+    public boolean accesSuspendu() {
+        return abonnementService.accesSuspendu(etablissementCourant());
+    }
+
     @ModelAttribute("abonnementRappel")
     public boolean abonnementRappel() {
         return abonnementService.doitRappeler(etablissementCourant());

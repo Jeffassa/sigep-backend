@@ -37,10 +37,12 @@ public class AdminOtpController {
     private final MailService mailService;
     private final ci.esatic.sigep.service.JournalSecuriteService journalSecurite;
     private final ci.esatic.sigep.security.ClientIpResolver resolveurIp;
+    private final ci.esatic.sigep.service.AbonnementService abonnementService;
+    private final ci.esatic.sigep.repository.EtablissementRepository etablissementRepository;
 
     @GetMapping("/admin-otp")
-    public String page(HttpSession session) {
-        if (Boolean.TRUE.equals(session.getAttribute(VERIFIED))) return redirectAfterOtp(session);
+    public String page(HttpSession session, Authentication authentication) {
+        if (Boolean.TRUE.equals(session.getAttribute(VERIFIED))) return redirectAfterOtp(session, authentication);
         return "admin/otp";
     }
 
@@ -65,7 +67,7 @@ public class AdminOtpController {
             session.removeAttribute(HASH);
             session.removeAttribute(EXPIRES);
             session.removeAttribute(ATTEMPTS);
-            return redirectAfterOtp(session);
+            return redirectAfterOtp(session, authentication);
         }
         session.setAttribute(ATTEMPTS, attempts + 1);
         journal(requete, ci.esatic.sigep.entity.TypeEvenement.OTP_ECHOUE,
@@ -92,7 +94,7 @@ public class AdminOtpController {
     @PostMapping("/admin-otp/renvoyer")
     public String renvoyer(HttpSession session, Authentication authentication, Model model) {
         if (authentication == null || !estAdmin(authentication)) return "redirect:/admin-login?error=true";
-        if (Boolean.TRUE.equals(session.getAttribute(VERIFIED))) return redirectAfterOtp(session);
+        if (Boolean.TRUE.equals(session.getAttribute(VERIFIED))) return redirectAfterOtp(session, authentication);
 
         Integer envois = (Integer) session.getAttribute(RESENDS);
         if (envois == null) envois = 0;
@@ -140,9 +142,21 @@ public class AdminOtpController {
                 !"ROLE_ENSEIGNANT".equals(a.getAuthority()));
     }
 
-    private String redirectAfterOtp(HttpSession session) {
+    /**
+     * Un établissement dont l'accès est suspendu (abonnement expiré, ou désactivé) arrive
+     * directement sur la page d'abonnement : il n'a rien d'autre à faire tant qu'il n'a pas payé.
+     */
+    private String redirectAfterOtp(HttpSession session, Authentication authentication) {
         String target = (String) session.getAttribute(TARGET);
-        return "redirect:" + (target == null ? "/admin/dashboard" : target);
+        if (target == null) target = "/admin/dashboard";
+        if (target.startsWith("/admin/") && authentication != null
+                && authentication.getPrincipal() instanceof ci.esatic.sigep.entity.User u
+                && u.getEtablissement() != null
+                && etablissementRepository.findById(u.getEtablissement().getId())
+                        .map(abonnementService::accesSuspendu).orElse(false)) {
+            target = "/admin/abonnement";
+        }
+        return "redirect:" + target;
     }
 
     private static String hash(String value) {

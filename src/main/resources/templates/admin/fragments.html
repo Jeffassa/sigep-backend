@@ -55,7 +55,7 @@
 <header th:fragment="topbar(active)"
         class="glass sticky top-0 z-50 border-x-0 border-t-0" style="border-radius:0;">
     <div class="barre-haute max-w-[1240px] mx-auto h-16 px-5 md:px-8 flex items-center justify-between">
-        <a th:href="@{/admin/dashboard}" class="marque-haute flex items-center gap-2.5 group">
+        <a th:href="${accesSuspendu} ? @{/admin/abonnement} : @{/admin/dashboard}" class="marque-haute flex items-center gap-2.5 group">
             <!-- Le logo déposé par l'établissement prend la place de celui de la plateforme.
                  C'est précisément ce que l'offre Pro vend sous « logo de l'établissement ». -->
             <img th:src="${etablissementLogo} ?: @{/images/logo_sigep.png}"
@@ -69,7 +69,7 @@
                 <span class="material-symbols-rounded text-[20px] icon-moon">dark_mode</span>
                 <span class="material-symbols-rounded text-[20px] icon-sun">light_mode</span>
             </button>
-            <button type="button" onclick="window.__openPalette&&window.__openPalette()"
+            <button th:unless="${accesSuspendu}" type="button" onclick="window.__openPalette&&window.__openPalette()"
                     class="btn glass flex items-center gap-2 px-3.5 h-10 rounded-full text-[13px] text-muted hover:text-ink">
                 <span class="material-symbols-rounded text-[18px]">search</span>
                 <span class="hidden sm:inline">Rechercher</span>
@@ -77,7 +77,7 @@
             </button>
             <!-- Écran d'émargement (QR de salle) : lien tout prêt, clé kiosque déjà injectée (C4).
                  S'ouvre dans un nouvel onglet → à projeter/afficher sur l'écran de la salle. -->
-            <a th:if="${qrDisplayUrl != null and (menu == null or menu.contains('messages'))}" th:href="${qrDisplayUrl}" target="_blank" rel="noopener"
+            <a th:if="${accesSuspendu != true and qrDisplayUrl != null and (menu == null or menu.contains('messages'))}" th:href="${qrDisplayUrl}" target="_blank" rel="noopener"
                title="Ouvrir l'écran d'émargement (QR de salle)"
                class="btn btn-gold flex items-center gap-2 px-3.5 h-10 rounded-full text-[13px] font-medium">
                 <span class="material-symbols-rounded text-[18px]">qr_code_2</span>
@@ -94,7 +94,8 @@
             <div class="flex items-center gap-2.5 pl-3 border-l border-line">
                 <div class="text-right hidden md:block leading-tight">
                     <p class="text-[13px] font-medium" th:text="${etablissementNom} ?: 'Administration'">Établissement</p>
-                    <a th:href="@{/admin/mon-compte}" class="font-mono text-[12px] text-muted hover:underline" th:text="${adminEmail} ?: 'Administration'">admin</a>
+                    <a th:unless="${accesSuspendu}" th:href="@{/admin/mon-compte}" class="font-mono text-[12px] text-muted hover:underline" th:text="${adminEmail} ?: 'Administration'">admin</a>
+                    <span th:if="${accesSuspendu}" class="font-mono text-[12px] text-muted" th:text="${adminEmail} ?: 'Administration'">admin</span>
                 </div>
                 <div class="pastille pastille-haute"
                      th:text="${etablissementNom != null and !#strings.isEmpty(etablissementNom)} ? ${#strings.toUpperCase(#strings.substring(etablissementNom,0,1))} : 'S'">A</div>
@@ -134,7 +135,13 @@
 
 <!-- ============================ ONGLETS DU CLASSEUR ============================ -->
 <nav th:fragment="dock(active)" class="dock glass-strong" id="dock" aria-label="Navigation principale">
-    <a th:href="@{/admin/dashboard}" class="dock-marque" th:text="${marque} ?: 'SIGEP'">SIGEP</a>
+    <a th:href="${accesSuspendu} ? @{/admin/abonnement} : @{/admin/dashboard}" class="dock-marque" th:text="${marque} ?: 'SIGEP'">SIGEP</a>
+    <!-- Accès suspendu : le serveur renverrait chaque onglet vers l'abonnement. On ne montre donc
+         que lui, au lieu d'onglets qui semblent ne pas répondre. -->
+    <a th:if="${accesSuspendu}" th:href="@{/admin/abonnement}" class="dock-item active" data-label="Abonnement">
+        <span class="material-symbols-rounded">card_membership</span><span class="dock-tip">Abonnement</span>
+    </a>
+    <th:block th:unless="${accesSuspendu}">
     <a th:href="@{/admin/dashboard}" class="dock-item" th:classappend="${active=='dashboard'}?'active':''" data-label="Tableau de bord">
         <span class="material-symbols-rounded">dashboard</span><span class="dock-tip">Tableau de bord</span>
     </a>
@@ -168,6 +175,7 @@
               class="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-1 bg-ink text-white text-[9px] font-mono rounded-full flex items-center justify-center"
               th:text="${alertesCount}">0</span>
     </a>
+    </th:block>
     <span class="w-px h-7 self-center bg-line mx-1"></span>
     <button type="button" onclick="window.__logout&amp;&amp;window.__logout()" class="dock-item" data-label="Déconnexion">
         <span class="material-symbols-rounded">logout</span><span class="dock-tip">Déconnexion</span>
@@ -188,6 +196,7 @@
             <span class="kbd">Échap</span>
         </div>
         <div id="paletteList" class="py-2 max-h-[52vh] overflow-y-auto">
+            <th:block th:unless="${accesSuspendu}">
             <a class="palette-item" th:href="@{/admin/dashboard}" data-key="tableau de bord dashboard accueil">
                 <span class="material-symbols-rounded">dashboard</span><span>Tableau de bord</span></a>
             <a th:if="${menu == null or menu.contains('enseignants')}" class="palette-item" th:href="@{/admin/enseignants}" data-key="enseignants professeurs liste">
@@ -208,9 +217,10 @@
                 <span class="material-symbols-rounded">monitoring</span><span>Statistiques</span></a>
             <a th:if="${menu == null or menu.contains('alertes')}" class="palette-item" th:href="@{/admin/alertes}" data-key="alertes emargements manquants rattrapages">
                 <span class="material-symbols-rounded">notifications</span><span>Alertes</span></a>
+            </th:block>
             <a class="palette-item" th:href="@{/admin/abonnement}" data-key="abonnement plan facturation renouveler paiement expiration">
                 <span class="material-symbols-rounded">card_membership</span><span>Abonnement</span></a>
-            <a th:if="${qrDisplayUrl != null and (menu == null or menu.contains('messages'))}" class="palette-item" th:href="@{/admin/ecran-emargement}"
+            <a th:if="${accesSuspendu != true and qrDisplayUrl != null and (menu == null or menu.contains('messages'))}" class="palette-item" th:href="@{/admin/ecran-emargement}"
                data-key="qr code ecran emargement salle affichage scanner presence kiosque cle regenerer">
                 <span class="material-symbols-rounded">qr_code_2</span><span>Écran d'émargement (QR de salle)</span></a>
             <button type="button" class="palette-item" onclick="window.__logout&amp;&amp;window.__logout()"

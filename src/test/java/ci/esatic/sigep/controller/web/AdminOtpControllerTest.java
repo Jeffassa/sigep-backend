@@ -39,7 +39,9 @@ class AdminOtpControllerTest {
         mailService = Mockito.mock(MailService.class);
         controller = new AdminOtpController(mailService,
                 Mockito.mock(ci.esatic.sigep.service.JournalSecuriteService.class),
-                Mockito.mock(ci.esatic.sigep.security.ClientIpResolver.class));
+                Mockito.mock(ci.esatic.sigep.security.ClientIpResolver.class),
+                Mockito.mock(ci.esatic.sigep.service.AbonnementService.class),
+                Mockito.mock(ci.esatic.sigep.repository.EtablissementRepository.class));
         session = new MockHttpSession();
     }
 
