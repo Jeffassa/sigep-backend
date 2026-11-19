@@ -3,6 +3,7 @@ package ci.esatic.sigep.controller.web;
 import ci.esatic.sigep.entity.Etablissement;
 import ci.esatic.sigep.entity.User;
 import ci.esatic.sigep.service.AbonnementService;
+import ci.esatic.sigep.service.AnnonceService;
 import ci.esatic.sigep.service.EtablissementCourantService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,6 +26,7 @@ public class TenantWebModelAdvice {
     private final AbonnementService abonnementService;
     private final EtablissementCourantService etablissementCourantService;
     private final ci.esatic.sigep.tenant.plan.PlanService planService;
+    private final AnnonceService annonceService;
 
     /** Tarifs et devise exposés à TOUTES les vues web (landing, abonnement, plateforme) :
      *  une seule source de vérité, donc aucun prix codé en dur qui pourrait diverger. */
@@ -193,6 +195,29 @@ public class TenantWebModelAdvice {
         if (profil == ci.esatic.sigep.entity.ERole.ROLE_DIRECTION) return true;
         return profil == ci.esatic.sigep.entity.ERole.ROLE_SCOLARITE
                 && requete.getRequestURI().startsWith("/admin/abonnement");
+    }
+
+    /** Cookie posé quand l'établissement masque une annonce : il contient son identifiant. */
+    static final String COOKIE_ANNONCE_LUE = "sigep_annonce_lue";
+
+    /**
+     * Annonce de la plateforme à afficher dans l'en-tête, sur les seules consoles d'établissement.
+     * Elle est servie depuis la mémoire ({@link AnnonceService}) : aucune requête par page.
+     */
+    @ModelAttribute("annonce")
+    public AnnonceService.AnnonceVisible annonce(jakarta.servlet.http.HttpServletRequest requete) {
+        if (requete == null || !requete.getRequestURI().startsWith("/admin/") || utilisateurCourant() == null) {
+            return null;
+        }
+        var annonce = annonceService.enCours().orElse(null);
+        if (annonce == null || !annonce.masquable() || requete.getCookies() == null) {
+            return annonce;
+        }
+        String id = String.valueOf(annonce.id());
+        for (var c : requete.getCookies()) {
+            if (COOKIE_ANNONCE_LUE.equals(c.getName()) && id.equals(c.getValue())) return null;
+        }
+        return annonce;
     }
 
     @ModelAttribute("abonnementExpire")

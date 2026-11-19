@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('SIGEP | Plateforme · Annonces')}"></head>
+<body>
+
+<div th:replace="~{plateforme/fragments :: topbar('annonces')}"></div>
+
+<main class="max-w-[1240px] mx-auto px-5 md:px-8 py-10 pb-24">
+
+    <section class="mb-8" data-reveal>
+        <p class="surtitre">Plateforme · Communication</p>
+        <h1 class="titre-page">Annonces</h1>
+        <p class="chapeau">Un bandeau affiché en haut de la console de chaque établissement : maintenance prévue, nouveauté, information.</p>
+    </section>
+
+    <div data-flash th:if="${ok}" class="note note-ok">
+        <svg th:replace="~{admin/fragments :: coche}"></svg><span th:text="${ok}"></span>
+    </div>
+    <div data-flash th:if="${erreur}" class="note note-alerte">
+        <span th:text="${erreur}"></span>
+    </div>
+
+    <section class="chapitre" data-reveal>
+        <div class="chapitre-tete">
+            <h2 class="titre-section">Publier une annonce</h2>
+        </div>
+        <form th:action="@{/plateforme/annonces}" method="post" class="feuille space-y-5">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div>
+                    <label for="type" class="etiquette">Type</label>
+                    <select id="type" name="type" class="w-full h-12 px-4 champ text-[15px]">
+                        <option th:each="t : ${types}" th:value="${t}" th:text="${t.libelle}">Type</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="debut" class="etiquette">Début <span class="text-muted">(vide = maintenant)</span></label>
+                    <input id="debut" name="debut" type="datetime-local" class="w-full h-12 px-4 champ text-[15px]"/>
+                </div>
+                <div>
+                    <label for="fin" class="etiquette">Fin <span class="text-muted">(vide = jusqu'à clôture)</span></label>
+                    <input id="fin" name="fin" type="datetime-local" class="w-full h-12 px-4 champ text-[15px]"/>
+                </div>
+            </div>
+            <div>
+                <label for="message" class="etiquette">Message</label>
+                <textarea id="message" name="message" required rows="3" th:maxlength="${longueurMax}"
+                          th:text="${brouillon}"
+                          placeholder="Ex. Maintenance le samedi 22 novembre de 22 h à 23 h : l'émargement sera indisponible."
+                          class="w-full px-4 py-3 champ text-[15px]"></textarea>
+                <p class="text-[11px] text-muted mt-1.5"><span th:text="${longueurMax}">300</span> caractères au plus. Une maintenance ne peut pas être masquée par les établissements ; les autres annonces, si.</p>
+            </div>
+            <button type="submit" class="btn btn-ink h-11 px-5 rounded-lg text-[14px] font-medium">Publier</button>
+        </form>
+    </section>
+
+    <section class="chapitre" data-reveal>
+        <div class="chapitre-tete">
+            <h2 class="titre-section">Annonces publiées</h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="registre" data-mobile-keep="2">
+                <thead><tr>
+                    <th>Message</th><th>Type</th><th>Période</th><th>État</th><th class="text-right"></th>
+                </tr></thead>
+                <tbody>
+                <tr th:each="a : ${annonces}" th:with="etat=${a.etat(maintenant)}">
+                    <td>
+                        <p th:text="${a.message}">Message</p>
+                        <p class="font-mono text-[11px] text-muted" th:text="${a.auteur}">auteur</p>
+                    </td>
+                    <td th:text="${a.type.libelle}">Type</td>
+                    <td class="font-mono text-[12px] whitespace-nowrap">
+                        <span th:text="${#temporals.format(a.debut,'dd/MM/yyyy HH:mm')}">--</span>
+                        → <span th:text="${a.fin != null} ? ${#temporals.format(a.fin,'dd/MM/yyyy HH:mm')} : 'clôture'">--</span>
+                    </td>
+                    <td><span class="etat" th:text="${etat}"
+                              th:classappend="${etat == 'Terminée'} ? ' etat-discret' : (${etat == 'En cours'} ? ' etat-attente' : '')">État</span></td>
+                    <td class="text-right">
+                        <form th:if="${etat != 'Terminée'}" th:action="@{/plateforme/annonces/{id}/clore(id=${a.id})}" method="post">
+                            <button type="submit" class="btn glass h-9 px-3 rounded-lg text-[12px] font-medium">Retirer</button>
+                        </form>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(annonces)}">
+                    <td colspan="5" class="vide">Aucune annonce publiée pour le moment.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+<div th:replace="~{plateforme/fragments :: dock('annonces')}"></div>
+<div th:replace="~{admin/fragments :: scripts}"></div>
+
+</body>
+</html>

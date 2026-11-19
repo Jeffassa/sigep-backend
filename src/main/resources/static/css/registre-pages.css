@@ -206,3 +206,11 @@ html.dark .constats .constat-bon::before { background: #7fd8c4; }
 .offre-choix-nom { font-stretch: 75%; font-weight: 800; font-size: 22px; line-height: 28px; }
 .offre-choix-prix { font: 14px 'DM Mono', monospace; }
 .offre-choix-detail { font-size: 13px; line-height: 18px; color: var(--c-muted); }
+
+/* Annonce de la plateforme, sous l'en-tête des consoles. Une maintenance se voit davantage. */
+.annonce-plateforme { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 8px 20px; border-top: 1px solid var(--c-line, rgba(0,0,0,.08)); font-size: 13px; line-height: 18px; background: var(--c-surface); }
+.annonce-plateforme strong { font-weight: 600; white-space: nowrap; }
+.annonce-plateforme .annonce-texte { min-width: 0; overflow-wrap: anywhere; }
+.annonce-maintenance { background: var(--c-accent); color: var(--c-accent-ink); }
+.annonce-fermer { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 999px; color: inherit; opacity: .7; }
+.annonce-fermer:hover { opacity: 1; background: rgba(0,0,0,.06); }

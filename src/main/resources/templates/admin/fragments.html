@@ -109,6 +109,19 @@
         <span th:if="${abonnementExpire}">Votre abonnement a expiré.&nbsp;<a th:href="@{/admin/abonnement}" class="underline">Renouveler</a></span>
         <span th:unless="${abonnementExpire}">Votre abonnement expire dans <strong th:text="${joursAvantExpiration}">0</strong>&nbsp;<span th:text="${joursAvantExpiration == 1} ? 'jour.' : 'jours.'">jours.</span>&nbsp;<a th:href="@{/admin/abonnement}" class="underline">Renouveler</a></span>
     </div>
+    <!-- Annonce de la plateforme. Masquée, elle le reste par un cookie lu côté serveur : le bandeau
+         ne réapparaît donc pas à la page suivante. Une maintenance ne se masque pas. -->
+    <div th:if="${annonce != null}" class="annonce-plateforme" role="status"
+         th:classappend="${annonce.masquable()} ? '' : ' annonce-maintenance'">
+        <span class="material-symbols-rounded text-[18px]" aria-hidden="true" th:text="${annonce.type().icone}">info</span>
+        <strong th:text="${annonce.type().libelle} + ' :'">Information :</strong>
+        <span class="annonce-texte" th:text="${annonce.message()}">Message</span>
+        <button th:if="${annonce.masquable()}" type="button" class="annonce-fermer" th:data-annonce="${annonce.id()}"
+                title="Masquer cette annonce" aria-label="Masquer cette annonce"
+                onclick="document.cookie='sigep_annonce_lue='+this.dataset.annonce+';path=/admin;max-age=2592000;samesite=lax'+(location.protocol==='https:'?';secure':'');this.parentNode.remove()">
+            <span class="material-symbols-rounded text-[18px]">close</span>
+        </button>
+    </div>
 </header>
 
 <!-- ======================= COCHE DE RÉUSSITE =======================
