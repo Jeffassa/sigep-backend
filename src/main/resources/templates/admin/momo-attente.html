@@ -69,7 +69,7 @@
 <div th:replace="~{admin/fragments :: palette}"></div>
 <div th:replace="~{admin/fragments :: scripts}"></div>
 
-<script data-page-script th:inline="javascript">
+<script th:nonce="${cspNonce}" data-page-script th:inline="javascript">
     (function () {
         var ref = /*[[${intent.reference}]]*/ '';
         var boite = document.getElementById('etat');

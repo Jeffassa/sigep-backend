@@ -88,7 +88,8 @@ class EcranSalleCookieTest {
         mockMvc.perform(get("/api/qr/display").param("etab", ecole.getSlug()).cookie(autorisation))
                 .andExpect(status().isOk())
                 .andExpect(header().string(HttpHeaders.CACHE_CONTROL, org.hamcrest.Matchers.containsString("no-store")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("data:image/png;base64,")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("data:image/png;base64,")))
+                .andExpect(content().string(org.hamcrest.Matchers.matchesPattern("(?s).*<script nonce=\"[A-Za-z0-9+/=]{20,}\">.*")));
     }
 
     @Test
@@ -120,25 +121,37 @@ class EcranSalleCookieTest {
     }
 
     @Test
-    void unAncienLienAvecCle_poseLeCookie_puisRetireLaCleDeLAdresse() throws Exception {
+    void laCleDansLAdresse_neSuffitPlus_etNePoseRien() throws Exception {
         MvcResult r = mockMvc.perform(get("/api/qr/display").param("etab", ecole.getSlug())
                         .param("key", ecole.getKioskKey()))
-                .andExpect(status().isSeeOther())
-                .andExpect(header().string(HttpHeaders.LOCATION, "/api/qr/display?etab=" + ecole.getSlug()))
-                .andReturn();
-        Cookie c = r.getResponse().getCookie(JetonEcranSalle.COOKIE);
-        assertThat(c).isNotNull();
-
-        mockMvc.perform(get("/api/qr/display").param("etab", ecole.getSlug())
-                        .cookie(new Cookie(c.getName(), c.getValue())))
-                .andExpect(status().isOk());
-    }
-
-    @Test
-    void uneMauvaiseCle_estRefusee_etNePoseRien() throws Exception {
-        MvcResult r = mockMvc.perform(get("/api/qr/display").param("etab", ecole.getSlug()).param("key", "mauvaise"))
                 .andExpect(status().isForbidden())
                 .andReturn();
         assertThat(r.getResponse().getCookie(JetonEcranSalle.COOKIE)).isNull();
+    }
+
+    @Test
+    void unReseauDeclare_limiteLEcranAuxLocaux() throws Exception {
+        Cookie autorisation = ouvrirDepuisLAdmin();
+        mockMvc.perform(post("/admin/ecran-emargement/reseau").with(user(admin)).with(csrf())
+                        .param("reseaux", "196.47.20.0/24\n41.202.10.7"))
+                .andExpect(redirectedUrl("/admin/ecran-emargement?reseau=1"));
+        assertThat(etablissementRepository.findById(ecole.getId()).orElseThrow().getEcranReseaux())
+                .isEqualTo("196.47.20.0/24, 41.202.10.7");
+
+        mockMvc.perform(get("/api/qr/display").param("etab", ecole.getSlug()).cookie(autorisation)
+                        .with(r -> { r.setRemoteAddr("196.47.20.9"); return r; }))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/qr/display").param("etab", ecole.getSlug()).cookie(autorisation)
+                        .with(r -> { r.setRemoteAddr("102.68.1.1"); return r; }))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void uneSaisieDeReseauIllisible_estRefusee() throws Exception {
+        mockMvc.perform(post("/admin/ecran-emargement/reseau").with(user(admin)).with(csrf())
+                        .param("reseaux", "exemple.com"))
+                .andExpect(redirectedUrl("/admin/ecran-emargement"))
+                .andExpect(flash().attribute("reseauInvalide", "exemple.com"));
+        assertThat(etablissementRepository.findById(ecole.getId()).orElseThrow().getEcranReseaux()).isNull();
     }
 }

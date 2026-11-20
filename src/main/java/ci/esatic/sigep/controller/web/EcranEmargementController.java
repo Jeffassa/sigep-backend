@@ -12,6 +12,10 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import ci.esatic.sigep.service.ReseauEcran;
+import java.util.List;
 import org.springframework.web.servlet.view.RedirectView;
 
 import java.net.URLEncoder;
@@ -39,12 +43,39 @@ public class EcranEmargementController {
     private final EtablissementCourantService etablissementCourantService;
     private final EtablissementRepository etablissementRepository;
     private final JetonEcranSalle jetonEcranSalle;
+    private final ci.esatic.sigep.security.ClientIpResolver clientIpResolver;
 
     @GetMapping("/admin/ecran-emargement")
-    public String page(Model model) {
+    public String page(Model model, HttpServletRequest request) {
         Etablissement e = etablissementCourantService.courant();
         model.addAttribute("ecranPret", e != null && e.getSlug() != null);
+        if (!model.containsAttribute("reseaux")) {
+            model.addAttribute("reseaux", e == null ? "" : e.getEcranReseaux());
+        }
+        model.addAttribute("ipActuelle", clientIpResolver.resolve(request));
         return "admin/ecran-emargement";
+    }
+
+    /** Réseau d'où l'écran peut s'afficher. Vide : partout où son cookie l'autorise. */
+    @PostMapping("/admin/ecran-emargement/reseau")
+    public RedirectView enregistrerReseau(@RequestParam(required = false) String reseaux,
+                                          RedirectAttributes flash) {
+        Etablissement e = etablissementCourantService.courant();
+        if (e == null) return new RedirectView("/admin/ecran-emargement?indispo=1");
+        String saisie = reseaux == null ? "" : reseaux.trim();
+        try {
+            List<String> entrees = ReseauEcran.lire(saisie);
+            String propre = String.join(", ", entrees);
+            if (propre.length() > ReseauEcran.LONGUEUR_MAX) throw new IllegalArgumentException("liste trop longue");
+            e.setEcranReseaux(propre.isEmpty() ? null : propre);
+            etablissementRepository.save(e);
+        } catch (IllegalArgumentException ex) {
+            flash.addFlashAttribute("reseauInvalide", ex.getMessage());
+            flash.addFlashAttribute("reseaux", saisie.length() > ReseauEcran.LONGUEUR_MAX
+                    ? saisie.substring(0, ReseauEcran.LONGUEUR_MAX) : saisie);
+            return new RedirectView("/admin/ecran-emargement");
+        }
+        return new RedirectView("/admin/ecran-emargement?reseau=1");
     }
 
     /**

@@ -144,6 +144,10 @@ public class Etablissement {
     @Column(name = "kiosk_key", length = 64)
     private String kioskKey;
 
+    /** Réseau d'où l'écran d'émargement peut s'afficher (IP ou plages CIDR). Vide : partout. */
+    @Column(name = "ecran_reseaux", length = 500)
+    private String ecranReseaux;
+
     /** Libellé affichable du tenant : nom personnalisé si défini, sinon nom légal. */
     @Transient
     public String getNomEffectif() {

@@ -195,7 +195,7 @@
 <div th:replace="~{admin/fragments :: palette}"></div>
 <div th:replace="~{admin/fragments :: scripts}"></div>
 
-<script data-page-script>
+<script th:nonce="${cspNonce}" data-page-script>
     (function () {
         const d = document.getElementById('dateDebut'), f = document.getElementById('dateFin'), fg = document.getElementById('formGenerer');
         if (d && f && fg) {

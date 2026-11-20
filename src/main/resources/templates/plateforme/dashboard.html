@@ -377,8 +377,8 @@
 <div th:replace="~{admin/fragments :: scripts}"></div>
 
 <!-- ECharts (data-viz de la vue d'ensemble) — chargé uniquement ici -->
-<script data-page-script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.6.0/echarts.min.js"></script>
-<script data-page-script th:inline="javascript">
+<script th:nonce="${cspNonce}" data-page-script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.6.0/echarts.min.js"></script>
+<script th:nonce="${cspNonce}" data-page-script th:inline="javascript">
 /*<![CDATA[*/
 (function () {
     if (!window.echarts) return;

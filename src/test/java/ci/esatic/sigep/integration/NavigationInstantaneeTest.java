@@ -122,7 +122,10 @@ class NavigationInstantaneeTest {
 
         // form.submit() appelé depuis un script ne déclenche PAS l'évènement « submit » :
         // la navigation instantanée ne pouvait donc pas l'intercepter, et la page se rechargeait.
-        assertThat(liste).contains("requestSubmit");
+        assertThat(liste).contains("data-autosubmit");
+        assertThat(new String(new org.springframework.core.io.ClassPathResource("static/js/actions.js")
+                .getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8))
+                .contains("requestSubmit");
     }
 
     @Test

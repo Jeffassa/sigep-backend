@@ -18,6 +18,15 @@
         <svg th:replace="~{admin/fragments :: coche}"></svg>
         <span>Nouvelle clé générée. Les écrans déjà installés sont désactivés : rouvrez-les depuis cette page.</span>
     </div>
+    <div th:if="${param.reseau}" class="feuille mb-5 flex items-center gap-2 text-[13px]" data-reveal
+         style="background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.35)">
+        <svg th:replace="~{admin/fragments :: coche}"></svg>
+        <span>Réseau de l'écran enregistré.</span>
+    </div>
+    <div th:if="${reseauInvalide}" class="feuille mb-5 flex items-center gap-2 text-[13px]" data-reveal
+         style="background:rgba(178,74,46,.12);border-color:rgba(178,74,46,.35)">
+        <span>Adresse illisible : <strong th:text="${reseauInvalide}"></strong>. Saisissez des adresses IP ou des plages comme 196.47.20.0/24.</span>
+    </div>
     <div th:if="${param.indispo}" class="feuille mb-5 flex items-center gap-2 text-[13px]" data-reveal
          style="background:rgba(178,74,46,.12);border-color:rgba(178,74,46,.35)">
         <span>Écran indisponible pour ce compte (aucun établissement rattaché).</span>
@@ -40,8 +49,30 @@
     </div>
 
     <div class="feuille mt-8 flex flex-col gap-4" data-reveal>
+        <div>
+            <h2 class="titre-section">Réseau de l'établissement</h2>
+            <p class="text-muted text-[13px] mt-1">
+                Facultatif. Indiquez l'adresse internet de l'établissement : l'écran ne s'affichera
+                que depuis ce réseau, même si un appareil autorisé quitte les locaux. Laissez vide
+                pour l'afficher partout.
+            </p>
+            <p class="text-[13px] mt-2">Adresse de votre connexion actuelle :
+                <code class="font-mono" th:text="${ipActuelle}">—</code></p>
+        </div>
+        <form th:action="@{/admin/ecran-emargement/reseau}" method="post" class="flex flex-col gap-3">
+            <label for="reseaux" class="text-[13px] font-medium">Adresses ou plages autorisées</label>
+            <textarea id="reseaux" name="reseaux" rows="3" maxlength="500" class="champ px-3 py-2 font-mono text-[13px] w-full"
+                      placeholder="196.47.20.9, 41.202.10.0/24" th:text="${reseaux}"></textarea>
+            <p class="text-muted text-[12px]">Si votre fournisseur change l'adresse de la box, l'écran
+                affichera un refus : mettez la liste à jour, ou videz-la.</p>
+            <button type="submit" class="btn glass h-11 px-5 rounded-2xl flex items-center gap-2 w-fit text-[13px] font-medium">
+                <span class="material-symbols-rounded text-[18px]">lan</span> Enregistrer le réseau
+            </button>
+        </form>
+    </div>
+
+    <div class="feuille mt-8 flex flex-col gap-4" data-reveal>
         <div class="flex items-start gap-3">
-            
             <div>
                 <h2 class="titre-section">Sécurité de la clé d'écran</h2>
                 <p class="text-muted text-[13px] mt-1">
@@ -51,7 +82,7 @@
             </div>
         </div>
         <form th:action="@{/admin/ecran-emargement/regenerer-cle}" method="post"
-              onsubmit="return confirm('Régénérer la clé ? Les écrans déjà ouverts devront être rechargés depuis ce panneau.');">
+              data-confirm="Régénérer la clé ? Les écrans déjà ouverts devront être rechargés depuis ce panneau.">
             <button type="submit" class="btn glass h-11 px-5 rounded-2xl flex items-center gap-2 w-fit text-[13px] font-medium">
                 <span class="material-symbols-rounded text-[18px]">autorenew</span> Régénérer la clé d'écran
             </button>

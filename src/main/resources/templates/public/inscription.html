@@ -98,7 +98,7 @@
 </main>
 </div>
 
-<script th:inline="none">
+<script th:nonce="${cspNonce}" th:inline="none">
 (function () {
     var form = document.getElementById('form');
     var btn = document.getElementById('submit');

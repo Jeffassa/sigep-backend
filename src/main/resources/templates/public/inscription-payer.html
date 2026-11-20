@@ -95,7 +95,7 @@
 </main>
 </div>
 
-<script th:inline="none">
+<script th:nonce="${cspNonce}" th:inline="none">
 (function () {
     var form = document.getElementById('paiement');
     if (!form) return;

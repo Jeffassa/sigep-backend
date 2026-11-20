@@ -51,7 +51,7 @@ public class TenantWebModelAdvice {
     }
 
     /** Email du propriétaire de la plateforme (identité SUPER ADMIN — détection). */
-    @Value("${app.platform.owner-email:assalendahjeanfrancois@gmail.com}")
+    @Value("${app.platform.owner-email:}")
     private String ownerEmail;
 
     /** Marque affichée dans l'interface (M10) — externalisée, plus de « SIGEP » en dur. */

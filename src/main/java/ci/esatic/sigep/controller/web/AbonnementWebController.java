@@ -8,7 +8,6 @@ import ci.esatic.sigep.service.StripeService;
 import ci.esatic.sigep.tenant.plan.PlanService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
@@ -31,9 +30,6 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @Slf4j
 @PreAuthorize("hasAnyRole('ADMIN','DIRECTION','SCOLARITE','COMPTABILITE')")
 public class AbonnementWebController {
-
-    @Value("${app.platform.owner-email:assalendahjeanfrancois@gmail.com}")
-    private String ownerEmail;
 
     private final StripeService stripeService;
     private final StripePaymentService stripePaymentService;
@@ -62,7 +58,6 @@ public class AbonnementWebController {
             }
         }
 
-        model.addAttribute("ownerEmail", ownerEmail);
         model.addAttribute("stripeEnabled", stripeService.isEnabled());
         model.addAttribute("momoEnabled", mobileMoneyService.isEnabled());
         model.addAttribute("momoPasserelle", mobileMoneyService.passerelle());

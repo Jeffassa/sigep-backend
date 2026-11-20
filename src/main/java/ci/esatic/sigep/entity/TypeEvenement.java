@@ -49,7 +49,13 @@ public enum TypeEvenement {
      * <p>Consignée au même titre que les incidents : savoir QUI a coupé les sessions d'un
      * établissement, et quand, fait partie de ce qu'on veut relire après coup.
      */
-    REMEDIATION("Action corrective");
+    REMEDIATION("Action corrective"),
+
+    /**
+     * Jeton de session déjà remplacé, présenté de nouveau : il en existe une copie. Toutes les
+     * sessions du compte ont été fermées.
+     */
+    SESSION_COPIEE("Session copiée");
 
     private final String libelle;
 

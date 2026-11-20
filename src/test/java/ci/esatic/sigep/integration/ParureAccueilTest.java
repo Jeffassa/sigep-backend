@@ -43,8 +43,8 @@ class ParureAccueilTest {
                 .doesNotContain("unpkg.com");
         // GSAP est chargé en différé, depuis le site.
         assertThat(page)
-                .contains("<script defer src=\"/js/vendor/gsap.min.js\"></script>")
-                .contains("<script defer src=\"/js/vendor/ScrollTrigger.min.js\"></script>");
+                .containsPattern("<script nonce=\"[^\"]+\" defer src=\"/js/vendor/gsap.min.js\"></script>")
+                .containsPattern("<script nonce=\"[^\"]+\" defer src=\"/js/vendor/ScrollTrigger.min.js\"></script>");
         // Three.js (le plus lourd) n'est jamais demandé par la page elle-même : sur téléphone,
         // il n'est pas téléchargé du tout.
         assertThat(page).doesNotContain("three.min.js");

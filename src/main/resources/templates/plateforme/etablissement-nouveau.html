@@ -88,7 +88,7 @@
 <div th:replace="~{plateforme/fragments :: dock('dashboard')}"></div>
 <div th:replace="~{admin/fragments :: scripts}"></div>
 
-<script data-page-script>
+<script th:nonce="${cspNonce}" data-page-script>
 (function () {
     var btn = document.getElementById('togglePwd');
     var inp = document.getElementById('adminPassword');

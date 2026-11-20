@@ -139,7 +139,7 @@
                         <td>
                             <div class="flex items-center gap-2">
                                 <form th:action="@{'/plateforme/securite/etablissements/' + ${b.id} + '/sessions'}" method="post"
-                                      onsubmit="return confirm('Couper toutes les sessions de cet etablissement ? Chacun devra se reconnecter.')">
+                                      data-confirm="Couper toutes les sessions de cet etablissement ? Chacun devra se reconnecter.">
                                     <button type="submit" title="Couper toutes les sessions ouvertes"
                                             class="bouton-ligne">
                                         <span class="material-symbols-rounded text-[16px]">logout</span>
@@ -147,7 +147,7 @@
                                     </button>
                                 </form>
                                 <form th:action="@{'/plateforme/securite/etablissements/' + ${b.id} + '/cle-kiosque'}" method="post"
-                                      onsubmit="return confirm('Renouveler la cle de l ecran de salle ? Les ecrans ouverts devront etre relances.')">
+                                      data-confirm="Renouveler la cle de l ecran de salle ? Les ecrans ouverts devront etre relances.">
                                     <button type="submit" title="Renouveler la clé de l'écran de salle"
                                             class="bouton-ligne">
                                         <span class="material-symbols-rounded text-[16px]">key</span>

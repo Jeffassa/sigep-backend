@@ -111,7 +111,7 @@
                                 </button>
                             </form>
                             <form th:action="@{'/admin/seances/' + ${sv.id} + '/refuser'}" method="post"
-                                  onsubmit="return confirm('Écarter cette séance ?');">
+                                  data-confirm="Écarter cette séance ?">
                                 <button type="submit" class="bouton-ligne">
                                     <span class="material-symbols-rounded text-[16px]">close</span> Écarter
                                 </button>
@@ -177,7 +177,7 @@
                             </form>
                             <!-- Refuser : séance à régulariser (émargement supprimé) -->
                             <form th:action="@{'/admin/emargements/hors-ligne/' + ${eh.id} + '/refuser'}" method="post"
-                                  onsubmit="return confirm('Refuser cet émargement hors ligne ? La séance redeviendra à régulariser.');">
+                                  data-confirm="Refuser cet émargement hors ligne ? La séance redeviendra à régulariser.">
                                 <button type="submit"
                                         class="bouton-ligne">
                                     <span class="material-symbols-rounded text-[16px]">close</span> Refuser
@@ -233,7 +233,7 @@
                             </form>
                             <!-- Refuser : statut REFUSE + email auto à l'enseignant -->
                             <form th:action="@{'/admin/rattrapages/' + ${d.id} + '/refuser'}" method="post"
-                                  onsubmit="return confirm('Refuser cette demande de rattrapage ? L\'enseignant en sera informé par e-mail.');">
+                                  data-confirm="Refuser cette demande de rattrapage ? L'enseignant en sera informé par e-mail.">
                                 <button type="submit"
                                         class="bouton-ligne">
                                     <span class="material-symbols-rounded text-[16px]">close</span> Refuser

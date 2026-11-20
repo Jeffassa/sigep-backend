@@ -53,7 +53,7 @@
         <label class="flex items-center gap-2 px-3 text-[13px] text-muted cursor-pointer select-none whitespace-nowrap"
                title="Les enseignants archivés sont masqués par défaut">
             <input type="checkbox" name="archives" value="true" th:checked="${archives}"
-                   onchange="if(this.form.requestSubmit)this.form.requestSubmit();else this.form.submit()"
+                   data-autosubmit
                    class="w-4 h-4 rounded border-line accent-current cursor-pointer"/>
             Voir les archivés
         </label>
@@ -129,7 +129,7 @@
                             </form>
                             <form th:if="${ens.user != null}"
                                   th:action="@{'/admin/enseignants/' + ${ens.id} + '/renvoyer-acces'}" method="post"
-                                  onsubmit="return confirm('Générer un nouveau mot de passe provisoire et l\'envoyer par e-mail ? L\'ancien cessera de fonctionner.')">
+                                  data-confirm="Générer un nouveau mot de passe provisoire et l'envoyer par e-mail ? L'ancien cessera de fonctionner.">
                                 <input type="hidden" name="search" th:value="${search}"/>
                                 <input type="hidden" name="departement" th:value="${departement}"/>
                                 <input type="hidden" name="archives" th:value="${archives}"/>
@@ -139,7 +139,7 @@
                                 </button>
                             </form>
                             <form th:action="@{'/admin/enseignants/' + ${ens.id} + '/supprimer'}" method="post"
-                                  onsubmit="return confirm('Supprimer cet enseignant ?')">
+                                  data-confirm="Supprimer cet enseignant ?">
                                 <input type="hidden" name="search" th:value="${search}"/>
                                 <input type="hidden" name="departement" th:value="${departement}"/>
                                 <input type="hidden" name="archives" th:value="${archives}"/>

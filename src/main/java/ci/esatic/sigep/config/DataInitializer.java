@@ -48,7 +48,7 @@ public class DataInitializer implements CommandLineRunner {
     @Value("${app.admin.password:}")
     private String adminPassword;
 
-    @Value("${app.platform.admin-email:${app.platform.owner-email:assalendahjeanfrancois@gmail.com}}")
+    @Value("${app.platform.admin-email:${app.platform.owner-email:}}")
     private String platformAdminEmail;
 
     @Value("${app.platform.admin-password:}")

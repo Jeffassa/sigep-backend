@@ -21,10 +21,13 @@
     <meta property="og:title" th:content="${pageTitle}"/>
     <meta property="og:site_name" th:content="${marque} ?: 'SIGEP'"/>
     <!-- Analytics sans cookie (Plausible) — activé seulement si un domaine est configuré -->
-    <script th:if="${plausibleDomain}" defer th:data-domain="${plausibleDomain}"
+    <script th:nonce="${cspNonce}" th:if="${plausibleDomain}" defer th:data-domain="${plausibleDomain}"
             src="https://plausible.io/js/script.js"></script>
+    <!-- Actions déclarées par attributs data-* (confirmations, thème, palette, déconnexion) :
+         la politique de sécurité des scripts interdit les gestionnaires en ligne. -->
+    <script th:nonce="${cspNonce}" defer th:src="@{/js/actions.js}" src="/js/actions.js"></script>
     <!-- Thème : applique le mode (clair/sombre) AVANT le rendu pour éviter le flash -->
-    <script>
+    <script th:nonce="${cspNonce}">
         (function () {
             try {
                 // Le papier par défaut : la nuit reste un choix explicite de la personne.
@@ -64,12 +67,12 @@
         </a>
 
         <div class="flex items-center gap-3">
-            <button type="button" onclick="window.__toggleTheme&&window.__toggleTheme()" title="Mode clair / sombre"
+            <button type="button" data-action="theme" title="Mode clair / sombre"
                     class="theme-toggle btn glass flex items-center justify-center w-10 h-10 rounded-full text-muted hover:text-ink">
                 <span class="material-symbols-rounded text-[20px] icon-moon">dark_mode</span>
                 <span class="material-symbols-rounded text-[20px] icon-sun">light_mode</span>
             </button>
-            <button th:unless="${accesSuspendu}" type="button" onclick="window.__openPalette&&window.__openPalette()"
+            <button th:unless="${accesSuspendu}" type="button" data-action="palette"
                     class="btn glass flex items-center gap-2 px-3.5 h-10 rounded-full text-[13px] text-muted hover:text-ink">
                 <span class="material-symbols-rounded text-[18px]">search</span>
                 <span class="hidden sm:inline">Rechercher</span>
@@ -119,7 +122,7 @@
         <span class="annonce-texte" th:text="${annonce.message()}">Message</span>
         <button th:if="${annonce.masquable()}" type="button" class="annonce-fermer" th:data-annonce="${annonce.id()}"
                 title="Masquer cette annonce" aria-label="Masquer cette annonce"
-                onclick="document.cookie='sigep_annonce_lue='+this.dataset.annonce+';path=/admin;max-age=2592000;samesite=lax'+(location.protocol==='https:'?';secure':'');this.parentNode.remove()">
+                data-action="annonce-lue">
             <span class="material-symbols-rounded text-[18px]">close</span>
         </button>
     </div>
@@ -177,7 +180,7 @@
     </a>
     </th:block>
     <span class="w-px h-7 self-center bg-line mx-1"></span>
-    <button type="button" onclick="window.__logout&amp;&amp;window.__logout()" class="dock-item" data-label="Déconnexion">
+    <button type="button" data-action="deconnexion" class="dock-item" data-label="Déconnexion">
         <span class="material-symbols-rounded">logout</span><span class="dock-tip">Déconnexion</span>
     </button>
     <!-- data-no-boost : la déconnexion doit rester une VRAIE navigation. Elle aboutit à
@@ -188,7 +191,7 @@
 </nav>
 
 <!-- ============================ PALETTE ⌘K ============================ -->
-<div th:fragment="palette" class="palette-overlay" id="paletteOverlay" onclick="if(event.target===this)window.__closePalette()">
+<div th:fragment="palette" class="palette-overlay" id="paletteOverlay" data-action="fermer-palette-fond">
     <div class="palette glass-strong" role="dialog" aria-label="Palette de commandes">
         <div class="flex items-center gap-2 px-4 border-b border-line">
             <span class="material-symbols-rounded text-muted">search</span>
@@ -223,7 +226,7 @@
             <a th:if="${accesSuspendu != true and qrDisplayUrl != null and (menu == null or menu.contains('messages'))}" class="palette-item" th:href="@{/admin/ecran-emargement}"
                data-key="qr code ecran emargement salle affichage scanner presence kiosque cle regenerer">
                 <span class="material-symbols-rounded">qr_code_2</span><span>Écran d'émargement (QR de salle)</span></a>
-            <button type="button" class="palette-item" onclick="window.__logout&amp;&amp;window.__logout()"
+            <button type="button" class="palette-item" data-action="deconnexion"
                     data-key="deconnexion logout sortir quitter"
                     style="width:calc(100% - 16px);border:0;background:transparent;font:inherit;cursor:pointer;text-align:left;">
                 <span class="material-symbols-rounded">logout</span><span>Déconnexion</span></button>
@@ -237,7 +240,7 @@
      JavaScript pur, sans aucune expression Thymeleaf. Sans lui, un double crochet ouvrant
      (tableau de tableaux) serait lu comme une expression a evaluer et ferait echouer le
      rendu de TOUTES les pages d'administration. C'est deja arrive. -->
-<script th:inline="none">
+<script th:nonce="${cspNonce}" th:inline="none">
 (function () {
     /* ----- Démontage des scripts de page -----------------------------------------------
        Les pages sont remplacées sans rechargement : ce que leur script met en route leur
@@ -739,7 +742,7 @@
 
         /* --- Interception des formulaires --- */
         document.addEventListener('submit', function (e) {
-            // Un onsubmit="return confirm(...)" refusé a déjà annulé l'évènement : on n'insiste pas.
+            // Une confirmation (data-confirm) refusée a déjà annulé l'évènement : on n'insiste pas.
             if (e.defaultPrevented) return;
             var form = e.target;
             if (!form || form.hasAttribute('data-no-boost')) return;
@@ -821,7 +824,7 @@
         @media (max-width: 560px) { .sigep-cookie__btns { width: 100%; } .sc-btn { flex: 1; } }
         @media (prefers-reduced-motion: reduce) { .sigep-cookie__card { animation: none; } }
     </style>
-    <script>
+    <script th:nonce="${cspNonce}">
         (function () {
             var KEY = 'sigep-cookie-consent';
             var box = document.getElementById('sigepCookie');

@@ -105,7 +105,7 @@ docker compose up -d
 <table><tr><th>Contrôle</th><th>Résultat attendu</th></tr><tr><td><code>GET http://localhost:8080/actuator/health</code></td><td>Réponse JSON avec état <code>UP</code>.</td></tr><tr><td><code>http://localhost:8080/admin-login</code></td><td>Page de connexion administrateur.</td></tr><tr><td><code>http://localhost:8080/swagger-ui.html</code></td><td>Swagger accessible après authentification admin, si activé.</td></tr></table>
 <h3>2.2 Variables utiles</h3>
 <p>En dev, utiliser les valeurs prévues par <code>application-dev.yml</code>. En prod ou préproduction, définir explicitement :</p>
-<ul><li><code>SPRING_PROFILES_ACTIVE=prod</code></li><li><code>DB_URL</code>, <code>DB_USERNAME</code>, <code>DB_PASSWORD</code></li><li><code>JWT_SECRET</code> et <code>JWT_QR_SECRET</code>, base64, au moins 32 octets, différentes</li><li><code>APP_SECURITY_REQUIRE_HTTPS=true</code></li><li><code>QR_DISPLAY_KEY</code> ou <code>QR_DISPLAY_ALLOWED_IPS</code></li>
+<ul><li><code>SPRING_PROFILES_ACTIVE=prod</code></li><li><code>DB_URL</code>, <code>DB_USERNAME</code>, <code>DB_PASSWORD</code></li><li><code>JWT_SECRET</code> et <code>JWT_QR_SECRET</code>, base64, au moins 32 octets, différentes</li><li><code>APP_SECURITY_REQUIRE_HTTPS=true</code></li>
 <li><code>APP_SECURITY_ADMIN_OTP_ENABLED</code> — second facteur administrateur, actif par défaut. <code>false</code> le coupe sans redéploiement.</li>
 <li><code>APP_SECURITY_JOURNAL_RETENTION_JOURS</code> — conservation du journal de sécurité, 60 jours par défaut.</li></ul>
 <h3>2.3 Application mobile</h3>

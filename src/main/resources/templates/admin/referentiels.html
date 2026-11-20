@@ -78,7 +78,7 @@
                         <p class="text-[12px] text-muted" th:text="${c.adresse} ?: '—'">Adresse</p>
                     </div>
                     <form th:action="@{'/admin/campus/' + ${c.id} + '/supprimer'}" method="post"
-                          onsubmit="return confirm('Supprimer cet établissement ?')">
+                          data-confirm="Supprimer cet établissement ?">
                         <button type="submit" class="bouton-ligne" title="Supprimer">
                             <span class="material-symbols-rounded text-[16px]">delete</span>
                         </button>
@@ -116,7 +116,7 @@
                     <button type="submit" class="btn btn-ink h-11 px-5 rounded-xl font-medium whitespace-nowrap">Envoyer</button>
                 </form>
                 <form th:if="${etablissementLogo != null}" th:action="@{/admin/etablissement/logo/retirer}" method="post"
-                      onsubmit="return confirm('Retirer le logo ? Le logo SIGEP reprendra sa place.')">
+                      data-confirm="Retirer le logo ? Le logo SIGEP reprendra sa place.">
                     <button type="submit" class="btn glass h-11 px-5 rounded-xl text-[14px] whitespace-nowrap">Retirer</button>
                 </form>
             </div>
@@ -136,7 +136,7 @@
                 <div th:each="x : ${matieres}" class="ligne-registre">
                     <span class="text-[13px] flex-grow truncate" th:text="${x.libelle}">Libellé</span>
                     <form th:action="@{'/admin/matieres/' + ${x.id} + '/supprimer'}" method="post"
-                          onsubmit="return confirm('Supprimer cette matière ?');">
+                          data-confirm="Supprimer cette matière ?">
                         <button type="submit" class="bouton-ligne">
                             <span class="material-symbols-rounded text-[15px]">delete</span></button>
                     </form>
@@ -164,7 +164,7 @@
                 <div th:each="x : ${classes}" class="ligne-registre">
                     <span class="text-[13px] flex-grow truncate" th:text="${x.libelle}">Libellé</span>
                     <form th:action="@{'/admin/classes/' + ${x.id} + '/supprimer'}" method="post"
-                          onsubmit="return confirm('Supprimer cette classe ?');">
+                          data-confirm="Supprimer cette classe ?">
                         <button type="submit" class="bouton-ligne">
                             <span class="material-symbols-rounded text-[15px]">delete</span></button>
                     </form>
@@ -199,7 +199,7 @@
                     <span class="font-mono text-[12px] font-bold" th:text="${x.libelle}">A101</span>
                     <span class="text-[13px] text-muted flex-grow truncate" th:text="${x.batiment}">Bât.</span>
                     <form th:action="@{'/admin/salles/' + ${x.id} + '/supprimer'}" method="post"
-                          onsubmit="return confirm('Supprimer cette salle ?');">
+                          data-confirm="Supprimer cette salle ?">
                         <button type="submit" class="bouton-ligne">
                             <span class="material-symbols-rounded text-[15px]">delete</span></button>
                     </form>

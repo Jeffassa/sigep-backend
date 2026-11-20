@@ -165,7 +165,7 @@
         <p class="text-[13px] text-muted mb-4">Supprime définitivement l'établissement et tout ce qu'il contient :
             comptes, enseignants, séances, émargements, rapports. Cette action est irréversible.</p>
         <form th:action="@{/plateforme/etablissements/supprimer}" method="post"
-              onsubmit="return confirm('Supprimer définitivement cet établissement et tout ce qu il contient : comptes, enseignants, séances, émargements, paiements, rapports ? Cette action est irréversible.');">
+              data-confirm="Supprimer définitivement cet établissement et tout ce qu il contient : comptes, enseignants, séances, émargements, paiements, rapports ? Cette action est irréversible.">
             <input type="hidden" name="slug" th:value="${e.slug}"/>
             <button type="submit" class="btn btn-danger h-11 px-5 text-[14px] font-medium inline-flex items-center gap-1.5">
                 <span class="material-symbols-rounded text-[18px]">delete_forever</span>Supprimer l'établissement

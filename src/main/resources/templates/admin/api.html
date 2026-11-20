@@ -74,7 +74,7 @@
                     </td>
                     <td class="text-right">
                         <form th:if="${c.estActive()}" th:action="@{'/admin/api/cles/' + ${c.id} + '/revoquer'}" method="post"
-                              onsubmit="return confirm('Révoquer cette clé ? Les appels qui l\'utilisent cesseront aussitôt de fonctionner.')">
+                              data-confirm="Révoquer cette clé ? Les appels qui l'utilisent cesseront aussitôt de fonctionner.">
                             <button type="submit" class="btn glass h-9 px-4 rounded-lg text-[13px]">Révoquer</button>
                         </form>
                     </td>

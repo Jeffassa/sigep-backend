@@ -161,7 +161,7 @@
                 Jèko, puis vous revenez ici. SIGEP ne voit ni votre numéro ni vos codes.</p>
         </form>
 
-        <script data-page-script th:inline="javascript">
+        <script th:nonce="${cspNonce}" data-page-script th:inline="javascript">
             (function () {
                 var sym = /*[[${symbole}]]*/ 'FCFA';
                 var f = document.getElementById('paiementAbo');
@@ -245,7 +245,7 @@
             Orange Money : obtenez d'abord votre code OTP en composant <strong class="text-ink">#144*82#</strong>.
         </p>
 
-        <script data-page-script th:inline="javascript">
+        <script th:nonce="${cspNonce}" data-page-script th:inline="javascript">
             (function () {
                 var sym = /*[[${symbole}]]*/ 'FCFA';
                 var p = document.getElementById('momoPlan'), m = document.getElementById('momoMois'),
@@ -280,7 +280,7 @@
             <li>Cliquez sur « Demander l'activation » : nous vérifions le versement et prolongeons votre période.</li>
         </ol>
         <a class="btn btn-ink inline-flex items-center gap-2 h-11 px-5 rounded-xl mt-6 font-medium"
-           th:href="'mailto:' + ${ownerEmail} + '?subject=Activation%20abonnement%20SIGEP&body=Etablissement%20:%20' + ${etablissementNom}">
+           th:href="'mailto:' + ${contactPlateforme} + '?subject=Activation%20abonnement%20SIGEP&body=Etablissement%20:%20' + ${etablissementNom}">
             <span class="material-symbols-rounded text-[18px]">mail</span> Demander l'activation
         </a>
         <p class="text-[12px] text-muted mt-3">L'encaissement Mobile Money automatique n'est pas

@@ -85,7 +85,7 @@
 </div>
 
 <!-- En attente : la page se recharge d'elle-même quand le verdict arrive -->
-<script th:if="${statut == 'EN_COURS'}" th:inline="javascript">
+<script th:nonce="${cspNonce}" th:if="${statut == 'EN_COURS'}" th:inline="javascript">
 (function () {
     var ref = /*[[${intent.reference}]]*/ '';
     var essais = 0;

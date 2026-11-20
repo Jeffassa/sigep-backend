@@ -37,6 +37,13 @@ public class RefreshToken {
     @Builder.Default
     private boolean revoked = false;
 
+    /** Successeur émis à la rotation. Non nul : ce jeton a déjà servi et ne vaut plus. */
+    @Column(name = "remplace_par")
+    private Long remplacePar;
+
+    @Column(name = "remplace_le")
+    private LocalDateTime remplaceLe;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 

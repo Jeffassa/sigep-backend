@@ -25,6 +25,11 @@
             <p class="font-medium text-[14px]">Inscription reçue</p>
             <p class="text-muted mt-1">Un e-mail vous préviendra dès l'activation de votre espace.</p>
         </div>
+        <div th:if="${param.bloque}"
+             class="note note-alerte note-bloc">
+            <p class="font-medium text-[14px]">Trop de tentatives</p>
+            <p class="text-muted mt-1">Ce compte est fermé aux connexions pendant 15 minutes.</p>
+        </div>
         <div th:if="${param.pending}"
              class="note note-bloc">
             <p class="font-medium text-[14px]">Espace pas encore activé</p>
@@ -67,7 +72,7 @@
 </main>
 </div>
 
-<script>
+<script th:nonce="${cspNonce}">
 (function () {
     var btn = document.getElementById('togglePwd');
     var inp = document.getElementById('password');

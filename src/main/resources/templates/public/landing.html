@@ -34,7 +34,7 @@
     <meta name="twitter:title" th:content="(${marque} ?: 'SIGEP') + ' · Émargement des enseignants par QR code et suivi des heures'"/>
     <meta name="twitter:description" content="Émargement par QR code, planning et rapports d'heures pour écoles et universités."/>
     <meta name="twitter:image" th:content="${baseUrl} + '/images/og-sigep.png'"/>
-    <script th:if="${plausibleDomain}" defer th:data-domain="${plausibleDomain}"
+    <script th:nonce="${cspNonce}" th:if="${plausibleDomain}" defer th:data-domain="${plausibleDomain}"
             src="https://plausible.io/js/script.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com"/>
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="crossorigin"/>
@@ -42,7 +42,7 @@
     <link rel="stylesheet" th:href="@{/css/registre.css}" href="/css/registre.css"/>
     <!-- Mise en scène : l'en-tête ne se cache que si l'animation va réellement avoir lieu. Si le
          script d'animation n'arrive pas, la classe est retirée et tout reste affiché. -->
-    <script>
+    <script th:nonce="${cspNonce}">
         (function () {
             try {
                 if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -53,10 +53,10 @@
         })();
     </script>
     <!-- GSAP et Three.js sont servis par SIGEP lui-même : aucun appel à un site tiers. -->
-    <script defer th:src="@{/js/vendor/gsap.min.js}" src="/js/vendor/gsap.min.js"></script>
-    <script defer th:src="@{/js/vendor/ScrollTrigger.min.js}" src="/js/vendor/ScrollTrigger.min.js"></script>
-    <script defer th:src="@{/js/accueil-mouvement.js}" src="/js/accueil-mouvement.js"></script>
-    <script type="module" th:src="@{/js/accueil-qr.js}" src="/js/accueil-qr.js"></script>
+    <script th:nonce="${cspNonce}" defer th:src="@{/js/vendor/gsap.min.js}" src="/js/vendor/gsap.min.js"></script>
+    <script th:nonce="${cspNonce}" defer th:src="@{/js/vendor/ScrollTrigger.min.js}" src="/js/vendor/ScrollTrigger.min.js"></script>
+    <script th:nonce="${cspNonce}" defer th:src="@{/js/accueil-mouvement.js}" src="/js/accueil-mouvement.js"></script>
+    <script th:nonce="${cspNonce}" type="module" th:src="@{/js/accueil-qr.js}" src="/js/accueil-qr.js"></script>
     <noscript><style>.ligne-visiteur, .curseur, .jauge { display: none !important; } .trace { animation: none; stroke-dashoffset: 0; } .cachet { animation: none; }</style></noscript>
 </head>
 <body>
@@ -304,7 +304,7 @@
     </div>
 </footer>
 
-<script th:inline="none">
+<script th:nonce="${cspNonce}" th:inline="none">
 (function () {
     var calme = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -477,7 +477,7 @@
 <th:block th:replace="~{public/fragments :: donneesStructurees}"></th:block>
 <!-- Les questions de la page, dites aussi aux moteurs. Mot pour mot celles affichées plus haut :
      décrire en données ce que la page ne montre pas est sanctionné. -->
-<script type="application/ld+json">
+<script th:nonce="${cspNonce}" type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "FAQPage",

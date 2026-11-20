@@ -160,17 +160,12 @@ app:
   qr:
     # SECURITE (E3) : validité COURTE du QR d'émargement en ligne pour réduire la fenêtre
     # de relais d'une capture d'écran (un QR photographié n'est réutilisable que quelques
-    # secondes). Le mode hors-ligne, lui, tolère l'expiration (preuve via l'iat signé).
-    expiration-ms: ${QR_EXPIRATION_MS:45000}
-    refresh-seconds: ${QR_REFRESH_SECONDS:15}
-    display:
-      # SECURITE : l'affichage du QR d'émargement est une preuve de présence physique.
-      # Il NE doit PAS être public sur internet. Définir au moins l'un des deux ci-dessous,
-      # sinon les pages /api/qr/display renvoient 403 (fail-closed) :
-      #  - QR_DISPLAY_KEY : clé secrète que l'écran/kiosque ajoute en paramètre (?key=...)
-      #  - QR_DISPLAY_ALLOWED_IPS : IP(s) publiques autorisées (réseau de l'établissement), séparées par des virgules
-      key: ${QR_DISPLAY_KEY:}
-      allowed-ips: ${QR_DISPLAY_ALLOWED_IPS:}
+    # secondes). Le mode hors-ligne, lui, tolère l'expiration (preuve via l'iat signé) et
+    # passe par la validation de la scolarité.
+    # L'affichage est autorisé par le cookie posé depuis l'administration (Écran d'émargement),
+    # et peut être limité au réseau de l'établissement depuis la même page.
+    expiration-ms: ${QR_EXPIRATION_MS:30000}
+    refresh-seconds: ${QR_REFRESH_SECONDS:10}
   rapports:
     dossier: ${RAPPORTS_DOSSIER:rapports}
   mail:
@@ -253,10 +248,6 @@ app:
     enabled: ${STRIPE_ENABLED:false}
     secret-key: ${STRIPE_SECRET_KEY:}
     webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
-  mobile-money:
-    # Webhook Mobile Money générique (C7). Secret partagé exigé (fail-closed si vide).
-    # L'agrégateur (CinetPay/PayDunya/Wave/Orange) poste sur /api/paiement/mobile-money/webhook.
-    webhook-secret: ${MOBILE_MONEY_WEBHOOK_SECRET:}
   jeko:
     # Encaissement Mobile Money via Jèko (page de paiement hébergée : Wave, Orange Money, MTN,
     # Moov, Djamo). Prioritaire sur NovaSend quand les deux sont configurés.

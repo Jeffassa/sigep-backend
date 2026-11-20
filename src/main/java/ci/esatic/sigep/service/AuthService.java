@@ -152,7 +152,7 @@ public class AuthService {
      * Échange un refresh token valide contre un nouvel access token.
      * SECURITE : rotation systématique — l'ancien refresh token est invalidé et un nouveau est émis.
      */
-    @Transactional
+    @Transactional(noRollbackFor = ci.esatic.sigep.exception.RefreshTokenInvalidException.class)
     public AuthResponse refresh(String refreshToken) {
         var rt = refreshTokenService.verifier(refreshToken);
         User user = rt.getUser();

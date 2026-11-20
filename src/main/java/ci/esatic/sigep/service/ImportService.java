@@ -372,6 +372,16 @@ public class ImportService {
         return feuilles;
     }
 
+    /** Au-delà, un fichier n'est plus un planning ni une liste d'enseignants : il occuperait le serveur. */
+    static final int LIGNES_MAX = 5_000;
+
+    private static void verifierTaille(Sheet sheet) {
+        if (sheet.getLastRowNum() > LIGNES_MAX) {
+            throw new IllegalArgumentException("fichier trop long : " + LIGNES_MAX
+                    + " lignes au plus par feuille. Découpez-le avant de l'importer.");
+        }
+    }
+
     /** .xlsx comme .xls : beaucoup de scolarités travaillent encore sur d'anciens fichiers. */
     private List<Feuille> lireClasseur(MultipartFile file) throws Exception {
         List<Feuille> feuilles = new ArrayList<>();
@@ -379,6 +389,7 @@ public class ImportService {
             for (int f = 0; f < workbook.getNumberOfSheets(); f++) {
                 if (workbook.isSheetHidden(f)) continue;
                 Sheet sheet = workbook.getSheetAt(f);
+                verifierTaille(sheet);
                 List<Ligne> lignes = new ArrayList<>();
                 for (int i = 0; i <= sheet.getLastRowNum(); i++) {
                     Row row = sheet.getRow(i);
@@ -968,6 +979,7 @@ public class ImportService {
         try (workbook) {
             Sheet sheet = workbook.getSheetAt(0);
             verifierEnteteEnseignants(sheet);
+            verifierTaille(sheet);
             for (int i = 1; i <= sheet.getLastRowNum(); i++) {
                 Row row = sheet.getRow(i);
                 if (row == null) continue;
