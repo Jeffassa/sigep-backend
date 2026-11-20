@@ -36,6 +36,10 @@ public class ReferentielWebController {
     private final ci.esatic.sigep.tenant.plan.PlanService planService;
     private final EtablissementCourantService etablissementCourantService;
     private final EtablissementRepository etablissementRepository;
+    private final ci.esatic.sigep.service.ImportService importService;
+    private final ci.esatic.sigep.service.CalendrierService calendrierService;
+    private final ci.esatic.sigep.repository.EnseignantRepository enseignantRepository;
+    private final tools.jackson.databind.ObjectMapper objectMapper;
 
     @GetMapping("/admin/referentiels")
     public String referentiels(Model model) {
@@ -205,6 +209,102 @@ public class ReferentielWebController {
             ra.addFlashAttribute("error", "Suppression impossible : cette salle est utilisée par des séances.");
         }
         return "redirect:/admin/referentiels";
+    }
+
+    // --- Dépôt de l'emploi du temps ---
+    // Tout se lit ici, sur nos serveurs : aucun document ne part chez un tiers.
+    @PostMapping("/admin/planning/importer")
+    public String importerEmploiDuTemps(
+            @RequestParam("fichier") java.util.List<org.springframework.web.multipart.MultipartFile> fichiers,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) LocalDate debut,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) LocalDate fin,
+            @RequestParam(required = false) String classe,
+            @RequestParam(required = false) Long enseignantId,
+            Model model,
+            RedirectAttributes ra) {
+        // Sans période indiquée, les cours répétés valent pour ce qui reste du semestre en cours :
+        // des séances créées dans le passé compteraient aussitôt comme des oublis.
+        if (debut == null && fin == null) {
+            var semestre = calendrierService.semestreDe(LocalDate.now()).orElse(null);
+            if (semestre != null) {
+                debut = LocalDate.now();
+                fin = semestre.getFin();
+            }
+        }
+        java.util.List<org.springframework.web.multipart.MultipartFile> deposes = fichiers.stream().filter(f -> !f.isEmpty()).toList();
+        if (deposes.isEmpty()) {
+            ra.addFlashAttribute("error", "Déposez votre emploi du temps.");
+            return "redirect:/admin/rapports";
+        }
+        int importees = 0, doublons = 0, fermes = 0;
+        java.util.List<String> erreurs = new java.util.ArrayList<>();
+        java.util.List<ci.esatic.sigep.service.ImportService.LigneRelue> aRelire = new java.util.ArrayList<>();
+        for (org.springframework.web.multipart.MultipartFile fichier : deposes) {
+            String nom = fichier.getOriginalFilename() == null ? "" : fichier.getOriginalFilename();
+            String minuscule = nom.toLowerCase();
+            String prefixe = deposes.size() > 1 ? nom + " : " : "";
+            try {
+                if (minuscule.endsWith(".pdf")) {
+                    var lu = importService.lirePdf(fichier, debut, fin, classe, enseignantId);
+                    aRelire.addAll(lu.lignes());
+                    lu.erreurs().forEach(e -> erreurs.add(prefixe + e));
+                } else if (minuscule.endsWith(".xlsx") || minuscule.endsWith(".xls") || minuscule.endsWith(".csv") || minuscule.endsWith(".docx")) {
+                    java.util.Map<String, Object> r = importService.importerPlanning(fichier, debut, fin, classe, enseignantId);
+                    importees += (Integer) r.get("totalImporte");
+                    doublons += (Integer) r.get("doublonsIgnores");
+                    fermes += (Integer) r.get("joursFermesIgnores");
+                    @SuppressWarnings("unchecked")
+                    java.util.List<String> lignes = (java.util.List<String>) r.get("erreurs");
+                    lignes.forEach(e -> erreurs.add(prefixe + e));
+                } else {
+                    erreurs.add(prefixe + "format non pris en charge. Déposez un fichier Excel, CSV, Word (.docx) ou un PDF non scanné.");
+                }
+            } catch (IllegalArgumentException e) {
+                erreurs.add(prefixe + e.getMessage());
+            } catch (Exception e) {
+                erreurs.add(prefixe + "ce fichier n'a pas pu être lu. Vérifiez qu'il s'ouvre bien.");
+            }
+        }
+        String message = importees + " séance(s) importée(s)"
+                + (doublons > 0 ? ", " + doublons + " déjà présente(s) ignorée(s)" : "")
+                + (fermes > 0 ? ", " + fermes + " date(s) sautée(s) : établissement fermé" : "")
+                + (!erreurs.isEmpty() ? ", " + erreurs.size() + " point(s) à corriger" : "") + ".";
+        if (!aRelire.isEmpty()) {
+            model.addAttribute("lignes", aRelire);
+            model.addAttribute("erreursImport", erreurs);
+            if (importees > 0) model.addAttribute("success", message);
+            model.addAttribute("enseignants", enseignantRepository.findByStatutOrderByNomAsc(ci.esatic.sigep.entity.StatutEnseignant.VALIDATED));
+            return "admin/planning-relecture";
+        }
+        ra.addFlashAttribute(importees > 0 || erreurs.isEmpty() ? "success" : "error", message);
+        ra.addFlashAttribute("erreursImport", erreurs);
+        return "redirect:/admin/rapports";
+    }
+
+    private static final int LIGNES_RELUES_MAX = 5000;
+
+    @PostMapping("/admin/planning/confirmer")
+    public String confirmerImport(@RequestParam String lignes, RedirectAttributes ra) {
+        java.util.List<ci.esatic.sigep.service.ImportService.LigneRelue> relues;
+        try {
+            relues = java.util.List.of(objectMapper.readValue(lignes, ci.esatic.sigep.service.ImportService.LigneRelue[].class));
+        } catch (Exception e) {
+            ra.addFlashAttribute("error", "Ces séances n'ont pas pu être lues. Recommencez l'import.");
+            return "redirect:/admin/rapports";
+        }
+        if (relues.size() > LIGNES_RELUES_MAX) {
+            ra.addFlashAttribute("error", "Trop de séances pour un seul import : découpez le document.");
+            return "redirect:/admin/rapports";
+        }
+        var resultat = importService.importerRelues(relues);
+        int importees = (Integer) resultat.get("totalImporte");
+        int doublons = (Integer) resultat.get("doublonsIgnores");
+        int enErreur = (Integer) resultat.get("lignesEnErreur");
+        ra.addFlashAttribute(importees > 0 || enErreur == 0 ? "success" : "error", importees + " séance(s) importée(s)"
+                + (doublons > 0 ? ", " + doublons + " déjà présente(s) ignorée(s)" : "")
+                + (enErreur > 0 ? ", " + enErreur + " ligne(s) à corriger" : "") + ".");
+        ra.addFlashAttribute("erreursImport", resultat.get("erreurs"));
+        return "redirect:/admin/rapports";
     }
 
     // --- Modèle d'emploi du temps (CSV téléchargeable) ---

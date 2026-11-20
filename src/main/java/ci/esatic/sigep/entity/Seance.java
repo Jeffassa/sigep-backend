@@ -49,6 +49,11 @@ public class Seance implements TenantScoped {
     @JoinColumn(name = "enseignant_id", nullable = false)
     private Enseignant enseignant;
 
+    /** Enseignant prévu au départ, quand un remplaçant assure la séance. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "remplace_enseignant_id")
+    private Enseignant enseignantRemplace;
+
     @Enumerated(EnumType.STRING)
     @Builder.Default
     private TypeSeance type = TypeSeance.NORMALE;

@@ -214,6 +214,23 @@ class PlateformeIntegrationTest {
     }
 
     @Test
+    void tableauDeBord_afficheLePilotageDuJourEtLaCelluleDAnalyse() throws Exception {
+        mockMvc.perform(get("/plateforme").with(user(superAdmin)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Aujourd'hui sur la plateforme")))
+                .andExpect(content().string(containsString("Échéances et quotas")))
+                .andExpect(content().string(containsString("Mise en route des nouvelles écoles")))
+                .andExpect(content().string(containsString("État technique")))
+                .andExpect(content().string(containsString("Base de données")))
+                // Les cinq analystes rendent chacun leur lecture.
+                .andExpect(content().string(containsString("Croissance")))
+                .andExpect(content().string(containsString("Revenus")))
+                .andExpect(content().string(containsString("Fidélisation")))
+                .andExpect(content().string(containsString("Usage")))
+                .andExpect(content().string(containsString("Marché")));
+    }
+
+    @Test
     void adminEtablissement_nAccedePasALaPlateforme() throws Exception {
         mockMvc.perform(get("/plateforme").with(user(adminClient)))
                 .andExpect(status().isForbidden());

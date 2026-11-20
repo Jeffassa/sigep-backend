@@ -20,6 +20,9 @@ services:
         value: admin@esatic.ci
       - key: DB_POOL_MAX
         value: "5"
+      # Le plan gratuit endort le service après 15 minutes sans requête (voir ReveilService).
+      - key: APP_KEEP_ALIVE_URL
+        value: https://sigep.store
       # --- Secrets à renseigner dans le dashboard Render (non versionnés) ---
       - key: DB_URL          # jdbc:postgresql://<host-neon>/<db>?sslmode=require
         sync: false

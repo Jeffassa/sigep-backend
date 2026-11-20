@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Notes de version SIGEP — novembre 2026</title>
+<style>
+@page { size: A4; margin: 16mm 15mm 17mm; }
+:root { --ink:#1b2430; --muted:#596579; --line:#d9e0e8; --blue:#174a72; --cyan:#087f8c; --gold:#b7791f; --pale:#eef6f8; --red:#9b2c2c; }
+body { font-family: Arial, Helvetica, sans-serif; color:var(--ink); font-size:10.4pt; line-height:1.45; max-width:820px; margin:0 auto; padding:0 16px; }
+h1 { color:var(--blue); font-size:24pt; margin:0 0 6px; }
+h2 { color:var(--blue); font-size:15pt; border-bottom:2px solid var(--cyan); padding-bottom:3px; margin:22px 0 8px; page-break-after:avoid; }
+h3 { color:var(--cyan); font-size:12pt; margin:14px 0 4px; page-break-after:avoid; }
+p { margin:5px 0 8px; } ul, ol { padding-left:22px; } li { margin:3px 0; }
+code { font-family: Consolas, monospace; font-size:9pt; background:#f1f4f7; padding:1px 3px; }
+table { width:100%; border-collapse:collapse; margin:8px 0 12px; font-size:9.4pt; page-break-inside:avoid; }
+th { background:var(--blue); color:white; text-align:left; padding:6px; } td { border:1px solid var(--line); padding:5px 6px; vertical-align:top; }
+.meta { border-left:5px solid var(--gold); padding:10px 14px; background:#fff9ed; color:#4a3a1c; margin:12px 0 18px; }
+.note, .warning { padding:9px 11px; margin:9px 0; border-left:4px solid var(--cyan); background:var(--pale); page-break-inside:avoid; }
+.warning { border-color:var(--red); background:#fff5f5; }
+</style>
+</head>
+<body>
+<h1>Notes de version SIGEP</h1>
+<div class="meta"><strong>Mise en production :</strong> 5 novembre 2026<br><strong>Backend :</strong> migration Flyway V34 · <strong>Application mobile :</strong> version 1.1.0<br><strong>Guide de recette associé :</strong> version 1.4</div>
+
+<h2>Ce qui change pour les établissements</h2>
+<h3>L’emploi du temps, tel que l’établissement le produit</h3>
+<ul>
+<li>Formats acceptés : Excel (<code>.xlsx</code>, <code>.xls</code>), CSV, Word (<code>.docx</code>) et PDF contenant du texte.</li>
+<li>Listes aux colonnes nommées librement et dans n’importe quel ordre ; grilles qui croisent jours et créneaux, dans un sens ou dans l’autre ; cours fusionnés sur plusieurs créneaux.</li>
+<li>Un emploi du temps par classe ou par professeur : un fichier, une feuille ou un PDF par personne, et plusieurs fichiers déposés en une fois.</li>
+<li>Un PDF passe par un écran de relecture : rien n’est enregistré avant validation.</li>
+<li>Formulaire d’import dans la console (page Rapports) ; jusqu’ici, l’import ne passait que par l’API.</li>
+<li>Tout est lu sur les serveurs de SIGEP : aucun document n’est transmis à un service extérieur.</li>
+</ul>
+<h3>Vie de l’établissement</h3>
+<ul>
+<li>Nouvelle page <strong>Calendrier</strong> : jours fériés et vacances (sautés par les cours répétés), semestres (périodes des statistiques et des imports), remplacement d’un enseignant sur une période, réglage de la tolérance d’émargement.</li>
+<li>Nouvelle page <strong>Équipe</strong> : accès Direction (lecture seule), Scolarité et Comptabilité, chacun limité à ce qui le concerne.</li>
+<li>Un vacataire garde une seule adresse et un seul mot de passe pour tous ses établissements, et choisit le sien dans l’application.</li>
+<li>Les heures des statistiques et du tableau de bord suivent la durée réelle des séances, et non plus un forfait de deux heures.</li>
+</ul>
+<h3>Plateforme et accès</h3>
+<ul>
+<li>Le tableau de bord de la plateforme met en avant les établissements à traiter : dossiers à valider, abonnements qui expirent, établissements inactifs.</li>
+<li>Lien de retour à l’accueil sur la connexion et l’inscription.</li>
+<li>Le code de secours de la connexion administrateur est supprimé.</li>
+</ul>
+<h3>Application mobile 1.1.0</h3>
+<ul>
+<li>Section « Mes établissements » dans le profil, pour les vacataires.</li>
+<li>Le serveur est réveillé à l’ouverture ; un émargement envoyé pendant son démarrage patiente au lieu de passer en hors-ligne.</li>
+</ul>
+
+<h2>Corrections</h2>
+<ul>
+<li>Les séances déclarées par un enseignant n’apparaissaient pas dans les alertes lorsqu’aucun émargement hors-ligne n’était en attente.</li>
+<li>Le bouton d’application du statut d’un enseignant était vide.</li>
+<li>Un import sans période ne crée plus de séances déjà passées.</li>
+</ul>
+
+<h2>Exploitation</h2>
+<table>
+<tr><th>Élément</th><th>Action</th></tr>
+<tr><td>Migrations V33 et V34</td><td>Appliquées automatiquement au démarrage. Elles ajoutent les profils, le calendrier et les remplacements, et permettent un compte enseignant dans plusieurs établissements.</td></tr>
+<tr><td><code>APP_KEEP_ALIVE_URL</code></td><td>À renseigner sur Render avec l’adresse publique : le service s’appelle toutes les 10 minutes et ne s’endort plus. Laisser vide sur un plan payant.</td></tr>
+<tr><td><code>APP_SECURITY_ADMIN_OTP_RECOVERY_HASH</code></td><td>N’est plus lue : la supprimer.</td></tr>
+<tr><td><code>AI_ENABLED</code></td><td>Laisser absente ou à <code>false</code>.</td></tr>
+<tr><td><code>MULTIPART_MAX_REQUEST_SIZE</code></td><td>50 Mo par défaut, pour déposer plusieurs fichiers en une fois.</td></tr>
+<tr><td>Application mobile</td><td>Distribuer l’APK 1.1.0. L’ancienne version reste compatible, sans le choix d’établissement ni l’attente au réveil.</td></tr>
+</table>
+
+<h2>Limites connues</h2>
+<ul>
+<li>Les photos et les PDF scannés ne sont pas lus : il faut le fichier d’origine.</li>
+<li>Les semaines alternées (A et B) ne sont pas prises en charge.</li>
+<li>Dans l’emploi du temps d’un professeur, une classe qui ne ressemble pas à une classe (L3, BTS 1, 6e A…) est supposée suivre la matière.</li>
+<li>Le maintien en éveil consomme environ 744 heures des 750 heures gratuites mensuelles de Render : un second service gratuit sur le même compte les dépasserait.</li>
+<li>Le paiement en ligne de l’abonnement attend le choix d’un prestataire.</li>
+</ul>
+</body>
+</html>

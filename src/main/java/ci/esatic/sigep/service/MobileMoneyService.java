@@ -18,7 +18,9 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Encaissement Mobile Money automatisé (NovaSend).
+ * Encaissement Mobile Money automatisé : par Jèko (page de paiement hébergée) ou par NovaSend
+ * (demande poussée sur le téléphone). Jèko l'emporte quand les deux sont configurés. Chaque
+ * paiement reste attaché à son fournisseur par sa référence (préfixe {@code JK-} pour Jèko).
  *
  * <p><b>Trois principes, chacun issu d'un mode de défaillance réel.</b></p>
  * <ol>
@@ -45,6 +47,7 @@ public class MobileMoneyService {
     private static final int MAX_MOIS = 24;
 
     private final NovaSendService novaSend;
+    private final JekoService jeko;
     private final PaiementIntentStore store;
     private final PlanService planService;
 
@@ -64,12 +67,111 @@ public class MobileMoneyService {
     private int retentionJours;
 
     public boolean isEnabled() {
-        return novaSend.isEnabled();
+        return jeko.isEnabled() || novaSend.isEnabled();
     }
 
-    /** Mode test déclaré : argent fictif côté fournisseur, mais abonnements bien réels ici. */
+    /**
+     * Un visiteur peut-il souscrire et payer seul depuis la page d'accueil ? Il faut un paiement par
+     * page hébergée (Jèko) : NovaSend pousse la demande sur un téléphone et suppose un espace ouvert.
+     */
+    public boolean achatEnLigne() {
+        return jeko.isEnabled();
+    }
+
+    /** Fournisseur proposé aux établissements : JEKO, NOVASEND, ou null si aucun n'est configuré. */
+    public String passerelle() {
+        if (jeko.isEnabled()) return "JEKO";
+        if (novaSend.isEnabled()) return "NOVASEND";
+        return null;
+    }
+
+    /** Mode test déclaré : argent fictif côté fournisseur, mais abonnements bien réels ici.
+     *  Jèko n'a pas de bac à sable : avec lui, tout paiement est réel. */
     public boolean estSandbox() {
-        return novaSend.estSandbox();
+        return !jeko.isEnabled() && novaSend.estSandbox();
+    }
+
+    /**
+     * Prépare un paiement Jèko et rend l'intention, qui porte l'adresse de la page de paiement.
+     * Comme pour NovaSend, le montant est recalculé ici et l'intention est enregistrée avant tout
+     * appel à Jèko : il ne doit jamais exister de paiement sans trace côté SIGEP.
+     */
+    public PaiementIntent initierJeko(Etablissement etab, Plan plan, int mois, String moyen) {
+        return initierJeko(etab, plan, mois, moyen, "/admin/abonnement/momo/retour?ref=");
+    }
+
+    /**
+     * Même chose, avec l'adresse de retour choisie par l'appelant : l'espace d'administration pour
+     * un établissement déjà ouvert, la page publique de suivi pour une inscription qui paie.
+     *
+     * @param retour chemin de retour, auquel la référence du paiement est ajoutée.
+     */
+    public PaiementIntent initierJeko(Etablissement etab, Plan plan, int mois, String moyen, String retour) {
+        return initierJeko(etab, plan, mois, moyen, retour, true);
+    }
+
+    /**
+     * @param reprendreEnCours une demande déjà en cours est rendue au lieu d'en créer une autre
+     *                         (anti double-clic de l'espace d'administration). La page de paiement
+     *                         publique passe {@code false} : le client doit pouvoir changer de durée
+     *                         ou de moyen après avoir quitté la page de Jèko. Si les deux demandes
+     *                         étaient payées, les deux seraient créditées : rien n'est perdu.
+     */
+    public PaiementIntent initierJeko(Etablissement etab, Plan plan, int mois, String moyen, String retour,
+                                      boolean reprendreEnCours) {
+        if (!jeko.isEnabled()) {
+            throw new JekoService.JekoException("Le paiement par Jèko n'est pas activé.");
+        }
+        if (!planService.estAchetable(plan)) {
+            throw new JekoService.JekoException("Ce plan n'est pas disponible à l'achat.");
+        }
+        if (!jeko.moyenSupporte(moyen)) {
+            throw new JekoService.JekoException("Choisissez Wave, Orange Money, MTN MoMo, Moov Money ou Djamo.");
+        }
+
+        // Une demande déjà en cours est reprise plutôt que doublée : un second paiement serait un
+        // second débit. Si elle a déjà une page de paiement, l'administrateur y retourne.
+        var dejaEnVol = reprendreEnCours ? store.enCoursPourEtablissement(etab.getId())
+                                         : java.util.Optional.<PaiementIntent>empty();
+        if (dejaEnVol.isPresent()) {
+            log.info("Jèko : une demande est déjà en cours (ref={}), elle est reprise", dejaEnVol.get().getReference());
+            return dejaEnVol.get();
+        }
+
+        int m = Math.min(MAX_MOIS, Math.max(1, mois));
+        long montant = (long) m * planService.prixMensuel(plan);
+        String devise = planService.devise().toUpperCase();
+        String reference = JekoService.PREFIXE_REFERENCE + UUID.randomUUID();
+
+        PaiementIntent intent = store.creer(PaiementIntent.builder()
+                .reference(reference)
+                .etablissementId(etab.getId())
+                .plan(plan)
+                .mois(m)
+                .montantAttendu(montant)
+                .devise(devise)
+                .provider(moyen.trim().toUpperCase())
+                .statut(StatutIntent.EN_COURS)
+                .build());
+
+        String adresseRetour = baseUrl + retour + reference;
+        try {
+            JekoService.Demande d = jeko.creerDemande(reference, montant, devise, moyen, adresseRetour);
+            store.majApresInitiation(reference, d.id(), d.redirectUrl(), d.statut());
+            intent.setNovasendId(d.id());
+            intent.setPaymentUrl(d.redirectUrl());
+        } catch (RuntimeException e) {
+            // Refus net de Jèko : rien n'a été créé chez lui, la demande est close. Sinon (réseau),
+            // on ne sait pas : un humain vérifiera dans le tableau de bord Jèko.
+            boolean refusNet = e instanceof JekoService.JekoException
+                    && !e.getMessage().contains("momentanément indisponible");
+            store.marquer(reference, refusNet ? StatutIntent.ECHOUE : StatutIntent.A_VERIFIER,
+                    (refusNet ? "Refusé par Jèko : " : "Création incertaine : ") + e.getMessage());
+            throw e;
+        }
+        log.info("Jèko : paiement préparé ref={} etab={} plan={} mois={} montant={}",
+                reference, etab.getId(), plan, m, montant);
+        return intent;
     }
 
     /**
@@ -160,6 +262,9 @@ public class MobileMoneyService {
         if (intent.getStatut() != StatutIntent.EN_COURS) {
             return intent.getStatut();   // déjà tranchée : idempotent
         }
+        if (reference.startsWith(JekoService.PREFIXE_REFERENCE)) {
+            return verifierJeko(intent);
+        }
 
         NovaSendService.Statut statut = novaSend.statut(reference);   // appel réseau, hors transaction
 
@@ -196,6 +301,45 @@ public class MobileMoneyService {
     }
 
     /**
+     * Paiement Jèko : l'état est lu chez Jèko avec l'identifiant de la demande. Le montant payé
+     * est fixé par SIGEP à la création, mais il est quand même contrôlé : Jèko l'exprime en
+     * centimes ; une valeur en francs est aussi reconnue. Tout autre montant part en arbitrage.
+     */
+    private StatutIntent verifierJeko(PaiementIntent intent) {
+        String reference = intent.getReference();
+        JekoService.Lecture lecture = jeko.lire(intent.getNovasendId());   // appel réseau, hors transaction
+        if (!lecture.aUnVerdict()) {
+            return sansVerdict(intent, lecture.etat() == JekoService.Etat.INTROUVABLE
+                    ? NovaSendService.Etat.INTROUVABLE : NovaSendService.Etat.INJOIGNABLE);
+        }
+        JekoService.Demande d = lecture.demande();
+        if (d.estPayee()) {
+            long attendu = intent.getMontantAttendu();
+            boolean deviseOk = d.devise() == null || d.devise().isBlank()
+                    || d.devise().equalsIgnoreCase(intent.getDevise());
+            boolean montantOk = d.montant() == attendu * 100 || d.montant() == attendu;
+            if (!deviseOk || !montantOk) {
+                log.error("Jèko À VÉRIFIER (écart) ref={} : payé {} {} / attendu {} {}",
+                        reference, d.montant(), d.devise(), attendu, intent.getDevise());
+                return store.marquer(reference, StatutIntent.A_VERIFIER,
+                        "Montant ou devise divergents : vérification manuelle requise.");
+            }
+            return store.crediter(reference, attendu);
+        }
+        if (d.estEchouee()) {
+            return store.marquer(reference, StatutIntent.ECHOUE,
+                    "Paiement non abouti" + (d.raisonEchec() == null ? "" : " (" + d.raisonEchec() + ")"));
+        }
+        // Jèko répond « en attente » : la demande existe, personne ne l'a payée. Passé la fenêtre de
+        // suivi, c'est un abandon constaté, pas une incertitude : inutile de le faire arbitrer.
+        LocalDateTime creation = intent.getDateCreation();
+        if (creation != null && creation.isBefore(LocalDateTime.now().minusHours(suiviHeures))) {
+            return store.marquer(reference, StatutIntent.EXPIRE, "Paiement jamais finalisé chez Jèko");
+        }
+        return StatutIntent.EN_COURS;
+    }
+
+    /**
      * Aucun verdict exploitable : on laisse l'intention en cours tant qu'on est dans la fenêtre
      * de suivi, puis on la confie à un humain. Jamais d'échec inventé sur un silence.
      */
@@ -208,6 +352,11 @@ public class MobileMoneyService {
                     "Aucune confirmation obtenue du fournisseur : vérification manuelle requise.");
         }
         return StatutIntent.EN_COURS;
+    }
+
+    /** La plus récente intention de paiement d'un établissement, quel que soit son état. */
+    public java.util.Optional<PaiementIntent> derniereIntention(Long etablissementId) {
+        return store.derniere(etablissementId);
     }
 
     /** L'utilisateur doit-il cesser d'attendre devant sa page ? (le suivi, lui, continue) */
@@ -224,7 +373,8 @@ public class MobileMoneyService {
     @Scheduled(fixedDelayString = "${app.novasend.poll-ms:60000}", initialDelayString = "${app.novasend.poll-ms:60000}")
     @SchedulerLock(name = "novasendRelance", lockAtMostFor = "PT5M", lockAtLeastFor = "PT10S")
     public void relancerIntentionsEnCours() {
-        if (!novaSend.isEnabled()) return;
+        // Pas de garde sur l'activation : un paiement lancé avant qu'on désactive le fournisseur
+        // doit quand même recevoir son verdict. Sans paiement en cours, ce tour ne coûte qu'une lecture.
         List<PaiementIntent> enCours = store.enCours();
         // Borne de sécurité : le balayage ne doit jamais devenir un travail illimité.
         int traitees = 0;

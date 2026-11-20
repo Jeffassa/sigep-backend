@@ -57,6 +57,10 @@ public class NovaSendService {
     @Value("${app.novasend.environment:sandbox}")
     private String environment;
 
+    /** Profils actifs : en production, une passerelle de test ne doit rien créditer. */
+    @Value("${spring.profiles.active:}")
+    private String profilsActifs;
+
     /** Mode test déclaré : l'argent est fictif alors que les abonnements crédités sont réels. */
     public boolean estSandbox() {
         return !"production".equalsIgnoreCase(environment);
@@ -65,7 +69,11 @@ public class NovaSendService {
     /** Encaissement Mobile Money utilisable ? (activé + identifiants présents) */
     public boolean isEnabled() {
         return enabled && apiKey != null && !apiKey.isBlank()
-                && secretKey != null && !secretKey.isBlank();   // isBlank() couvre déjà les espaces seuls
+                && secretKey != null && !secretKey.isBlank()    // isBlank() couvre déjà les espaces seuls
+                // En production, le mode test prolongerait de vrais abonnements sans encaissement.
+                && !(estSandbox() && profilsActifs != null
+                        && java.util.Arrays.asList(profilsActifs.split(",")).stream()
+                                .map(String::trim).anyMatch("prod"::equals));
     }
 
     /** Opérateurs supportés par l'API Direct. */

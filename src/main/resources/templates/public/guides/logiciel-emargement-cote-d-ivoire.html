@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{public/guides/fragments :: head('Logiciel d’émargement des enseignants en Côte d’Ivoire · SIGEP', 'SIGEP, logiciel d’émargement par QR code et de suivi des heures pour les écoles et universités de Côte d’Ivoire : prix en FCFA, paiement par Mobile Money, émargement même quand le réseau coupe.')}"></head>
+<body>
+<div class="seyes">
+    <nav th:replace="~{public/guides/fragments :: entete}"></nav>
+    <nav th:replace="~{public/guides/fragments :: fil('SIGEP en Côte d’Ivoire')}"></nav>
+
+    <header class="guide-tete marge">
+        <p class="surtitre">Côte d’Ivoire</p>
+        <h1>Le logiciel d’émargement <span class="it">pensé pour nos établissements.</span></h1>
+        <p class="corps chapeau">Grandes écoles, universités, instituts de formation : la feuille de présence circule encore, et les heures des enseignants se recomptent à la main avant chaque paie. SIGEP les remplace par un émargement par QR code et un état des heures prêt pour la paie, avec des prix en FCFA et un paiement par Mobile Money.</p>
+        <div class="appel">
+            <a class="bouton" th:href="@{/inscription}">Démarrer gratuitement</a>
+            <span class="mono">Gratuit jusqu’à 10 enseignants<br/>Sans carte bancaire</span>
+        </div>
+    </header>
+</div>
+
+<main class="guide-corps">
+    <div class="marge">
+        <section>
+            <h2 class="titre-section">Des prix en FCFA, payés par Mobile Money</h2>
+            <ul>
+                <li><strong>Free</strong> : 0 <span th:text="${symbole}">FCFA</span>, jusqu’à 10 enseignants ;</li>
+                <li><strong>Pro</strong> : <span th:text="${#numbers.formatInteger(prixPro,1,'WHITESPACE')}">13 000</span> <span th:text="${symbole}">FCFA</span> par mois, enseignants illimités et export pour la paie ;</li>
+                <li><strong>Enterprise</strong> : <span th:text="${#numbers.formatInteger(prixEnterprise,1,'WHITESPACE')}">96 000</span> <span th:text="${symbole}">FCFA</span> par mois, pour les groupes et les universités, avec une API.</li>
+            </ul>
+            <p class="corps">Vous payez un, trois ou douze mois d’avance, sans engagement, par Wave, Orange Money, MTN MoMo, Moov Money ou Djamo. Le paiement passe par une page sécurisée : SIGEP ne voit ni votre numéro ni vos codes. Un paiement confirmé active l’espace aussitôt.</p>
+        </section>
+
+        <section>
+            <h2 class="titre-section">Quand le réseau coupe</h2>
+            <p class="corps">Une salle sans couverture ne bloque pas l’émargement : le scan est gardé dans le téléphone de l’enseignant et part dès que la connexion revient. La scolarité valide alors la séance, qui rejoint les heures du mois.</p>
+        </section>
+
+        <section>
+            <h2 class="titre-section">L’emploi du temps, tel que vous le produisez</h2>
+            <p class="corps">Pas besoin de refaire le planning dans un nouveau modèle. SIGEP lit les fichiers que les scolarités utilisent déjà :</p>
+            <ul>
+                <li>Excel, CSV, Word, et PDF contenant du texte ;</li>
+                <li>listes aux colonnes nommées librement, ou grilles qui croisent jours et créneaux ;</li>
+                <li>un emploi du temps par classe ou par professeur, et plusieurs fichiers déposés en une fois.</li>
+            </ul>
+            <p class="corps">Les jours fériés, les vacances et les semestres se règlent dans le calendrier de l’établissement.</p>
+        </section>
+
+        <section>
+            <h2 class="titre-section">Vos données restent chez nous</h2>
+            <p class="corps">Chaque établissement dispose de son propre espace : ses enseignants, ses séances et ses heures ne sont ni partagés ni visibles par un autre. Les fichiers déposés sont lus sur les serveurs de SIGEP, sans être transmis à un service extérieur.</p>
+        </section>
+    </div>
+</main>
+
+<section class="guide-questions seyes" aria-labelledby="titre-questions">
+    <div class="marge">
+        <h2 id="titre-questions" class="titre-section">Questions</h2>
+        <div class="liste-questions">
+            <details><summary>Comment payer l’abonnement ?<span class="signe" aria-hidden="true">+</span></summary><p class="corps">Par Mobile Money (Wave, Orange Money, MTN MoMo, Moov Money ou Djamo), pour un, trois ou douze mois, sans engagement.</p></details>
+            <details><summary>Faut-il une connexion permanente dans les salles ?<span class="signe" aria-hidden="true">+</span></summary><p class="corps">Non. Sans réseau, l’émargement est gardé dans le téléphone puis envoyé au retour de la connexion, et la scolarité le valide.</p></details>
+            <details><summary>Peut-on essayer avant de payer ?<span class="signe" aria-hidden="true">+</span></summary><p class="corps">Oui. Le plan Free est gratuit jusqu’à 10 enseignants, sans carte bancaire. Vous passez au plan Pro quand vous en avez besoin.</p></details>
+        </div>
+    </div>
+</section>
+
+<section th:replace="~{public/guides/fragments :: autres('ci')}"></section>
+<footer th:replace="~{public/guides/fragments :: fin}"></footer>
+
+<script th:nonce="${cspNonce}" type="application/ld+json" th:inline="text">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Accueil", "item": "[[${baseUrl}]]/" },
+        { "@type": "ListItem", "position": 2, "name": "SIGEP en Côte d’Ivoire", "item": "[[${baseUrl}]]/logiciel-emargement-cote-d-ivoire" }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        { "@type": "Question", "name": "Comment payer l’abonnement ?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Par Mobile Money (Wave, Orange Money, MTN MoMo, Moov Money ou Djamo), pour un, trois ou douze mois, sans engagement." } },
+        { "@type": "Question", "name": "Faut-il une connexion permanente dans les salles ?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Non. Sans réseau, l’émargement est gardé dans le téléphone puis envoyé au retour de la connexion, et la scolarité le valide." } },
+        { "@type": "Question", "name": "Peut-on essayer avant de payer ?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Oui. Le plan Free est gratuit jusqu’à 10 enseignants, sans carte bancaire. Vous passez au plan Pro quand vous en avez besoin." } }
+      ]
+    }
+  ]
+}
+</script>
+</body>
+</html>

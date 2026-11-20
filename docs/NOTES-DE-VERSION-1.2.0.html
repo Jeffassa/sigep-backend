@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Notes de version SIGEP 1.2.0</title>
+<style>
+@page { size: A4; margin: 16mm 15mm 17mm; }
+:root { --ink:#1b2430; --muted:#596579; --line:#d9e0e8; --blue:#174a72; --cyan:#087f8c; --gold:#b7791f; --pale:#eef6f8; --red:#9b2c2c; }
+body { font-family: Arial, Helvetica, sans-serif; color:var(--ink); font-size:10.4pt; line-height:1.45; max-width:820px; margin:0 auto; padding:0 16px; }
+h1 { color:var(--blue); font-size:24pt; margin:0 0 6px; }
+h2 { color:var(--blue); font-size:15pt; border-bottom:2px solid var(--cyan); padding-bottom:3px; margin:22px 0 8px; page-break-after:avoid; }
+h3 { color:var(--cyan); font-size:12pt; margin:14px 0 4px; page-break-after:avoid; }
+p { margin:5px 0 8px; } ul, ol { padding-left:22px; } li { margin:3px 0; }
+code { font-family: Consolas, monospace; font-size:9pt; background:#f1f4f7; padding:1px 3px; }
+table { width:100%; border-collapse:collapse; margin:8px 0 12px; font-size:9.4pt; page-break-inside:avoid; }
+th { background:var(--blue); color:white; text-align:left; padding:6px; } td { border:1px solid var(--line); padding:5px 6px; vertical-align:top; }
+.meta { border-left:5px solid var(--gold); padding:10px 14px; background:#fff9ed; color:#4a3a1c; margin:12px 0 18px; }
+.note, .warning { padding:9px 11px; margin:9px 0; border-left:4px solid var(--cyan); background:var(--pale); page-break-inside:avoid; }
+.warning { border-color:var(--red); background:#fff5f5; }
+</style>
+</head>
+<body>
+<h1>Notes de version SIGEP 1.2.0</h1>
+<div class="meta"><strong>Mise en production :</strong> 20 novembre 2026<br><strong>Backend :</strong> migrations Flyway V35 à V37 · <strong>Application mobile :</strong> version 1.2.0<br><strong>Guide d’utilisation associé :</strong> édition du 20 novembre 2026</div>
+
+<h2>Ce qui change pour les établissements</h2>
+<h3>S’abonner et payer sans assistance</h3>
+<ul>
+<li>Depuis l’accueil, « Souscrire au plan Pro » ou « … Enterprise » crée l’espace, puis ouvre une page de paiement : offre, durée, moyen de paiement et total.</li>
+<li>Paiement par Mobile Money (Wave, Orange Money, MTN MoMo, Moov Money, Djamo) sur la page sécurisée de Jèko. SIGEP ne voit ni le numéro ni les codes du payeur.</li>
+<li>Un paiement confirmé active l’espace aussitôt, sans attendre l’examen du dossier. Une page de suivi, dont le lien part aussi par e-mail, affiche l’état du paiement.</li>
+<li>Après un échec, « Payer à nouveau » ramène à la page de paiement.</li>
+<li>Un établissement dont l’abonnement a expiré arrive directement sur la page d’abonnement ; la console ne propose plus que l’abonnement et la déconnexion jusqu’au renouvellement.</li>
+</ul>
+<h3>Écran d’émargement de la salle</h3>
+<ul>
+<li>L’écran s’ouvre depuis la console (page Écran d’émargement) et reste autorisé sur l’appareil. Régénérer la clé désactive tous les écrans déjà installés.</li>
+<li>Nouveau réglage <strong>Réseau autorisé</strong> : adresses IP ou plages des locaux de l’établissement. Renseigné, il limite l’affichage du QR à ces réseaux ; la page indique l’adresse actuelle pour aider à le remplir.</li>
+<li>Le QR est renouvelé toutes les 10 secondes et reste valable 30 secondes.</li>
+</ul>
+<div class="warning">Les écrans ouverts avec une ancienne adresse contenant une clé ne s’affichent plus : il faut les rouvrir une fois depuis la console.</div>
+<h3>Consoles</h3>
+<ul>
+<li>Pages nettement plus rapides : le tableau de bord d’établissement passe de 48 à 15 requêtes, celui de la plateforme de 59 à 19.</li>
+<li>Les annonces de la plateforme (information, nouveauté, maintenance) s’affichent en bandeau sous l’en-tête. Une annonce de maintenance ne peut pas être masquée.</li>
+<li>Pages de connexion, d’inscription et de paiement épurées, en deux parties.</li>
+</ul>
+<h3>Plateforme</h3>
+<ul>
+<li>Le tableau de bord du super administrateur ajoute l’usage du jour, les échéances à 7 et 30 jours, la mise en route des nouvelles écoles et l’état technique.</li>
+<li>Une cellule d’analyse (croissance, revenus, fidélisation, usage, marché) calcule ses indicateurs sur les serveurs de SIGEP : aucune donnée n’est transmise à un service extérieur.</li>
+<li>Publication, programmation et retrait des annonces depuis <code>/plateforme/annonces</code>.</li>
+</ul>
+<h3>Application mobile 1.2.0</h3>
+<ul>
+<li>Tant que le mot de passe est encore le provisoire envoyé par l’établissement, l’application ouvre d’abord l’écran « Votre mot de passe ». L’enseignant en choisit un personnel, puis accède à ses séances sans se reconnecter.</li>
+<li>Navigation mise à jour (React Navigation 7).</li>
+<li>Les données de l’application ne sont plus incluses dans les sauvegardes Android.</li>
+</ul>
+<div class="note">L’APK 1.2.0 est signé avec la même clé que la 1.1.0 : il s’installe par-dessus, sans désinstaller ni perdre les émargements en attente.</div>
+
+<h2>Corrections</h2>
+<ul>
+<li>La console attendait jusqu’à 2 secondes par lecture quand le cache ne répondait plus : il est désormais écarté aussitôt, et la donnée relue en base.</li>
+<li>Textes de l’espace établissement nettoyés.</li>
+<li>Le texte du bloc gauche des pages d’accès est centré.</li>
+</ul>
+
+<h2>Exploitation</h2>
+<table>
+<tr><th>Élément</th><th>Action</th></tr>
+<tr><td>Migrations V35 à V37</td><td>Appliquées automatiquement au démarrage. Elles ajoutent les annonces de la plateforme, le suivi des sessions mobiles et le réseau autorisé de l’écran.</td></tr>
+<tr><td><code>JEKO_*</code></td><td><code>JEKO_ENABLED</code>, <code>JEKO_API_KEY</code>, <code>JEKO_API_KEY_ID</code>, <code>JEKO_STORE_ID</code>, <code>JEKO_WEBHOOK_SECRET</code> : nécessaires au paiement en ligne.</td></tr>
+<tr><td><code>PROXYS_DE_CONFIANCE</code></td><td>Facultative : relais supplémentaires devant le service, en plus de Cloudflare.</td></tr>
+<tr><td><code>TRUSTED_PROXY_COUNT</code>, <code>QR_DISPLAY_KEY</code>, <code>QR_DISPLAY_ALLOWED_IPS</code>, <code>MOBILE_MONEY_WEBHOOK_SECRET</code></td><td>Ne sont plus lues : les supprimer.</td></tr>
+<tr><td><code>PLATFORM_OWNER_EMAIL</code></td><td>À renseigner sur Render avec l’adresse du propriétaire de la plateforme.</td></tr>
+<tr><td><code>CACHE_TYPE</code>, <code>REDIS_TIMEOUT</code></td><td>Cache local par défaut ; <code>redis</code> une fois Redis provisionné. Délai d’attente ramené à 1 s.</td></tr>
+<tr><td><code>AI_ENABLED</code></td><td>Laisser absente ou à <code>false</code>.</td></tr>
+<tr><td>Application mobile</td><td>Distribuer l’APK 1.2.0. La 1.1.0 continue de fonctionner, mais un enseignant au mot de passe provisoire n’y verra que des refus tant qu’il ne l’a pas changé depuis son profil.</td></tr>
+</table>
+
+<h2>Limites connues</h2>
+<ul>
+<li>Le site ne propose pas encore de lien de téléchargement de l’application : l’APK est transmis par l’établissement.</li>
+<li>Le premier paiement réel par Jèko reste à faire.</li>
+<li>Les photos et les PDF scannés ne sont toujours pas lus, et les semaines alternées (A et B) ne sont pas prises en charge.</li>
+</ul>
+</body>
+</html>

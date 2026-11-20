@@ -24,6 +24,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final UserDetailsServiceImpl userDetailsService;
 
+    /** Code renvoyé à l'application, qui ouvre alors l'écran de changement de mot de passe. */
+    public static final String CODE_MOT_DE_PASSE = "MOT_DE_PASSE_A_CHANGER";
+    static final String ROUTE_MOT_DE_PASSE = "/api/profil/mot-de-passe";
+
+    @org.springframework.beans.factory.annotation.Value("${app.security.mot-de-passe-impose-api:true}")
+    private boolean motDePasseImpose;
+
     @Override
     protected void doFilterInternal(
             @NonNull HttpServletRequest request,
@@ -47,12 +54,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             try {
                 UserDetails userDetails = userDetailsService.loadUserByUsername(userEmail);
-                if (jwtService.isValid(claims, userDetails)) {   // pas de re-parsing
+                // Un compte désactivé perd l'accès tout de suite, sans attendre l'expiration du jeton.
+                if (jwtService.isValid(claims, userDetails)   // pas de re-parsing
+                        && userDetails.isEnabled() && userDetails.isAccountNonLocked()) {
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                             userDetails, null, userDetails.getAuthorities()
                     );
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
+                    if (motDePasseAChanger(userDetails, request)) {
+                        refuserTantQueMotDePasseProvisoire(response);
+                        return;
+                    }
                 }
             } catch (UsernameNotFoundException e) {
                 // Token de signature valide mais utilisateur supprimé/renommé : on poursuit
@@ -62,5 +75,24 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    /**
+     * Un mot de passe provisoire (créé par l'établissement, ou réinitialisé) ouvre la seule route
+     * qui permet de le remplacer. Tant qu'il n'est pas changé, celui qui l'a lu dans un courriel ou
+     * par-dessus une épaule ne peut rien faire d'autre avec.
+     */
+    private boolean motDePasseAChanger(UserDetails userDetails, HttpServletRequest request) {
+        if (!motDePasseImpose || !(userDetails instanceof ci.esatic.sigep.entity.User u)
+                || !u.isMustChangePassword()) return false;
+        String uri = request.getRequestURI();
+        return !(uri.equals(ROUTE_MOT_DE_PASSE) || uri.startsWith("/api/auth/"));
+    }
+
+    private static void refuserTantQueMotDePasseProvisoire(HttpServletResponse response) throws IOException {
+        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+        response.setContentType("application/json;charset=UTF-8");
+        response.getWriter().write("{\"success\":false,\"message\":\"Choisissez votre mot de passe "
+                + "personnel (onglet Profil) avant de continuer.\",\"data\":{\"code\":\"" + CODE_MOT_DE_PASSE + "\"}}");
     }
 }

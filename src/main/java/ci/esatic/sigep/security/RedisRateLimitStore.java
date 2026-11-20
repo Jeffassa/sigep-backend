@@ -1,5 +1,6 @@
 package ci.esatic.sigep.security;
 
+import ci.esatic.sigep.config.DisjoncteurRedis;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -15,9 +16,8 @@ import java.time.Duration;
  * Redis est provisionné). Fenêtre fixe par tranche de {@code windowMs} : {@code INCR} atomique
  * + {@code EXPIRE} à la première incrémentation.
  *
- * <p>SECURITE/ROBUSTESSE : <b>fail-open</b> en cas d'erreur Redis (on ne bloque pas le trafic
- * légitime si le cache est indisponible ; le budget global mémoire et les protections Tomcat
- * restent des filets). Une panne Redis dégrade la précision du rate-limit, jamais la disponibilité.
+ * <p>SECURITE/ROBUSTESSE : Redis indisponible, le filtre compte en mémoire locale. Une panne
+ * Redis dégrade le partage entre instances, jamais la limitation ni la disponibilité.
  */
 @Component
 @Slf4j
@@ -25,13 +25,20 @@ import java.time.Duration;
 public class RedisRateLimitStore {
 
     private final StringRedisTemplate redis;
+    private final DisjoncteurRedis disjoncteur;
 
-    public RedisRateLimitStore(StringRedisTemplate redis) {
+    public RedisRateLimitStore(StringRedisTemplate redis, DisjoncteurRedis disjoncteur) {
         this.redis = redis;
+        this.disjoncteur = disjoncteur;
     }
 
-    /** Enregistre un hit sur la fenêtre courante et indique si la clé dépasse son budget. */
-    public boolean overLimit(String cle, int max, long windowMs) {
+    /**
+     * Enregistre un hit sur la fenêtre courante et indique si la clé dépasse son budget, ou
+     * {@code null} si Redis ne répond pas : l'appelant compte alors en mémoire locale. Redis
+     * écarté par le disjoncteur, on ne l'attend même pas.
+     */
+    public Boolean overLimit(String cle, int max, long windowMs) {
+        if (!disjoncteur.autorise()) return null;
         try {
             long fenetre = System.currentTimeMillis() / windowMs;
             String k = "rl:" + cle + ":" + fenetre;
@@ -40,10 +47,11 @@ public class RedisRateLimitStore {
                 // Garde deux fenêtres puis expire : borne l'espace mémoire Redis.
                 redis.expire(k, Duration.ofMillis(windowMs * 2));
             }
+            disjoncteur.reussite();
             return count != null && count > max;
         } catch (Exception e) {
-            log.warn("Rate-limit Redis indisponible (fail-open) : {}", e.getMessage());
-            return false;
+            disjoncteur.echec(e);
+            return null;
         }
     }
 }

@@ -123,7 +123,7 @@ public class EmargementService {
             journaliserRefus(ci.esatic.sigep.entity.TypeEvenement.QR_AUTRE_ETABLISSEMENT,
                     ci.esatic.sigep.entity.SeveriteEvenement.CRITIQUE, enseignant,
                     "QR presente par un enseignant d'un autre etablissement");
-            throw new MetierException("QR_AUTRE_ETABLISSEMENT", "Ce QR n'appartient pas a votre etablissement.");
+            throw new MetierException("QR_AUTRE_ETABLISSEMENT", "Ce QR appartient à un autre établissement. Si vous y enseignez, choisissez-le dans votre profil.");
         }
         // Le QR doit avoir été émis PENDANT la fenêtre de la séance (preuve de présence différée).
         boolean enRetard = verifierFenetreScan(seance, etab, qr.emisLe(), zone);
@@ -332,7 +332,7 @@ public class EmargementService {
             journaliserRefus(ci.esatic.sigep.entity.TypeEvenement.QR_AUTRE_ETABLISSEMENT,
                     ci.esatic.sigep.entity.SeveriteEvenement.CRITIQUE, enseignant,
                     "QR presente par un enseignant d'un autre etablissement");
-            throw new MetierException("QR_AUTRE_ETABLISSEMENT", "Ce QR n'appartient pas a votre etablissement.");
+            throw new MetierException("QR_AUTRE_ETABLISSEMENT", "Ce QR appartient à un autre établissement. Si vous y enseignez, choisissez-le dans votre profil.");
         }
 
         // Regle 6 : anti-rejeu — un meme token ne peut servir qu'une fois par enseignant

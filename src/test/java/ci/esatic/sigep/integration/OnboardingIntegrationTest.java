@@ -78,6 +78,22 @@ class OnboardingIntegrationTest {
     }
 
     @Test
+    void planPayant_sansPaiementEnLigne_devientUneInscriptionGratuite() throws Exception {
+        // Jèko n'est pas configuré ici : un plan payant choisi sur l'accueil ne doit ni échouer ni
+        // promettre un paiement, mais créer l'espace comme une inscription ordinaire.
+        String corps = objectMapper.writeValueAsString(Map.of(
+                "nomEtablissement", "Collège Sans Paiement", "adminEmail", "sans-paiement@college.ci",
+                "adminPassword", "Secret@2026", "plan", "PRO"));
+        mockMvc.perform(post("/api/saas/etablissements").contentType(MediaType.APPLICATION_JSON).content(corps))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("en cours d'analyse")))
+                .andExpect(jsonPath("$.data.paiementPage").doesNotExist());
+        var etab = etablissementRepository.findBySlug("college-sans-paiement").orElseThrow();
+        assertThat(etab.getStatut()).isEqualTo(ci.esatic.sigep.entity.StatutEtablissement.EN_ATTENTE);
+        assertThat(etab.getPlan()).isEqualTo(ci.esatic.sigep.entity.Plan.FREE);
+    }
+
+    @Test
     void email_admin_en_double_est_refuse() throws Exception {
         mockMvc.perform(post("/api/saas/etablissements")
                         .contentType(MediaType.APPLICATION_JSON)

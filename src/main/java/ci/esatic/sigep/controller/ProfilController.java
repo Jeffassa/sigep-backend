@@ -39,4 +39,13 @@ public class ProfilController {
         return ResponseEntity.ok(ApiResponse.success(
                 "Mot de passe modifié. Reconnectez-vous avec le nouveau mot de passe.", null));
     }
+
+    /** Vacataire : choisit l'établissement où il travaille. Aucun nouveau jeton n'est nécessaire. */
+    @PostMapping("/etablissement/{id}")
+    public ResponseEntity<ApiResponse<ci.esatic.sigep.dto.response.AuthResponse>> changerEtablissement(
+            Authentication authentication,
+            @org.springframework.web.bind.annotation.PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success("Établissement changé.",
+                authService.changerEtablissement(authentication.getName(), id)));
+    }
 }

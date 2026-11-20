@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Importer son emploi du temps dans SIGEP</title>
+<style>
+@page { size: A4; margin: 16mm 15mm 17mm; }
+:root { --ink:#1b2430; --muted:#596579; --line:#d9e0e8; --blue:#174a72; --cyan:#087f8c; --gold:#b7791f; --pale:#eef6f8; --red:#9b2c2c; }
+body { font-family: Arial, Helvetica, sans-serif; color:var(--ink); font-size:10.6pt; line-height:1.5; max-width:820px; margin:0 auto; padding:0 16px; }
+h1 { color:var(--blue); font-size:24pt; margin:0 0 6px; }
+h2 { color:var(--blue); font-size:15pt; border-bottom:2px solid var(--cyan); padding-bottom:3px; margin:22px 0 8px; page-break-after:avoid; }
+p { margin:5px 0 8px; } ul, ol { padding-left:22px; } li { margin:3px 0; }
+code { font-family: Consolas, monospace; font-size:9.4pt; background:#f1f4f7; padding:1px 3px; }
+table { width:100%; border-collapse:collapse; margin:8px 0 12px; font-size:9.6pt; page-break-inside:avoid; }
+th { background:var(--blue); color:white; text-align:left; padding:6px; } td { border:1px solid var(--line); padding:5px 6px; vertical-align:top; }
+.chapeau { color:var(--muted); font-size:12pt; }
+.note, .warning { padding:9px 11px; margin:9px 0; border-left:4px solid var(--cyan); background:var(--pale); page-break-inside:avoid; }
+.warning { border-color:var(--red); background:#fff5f5; }
+</style>
+</head>
+<body>
+<h1>Importer son emploi du temps dans SIGEP</h1>
+<p class="chapeau">À l’intention de la scolarité. Déposez vos fichiers tels que vous les produisez déjà : inutile de les recopier dans un modèle.</p>
+
+<h2>Avant le premier import</h2>
+<ol>
+<li><strong>Créez vos enseignants</strong> (page Enseignants), un par un ou par fichier d’annuaire. Une séance dont l’enseignant n’est pas dans l’annuaire est refusée.</li>
+<li><strong>Saisissez votre calendrier</strong> (page Calendrier) : semestres, vacances et jours fériés. Les cours répétés chaque semaine sautent les fermetures, et sans période indiquée l’import vaut pour la fin du semestre en cours.</li>
+</ol>
+
+<h2>Déposer les fichiers</h2>
+<ol>
+<li>Page <strong>Rapports</strong>, section « Importer l’emploi du temps ».</li>
+<li>Choisissez un ou plusieurs fichiers, par exemple un par professeur.</li>
+<li>Champs facultatifs : la <strong>période</strong> des cours répétés, la <strong>classe</strong> quand une grille ne la dit pas, le <strong>professeur</strong> quand un fichier est le sien sans le dire.</li>
+<li>Cliquez sur <strong>Importer</strong>. Le message donne le nombre de séances créées et, ligne par ligne, ce qui n’a pas été compris et pourquoi. Les lignes correctes sont importées quand même.</li>
+</ol>
+<p>Réimporter un fichier corrigé ne crée pas de doublon.</p>
+
+<h2>Les présentations comprises</h2>
+<table>
+<tr><th>Présentation</th><th>Ce que SIGEP lit</th></tr>
+<tr><td>Liste, une ligne par cours</td><td>Colonnes dans n’importe quel ordre, reconnues à leur titre : date ou jour, début et fin (ou « 8h-10h » dans une seule colonne), professeur ou intervenant, matière ou cours ou UE, classe ou niveau, salle ou local.</td></tr>
+<tr><td>Grille jours × créneaux</td><td>Les jours en colonnes et les créneaux en lignes, ou l’inverse. Chaque case donne la matière, la salle et l’enseignant ou la classe, sur une ou plusieurs lignes, séparés par un tiret ou une barre. Une case fusionnée sur deux créneaux est un seul cours. « Pause » et les cases vides sont ignorées.</td></tr>
+<tr><td>Une feuille par classe</td><td>La classe est le nom de l’onglet, ou une ligne « Classe : L3 Info » au-dessus de la grille.</td></tr>
+<tr><td>Un emploi du temps par professeur</td><td>Le professeur est reconnu par le champ du formulaire, une ligne « Enseignant : M. Kouassi » en tête, le nom de l’onglet ou le nom du fichier (<code>EDT_Kouassi_Aya.xlsx</code>).</td></tr>
+<tr><td>Document Word</td><td>Les tableaux du document, lus comme un tableur.</td></tr>
+<tr><td>PDF</td><td>Le texte du PDF est remis en tableau, puis présenté sur un écran de relecture : corrigez, décochez au besoin, puis enregistrez.</td></tr>
+</table>
+
+<h2>Écritures acceptées</h2>
+<ul>
+<li>Heures : <code>08:00</code>, <code>8h</code>, <code>8h30</code>, <code>08H00</code>, <code>9.30</code>, ou une vraie heure Excel.</li>
+<li>Dates : <code>05/11/2026</code>, <code>5/11/26</code>, <code>2026-11-05</code>, <code>5 novembre 2026</code>, « Lundi 2/11/2026 » ; une date dans une cellule fusionnée vaut pour les lignes qu’elle couvre.</li>
+<li>Jours : « Lundi » ou « Lun » répète le cours chaque semaine sur la période choisie.</li>
+<li>Enseignant : matricule, adresse e-mail, « Prénom Nom », « NOM Prénom », ou le seul nom s’il est unique. Deux homonymes sont signalés, jamais devinés.</li>
+</ul>
+
+<h2>Ce qui n’est pas lu</h2>
+<div class="warning">Les photos et les PDF scannés ne contiennent pas de texte exploitable : déposez le fichier d’origine. Les semaines alternées (A et B) ne sont pas prises en charge.</div>
+<p>Si l’un de vos fichiers n’est pas compris, transmettez-le à votre contact SIGEP, sans données personnelles au besoin : il sert à étendre la lecture.</p>
+
+<h2>Après l’import</h2>
+<ul>
+<li>Les séances apparaissent dans l’application des enseignants concernés.</li>
+<li>Une séance qu’un enseignant ajoute lui-même attend votre accord, dans la page Alertes.</li>
+<li>Pour une absence, remplacez l’enseignant depuis le Calendrier plutôt que de modifier les fichiers.</li>
+</ul>
+</body>
+</html>

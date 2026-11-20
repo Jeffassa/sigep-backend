@@ -114,16 +114,39 @@ class RefreshTokenIntegrationTest {
         String refresh = login();
         String body = objectMapper.writeValueAsString(Map.of("refreshToken", refresh));
 
-        // 1er usage : OK (l'ancien token est supprimé par la rotation)
+        // 1er usage : OK (l'ancien token est marqué remplacé par la rotation)
         mockMvc.perform(post("/api/auth/refresh")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isOk());
 
-        // 2e usage du MÊME token : rejeté (rotation → token supprimé)
+        // 2e usage du MÊME token : rejeté (jeton remplacé)
         mockMvc.perform(post("/api/auth/refresh")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void refresh_unJetonRemplaceQuiRevient_fermeToutesLesSessions() throws Exception {
+        String copie = login();
+        MvcResult res = mockMvc.perform(post("/api/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("refreshToken", copie))))
+                .andExpect(status().isOk()).andReturn();
+        String successeur = objectMapper.readTree(res.getResponse().getContentAsString())
+                .get("data").get("refreshToken").asText();
+        String autreAppareil = login();
+
+        // La copie revient : le compte est ferme partout, successeur et autres appareils compris.
+        mockMvc.perform(post("/api/auth/refresh").contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("refreshToken", copie))))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(post("/api/auth/refresh").contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("refreshToken", successeur))))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(post("/api/auth/refresh").contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("refreshToken", autreAppareil))))
                 .andExpect(status().isUnauthorized());
     }
 

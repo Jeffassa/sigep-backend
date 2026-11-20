@@ -37,6 +37,12 @@
             <artifactId>anthropic-java</artifactId>
             <version>2.34.0</version>
         </dependency>
+        <!-- Lecture du texte des emplois du temps en PDF, sur nos serveurs -->
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>3.0.3</version>
+        </dependency>
         <!-- Stripe (paiement en ligne par carte — Checkout + webhook) -->
         <dependency>
             <groupId>com.stripe</groupId>
@@ -70,6 +76,12 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-cache</artifactId>
+        </dependency>
+        <!-- Cache local borné et à durée de vie, utilisé tant que Redis n'est pas provisionné :
+             le cache « simple » de Spring ne fait jamais expirer ses entrées. -->
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

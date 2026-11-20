@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -34,6 +35,7 @@ public class SecurityConfig {
     private final ci.esatic.sigep.service.JournalSecuriteService journalSecurite;
     private final ci.esatic.sigep.security.ClientIpResolver clientIpResolver;
     private final ci.esatic.sigep.security.CleApiAuthFilter cleApiAuthFilter;
+    private final ci.esatic.sigep.security.FreinConnexion freinConnexion;
 
     /** Voir {@link AdminOtpInterceptor} : interrupteur de secours du second facteur. */
     @org.springframework.beans.factory.annotation.Value("${app.security.admin-otp.enabled:true}")
@@ -64,9 +66,24 @@ public class SecurityConfig {
                         // règle, /admin-otp retombe sur anyRequest().hasRole("ADMIN") et le super
                         // administrateur — qui ne porte que ROLE_SUPER_ADMIN — reçoit un 403 sur la
                         // page même qui doit le laisser entrer.
-                        .requestMatchers("/admin-otp", "/admin-otp/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
+                        .requestMatchers("/admin-otp", "/admin-otp/**")
+                                .hasAnyRole("ADMIN", "SUPER_ADMIN", "DIRECTION", "SCOLARITE", "COMPTABILITE")
                         // Espace plateforme (super admin) : strictement séparé de l'admin établissement
                         .requestMatchers("/plateforme/**").hasRole("SUPER_ADMIN")
+                        .requestMatchers("/admin/logout", "/admin/mon-compte")
+                                .hasAnyRole("ADMIN", "DIRECTION", "SCOLARITE", "COMPTABILITE")
+                        // Tout ce qui n'est pas ouvert ci-dessous reste réservé à l'administrateur
+                        // principal : une page ajoutée plus tard n'est jamais ouverte par mégarde.
+                        .requestMatchers(HttpMethod.GET, ProfilsAdmin.LECTURE_COMMUNE)
+                                .hasAnyRole("ADMIN", "DIRECTION", "SCOLARITE", "COMPTABILITE")
+                        .requestMatchers(HttpMethod.POST, "/admin/rapports/generer")
+                                .hasAnyRole("ADMIN", "DIRECTION", "SCOLARITE", "COMPTABILITE")
+                        .requestMatchers(HttpMethod.GET, ProfilsAdmin.LECTURE_DIRECTION)
+                                .hasAnyRole("ADMIN", "DIRECTION", "SCOLARITE")
+                        .requestMatchers(HttpMethod.GET, "/admin/paie", "/admin/paie/**")
+                                .hasAnyRole("ADMIN", "DIRECTION", "COMPTABILITE")
+                        .requestMatchers(ProfilsAdmin.SCOLARITE).hasAnyRole("ADMIN", "SCOLARITE")
+                        .requestMatchers("/admin/abonnement/**").hasAnyRole("ADMIN", "COMPTABILITE")
                         .anyRequest().hasRole("ADMIN")
                 )
                 .formLogin(form -> form
@@ -106,6 +123,10 @@ public class SecurityConfig {
                             response.sendRedirect("/admin-otp");
                         })
                         .failureHandler((request, response, exception) -> {
+                            if (exception instanceof ci.esatic.sigep.security.FreinConnexion.CompteFreineException) {
+                                response.sendRedirect("/admin-login?bloque=1");
+                                return;
+                            }
                             // Repete depuis une meme IP, c'est une attaque par dictionnaire ;
                             // isole, une simple faute de frappe. Le journal permet de trancher.
                             journalSecurite.enregistrer(
@@ -177,23 +198,28 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Pages publiques SaaS (accueil + inscription + pages légales) + SEO + statiques
                         .requestMatchers("/", "/inscription", "/error", "/favicon.ico").permitAll()
+                        // Suivi du paiement d'une inscription : la référence, imprévisible, en est la clé.
+                        .requestMatchers("/inscription/paiement", "/inscription/paiement/**").permitAll()
+                        // Page de paiement d'une inscription : le jeton signé en est la clé.
+                        .requestMatchers("/inscription/payer").permitAll()
                         .requestMatchers("/mentions-legales", "/confidentialite", "/cgu").permitAll()
+                        .requestMatchers(ci.esatic.sigep.controller.web.PagesThematiquesController.CHEMINS).permitAll()
                         .requestMatchers("/robots.txt", "/sitemap.xml").permitAll()
                         .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
                         // Onboarding SaaS : inscription publique d'un établissement (rate-limité)
                         .requestMatchers("/api/saas/**").permitAll()
-                        .requestMatchers("/api/qr/display/**").permitAll()
+                        .requestMatchers("/api/qr/display").permitAll()
                         // Webhook Stripe : public, protégé par la vérification de signature
                         .requestMatchers("/api/stripe/webhook").permitAll()
-                        // Webhook Mobile Money (générique) : public, protégé par un secret partagé
-                        .requestMatchers("/api/paiement/mobile-money/webhook").permitAll()
                         // Webhook NovaSend : public, protégé par signature HMAC-SHA256 du corps
                         .requestMatchers("/api/paiement/novasend/webhook").permitAll()
+                        // Webhook Jèko : public, protégé par signature HMAC-SHA256 du corps
+                        .requestMatchers("/api/paiement/jeko/webhook").permitAll()
                         // Sondes de supervision publiques ; le reste de l'actuator (metrics…)
-                        // réservé aux admins — pas exposé aux enseignants authentifiés.
+                        // couvre toute la plateforme : réservé au super administrateur.
                         .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
-                        .requestMatchers("/actuator/**").hasRole("ADMIN")
+                        .requestMatchers("/actuator/**").hasRole("SUPER_ADMIN")
                         // Doc OpenAPI/Swagger : réservée ADMIN (désactivée en prod, cf. application-prod.yml).
                         // Évite qu'un simple compte enseignant énumère toute la surface API.
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").hasRole("ADMIN")
@@ -255,16 +281,22 @@ public class SecurityConfig {
     }
 
     /**
-     * En-têtes de sécurité communs aux deux chaînes (défense en profondeur).
-     * CSP volontairement PARTIELLE (pas de {@code default-src}) : on verrouille l'injection
-     * d'objets, la base-uri et le framing sans casser les scripts inline ni les CDN légitimes
-     * (ECharts, Google Fonts) utilisés par l'admin et les pages QR. S'ajoute aux défauts Spring
-     * (X-Frame-Options DENY, X-Content-Type-Options nosniff, HSTS en HTTPS).
+     * En-têtes de sécurité communs aux chaînes (défense en profondeur).
+     * CSP à nonce sur les scripts ({@link ci.esatic.sigep.security.CspNonceFilter}) : seuls les
+     * scripts émis par le serveur pour CETTE réponse s'exécutent. Styles, images et polices ne
+     * sont pas restreints. S'ajoute aux défauts Spring (X-Frame-Options DENY,
+     * X-Content-Type-Options nosniff, HSTS en HTTPS).
      */
     private void appliquerHeadersSecurite(HttpSecurity http) throws Exception {
         http.headers(h -> h
-                .contentSecurityPolicy(csp -> csp.policyDirectives(
-                        "object-src 'none'; base-uri 'self'; frame-ancestors 'none'"))
+                .addHeaderWriter((requete, reponse) -> {
+                    if (reponse.containsHeader("Content-Security-Policy")) return;
+                    Object nonce = requete.getAttribute(ci.esatic.sigep.security.CspNonceFilter.ATTRIBUT);
+                    reponse.setHeader("Content-Security-Policy",
+                            nonce == null || ci.esatic.sigep.security.CspNonceFilter.horsPolitiqueStricte(requete)
+                                    ? ci.esatic.sigep.security.CspNonceFilter.POLITIQUE_SANS_NONCE
+                                    : ci.esatic.sigep.security.CspNonceFilter.politique(nonce.toString()));
+                })
                 .referrerPolicy(r -> r.policy(
                         org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
                 .addHeaderWriter(new org.springframework.security.web.header.writers.StaticHeadersWriter(
@@ -313,7 +345,10 @@ public class SecurityConfig {
             java.util.Set.of("/favicon.ico", "/robots.txt", "/sitemap.xml");
 
     private static final java.util.Set<String> PAGES_PUBLIQUES =
-            java.util.Set.of("/", "/inscription", "/mentions-legales", "/confidentialite", "/cgu");
+            java.util.stream.Stream.concat(
+                    java.util.stream.Stream.of("/", "/inscription", "/mentions-legales", "/confidentialite", "/cgu"),
+                    java.util.Arrays.stream(ci.esatic.sigep.controller.web.PagesThematiquesController.CHEMINS))
+                    .collect(java.util.stream.Collectors.toUnmodifiableSet());
 
     /**
      * Politique de cache, décidée sur le seul chemin demandé.
@@ -368,14 +403,37 @@ public class SecurityConfig {
      *  base sur UserDetailsService + PasswordEncoder (cf. authenticationManager), et chaque
      *  chaîne HTTP reçoit explicitement ce provider ci-dessous. */
     private AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
-        provider.setPasswordEncoder(passwordEncoder());
-        return provider;
+        DaoAuthenticationProvider dao = new DaoAuthenticationProvider(userDetailsService);
+        dao.setPasswordEncoder(passwordEncoder());
+        // Le frein par compte enveloppe la vérification du mot de passe : la console comme
+        // l'application passent par ici, donc une attaque ne peut pas changer de porte.
+        return new AuthenticationProvider() {
+            @Override
+            public org.springframework.security.core.Authentication authenticate(
+                    org.springframework.security.core.Authentication demande) {
+                String compte = demande.getName();
+                freinConnexion.verifier(compte);
+                try {
+                    var resultat = dao.authenticate(demande);
+                    freinConnexion.succes(compte);
+                    return resultat;
+                } catch (org.springframework.security.authentication.BadCredentialsException e) {
+                    freinConnexion.echec(compte);
+                    throw e;
+                }
+            }
+
+            @Override
+            public boolean supports(Class<?> type) {
+                return dao.supports(type);
+            }
+        };
     }
 
+    /** Le gestionnaire de la connexion de l'application : même fournisseur, donc même frein. */
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
-        return config.getAuthenticationManager();
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) {
+        return new org.springframework.security.authentication.ProviderManager(authenticationProvider());
     }
 
     @Bean
