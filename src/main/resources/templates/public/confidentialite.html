@@ -5,15 +5,13 @@
 <main class="max-w-[820px] mx-auto px-5 md:px-8 py-14 page-texte">
     <a th:href="@{/}" class="text-[13px] text-muted hover:text-ink">← Retour à l'accueil</a>
     <h1 class="titre-page mt-4 mb-6">Politique de confidentialité</h1>
-    <div class="note note-attention">
-        Modèle à faire valider juridiquement (RGPD si UE ; loi ivoirienne n°2013-450 relative à la protection
-        des données personnelles / ARTCI). Champs <strong>[À COMPLÉTER]</strong> à renseigner.
-    </div>
 
     <article class="mt-8">
         <section>
             <h2>Responsable du traitement</h2>
-            <p><strong>[À COMPLÉTER : raison sociale]</strong>. Contact :
+            <p><strong th:text="${marque} ?: 'SIGEP'">SIGEP</strong>, entreprise individuelle établie à Abidjan
+               (Côte d'Ivoire), dans le cadre de la loi n° 2013-450 relative à la protection des données à caractère
+               personnel. Contact :
                <a th:href="'mailto:' + ${contactPlateforme}" class="underline" th:text="${contactPlateforme}">contact</a>.</p>
         </section>
         <section>
@@ -29,7 +27,8 @@
 <section>
             <h2>Durée de conservation</h2>
             <p>Les données sont conservées pendant la durée de la relation contractuelle, puis archivées ou supprimées
-               conformément aux obligations légales <strong>[À COMPLÉTER : durée]</strong>.</p>
+               dans un délai d'un an après la fin de l'abonnement. Les pièces de facturation sont conservées pendant la
+               durée imposée par les obligations comptables.</p>
         </section>
         <section>
             <h2>Vos droits</h2>
