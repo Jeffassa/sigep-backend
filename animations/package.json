@@ -1,0 +1,13 @@
+{
+  "name": "sigep-animations",
+  "private": true,
+  "description": "Bibliothèques d'animation de la page d'accueil, servies par SIGEP lui-même (aucun CDN).",
+  "scripts": {
+    "build": "node construire.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.0",
+    "gsap": "3.15.0",
+    "three": "0.186.1"
+  }
+}

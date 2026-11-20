@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('SIGEP | Mon compte')}"></head>
+<body>
+
+<div th:replace="~{admin/fragments :: topbar('compte')}"></div>
+
+<main class="max-w-[640px] mx-auto px-5 md:px-8 py-10 pb-36">
+
+    <div class="en-tete-page">
+        <div>
+            <p class="surtitre" th:text="${profilLibelle} ?: 'Administration'">Administration</p>
+            <h1 class="titre-page">Mon mot de passe</h1>
+            <p class="chapeau">Remplacez le mot de passe reçu par e-mail avant de continuer.</p>
+        </div>
+    </div>
+
+    <div data-flash th:if="${error}" class="feuille mb-5 text-[13px]" style="border-color:rgba(186,26,26,.3)">
+        <span th:text="${error}">Erreur</span>
+    </div>
+
+    <form th:action="@{/admin/mon-compte}" method="post" class="ouvert-lecture feuille flex flex-col gap-5">
+        <label class="flex flex-col gap-1.5 text-[13px]">
+            <span class="etiquette mb-0">Mot de passe actuel</span>
+            <input type="password" name="ancien" required autocomplete="current-password" class="champ px-3 h-11 text-[14px]"/>
+        </label>
+        <label class="flex flex-col gap-1.5 text-[13px]">
+            <span class="etiquette mb-0">Nouveau mot de passe</span>
+            <input type="password" name="nouveau" required minlength="8" autocomplete="new-password" class="champ px-3 h-11 text-[14px]"/>
+            <span class="text-muted">Au moins 8 caractères, dont une lettre et un chiffre.</span>
+        </label>
+        <label class="flex flex-col gap-1.5 text-[13px]">
+            <span class="etiquette mb-0">Confirmation</span>
+            <input type="password" name="confirmation" required minlength="8" autocomplete="new-password" class="champ px-3 h-11 text-[14px]"/>
+        </label>
+        <button type="submit" class="btn btn-ink h-11 px-5 w-fit rounded-xl font-medium">Enregistrer</button>
+    </form>
+</main>
+
+<div th:replace="~{admin/fragments :: dock('compte')}"></div>
+<div th:replace="~{admin/fragments :: palette}"></div>
+<div th:replace="~{admin/fragments :: scripts}"></div>
+</body>
+</html>

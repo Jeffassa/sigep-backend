@@ -14,7 +14,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,7 +37,7 @@ class TenantIsolationTest {
 
     // Mocké : évite de commiter l'admin/établissement par défaut dans la base H2
     // partagée entre contextes de test.
-    @MockBean
+    @MockitoBean
     private DataInitializer dataInitializer;
 
     @Autowired

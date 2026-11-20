@@ -1,7 +1,7 @@
 package ci.esatic.sigep.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -57,6 +57,10 @@ public class NovaSendService {
     @Value("${app.novasend.environment:sandbox}")
     private String environment;
 
+    /** Profils actifs : en production, une passerelle de test ne doit rien créditer. */
+    @Value("${spring.profiles.active:}")
+    private String profilsActifs;
+
     /** Mode test déclaré : l'argent est fictif alors que les abonnements crédités sont réels. */
     public boolean estSandbox() {
         return !"production".equalsIgnoreCase(environment);
@@ -65,7 +69,11 @@ public class NovaSendService {
     /** Encaissement Mobile Money utilisable ? (activé + identifiants présents) */
     public boolean isEnabled() {
         return enabled && apiKey != null && !apiKey.isBlank()
-                && secretKey != null && !secretKey.isBlank();   // isBlank() couvre déjà les espaces seuls
+                && secretKey != null && !secretKey.isBlank()    // isBlank() couvre déjà les espaces seuls
+                // En production, le mode test prolongerait de vrais abonnements sans encaissement.
+                && !(estSandbox() && profilsActifs != null
+                        && java.util.Arrays.asList(profilsActifs.split(",")).stream()
+                                .map(String::trim).anyMatch("prod"::equals));
     }
 
     /** Opérateurs supportés par l'API Direct. */
@@ -277,13 +285,13 @@ public class NovaSendService {
             JsonNode n = objectMapper.readTree(json);
             JsonNode failure = n.path("failure");
             return new Reponse(
-                    n.path("id").asText(null),
-                    n.path("reference").asText(null),
-                    n.path("status").asText(""),
-                    n.path("confirmationStatus").asText(""),
-                    n.path("paymentUrl").asText(null),
+                    n.path("id").asString(null),
+                    n.path("reference").asString(null),
+                    n.path("status").asString(""),
+                    n.path("confirmationStatus").asString(""),
+                    n.path("paymentUrl").asString(null),
                     n.path("amount").asLong(0),
-                    n.path("currency").asText(""),
+                    n.path("currency").asString(""),
                     failure.isMissingNode() || failure.isNull() ? null : failure.toString());
         } catch (Exception e) {
             log.warn("NovaSend : réponse illisible : {}", e.getMessage());
@@ -317,7 +325,7 @@ public class NovaSendService {
         try {
             JsonNode n = objectMapper.readTree(corps);
             for (String cle : new String[]{"message", "error", "code", "detail"}) {
-                String v = n.path(cle).asText("");
+                String v = n.path(cle).asString("");
                 if (!v.isBlank()) return v;
             }
         } catch (Exception ignore) { /* corps non JSON */ }

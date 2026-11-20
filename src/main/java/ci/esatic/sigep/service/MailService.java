@@ -8,7 +8,9 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Envoi d'e-mails de notification (asynchrone).
@@ -38,6 +40,21 @@ public class MailService {
         this.mailSenderProvider = mailSenderProvider;
     }
 
+    // ─── Suivi des envois, pour l'état technique de la plateforme ─────────────
+    // Compté en mémoire : repart de zéro à chaque redémarrage, ce que l'écran précise.
+    private final AtomicLong envoyes = new AtomicLong();
+    private final AtomicLong echecs = new AtomicLong();
+    private volatile LocalDateTime dernierEchec;
+
+    /** Ce que l'envoi d'e-mails a donné depuis le démarrage du service. */
+    public record BilanEnvois(boolean active, boolean configure, long envoyes, long echecs,
+                              LocalDateTime dernierEchec) {}
+
+    public BilanEnvois bilanEnvois() {
+        return new BilanEnvois(enabled, mailSenderProvider.getIfAvailable() != null,
+                envoyes.get(), echecs.get(), dernierEchec);
+    }
+
     // ─── SA-2 : cycle de validation d'un établissement ────────────────────────
 
     /** Après l'inscription self-service : le dossier est reçu et en cours d'analyse. */
@@ -49,6 +66,22 @@ public class MailService {
                 + "Nous avons bien reçu l'inscription de « " + nomEtablissement + " ».\n\n"
                 + "Votre dossier est en cours d'examen. Vous recevrez un e-mail dès que votre "
                 + "espace sera activé.\n\n"
+                + "L'équipe SIGEP");
+    }
+
+    /**
+     * Inscription avec un plan payant : l'espace sera activé par le paiement. L'e-mail garde le
+     * lien vers le paiement, pour le reprendre si la page a été fermée ou si le paiement a échoué.
+     */
+    @Async
+    public void notifierPaiementAFinaliser(String email, String prenom, String nomEtablissement, String lien) {
+        String bonjour = (prenom == null || prenom.isBlank()) ? "Bonjour," : "Bonjour " + prenom + ",";
+        envoyer(email, "SIGEP - Finalisez l'activation de votre espace",
+                bonjour + "\n\n"
+                + "L'espace de « " + nomEtablissement + " » est créé. Il sera activé dès que votre "
+                + "paiement sera confirmé.\n\n"
+                + "Payer ou reprendre votre paiement :\n" + lien + "\n\n"
+                + "Vous recevrez un e-mail de confirmation à l'activation.\n\n"
                 + "L'équipe SIGEP");
     }
 
@@ -149,6 +182,31 @@ public class MailService {
     }
 
     @Async
+    public void notifierRattachementEtablissement(String expediteur, String email, String prenom,
+                                                  String nomEtablissement) {
+        envoyer(expediteur, email, "SIGEP - Nouvel établissement",
+                "Bonjour " + (prenom == null ? "" : prenom) + ",\n\n"
+                + nomEtablissement + " vous a ajouté à ses enseignants.\n\n"
+                + "Vous gardez votre adresse et votre mot de passe : choisissez cet établissement "
+                + "depuis votre profil dans l'application. Si vous n'y enseignez pas, prévenez "
+                + "son administration.\n\n"
+                + "SIGEP");
+    }
+
+    @Async
+    public void notifierCompteAdministration(String expediteur, String email, String nomEtablissement,
+                                             String profil, String motDePasseProvisoire) {
+        envoyer(expediteur, email, "SIGEP - Votre accès " + profil,
+                "Bonjour,\n\n"
+                + nomEtablissement + " vous a créé un accès « " + profil + " » à SIGEP.\n\n"
+                + "Email : " + email + "\n"
+                + "Mot de passe provisoire : " + motDePasseProvisoire + "\n\n"
+                + "À la première connexion, vous recevrez un code par e-mail, puis vous choisirez "
+                + "votre mot de passe.\n\n"
+                + "SIGEP");
+    }
+
+    @Async
     public void envoyerCodeOtpAdmin(String email, String code) {
         envoyer(email, "SIGEP - Code de vérification",
                 "Bonjour,\n\nVotre code de vérification est : " + code + "\n\n"
@@ -208,10 +266,13 @@ public class MailService {
         for (int tentative = 1; tentative <= MAX_TENTATIVES_MAIL; tentative++) {
             try {
                 sender.send(msg);
+                envoyes.incrementAndGet();
                 log.info("E-mail envoyé à {} : {}", destinataire, sujet);
                 return;
             } catch (Exception e) {
                 if (tentative >= MAX_TENTATIVES_MAIL) {
+                    echecs.incrementAndGet();
+                    dernierEchec = LocalDateTime.now();
                     log.error("Échec envoi e-mail à {} après {} tentatives : {}",
                             destinataire, tentative, e.getMessage());
                     return;

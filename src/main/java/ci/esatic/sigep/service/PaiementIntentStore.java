@@ -72,8 +72,10 @@ public class PaiementIntentStore {
         if (i == null) return null;
         if (i.getStatut() != StatutIntent.EN_COURS) return i.getStatut();   // déjà traitée
 
+        boolean jeko = reference.startsWith(JekoService.PREFIXE_REFERENCE);
         boolean enregistre = paiementService.enregistrer(i.getEtablissementId(), i.getMois(),
-                montantRecu, "NovaSend " + reference, "NovaSend (Mobile Money)",
+                montantRecu, (jeko ? "Jèko " : "NovaSend ") + reference,
+                jeko ? "Jèko (Mobile Money)" : "NovaSend (Mobile Money)",
                 i.getPlan(), i.getDevise());
 
         i.setStatut(StatutIntent.REUSSI);
@@ -106,6 +108,11 @@ public class PaiementIntentStore {
     @Transactional(readOnly = true)
     public List<PaiementIntent> enCours() {
         return repository.findByStatutOrderByDateCreationAsc(StatutIntent.EN_COURS);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<PaiementIntent> derniere(Long etablissementId) {
+        return repository.findByEtablissementIdOrderByDateCreationDesc(etablissementId).stream().findFirst();
     }
 
     /** Une initiation est-elle déjà en vol pour cet établissement ? (anti double-clic) */

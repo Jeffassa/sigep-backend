@@ -98,6 +98,7 @@ public class EmargementService {
         if (!seance.getEnseignant().getId().equals(enseignant.getId())) {
             throw new MetierException("SEANCE_NON_ATTRIBUEE", "Cette seance ne vous appartient pas");
         }
+        refuserSeanceAValider(seance);
         // Règle 3 : unicité — pas déjà émargée (ni en attente).
         if (emargementRepository.existsBySeanceId(seance.getId())) {
             throw new MetierException("DEJA_EMARGEE", "Cette seance a deja ete emargee");
@@ -122,7 +123,7 @@ public class EmargementService {
             journaliserRefus(ci.esatic.sigep.entity.TypeEvenement.QR_AUTRE_ETABLISSEMENT,
                     ci.esatic.sigep.entity.SeveriteEvenement.CRITIQUE, enseignant,
                     "QR presente par un enseignant d'un autre etablissement");
-            throw new MetierException("QR_AUTRE_ETABLISSEMENT", "Ce QR n'appartient pas a votre etablissement.");
+            throw new MetierException("QR_AUTRE_ETABLISSEMENT", "Ce QR appartient à un autre établissement. Si vous y enseignez, choisissez-le dans votre profil.");
         }
         // Le QR doit avoir été émis PENDANT la fenêtre de la séance (preuve de présence différée).
         boolean enRetard = verifierFenetreScan(seance, etab, qr.emisLe(), zone);
@@ -274,6 +275,7 @@ public class EmargementService {
         if (!seance.getEnseignant().getId().equals(enseignant.getId())) {
             throw new MetierException("SEANCE_NON_ATTRIBUEE", "Cette seance ne vous appartient pas");
         }
+        refuserSeanceAValider(seance);
 
         // Fuseau + tolérances PROPRES à l'établissement (E1 + E7).
         ZoneId zone = zoneDe(etab);
@@ -305,6 +307,14 @@ public class EmargementService {
         return maintenant.isAfter(finAutorisee);
     }
 
+    /** Une séance importée par l'enseignant ne donne lieu à aucun émargement avant l'accord de la scolarité. */
+    private void refuserSeanceAValider(Seance seance) {
+        if (seance.getStatut() == StatutSeance.A_VALIDER) {
+            throw new MetierException("SEANCE_A_VALIDER",
+                    "Cette seance attend la validation de la scolarite.");
+        }
+    }
+
     /** Règles d'émargement EN LIGNE : communes + QR frais + appartenance tenant + anti-rejeu. */
     private boolean validerRegles(Enseignant enseignant, Seance seance, String qrToken, Etablissement etab) {
         boolean enRetard = validerReglesCommunes(enseignant, seance, etab);
@@ -322,7 +332,7 @@ public class EmargementService {
             journaliserRefus(ci.esatic.sigep.entity.TypeEvenement.QR_AUTRE_ETABLISSEMENT,
                     ci.esatic.sigep.entity.SeveriteEvenement.CRITIQUE, enseignant,
                     "QR presente par un enseignant d'un autre etablissement");
-            throw new MetierException("QR_AUTRE_ETABLISSEMENT", "Ce QR n'appartient pas a votre etablissement.");
+            throw new MetierException("QR_AUTRE_ETABLISSEMENT", "Ce QR appartient à un autre établissement. Si vous y enseignez, choisissez-le dans votre profil.");
         }
 
         // Regle 6 : anti-rejeu — un meme token ne peut servir qu'une fois par enseignant

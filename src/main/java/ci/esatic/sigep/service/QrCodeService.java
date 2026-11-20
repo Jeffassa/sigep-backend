@@ -38,22 +38,6 @@ public class QrCodeService {
 
     private final JwtService jwtService;
 
-    public QrCodeResponse generateQrForSalle(String salleCode) {
-        String token = jwtService.generateQrToken(salleCode, qrExpirationMs);
-        String qrImageBase64 = generateQrImage(token);
-
-        return QrCodeResponse.builder()
-                .salleCode(salleCode)
-                .qrImageBase64(qrImageBase64)
-                .expiresInSeconds(qrRefreshSeconds)
-                .generatedAt(System.currentTimeMillis())
-                .build();
-    }
-
-    public boolean validateQrToken(String token, String salleCode) {
-        return jwtService.isQrTokenValid(token, salleCode);
-    }
-
     /** QR universel d'émargement d'un établissement (un écran par tenant, renouvelé régulièrement). */
     public QrCodeResponse generateUniversalQr(Long etablissementId) {
         String token = jwtService.generateUniversalQrToken(qrExpirationMs, etablissementId);

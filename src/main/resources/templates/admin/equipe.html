@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('SIGEP | Équipe')}"></head>
+<body>
+
+<div th:replace="~{admin/fragments :: topbar('equipe')}"></div>
+
+<main class="max-w-[1240px] mx-auto px-5 md:px-8 py-10 pb-36">
+
+    <div class="en-tete-page">
+        <div>
+            <p class="surtitre">Administration</p>
+            <h1 class="titre-page">Équipe</h1>
+            <p class="chapeau">Donnez à chacun l'accès dont il a besoin, sans partager votre compte.</p>
+        </div>
+    </div>
+
+    <div data-flash th:if="${success}" class="feuille mb-5 flex items-center gap-2 text-[13px]"
+         style="background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.35)">
+        <svg th:replace="~{admin/fragments :: coche}"></svg><span th:text="${success}">OK</span>
+    </div>
+    <div data-flash th:if="${error}" class="feuille mb-5 text-[13px]" style="border-color:rgba(186,26,26,.3)">
+        <span th:text="${error}">Erreur</span>
+    </div>
+
+    <section class="feuille mb-10">
+        <h2 class="titre-section">Ajouter un accès</h2>
+        <form th:action="@{/admin/equipe}" method="post" class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+            <div class="md:col-span-6">
+                <label for="equipeEmail" class="etiquette">Adresse e-mail</label>
+                <input id="equipeEmail" type="email" name="email" required autocomplete="off" class="w-full h-11 px-3 champ"/>
+            </div>
+            <div class="md:col-span-3">
+                <label for="equipeProfil" class="etiquette">Profil</label>
+                <select id="equipeProfil" name="profil" class="w-full h-11 px-3 champ">
+                    <option th:each="p : ${profils}" th:value="${p.key}" th:text="${p.value}">Profil</option>
+                </select>
+            </div>
+            <button type="submit" class="md:col-span-3 btn btn-ink h-11 font-medium">Créer l'accès</button>
+        </form>
+        <ul class="text-[13px] text-muted mt-4 flex flex-col gap-1">
+            <li><strong class="text-ink">Direction :</strong> consulte tout, ne modifie rien.</li>
+            <li><strong class="text-ink">Scolarité :</strong> enseignants, emploi du temps, calendrier, émargements et alertes.</li>
+            <li><strong class="text-ink">Comptabilité :</strong> paie, abonnement et rapports.</li>
+        </ul>
+    </section>
+
+    <section class="feuille">
+        <h2 class="titre-section">Comptes</h2>
+        <div class="overflow-x-auto">
+            <table class="registre">
+                <thead><tr><th>Adresse</th><th>Profil</th><th>État</th><th></th></tr></thead>
+                <tbody>
+                <tr th:each="m : ${membres}">
+                    <td th:text="${m.email}">adresse</td>
+                    <td th:text="${m.profil}">Profil</td>
+                    <td th:text="${m.actif} ? 'Actif' : 'Accès retiré'">Actif</td>
+                    <td class="text-right">
+                        <form th:unless="${m.principal}" th:action="@{/admin/equipe/{id}/acces(id=${m.id})}" method="post">
+                            <input type="hidden" name="actif" th:value="${!m.actif}"/>
+                            <button type="submit" class="btn text-[13px] underline" th:text="${m.actif} ? 'Retirer l\'accès' : 'Rétablir'">Retirer</button>
+                        </form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+<div th:replace="~{admin/fragments :: dock('equipe')}"></div>
+<div th:replace="~{admin/fragments :: palette}"></div>
+<div th:replace="~{admin/fragments :: scripts}"></div>
+</body>
+</html>

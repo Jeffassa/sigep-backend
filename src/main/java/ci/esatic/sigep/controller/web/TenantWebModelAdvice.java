@@ -3,6 +3,7 @@ package ci.esatic.sigep.controller.web;
 import ci.esatic.sigep.entity.Etablissement;
 import ci.esatic.sigep.entity.User;
 import ci.esatic.sigep.service.AbonnementService;
+import ci.esatic.sigep.service.AnnonceService;
 import ci.esatic.sigep.service.EtablissementCourantService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,6 +26,7 @@ public class TenantWebModelAdvice {
     private final AbonnementService abonnementService;
     private final EtablissementCourantService etablissementCourantService;
     private final ci.esatic.sigep.tenant.plan.PlanService planService;
+    private final AnnonceService annonceService;
 
     /** Tarifs et devise exposés à TOUTES les vues web (landing, abonnement, plateforme) :
      *  une seule source de vérité, donc aucun prix codé en dur qui pourrait diverger. */
@@ -49,7 +51,7 @@ public class TenantWebModelAdvice {
     }
 
     /** Email du propriétaire de la plateforme (identité SUPER ADMIN — détection). */
-    @Value("${app.platform.owner-email:assalendahjeanfrancois@gmail.com}")
+    @Value("${app.platform.owner-email:}")
     private String ownerEmail;
 
     /** Marque affichée dans l'interface (M10) — externalisée, plus de « SIGEP » en dur. */
@@ -71,6 +73,23 @@ public class TenantWebModelAdvice {
     @ModelAttribute("plausibleDomain")
     public String plausibleDomain() {
         return (plausibleDomain != null && !plausibleDomain.isBlank()) ? plausibleDomain : null;
+    }
+
+    /** Codes de preuve de propriété fournis par les outils des moteurs — vides = balises absentes. */
+    @Value("${app.seo.google-site-verification:}")
+    private String verificationGoogle;
+
+    @Value("${app.seo.bing-site-verification:}")
+    private String verificationBing;
+
+    @ModelAttribute("verificationGoogle")
+    public String verificationGoogle() {
+        return (verificationGoogle != null && !verificationGoogle.isBlank()) ? verificationGoogle : null;
+    }
+
+    @ModelAttribute("verificationBing")
+    public String verificationBing() {
+        return (verificationBing != null && !verificationBing.isBlank()) ? verificationBing : null;
     }
 
     @ModelAttribute("marque")
@@ -149,9 +168,70 @@ public class TenantWebModelAdvice {
         return u != null ? u.getEmail() : null;
     }
 
+    private ci.esatic.sigep.entity.ERole profilSecondaire() {
+        User u = utilisateurCourant();
+        if (u == null || u.getRoles().stream().anyMatch(r -> r.getName() == ci.esatic.sigep.entity.ERole.ROLE_ADMIN)) {
+            return null;
+        }
+        return u.getRoles().stream().map(r -> r.getName())
+                .filter(ci.esatic.sigep.config.ProfilsAdmin.LIBELLES::containsKey).findFirst().orElse(null);
+    }
+
+    /** Onglets du profil connecté ; null pour l'administrateur principal, qui les voit tous. */
+    @ModelAttribute("menu")
+    public java.util.Set<String> menu() {
+        return ci.esatic.sigep.config.ProfilsAdmin.menu(profilSecondaire());
+    }
+
+    @ModelAttribute("profilLibelle")
+    public String profilLibelle() {
+        var profil = profilSecondaire();
+        return profil == null ? null : ci.esatic.sigep.config.ProfilsAdmin.LIBELLES.get(profil);
+    }
+
+    @ModelAttribute("lectureSeule")
+    public boolean lectureSeule(jakarta.servlet.http.HttpServletRequest requete) {
+        var profil = profilSecondaire();
+        if (profil == ci.esatic.sigep.entity.ERole.ROLE_DIRECTION) return true;
+        return profil == ci.esatic.sigep.entity.ERole.ROLE_SCOLARITE
+                && requete.getRequestURI().startsWith("/admin/abonnement");
+    }
+
+    /** Cookie posé quand l'établissement masque une annonce : il contient son identifiant. */
+    static final String COOKIE_ANNONCE_LUE = "sigep_annonce_lue";
+
+    /**
+     * Annonce de la plateforme à afficher dans l'en-tête, sur les seules consoles d'établissement.
+     * Elle est servie depuis la mémoire ({@link AnnonceService}) : aucune requête par page.
+     */
+    @ModelAttribute("annonce")
+    public AnnonceService.AnnonceVisible annonce(jakarta.servlet.http.HttpServletRequest requete) {
+        if (requete == null || !requete.getRequestURI().startsWith("/admin/") || utilisateurCourant() == null) {
+            return null;
+        }
+        var annonce = annonceService.enCours().orElse(null);
+        if (annonce == null || !annonce.masquable() || requete.getCookies() == null) {
+            return annonce;
+        }
+        String id = String.valueOf(annonce.id());
+        for (var c : requete.getCookies()) {
+            if (COOKIE_ANNONCE_LUE.equals(c.getName()) && id.equals(c.getValue())) return null;
+        }
+        return annonce;
+    }
+
     @ModelAttribute("abonnementExpire")
     public boolean abonnementExpire() {
         return abonnementService.estExpire(etablissementCourant());
+    }
+
+    /**
+     * Accès suspendu (abonnement expiré ou établissement désactivé) : la console n'offre plus
+     * que l'abonnement et la déconnexion, les seules pages que le serveur laisse ouvertes.
+     */
+    @ModelAttribute("accesSuspendu")
+    public boolean accesSuspendu() {
+        return abonnementService.accesSuspendu(etablissementCourant());
     }
 
     @ModelAttribute("abonnementRappel")

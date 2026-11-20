@@ -49,6 +49,13 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(ex.getMessage()));
     }
 
+    @ExceptionHandler(ci.esatic.sigep.security.FreinConnexion.CompteFreineException.class)
+    public ResponseEntity<ApiResponse<Void>> handleCompteFreine(
+            ci.esatic.sigep.security.FreinConnexion.CompteFreineException ex) {
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .body(ApiResponse.error(ex.getMessage()));
+    }
+
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ApiResponse<Void>> handleBadCredentials(BadCredentialsException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)

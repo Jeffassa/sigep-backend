@@ -116,9 +116,9 @@ public class RapportWebController {
                 return "redirect:/admin/rapports";
             }
             List<?> result = rapportService.genererTousRapports(d, f);
-            ra.addFlashAttribute("success", result.size() + " rapport(s) genere(s) avec succes.");
+            ra.addFlashAttribute("success", result.size() == 1 ? "1 rapport généré." : result.size() + " rapports générés.");
         } catch (Exception e) {
-            ra.addFlashAttribute("error", "Erreur lors de la generation : " + e.getMessage());
+            ra.addFlashAttribute("error", "Les rapports n'ont pas pu être générés. Réessayez dans un instant.");
         }
         return "redirect:/admin/rapports";
     }

@@ -78,7 +78,14 @@ public class LogoEtablissementController {
         }
 
         try {
-            etablissement.setLogoDonnees(fichier.getBytes());
+            byte[] octets = fichier.getBytes();
+            // Le type annoncé vient du navigateur : on vérifie la signature du fichier lui-même.
+            if (!signatureConforme(octets, type.toLowerCase())) {
+                ra.addFlashAttribute("error",
+                        "Ce fichier n'est pas une image PNG, JPEG ou WebP valide.");
+                return "redirect:/admin/referentiels";
+            }
+            etablissement.setLogoDonnees(octets);
             etablissement.setLogoType(type.toLowerCase());
             etablissementRepository.save(etablissement);
             ra.addFlashAttribute("success", "Logo mis à jour.");
@@ -132,5 +139,17 @@ public class LogoEtablissementController {
                 // se voie sans attendre.
                 .cacheControl(CacheControl.maxAge(5, TimeUnit.MINUTES).cachePrivate())
                 .body(etablissement.getLogoDonnees());
+    }
+
+    /** Premiers octets attendus pour chaque format admis. */
+    static boolean signatureConforme(byte[] o, String type) {
+        if (o == null) return false;
+        return switch (type) {
+            case "image/png" -> o.length > 8 && (o[0] & 0xFF) == 0x89 && o[1] == 'P' && o[2] == 'N' && o[3] == 'G';
+            case "image/jpeg", "image/jpg" -> o.length > 3 && (o[0] & 0xFF) == 0xFF && (o[1] & 0xFF) == 0xD8 && (o[2] & 0xFF) == 0xFF;
+            case "image/webp" -> o.length > 12 && o[0] == 'R' && o[1] == 'I' && o[2] == 'F' && o[3] == 'F'
+                    && o[8] == 'W' && o[9] == 'E' && o[10] == 'B' && o[11] == 'P';
+            default -> false;
+        };
     }
 }

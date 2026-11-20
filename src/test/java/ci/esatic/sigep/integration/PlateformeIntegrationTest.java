@@ -12,9 +12,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -29,7 +29,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -45,7 +45,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class PlateformeIntegrationTest {
 
     // Mocké : évite de commiter l'admin/établissement par défaut dans la base H2 partagée.
-    @MockBean
+    @MockitoBean
     private DataInitializer dataInitializer;
 
     @Autowired private MockMvc mockMvc;
@@ -214,6 +214,23 @@ class PlateformeIntegrationTest {
     }
 
     @Test
+    void tableauDeBord_afficheLePilotageDuJourEtLaCelluleDAnalyse() throws Exception {
+        mockMvc.perform(get("/plateforme").with(user(superAdmin)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Aujourd'hui sur la plateforme")))
+                .andExpect(content().string(containsString("Échéances et quotas")))
+                .andExpect(content().string(containsString("Mise en route des nouvelles écoles")))
+                .andExpect(content().string(containsString("État technique")))
+                .andExpect(content().string(containsString("Base de données")))
+                // Les cinq analystes rendent chacun leur lecture.
+                .andExpect(content().string(containsString("Croissance")))
+                .andExpect(content().string(containsString("Revenus")))
+                .andExpect(content().string(containsString("Fidélisation")))
+                .andExpect(content().string(containsString("Usage")))
+                .andExpect(content().string(containsString("Marché")));
+    }
+
+    @Test
     void adminEtablissement_nAccedePasALaPlateforme() throws Exception {
         mockMvc.perform(get("/plateforme").with(user(adminClient)))
                 .andExpect(status().isForbidden());
@@ -229,7 +246,7 @@ class PlateformeIntegrationTest {
     void anonyme_estRedirigeVersLaConnexion() throws Exception {
         mockMvc.perform(get("/plateforme"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrlPattern("**/admin-login"));
+                .andExpect(redirectedUrl("/admin-login"));
     }
 
     @Test

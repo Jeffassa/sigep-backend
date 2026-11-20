@@ -38,6 +38,7 @@ public class CleApiAuthFilter extends OncePerRequestFilter {
     private final CleApiService cleApiService;
     private final PlanService planService;
     private final EtablissementRepository etablissementRepository;
+    private final ci.esatic.sigep.service.AbonnementService abonnementService;
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
@@ -65,6 +66,10 @@ public class CleApiAuthFilter extends OncePerRequestFilter {
         var etablissement = etablissementRepository.findById(cleApi.getEtablissementId()).orElse(null);
         if (etablissement == null) {
             refuser(reponse, 403, "Établissement introuvable.");
+            return;
+        }
+        if (abonnementService.accesSuspendu(etablissement)) {
+            refuser(reponse, 403, "L'accès de cet établissement est suspendu.");
             return;
         }
         if (!planService.estDisponible(etablissement, Feature.API_PUBLIQUE)) {

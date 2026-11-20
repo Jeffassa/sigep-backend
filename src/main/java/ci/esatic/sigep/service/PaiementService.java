@@ -92,13 +92,27 @@ public class PaiementService {
             e.setActif(true);
             log.info("Établissement {} réactivé suite à paiement", e.getId());
         }
+        // Achat en libre-service : l'inscription suivie d'un paiement confirmé n'attend pas
+        // d'examen, le paiement vaut validation. Un dossier REFUSÉ, lui, ne se rouvre pas seul :
+        // l'argent est enregistré et signalé, la décision reste humaine.
+        boolean activeParLePaiement = e.getStatut() == ci.esatic.sigep.entity.StatutEtablissement.EN_ATTENTE;
+        if (activeParLePaiement) {
+            e.setStatut(ci.esatic.sigep.entity.StatutEtablissement.VALIDE);
+            log.info("Établissement {} activé par son paiement ({})", e.getId(), source);
+        } else if (e.getStatut() == ci.esatic.sigep.entity.StatutEtablissement.REFUSE) {
+            log.error("Paiement reçu pour l'établissement {} dont le dossier est REFUSÉ ({}) : "
+                    + "à traiter par la plateforme (remboursement ou réouverture)", e.getId(), reference);
+        }
         abonnementService.prolonger(e, m);
         etablissementRepository.save(e);
 
         final Etablissement etab = e;
-        userRepository.findFirstByEtablissementIdOrderByIdAsc(e.getId())
-                .ifPresent(u -> mailService.notifierPaiementEnLigne(
-                        u.getEmail(), etab.getNom(), montant, etab.getDateExpiration()));
+        userRepository.findFirstByEtablissementIdOrderByIdAsc(e.getId()).ifPresent(u -> {
+            if (activeParLePaiement) {
+                mailService.notifierEtablissementValide(u.getEmail(), etab.getNom());
+            }
+            mailService.notifierPaiementEnLigne(u.getEmail(), etab.getNom(), montant, etab.getDateExpiration());
+        });
 
         log.info("Paiement enregistré ({}) : établissement={} montant={} {} plan={} mois={}",
                 source, e.getId(), montant, dev, cible, m);

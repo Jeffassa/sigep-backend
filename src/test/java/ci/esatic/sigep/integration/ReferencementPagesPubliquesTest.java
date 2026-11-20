@@ -5,9 +5,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -28,7 +28,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 @ActiveProfiles("test")
 class ReferencementPagesPubliquesTest {
 
-    @MockBean private DataInitializer dataInitializer;
+    @MockitoBean private DataInitializer dataInitializer;
 
     @Autowired private MockMvc mockMvc;
 
@@ -47,7 +47,9 @@ class ReferencementPagesPubliquesTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"/", "/inscription", "/mentions-legales", "/confidentialite", "/cgu"})
+    @ValueSource(strings = {"/", "/inscription", "/mentions-legales", "/confidentialite", "/cgu",
+            "/emargement-qr-code", "/suivi-heures-vacataires", "/etat-heures-paie-enseignants",
+            "/logiciel-emargement-cote-d-ivoire"})
     void chaquePagePublique_porteSesReperesDeReferencement(String url) throws Exception {
         String html = rendu(url);
 
@@ -62,6 +64,46 @@ class ReferencementPagesPubliquesTest {
         // désignerait une seconde version du site.
         assertThat(html).as("canonique de " + url).contains("rel=\"canonical\"");
         assertThat(html).as("canonique absolue de " + url).contains("https://sigep.store");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"/emargement-qr-code", "/suivi-heures-vacataires", "/etat-heures-paie-enseignants",
+            "/logiciel-emargement-cote-d-ivoire"})
+    void chaquePageThematique_estComplete_etReliee(String url) throws Exception {
+        String html = rendu(url);
+
+        assertThat(compter(html, "<h1")).as("un seul titre principal sur " + url).isEqualTo(1);
+        assertThat(html).as("canonique propre a " + url).contains("href=\"https://sigep.store" + url + "\"");
+        assertThat(html).as("lien vers l'inscription sur " + url).contains("href=\"/inscription\"");
+        assertThat(html).as("une page lit vite : pas d'animation sur " + url)
+                .doesNotContain("gsap").doesNotContain("accueil-qr.js");
+
+        // Le balisage ne décrit que ce qui est à l'écran : chaque question du balisage est
+        // aussi une question affichée.
+        int debut = html.indexOf("application/ld+json");
+        int ouvre = html.indexOf('>', debut) + 1;
+        String json = html.substring(ouvre, html.indexOf("</script>", ouvre)).trim();
+        var noeud = new tools.jackson.databind.ObjectMapper().readTree(json);
+        assertThat(json).doesNotContain("${");
+        var questions = noeud.path("@graph").get(1).path("mainEntity");
+        assertThat(questions).isNotEmpty();
+        for (var q : questions) {
+            assertThat(html).as("question affichee sur " + url)
+                    .contains("<summary>" + q.path("name").asText());
+        }
+        assertThat(noeud.path("@graph").get(0).path("itemListElement").get(1).path("item").asText())
+                .isEqualTo("https://sigep.store" + url);
+    }
+
+    @Test
+    void lAccueilEtLeSitemap_menentAuxPagesThematiques() throws Exception {
+        String accueil = rendu("/");
+        String sitemap = new String(getClass().getResourceAsStream("/static/sitemap.xml").readAllBytes(),
+                java.nio.charset.StandardCharsets.UTF_8);
+        for (String chemin : ci.esatic.sigep.controller.web.PagesThematiquesController.CHEMINS) {
+            assertThat(accueil).as("lien depuis l'accueil vers " + chemin).contains("href=\"" + chemin + "\"");
+            assertThat(sitemap).as("sitemap : " + chemin).contains("<loc>https://sigep.store" + chemin + "</loc>");
+        }
     }
 
     @Test
@@ -99,7 +141,7 @@ class ReferencementPagesPubliquesTest {
         int ferme = html.indexOf("</script>", ouvre);
         String json = html.substring(ouvre, ferme).trim();
 
-        var noeud = new com.fasterxml.jackson.databind.ObjectMapper().readTree(json);
+        var noeud = new tools.jackson.databind.ObjectMapper().readTree(json);
 
         assertThat(noeud.path("@graph")).as("le graphe doit porter ses trois noeuds").hasSize(3);
         assertThat(json).as("aucune expression de template ne doit subsister").doesNotContain("${");
@@ -113,17 +155,10 @@ class ReferencementPagesPubliquesTest {
         String html = rendu("/");
 
         // Le contenu ne doit pas dépendre d'un script pour EXISTER : posé à opacity:0 dans la
-        // feuille de style, tout ce qui suit l'accroche disparaissait dès que le script ne
-        // s'exécutait pas, et un moteur n'avait qu'une page vide à indexer.
-        // Toute règle qui masque doit être portée par la classe d'armement : on compte les deux
-        // formes, et elles doivent coïncider. Chercher simplement l'absence de « .reveal
-        // { opacity: 0 » ne prouverait rien — la forme conditionnée contient cette sous-chaîne.
-        int masquages = compter(html, ".reveal { opacity: 0");
-        int masquagesArmes = compter(html, "html.anim-reveal .reveal { opacity: 0");
-        assertThat(masquages).as("au moins une regle de masquage doit exister").isPositive();
-        assertThat(masquagesArmes)
-                .as("tout masquage doit etre conditionne a l'armement du script")
-                .isEqualTo(masquages);
+        // feuille de style, tout ce qui suit l'accroche disparaîtrait dès que le script ne
+        // s'exécute pas, et un moteur n'aurait qu'une page vide à indexer.
+        assertThat(html).as("aucun masquage en attente d'un script").doesNotContain(".reveal");
+        assertThat(html).as("le contenu est dans le document").contains("Le bordereau").contains("Questions.");
         assertThat(html).as("filet pour les visiteurs sans JavaScript").contains("<noscript>");
     }
 

@@ -1,0 +1,64 @@
+/* ============================================================================
+   PAGES THÉMATIQUES : le papier de l'accueil (registre.css), mis en page pour la lecture.
+
+   Le texte reste sur la grille de 32 px de l'accueil. Les titres de section sont plus petits
+   que ceux de l'accueil : on lit ici un article, on ne parcourt pas une affiche.
+   ========================================================================= */
+.bouton-petit { padding: 10px 18px; font-size: 15px; margin-left: auto; }
+.nav .bouton-petit { color: #fff; text-decoration: none; }
+.nav .bouton-petit:hover { color: #fff; text-decoration: none; }
+
+.fil { font: 13px var(--chiffres); color: var(--encre-2); padding-top: 8px; }
+.fil a { color: var(--encre-2); }
+
+.guide-tete { padding-top: 32px; padding-bottom: 64px; }
+.guide-tete .surtitre { font: 500 13px/32px var(--chiffres); text-transform: uppercase; letter-spacing: .08em; color: var(--kola); }
+.guide-tete h1 {
+    font-family: var(--affiche); font-stretch: 75%; font-weight: 900;
+    font-size: clamp(48px, 5vw, 80px); line-height: 1; letter-spacing: -.015em;
+    max-width: 1000px; margin-top: 8px;
+}
+.guide-tete h1 .it { font-weight: 500; }
+.guide-tete .chapeau { margin-top: 32px; max-width: 720px; color: var(--encre-2); }
+.guide-tete .appel { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 24px; margin-top: 32px; }
+.guide-tete .appel .mono { font-size: 13px; line-height: 16px; color: var(--encre-2); }
+
+.guide-corps { padding: 64px 0 32px; }
+.guide-corps section { max-width: 760px; }
+.guide-corps section + section { margin-top: 64px; }
+.titre-section {
+    font-family: var(--affiche); font-stretch: 75%; font-weight: 900;
+    font-size: 40px; line-height: 48px; letter-spacing: -.01em; margin-bottom: 16px;
+}
+.guide-corps .corps + .corps, .guide-corps ul + .corps, .guide-corps ol + .corps { margin-top: 16px; }
+.guide-corps ul, .guide-corps ol { margin: 16px 0 0; padding-left: 24px; font-size: 19px; line-height: 32px; }
+.guide-corps li + li { margin-top: 8px; }
+.guide-corps strong { font-weight: 700; }
+
+/* Une comparaison courte se lit mieux en tableau qu'en paragraphes. */
+.comparatif { width: 100%; border-collapse: collapse; margin-top: 24px; font-size: 16px; line-height: 24px; }
+.comparatif th { font: 500 12px var(--chiffres); text-align: left; padding: 12px 8px; border-bottom: 2px solid var(--encre); }
+.comparatif td { padding: 14px 8px; border-bottom: 1px solid var(--ligne); vertical-align: top; }
+.comparatif td:first-child { font-weight: 700; }
+
+.encadre { margin-top: 24px; padding: 16px 20px; background: rgba(245,166,35,.14); border-left: 4px solid var(--or); font-size: 17px; line-height: 28px; }
+
+.guide-questions { padding: 32px 0 96px; }
+.guide-questions .titre-section { margin-bottom: 24px; }
+
+.autres { padding: 64px 0 96px; }
+.cartes { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; max-width: 1100px; }
+.cartes a {
+    display: block; height: 100%; padding: 20px 24px; background: #fff; text-decoration: none;
+    border-top: 3px solid var(--encre); box-shadow: 0 1px 0 var(--ligne);
+}
+.cartes a:hover { border-top-color: var(--kola); }
+.cartes strong { display: block; font-stretch: 75%; font-weight: 800; font-size: 24px; line-height: 32px; }
+.cartes span { display: block; margin-top: 8px; font-size: 16px; line-height: 24px; color: var(--encre-2); }
+
+@media (max-width: 820px) {
+    .titre-section { font-size: 32px; line-height: 40px; }
+    .guide-tete h1 { font-size: 44px; }
+    .nav .bouton-petit { display: none; }
+    .comparatif { font-size: 15px; }
+}

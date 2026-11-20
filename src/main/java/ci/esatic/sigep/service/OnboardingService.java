@@ -48,8 +48,23 @@ public class OnboardingService {
     @org.springframework.beans.factory.annotation.Value("${app.plans.free-max-enseignants:10}")
     private int freeMaxEnseignants;
 
+    /** Ce que crée une inscription : l'établissement et son premier administrateur. */
+    public record Inscription(Etablissement etablissement, User admin, AuthResponse reponse) {}
+
     @Transactional
     public AuthResponse inscrire(InscriptionEtablissementRequest req) {
+        return creer(req, false).reponse();
+    }
+
+    /**
+     * Crée l'établissement et son administrateur.
+     *
+     * @param paiementAttendu l'inscription est suivie d'un paiement : l'e-mail « dossier en cours
+     *                        d'examen » n'est pas envoyé, puisque c'est le paiement confirmé qui
+     *                        activera l'espace, sans examen.
+     */
+    @Transactional
+    public Inscription creer(InscriptionEtablissementRequest req, boolean paiementAttendu) {
         if (userRepository.existsByEmail(req.getAdminEmail())) {
             throw new IllegalArgumentException("Email déjà utilisé : " + req.getAdminEmail());
         }
@@ -79,19 +94,20 @@ public class OnboardingService {
 
         if (autoValidation) {
             mailService.notifierEtablissementValide(admin.getEmail(), etablissement.getNom());
-        } else {
+        } else if (!paiementAttendu) {
             mailService.notifierInscriptionEtablissementRecue(
                     admin.getEmail(), req.getAdminPrenom(), etablissement.getNom());
         }
 
         // Pas de token : le compte ne devient utilisable qu'après validation du dossier.
-        return AuthResponse.builder()
+        AuthResponse reponse = AuthResponse.builder()
                 .id(admin.getId())
                 .email(admin.getEmail())
                 .roles(List.of(ERole.ROLE_ADMIN.name()))
                 .nom(req.getAdminNom())
                 .prenom(req.getAdminPrenom())
                 .build();
+        return new Inscription(etablissement, admin, reponse);
     }
 
     /**

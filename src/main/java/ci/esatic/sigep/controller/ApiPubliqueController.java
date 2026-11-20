@@ -75,7 +75,10 @@ public class ApiPubliqueController {
                     "success", false, "message", "Période trop large : 92 jours au maximum."));
         }
 
-        return ResponseEntity.ok(seanceRepository.findByDateBetweenOrderByDateAscHeureDebutAsc(debut, fin).stream().map(s -> {
+        return ResponseEntity.ok(seanceRepository.findByDateBetweenOrderByDateAscHeureDebutAsc(debut, fin).stream()
+                // Pas encore acceptée par la scolarité : elle n'existe pas pour un système tiers.
+                .filter(s -> s.getStatut() != ci.esatic.sigep.entity.StatutSeance.A_VALIDER)
+                .map(s -> {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("date", s.getDate() != null ? s.getDate().toString() : null);
             m.put("heureDebut", s.getHeureDebut() != null ? s.getHeureDebut().toString() : null);
