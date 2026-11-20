@@ -786,42 +786,48 @@
 </th:block>
 
 <!-- ==================== BANNIÈRE DE CONSENTEMENT COOKIES (réutilisable) ====================
-     Autonome (styles + JS scopés, couleurs fixes) : s'affiche à l'identique sur l'admin ET la
-     landing. Glass sombre + reflet (effet miroir) + accent vert de la marque. -->
+     Autonome (styles + JS scopés, couleurs fixes) : s'affiche à l'identique sur l'admin, l'accueil
+     et les pages publiques. -->
 <div th:fragment="cookieConsent" id="sigepCookie" class="sigep-cookie" hidden>
-    <div class="sigep-cookie__card">
-        <div class="sigep-cookie__txt">
-            <strong>Cookies et confidentialité</strong>
+    <section class="sigep-cookie__card" role="region" aria-labelledby="sigepCookieTitre">
+        <h2 id="sigepCookieTitre" class="sigep-cookie__titre">Cookies et confidentialité</h2>
+        <p class="sigep-cookie__txt">
             Nous n'utilisons que des cookies essentiels (session, préférence d'affichage) ;
             notre mesure d'audience est sans cookie.
             <a th:href="@{/confidentialite}" href="/confidentialite">En savoir plus</a>.
-        </div>
+        </p>
         <div class="sigep-cookie__btns">
             <button type="button" class="sc-btn sc-ghost" data-consent="essential">Essentiels uniquement</button>
             <button type="button" class="sc-btn sc-accent" data-consent="all">Tout accepter</button>
         </div>
-    </div>
+    </section>
     <style>
-        .sigep-cookie { position: fixed; left: 0; right: 0; bottom: 0; z-index: 200;
-            display: flex; justify-content: center; padding: 14px; pointer-events: none; }
+        /* Fiche compacte posée dans un coin : elle informe sans masquer le milieu de la page. */
+        .sigep-cookie { position: fixed; right: 20px; bottom: 20px; z-index: 200; width: 400px;
+            max-width: calc(100vw - 24px); pointer-events: none; }
         .sigep-cookie[hidden] { display: none !important; }
-        .sigep-cookie__card { pointer-events: auto; max-width: 760px; width: 100%;
-            display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between;
-            background: #081a38;
-            border: 1px solid #3a5684; border-radius: 2px; padding: 15px 18px; color: #f6ecd9;
-            animation: sc-in .5s cubic-bezier(.16,1,.3,1) both; }
-        @keyframes sc-in { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
-        .sigep-cookie__txt { font: 400 13px/1.55 Archivo, Arial, sans-serif; flex: 1 1 340px; min-width: 260px; }
-        .sigep-cookie__txt strong { display: block; font-weight: 600; font-size: 14px; margin-bottom: 3px; }
-        .sigep-cookie__txt a { color: #ffbe57; text-decoration: underline; }
-        .sigep-cookie__btns { display: flex; gap: 8px; flex-wrap: wrap; }
-        .sc-btn { font: 600 13px Archivo, Arial, sans-serif; border-radius: 2px; min-height: 44px; padding: 9px 16px;
-            cursor: pointer; border: 1px solid transparent; transition: opacity .15s, background .15s; white-space: nowrap; }
+        .sigep-cookie__card { pointer-events: auto; box-sizing: border-box; padding: 18px 20px 20px;
+            background: #081a38; border: 1px solid #3a5684; border-radius: 2px; color: #f6ecd9;
+            font-family: Archivo, Arial, sans-serif; box-shadow: 0 18px 40px rgba(8, 26, 56, .28);
+            animation: sc-in .45s cubic-bezier(.16,1,.3,1) both; }
+        @keyframes sc-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+        .sigep-cookie__titre { margin: 0; font: 700 16px/22px Archivo, Arial, sans-serif; color: #f6ecd9; }
+        .sigep-cookie__txt { margin: 6px 0 0; font-size: 14px; line-height: 22px; color: #f6ecd9; opacity: .9; }
+        .sigep-cookie__txt a { color: #ffbe57; text-decoration: underline; text-underline-offset: 2px; white-space: nowrap; }
+        /* Deux boutons de même taille, côte à côte : refuser est aussi simple qu'accepter. */
+        .sigep-cookie__btns { display: flex; gap: 8px; margin-top: 16px; }
+        .sc-btn { flex: 1 1 0; min-height: 44px; padding: 8px 12px; border-radius: 2px; cursor: pointer;
+            font: 600 14px Archivo, Arial, sans-serif; border: 1px solid transparent; white-space: nowrap;
+            transition: opacity .15s, background .15s; }
         .sc-accent { background: #f5a623; color: #081a38; }
         .sc-accent:hover { opacity: .92; }
         .sc-ghost { background: transparent; border-color: #5b769f; color: #f6ecd9; }
         .sc-ghost:hover { background: rgba(255,255,255,.08); }
-        @media (max-width: 560px) { .sigep-cookie__btns { width: 100%; } .sc-btn { flex: 1; } }
+        .sc-btn:focus-visible, .sigep-cookie__txt a:focus-visible { outline: 3px solid #f5a623; outline-offset: 2px; }
+        @media (max-width: 560px) {
+            .sigep-cookie { left: 12px; right: 12px; bottom: 12px; width: auto; max-width: none; }
+            .sc-btn { font-size: 13px; padding: 8px 6px; }
+        }
         @media (prefers-reduced-motion: reduce) { .sigep-cookie__card { animation: none; } }
     </style>
     <script th:nonce="${cspNonce}">

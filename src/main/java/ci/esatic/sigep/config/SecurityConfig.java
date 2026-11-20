@@ -203,6 +203,7 @@ public class SecurityConfig {
                         // Page de paiement d'une inscription : le jeton signé en est la clé.
                         .requestMatchers("/inscription/payer").permitAll()
                         .requestMatchers("/mentions-legales", "/confidentialite", "/cgu").permitAll()
+                        .requestMatchers(ci.esatic.sigep.controller.web.PagesThematiquesController.CHEMINS).permitAll()
                         .requestMatchers("/robots.txt", "/sitemap.xml").permitAll()
                         .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
@@ -344,7 +345,10 @@ public class SecurityConfig {
             java.util.Set.of("/favicon.ico", "/robots.txt", "/sitemap.xml");
 
     private static final java.util.Set<String> PAGES_PUBLIQUES =
-            java.util.Set.of("/", "/inscription", "/mentions-legales", "/confidentialite", "/cgu");
+            java.util.stream.Stream.concat(
+                    java.util.stream.Stream.of("/", "/inscription", "/mentions-legales", "/confidentialite", "/cgu"),
+                    java.util.Arrays.stream(ci.esatic.sigep.controller.web.PagesThematiquesController.CHEMINS))
+                    .collect(java.util.stream.Collectors.toUnmodifiableSet());
 
     /**
      * Politique de cache, décidée sur le seul chemin demandé.

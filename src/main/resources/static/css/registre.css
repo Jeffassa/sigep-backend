@@ -289,3 +289,10 @@ details .corps { margin-bottom: 24px; max-width: 720px; }
 .qr-box.en-3d canvas { opacity: 1; }
 .qr-box svg { transition: opacity .5s ease; }
 .qr-box.en-3d svg { opacity: 0; }
+
+/* ----- Les mots que l'on cherche, au-dessus du titre ----- */
+.surtitre-accueil { font-size: 13px; line-height: 32px; letter-spacing: .06em; text-transform: uppercase; color: var(--kola); }
+/* ----- Les pages thématiques, au pied de l'accueil ----- */
+.pied-guides { display: flex; flex-wrap: wrap; gap: 8px 24px; margin-top: 8px; font-size: 14px; }
+.pied-guides a { color: var(--creme); padding: 12px 0; }
+.pied-guides a:hover { color: var(--or-clair); }

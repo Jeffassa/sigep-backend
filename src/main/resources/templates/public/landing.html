@@ -78,6 +78,7 @@
 
     <header class="accroche marge">
         <div class="accroche-texte">
+            <p class="surtitre-accueil mono">Émargement des enseignants par QR code · suivi des heures · paie</p>
             <h1 class="titre">Chaque heure de cours,<br/><span class="it" style="font-size:1.12em">signée.</span> <span class="sur">Comptée.</span><br/>Prête pour la paie.</h1>
             <p class="corps">L'enseignant scanne le QR code affiché dans la salle et signe sur son téléphone. La scolarité voit aussitôt qui a fait cours, combien d'heures, et sort l'état pour la paie sans rien ressaisir.</p>
             <div class="appel">
@@ -88,11 +89,11 @@
 
         <aside class="fiche-qr" aria-label="Exemple de code affiché en salle">
             <div class="qr-box">
-                <svg viewBox="0 0 25 25" role="img" aria-label="QR code d'illustration, renouvelé toutes les 15 secondes" shape-rendering="crispEdges">
+                <svg viewBox="0 0 25 25" role="img" aria-label="QR code d'illustration, renouvelé toutes les 10 secondes" shape-rendering="crispEdges">
                     <path id="qr" fill="#081a38" d="M0 0h7v7h-7zM1 1v5h5v-5zM2 2h3v3h-3zM18 0h7v7h-7zM19 1v5h5v-5zM20 2h3v3h-3zM0 18h7v7h-7zM1 19v5h5v-5zM2 20h3v3h-3z" fill-rule="evenodd"/>
                 </svg>
             </div>
-            <p class="mono">Salle B12 · nouveau code dans <strong><span id="secondes">15</span> s</strong></p>
+            <p class="mono">Salle B12 · nouveau code dans <strong><span id="secondes">10</span> s</strong></p>
             <div class="jauge"><div id="jauge"></div></div>
         </aside>
     </header>
@@ -192,7 +193,7 @@
             <span class="it" aria-hidden="true">2</span>
             <div>
                 <h3>Affichez le code en salle</h3>
-                <p class="corps">Un écran affiche un QR qui se renouvelle en continu. Une photo du code expire en moins d'une minute, et un même code ne sert qu'une fois par enseignant.</p>
+                <p class="corps">Un écran affiche un QR qui se renouvelle en continu. Une photo du code n'est plus acceptée au bout de 30 secondes, et un même code ne sert qu'une fois par enseignant.</p>
             </div>
         </div>
         <div class="geste">
@@ -301,6 +302,12 @@
                 <a th:href="@{/cgu}" href="/cgu">CGU</a>
             </nav>
         </div>
+        <nav class="pied-guides" aria-label="Pages utiles">
+            <a th:href="@{/emargement-qr-code}" href="/emargement-qr-code">Émargement par QR code</a>
+            <a th:href="@{/suivi-heures-vacataires}" href="/suivi-heures-vacataires">Heures des vacataires</a>
+            <a th:href="@{/etat-heures-paie-enseignants}" href="/etat-heures-paie-enseignants">État des heures pour la paie</a>
+            <a th:href="@{/logiciel-emargement-cote-d-ivoire}" href="/logiciel-emargement-cote-d-ivoire">SIGEP en Côte d’Ivoire</a>
+        </nav>
     </div>
 </footer>
 
@@ -340,14 +347,14 @@
         window.__qrCode = cases;
         document.dispatchEvent(new CustomEvent('sigep:qr', { detail: cases }));
     }
-    var graine = 7, reste = 15;
+    var graine = 7, reste = 10;
     var elSec = document.getElementById('secondes'), elJauge = document.getElementById('jauge');
     dessinerCode(graine);
     setInterval(function () {
-        reste = reste <= 1 ? 15 : reste - 1;
-        if (reste === 15) dessinerCode(++graine);
+        reste = reste <= 1 ? 10 : reste - 1;
+        if (reste === 10) dessinerCode(++graine);
         elSec.textContent = reste;
-        elJauge.style.width = (reste / 15 * 100) + '%';
+        elJauge.style.width = (reste / 10 * 100) + '%';
     }, 1000);
 
     /* ----- La ligne que le visiteur signe ----- */

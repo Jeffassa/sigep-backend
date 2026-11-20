@@ -47,7 +47,9 @@ class ReferencementPagesPubliquesTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"/", "/inscription", "/mentions-legales", "/confidentialite", "/cgu"})
+    @ValueSource(strings = {"/", "/inscription", "/mentions-legales", "/confidentialite", "/cgu",
+            "/emargement-qr-code", "/suivi-heures-vacataires", "/etat-heures-paie-enseignants",
+            "/logiciel-emargement-cote-d-ivoire"})
     void chaquePagePublique_porteSesReperesDeReferencement(String url) throws Exception {
         String html = rendu(url);
 
@@ -62,6 +64,46 @@ class ReferencementPagesPubliquesTest {
         // désignerait une seconde version du site.
         assertThat(html).as("canonique de " + url).contains("rel=\"canonical\"");
         assertThat(html).as("canonique absolue de " + url).contains("https://sigep.store");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"/emargement-qr-code", "/suivi-heures-vacataires", "/etat-heures-paie-enseignants",
+            "/logiciel-emargement-cote-d-ivoire"})
+    void chaquePageThematique_estComplete_etReliee(String url) throws Exception {
+        String html = rendu(url);
+
+        assertThat(compter(html, "<h1")).as("un seul titre principal sur " + url).isEqualTo(1);
+        assertThat(html).as("canonique propre a " + url).contains("href=\"https://sigep.store" + url + "\"");
+        assertThat(html).as("lien vers l'inscription sur " + url).contains("href=\"/inscription\"");
+        assertThat(html).as("une page lit vite : pas d'animation sur " + url)
+                .doesNotContain("gsap").doesNotContain("accueil-qr.js");
+
+        // Le balisage ne décrit que ce qui est à l'écran : chaque question du balisage est
+        // aussi une question affichée.
+        int debut = html.indexOf("application/ld+json");
+        int ouvre = html.indexOf('>', debut) + 1;
+        String json = html.substring(ouvre, html.indexOf("</script>", ouvre)).trim();
+        var noeud = new tools.jackson.databind.ObjectMapper().readTree(json);
+        assertThat(json).doesNotContain("${");
+        var questions = noeud.path("@graph").get(1).path("mainEntity");
+        assertThat(questions).isNotEmpty();
+        for (var q : questions) {
+            assertThat(html).as("question affichee sur " + url)
+                    .contains("<summary>" + q.path("name").asText());
+        }
+        assertThat(noeud.path("@graph").get(0).path("itemListElement").get(1).path("item").asText())
+                .isEqualTo("https://sigep.store" + url);
+    }
+
+    @Test
+    void lAccueilEtLeSitemap_menentAuxPagesThematiques() throws Exception {
+        String accueil = rendu("/");
+        String sitemap = new String(getClass().getResourceAsStream("/static/sitemap.xml").readAllBytes(),
+                java.nio.charset.StandardCharsets.UTF_8);
+        for (String chemin : ci.esatic.sigep.controller.web.PagesThematiquesController.CHEMINS) {
+            assertThat(accueil).as("lien depuis l'accueil vers " + chemin).contains("href=\"" + chemin + "\"");
+            assertThat(sitemap).as("sitemap : " + chemin).contains("<loc>https://sigep.store" + chemin + "</loc>");
+        }
     }
 
     @Test
