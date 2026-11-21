@@ -35,7 +35,7 @@ figcaption { color:var(--muted); font-size:9pt; margin-top:4px; }
 <div class="couverture">
   <h1>Guide d'utilisation de SIGEP</h1>
   <p class="chapeau">Système Intelligent de Gestion des Enseignements et du Pointage : ce que fait chaque acteur, et comment le système fonctionne d'un bout à l'autre.</p>
-  <p class="version">Version du 13 novembre 2026 · s'applique à sigep.store et à l'application Android SIGEP 1.2.0</p>
+  <p class="version">Version du 21 novembre 2026 · s'applique à sigep.store et à l'application Android SIGEP 1.2.1</p>
 </div>
 
 <h2>Sommaire</h2>
@@ -190,7 +190,7 @@ figcaption { color:var(--muted); font-size:9pt; margin-top:4px; }
   <tr><td>3</td><td><strong>Équipe</strong></td><td>Donner un accès à la Direction, à la Scolarité ou à la Comptabilité, sans partager son propre compte.</td></tr>
   <tr><td>4</td><td><strong>Calendrier</strong></td><td>Jours fériés, vacances, semestres ; règles de tolérance (par défaut : 15 minutes avant le début, 30 après la fin) ; remplacements d'un enseignant absent.</td></tr>
   <tr><td>5</td><td><strong>Rapports → Importer l'emploi du temps</strong></td><td>Déposer les fichiers tels quels : Excel, CSV, Word ou PDF, en liste ou en grille, un par classe ou par professeur. Un PDF passe par une page de relecture avant enregistrement. Réimporter ne crée pas de doublon.</td></tr>
-  <tr><td>6</td><td><strong>Écran d'émargement</strong></td><td>Ouvrir l'écran de salle sur l'ordinateur relié à l'écran ou au vidéoprojecteur.</td></tr>
+  <tr><td>6</td><td><strong>Écran d'émargement</strong></td><td>Ouvrir l'écran de salle sur l'ordinateur relié à l'écran ou au vidéoprojecteur. Facultatif : « Émargement sur place » enregistre la position de l'établissement et un rayon ; un enseignant ne peut alors émarger que si son téléphone est dans ce rayon. À activer une fois tous les enseignants passés à l'application 1.2.1.</td></tr>
 </table>
 <div class="note">Le détail des formats d'emploi du temps compris est dans le <em>Guide d'import de l'emploi du temps</em>.</div>
 
@@ -324,7 +324,7 @@ figcaption { color:var(--muted); font-size:9pt; margin-top:4px; }
   <tr><td><strong>Statistiques</strong></td><td>Ses heures et son taux d'émargement.</td></tr>
   <tr><td><strong>Profil</strong></td><td>Changer son mot de passe, voir ses établissements, importer son emploi du temps (Excel ou CSV), se déconnecter.</td></tr>
 </table>
-<div class="note">L'application s'installe à partir du fichier SIGEP-1.2.0.apk sur Android. Au premier lancement, autoriser la caméra : sans elle, pas de scan.</div>
+<div class="note">L'application s'installe à partir du fichier SIGEP-1.2.1.apk, sur Android 10 ou plus récent. L'établissement en envoie le lien à ses enseignants depuis Enseignants → Application mobile, à tous d'un coup ou à un seul. Au premier lancement, autoriser la caméra : sans elle, pas de scan. Si l'établissement vérifie la présence sur place, autoriser aussi la localisation : elle n'est relevée qu'au moment d'émarger et n'est pas enregistrée. Se déconnecter depuis le Profil efface du téléphone les émargements pas encore envoyés : l'application prévient avant.</div>
 
 <!-- ===================================================================== -->
 <h2>13. L'espace plateforme (super administrateur)</h2>
@@ -366,7 +366,7 @@ figcaption { color:var(--muted); font-size:9pt; margin-top:4px; }
   <tr><th style="width:34%">Situation</th><th>Que faire</th></tr>
   <tr><td>Le code de connexion n'arrive pas</td><td>Attendre une minute, regarder les courriers indésirables, puis « Renvoyer un code ».</td></tr>
   <tr><td>Un enseignant a perdu son mot de passe</td><td>Page Enseignants : « Renvoyer les accès par e-mail » génère un nouveau mot de passe provisoire.</td></tr>
-  <tr><td>Le scan est refusé</td><td>Vérifier que l'enseignant est dans la bonne salle, à l'heure (fenêtre de tolérance), et que l'écran de salle affiche bien un code qui change.</td></tr>
+  <tr><td>Le scan est refusé</td><td>Vérifier que l'enseignant est dans la bonne salle, à l'heure (fenêtre de tolérance), et que l'écran de salle affiche bien un code qui change. Si l'établissement vérifie la présence sur place : localisation autorisée et activée sur le téléphone, application 1.2.1 ou plus récente, rayon assez large pour couvrir tout le site.</td></tr>
   <tr><td>Pas de réseau dans la salle</td><td>Scanner quand même : l'émargement part au retour du réseau, puis la scolarité le valide.</td></tr>
   <tr><td>Une séance manque dans le planning</td><td>Vérifier l'import (page Rapports) et le calendrier : un cours répété ne se crée pas pendant une fermeture.</td></tr>
   <tr><td>Paiement effectué, abonnement pas encore prolongé</td><td>Ne pas repayer. La confirmation arrive en général en moins d'une minute ; au-delà de 48 heures, le paiement passe en vérification par la plateforme.</td></tr>
