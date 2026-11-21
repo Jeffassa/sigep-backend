@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Notes de version SIGEP 1.2.1</title>
+<style>
+@page { size: A4; margin: 16mm 15mm 17mm; }
+:root { --ink:#1b2430; --muted:#596579; --line:#d9e0e8; --blue:#174a72; --cyan:#087f8c; --gold:#b7791f; --pale:#eef6f8; --red:#9b2c2c; }
+body { font-family: Arial, Helvetica, sans-serif; color:var(--ink); font-size:10.4pt; line-height:1.45; max-width:820px; margin:0 auto; padding:0 16px; }
+h1 { color:var(--blue); font-size:24pt; margin:0 0 6px; }
+h2 { color:var(--blue); font-size:15pt; border-bottom:2px solid var(--cyan); padding-bottom:3px; margin:22px 0 8px; page-break-after:avoid; }
+h3 { color:var(--cyan); font-size:12pt; margin:14px 0 4px; page-break-after:avoid; }
+p { margin:5px 0 8px; } ul, ol { padding-left:22px; } li { margin:3px 0; }
+code { font-family: Consolas, monospace; font-size:9pt; background:#f1f4f7; padding:1px 3px; }
+table { width:100%; border-collapse:collapse; margin:8px 0 12px; font-size:9.4pt; page-break-inside:avoid; }
+th { background:var(--blue); color:white; text-align:left; padding:6px; } td { border:1px solid var(--line); padding:5px 6px; vertical-align:top; }
+.meta { border-left:5px solid var(--gold); padding:10px 14px; background:#fff9ed; color:#4a3a1c; margin:12px 0 18px; }
+.note, .warning { padding:9px 11px; margin:9px 0; border-left:4px solid var(--cyan); background:var(--pale); page-break-inside:avoid; }
+.warning { border-color:var(--red); background:#fff5f5; }
+</style>
+</head>
+<body>
+<h1>Notes de version SIGEP 1.2.1</h1>
+<div class="meta"><strong>Mise en production :</strong> 21 novembre 2026<br><strong>Backend :</strong> migrations Flyway V38 et V39 · <strong>Application mobile :</strong> version 1.2.1 (Android 10 ou plus récent)<br><strong>Guide d’utilisation associé :</strong> édition du 21 novembre 2026</div>
+
+<h2>Ce qui change pour les établissements</h2>
+<h3>Envoyer l’application aux enseignants</h3>
+<ul>
+<li>Nouvelle page <strong>Enseignants → Application mobile</strong>, aussi accessible depuis la palette de commandes. Elle affiche la version en ligne, un bouton « Télécharger l’APK » et le lien à partager.</li>
+<li>« Envoyer à tous les enseignants » écrit à chaque enseignant actif qui a une adresse e-mail. On peut aussi l’envoyer à un seul enseignant, choisi dans une liste.</li>
+<li>L’e-mail porte le lien de téléchargement et les trois étapes d’installation. L’APK est trop lourd pour une pièce jointe.</li>
+<li>Le lien <code>https://sigep.store/telecharger/sigep-android.apk</code> donne toujours la dernière version. L’établissement peut aussi le diffuser lui-même, par message ou sur un groupe.</li>
+<li>Un envoi à tous ne peut pas être relancé avant un quart d’heure : un double clic n’écrit pas deux fois aux enseignants.</li>
+</ul>
+<h3>Émargement sur place</h3>
+<ul>
+<li>Nouvelle rubrique facultative sur la page <strong>Écran d’émargement</strong> : la position de l’établissement et un rayon, de 100 m à 1 000 m (300 m par défaut).</li>
+<li>Sur place, « Utiliser la position de cet appareil » remplit les coordonnées. On peut aussi les copier depuis une carte en ligne.</li>
+<li>Une fois la zone enregistrée, un enseignant ne peut émarger que si son téléphone se trouve dans ce rayon. Un code photographié et envoyé à un collègue absent ne permet plus d’émarger.</li>
+<li>L’application indique pourquoi un émargement est refusé : localisation coupée ou refusée, position trop imprécise, position modifiée par une autre application, ou téléphone hors de la zone. Un refus ne consomme pas le code : l’enseignant peut réessayer aussitôt.</li>
+<li>Sans réseau, la position prise au moment du scan part avec l’émargement et est contrôlée à l’envoi.</li>
+<li>Les émargements tentés hors de la zone apparaissent dans le journal de sécurité, avec la seule distance à l’établissement.</li>
+<li>« Retirer la zone » supprime le contrôle. Sans zone enregistrée, rien ne change.</li>
+</ul>
+<div class="warning">N’activer la zone qu’une fois tous les enseignants passés à l’application 1.2.1 : les versions précédentes n’envoient pas de position, et leurs émargements seraient refusés.</div>
+<h3>Inscription</h3>
+<ul>
+<li>Le formulaire répond de la même façon, que l’adresse soit nouvelle ou déjà inscrite. Dans le second cas, rien n’est créé et le titulaire de l’adresse est prévenu par e-mail, avec le lien de connexion.</li>
+<li>Pour un plan payant, la page de paiement ne s’ouvre plus directement : son lien part par e-mail, et l’écran affiche « Vérifiez votre boîte mail ». Le lien reste valable 30 jours.</li>
+</ul>
+
+<h2>Plateforme</h2>
+<ul>
+<li>Nouvelle page <strong>Plateforme → Application mobile</strong> : le super administrateur y dépose l’APK, avec son numéro de version. Une barre d’avancement suit l’envoi.</li>
+<li>L’APK est gardé dans la base de SIGEP et servi depuis sigep.store, sans service extérieur. Un nouveau dépôt remplace la version en ligne.</li>
+<li>La page affiche la version en ligne, sa taille, sa date de dépôt et son empreinte SHA-256.</li>
+</ul>
+
+<h2>Application mobile 1.2.1</h2>
+<ul>
+<li>Fonctionne sur Android 10 ou plus récent, sur les processeurs ARM 32 et 64 bits (la quasi-totalité des téléphones). L’APK passe de 110 à 75 Mo.</li>
+<li>Si l’établissement a défini une zone, l’application demande l’accès à la localisation et relève la position au moment d’émarger, jamais en arrière-plan.</li>
+<li>Les émargements en attente d’envoi (QR, signature, position) sont chiffrés sur le téléphone.</li>
+<li>Si un autre compte se connecte sur le même téléphone, les émargements en attente du compte précédent sont effacés sans être envoyés.</li>
+<li>Se déconnecter depuis le Profil efface les émargements pas encore envoyés. L’application prévient avant, en indiquant combien seraient perdus.</li>
+</ul>
+<div class="note">L’APK 1.2.1 s’installe par-dessus la 1.2.0, sans désinstaller. Les émargements en attente sont repris et chiffrés au premier lancement.</div>
+
+<h2>Vie privée</h2>
+<ul>
+<li>La position du téléphone sert uniquement à vérifier la distance à l’établissement, puis elle est oubliée. Les coordonnées ne sont pas enregistrées.</li>
+<li>La politique de confidentialité de sigep.store décrit ce traitement.</li>
+</ul>
+
+<h2>Corrections</h2>
+<ul>
+<li>Trois pages de console arrivaient sans leur script quand on les ouvrait depuis le menu : la plupart de leurs boutons ne faisaient rien. Cela touchait le dépôt de l’APK, la recherche de position de la zone d’émargement et la validation d’un emploi du temps relu. Un test vérifie désormais toutes les pages de console.</li>
+</ul>
+
+<h2>Exploitation</h2>
+<table>
+<tr><th>Élément</th><th>Action</th></tr>
+<tr><td>Migrations V38 et V39</td><td>Appliquées automatiquement au démarrage. Elles ajoutent la zone d’émargement des établissements et le stockage de l’application mobile.</td></tr>
+<tr><td>Variables d’environnement</td><td>Aucune nouvelle variable.</td></tr>
+<tr><td>Application mobile</td><td>À chaque nouvelle version : compiler l’APK (profil <code>preview</code> d’EAS), puis le déposer sur <code>/plateforme/application</code>. Ne plus diffuser de lien Expo, qui est temporaire.</td></tr>
+<tr><td>Base de données</td><td>L’APK occupe environ 75 Mo dans la base. Une seule version est gardée.</td></tr>
+<tr><td>Téléchargements</td><td>Limités à 60 par heure et par adresse IP, assez pour tout un établissement derrière la même connexion.</td></tr>
+</table>
+
+<h2>Limites connues</h2>
+<ul>
+<li>Pas d’application iOS, et pas de prise en charge des téléphones antérieurs à Android 10.</li>
+<li>L’envoi par e-mail ne touche que les enseignants actifs qui ont une adresse : les autres doivent recevoir le lien autrement.</li>
+<li>Le premier paiement réel par Jèko reste à faire.</li>
+<li>Les photos et les PDF scannés ne sont toujours pas lus, et les semaines alternées (A et B) ne sont pas prises en charge.</li>
+</ul>
+</body>
+</html>
