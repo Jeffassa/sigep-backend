@@ -51,7 +51,10 @@ class TenantIsolationGuardTest {
                    "EvenementSecurite",
                    // Annonce de la plateforme : publiee par le super-administrateur et adressee
                    // a TOUS les etablissements ; elle ne contient aucune donnee d'un etablissement.
-                   "Annonce");
+                   "Annonce",
+                   // APK de l'application Android : depose par la plateforme, le meme pour tous
+                   // les etablissements ; aucune donnee d'un etablissement.
+                   "ApplicationMobile", "ApplicationMobileMorceau");
 
     /**
      * Requêtes natives autorisées à ne pas filtrer par établissement.

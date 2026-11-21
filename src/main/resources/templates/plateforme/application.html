@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('SIGEP | Plateforme · Application mobile')}"></head>
+<body>
+
+<div th:replace="~{plateforme/fragments :: topbar('application')}"></div>
+
+<main class="max-w-[1000px] mx-auto px-5 md:px-8 py-10 pb-24">
+
+    <section class="mb-8" data-reveal>
+        <p class="surtitre">Plateforme · Diffusion</p>
+        <h1 class="titre-page">Application mobile</h1>
+        <p class="chapeau">L'APK déposé ici est servi depuis sigep.store. Chaque établissement en envoie le lien
+            à ses enseignants depuis sa console. Un nouveau dépôt remplace la version en ligne.</p>
+    </section>
+
+    <section class="chapitre" data-reveal>
+        <div class="chapitre-tete">
+            <h2 class="titre-section">Version en ligne</h2>
+        </div>
+        <div class="feuille">
+            <p th:if="${apk == null}" class="text-muted">Aucun APK n'est encore en ligne.</p>
+            <th:block th:if="${apk != null}">
+                <p class="text-[15px]"><strong>SIGEP <span th:text="${apk.version}">1.2.1</span></strong>
+                    · <span th:text="${tailleMo} + ' Mo'">50 Mo</span>
+                    · déposé le <span th:text="${#temporals.format(apk.dateDepot, 'dd/MM/yyyy HH:mm')}">21/11/2026</span>
+                    <span th:if="${apk.deposePar}" th:text="'par ' + ${apk.deposePar}"></span></p>
+                <p class="text-muted text-[12px] mt-2 font-mono break-all" th:text="'SHA-256 ' + ${apk.sha256}"></p>
+                <a th:href="@{${cheminTelechargement}}" download class="text-[13px] underline mt-3 inline-block">Télécharger cette version</a>
+            </th:block>
+        </div>
+    </section>
+
+    <section class="chapitre" data-reveal>
+        <div class="chapitre-tete">
+            <h2 class="titre-section">Déposer une version</h2>
+        </div>
+        <!-- Le formulaire ne part pas tel quel : le script envoie le fichier brut, avec son jeton CSRF. -->
+        <form id="depot" th:action="@{/plateforme/application/depot}" method="post" class="feuille space-y-5" data-no-boost>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div>
+                    <label for="version" class="etiquette">Version</label>
+                    <input id="version" type="text" required pattern="\d{1,3}\.\d{1,3}\.\d{1,3}" placeholder="1.2.1"
+                           class="w-full h-12 px-4 champ text-[15px] font-mono"/>
+                </div>
+                <div class="md:col-span-2">
+                    <label for="fichier" class="etiquette">Fichier APK <span class="text-muted" th:text="'(' + ${tailleMaxMo} + ' Mo au plus)'"></span></label>
+                    <input id="fichier" type="file" required accept=".apk,application/vnd.android.package-archive"
+                           class="w-full text-[14px]"/>
+                </div>
+            </div>
+            <p class="text-muted text-[12px]">Prenez l'APK compilé pour Android 10 et plus (profil « preview » d'EAS).
+                La version doit être celle de l'application : les e-mails et le nom du fichier la reprennent.</p>
+            <div class="flex items-center gap-4">
+                <button id="envoyer" type="submit" class="btn btn-gold h-12 px-6 rounded-2xl text-[14px] font-medium">Mettre en ligne</button>
+                <span id="etat" class="text-[13px] text-muted" aria-live="polite"></span>
+            </div>
+        </form>
+    </section>
+</main>
+
+<div th:replace="~{plateforme/fragments :: dock('application')}"></div>
+<div th:replace="~{admin/fragments :: scripts}"></div>
+<script th:nonce="${cspNonce}" th:inline="none">
+(function () {
+    var form = document.getElementById('depot');
+    if (!form || form.dataset.pret) return;
+    form.dataset.pret = '1';
+    var etat = document.getElementById('etat');
+    var bouton = document.getElementById('envoyer');
+
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var version = document.getElementById('version').value.trim();
+        var fichier = document.getElementById('fichier').files[0];
+        if (!fichier) return;
+        if (!/\.apk$/i.test(fichier.name)) { etat.textContent = 'Choisissez un fichier .apk.'; return; }
+        var jeton = form.querySelector('input[name="_csrf"]');
+
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', form.action + '?version=' + encodeURIComponent(version));
+        xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+        if (jeton) xhr.setRequestHeader('X-CSRF-TOKEN', jeton.value);
+        xhr.upload.onprogress = function (p) {
+            if (p.lengthComputable) etat.textContent = 'Envoi… ' + Math.round(100 * p.loaded / p.total) + ' %';
+        };
+        xhr.onload = function () {
+            var r = {};
+            try { r = JSON.parse(xhr.responseText); } catch (err) {}
+            if (xhr.status === 200 && r.ok) { etat.textContent = r.message; setTimeout(function () { location.reload(); }, 1200); }
+            else { etat.textContent = r.message || ('Échec de l\'envoi (' + xhr.status + ').'); bouton.disabled = false; }
+        };
+        xhr.onerror = function () { etat.textContent = 'Envoi interrompu : réessayez.'; bouton.disabled = false; };
+        bouton.disabled = true;
+        etat.textContent = 'Envoi…';
+        xhr.send(fichier);
+    });
+})();
+</script>
+
+</body>
+</html>

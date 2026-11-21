@@ -201,6 +201,26 @@ public class MailService {
                 + "SIGEP");
     }
 
+    /** L'établissement envoie à un enseignant le lien de l'application Android. */
+    @Async
+    public void notifierApplicationMobile(String expediteur, String email, String prenom,
+                                          String nomEtablissement, String version, String lien) {
+        envoyer(expediteur, email, "SIGEP - Installez l'application d'émargement",
+                "Bonjour " + (prenom == null ? "" : prenom) + ",\n\n"
+                + nomEtablissement + " utilise SIGEP pour l'émargement des séances. Installez "
+                + "l'application sur votre téléphone Android (Android 10 ou plus récent) :\n\n"
+                + lien + "\n\n"
+                + "1. Ouvrez ce lien depuis votre téléphone et téléchargez le fichier SIGEP-"
+                + version + ".apk.\n"
+                + "2. Ouvrez le fichier. Si Android le demande, autorisez votre navigateur à "
+                + "installer des applications, puis touchez « Installer ».\n"
+                + "3. Connectez-vous avec l'adresse " + email + " et le mot de passe reçu de "
+                + "l'établissement.\n\n"
+                + "Déjà installée ? Ce lien donne toujours la dernière version : installez-la "
+                + "par-dessus, vos émargements sont conservés.\n\n"
+                + "SIGEP");
+    }
+
     @Async
     public void notifierRattachementEtablissement(String expediteur, String email, String prenom,
                                                   String nomEtablissement) {

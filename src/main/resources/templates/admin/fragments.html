@@ -204,6 +204,8 @@
                 <span class="material-symbols-rounded">dashboard</span><span>Tableau de bord</span></a>
             <a th:if="${menu == null or menu.contains('enseignants')}" class="palette-item" th:href="@{/admin/enseignants}" data-key="enseignants professeurs liste">
                 <span class="material-symbols-rounded">groups</span><span>Enseignants</span></a>
+            <a th:if="${menu == null or menu.contains('messages')}" class="palette-item" th:href="@{/admin/enseignants/application-mobile}" data-key="application mobile android apk telecharger installer envoyer lien enseignants">
+                <span class="material-symbols-rounded">install_mobile</span><span>Application mobile (envoyer aux enseignants)</span></a>
             <a th:if="${menu == null or menu.contains('messages')}" class="palette-item" th:href="@{/admin/enseignants/nouveau}" data-key="nouvel enseignant ajouter creer">
                 <span class="material-symbols-rounded">person_add</span><span>Nouvel enseignant</span></a>
             <a class="palette-item" th:href="@{/admin/rapports}" data-key="rapports pdf import generer">

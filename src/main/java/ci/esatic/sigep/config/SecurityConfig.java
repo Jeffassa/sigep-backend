@@ -204,6 +204,8 @@ public class SecurityConfig {
                         .requestMatchers("/inscription/payer").permitAll()
                         .requestMatchers("/mentions-legales", "/confidentialite", "/cgu").permitAll()
                         .requestMatchers(ci.esatic.sigep.controller.web.PagesThematiquesController.CHEMINS).permitAll()
+                        // Application Android : le lien envoyé aux enseignants, avant toute connexion.
+                        .requestMatchers(HttpMethod.GET, ci.esatic.sigep.controller.web.ApplicationMobileController.CHEMIN).permitAll()
                         .requestMatchers("/robots.txt", "/sitemap.xml").permitAll()
                         .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
