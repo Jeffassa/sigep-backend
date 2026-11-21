@@ -145,6 +145,7 @@ public class AuthService {
                                 etablissementRepository.findById(f.etablissementId()).orElseThrow().getNomEffectif()))
                         .toList())
                 .mustChangePassword(user.isMustChangePassword())
+                .positionExigee(user.getEtablissement() != null && user.getEtablissement().isZoneDefinie())
                 .build();
     }
 

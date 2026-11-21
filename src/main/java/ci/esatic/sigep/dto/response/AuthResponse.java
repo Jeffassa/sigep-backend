@@ -30,5 +30,8 @@ public class AuthResponse {
     /** Indique qu'un secret provisoire doit être remplacé depuis le profil. */
     private boolean mustChangePassword;
 
+    /** L'établissement de travail vérifie la position du téléphone à l'émargement. */
+    private boolean positionExigee;
+
     public record EtablissementAccessible(Long id, String nom) {}
 }

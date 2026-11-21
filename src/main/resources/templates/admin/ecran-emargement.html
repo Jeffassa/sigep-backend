@@ -71,6 +71,71 @@
         </form>
     </div>
 
+    <div id="zone" class="feuille mt-8 flex flex-col gap-4" data-reveal>
+        <div>
+            <h2 class="titre-section">Émargement sur place</h2>
+            <p class="text-muted text-[13px] mt-1">
+                Facultatif. Indiquez où se trouve l'établissement : un enseignant ne pourra émarger que
+                si son téléphone est dans ce rayon. Un code photographié et envoyé à un collègue absent
+                ne sert alors plus à rien. Laissez vide pour ne pas vérifier la position.
+            </p>
+            <p class="text-muted text-[13px] mt-2">
+                Le téléphone envoie sa position au moment d'émarger. SIGEP calcule la distance puis
+                l'oublie : la position des enseignants n'est jamais enregistrée. Les enseignants
+                doivent avoir l'application 1.2.1 ou plus récente et autoriser la localisation.
+            </p>
+        </div>
+
+        <div th:if="${param.zone}" class="flex items-center gap-2 text-[13px]">
+            <svg th:replace="~{admin/fragments :: coche}"></svg>
+            <span>Zone enregistrée : la position est vérifiée à chaque émargement.</span>
+        </div>
+        <div th:if="${param.zoneRetiree}" class="flex items-center gap-2 text-[13px]">
+            <svg th:replace="~{admin/fragments :: coche}"></svg>
+            <span>Zone retirée : la position n'est plus vérifiée.</span>
+        </div>
+        <div th:if="${zoneInvalide}" class="text-[13px]" style="color:#b24a2e">
+            Coordonnées illisibles. Saisissez la latitude puis la longitude, séparées par une virgule,
+            par exemple <code class="font-mono">5.359950, -4.008260</code>.
+        </div>
+
+        <form th:action="@{/admin/ecran-emargement/zone}" method="post" class="flex flex-col gap-3">
+            <label for="coordonnees" class="text-[13px] font-medium">Coordonnées de l'établissement</label>
+            <input id="coordonnees" name="coordonnees" type="text" maxlength="80" inputmode="decimal"
+                   class="champ h-11 px-3 font-mono text-[13px] w-full"
+                   placeholder="5.359950, -4.008260" th:value="${coordonnees}"/>
+            <p class="text-muted text-[12px]">Sur place, utilisez la position de cet appareil. Sinon,
+                faites un clic droit sur l'établissement dans une carte en ligne et copiez ses coordonnées.</p>
+            <button type="button" id="maPosition"
+                    class="btn glass h-10 px-4 rounded-2xl flex items-center gap-2 w-fit text-[13px] font-medium">
+                <span class="material-symbols-rounded text-[18px]">my_location</span> Utiliser la position de cet appareil
+            </button>
+            <p id="maPositionEtat" class="text-muted text-[12px]" aria-live="polite"></p>
+
+            <label for="rayon" class="text-[13px] font-medium mt-2">Rayon accepté</label>
+            <select id="rayon" name="rayon" class="champ h-11 px-3 text-[13px] w-fit">
+                <option th:each="r : ${rayons}" th:value="${r}" th:selected="${r == rayon}"
+                        th:text="${r} + ' m'">300 m</option>
+            </select>
+            <p class="text-muted text-[12px]">Couvrez tout le site, bâtiments annexes compris. Dans un
+                bâtiment, la position d'un téléphone peut se tromper de plusieurs dizaines de mètres :
+                300 m convient à la plupart des campus.</p>
+
+            <button type="submit"
+                    class="btn glass h-11 px-5 rounded-2xl flex items-center gap-2 w-fit text-[13px] font-medium mt-1">
+                <span class="material-symbols-rounded text-[18px]">location_on</span> Enregistrer la zone
+            </button>
+        </form>
+        <form th:if="${zoneDefinie}" th:action="@{/admin/ecran-emargement/zone}" method="post"
+              data-confirm="Retirer la zone ? La position des enseignants ne sera plus vérifiée.">
+            <input type="hidden" name="retirer" value="1"/>
+            <button type="submit"
+                    class="btn glass h-11 px-5 rounded-2xl flex items-center gap-2 w-fit text-[13px] font-medium">
+                <span class="material-symbols-rounded text-[18px]">location_off</span> Retirer la zone
+            </button>
+        </form>
+    </div>
+
     <div class="feuille mt-8 flex flex-col gap-4" data-reveal>
         <div class="flex items-start gap-3">
             <div>
@@ -94,6 +159,50 @@
 <div th:replace="~{admin/fragments :: dock('')}"></div>
 <div th:replace="~{admin/fragments :: palette}"></div>
 <div th:replace="~{admin/fragments :: scripts}"></div>
+<script th:nonce="${cspNonce}" th:inline="none">
+(function () {
+    // La position de cet ordinateur ou de ce téléphone remplit le champ ; rien n'est envoyé
+    // avant « Enregistrer la zone ».
+    var bouton = document.getElementById('maPosition');
+    var etat = document.getElementById('maPositionEtat');
+    var champ = document.getElementById('coordonnees');
+    if (!bouton) return;
+    if (!navigator.geolocation) { bouton.hidden = true; return; }
+
+    // La localisation n'est permise qu'à cette page. Arrivée par la navigation instantanée de la
+    // console, la page garde la règle de la précédente, qui l'interdit : on la recharge alors
+    // une fois, et la recherche reprend d'elle-même.
+    var REPRISE = 'sigep-zone-localiser';
+    function lire(cle) { try { return sessionStorage.getItem(cle); } catch (e) { return null; } }
+    function poser(cle, v) { try { if (v) sessionStorage.setItem(cle, v); else sessionStorage.removeItem(cle); } catch (e) {} }
+    function recharger() {
+        if (lire(REPRISE)) return false;          // déjà rechargée : la cause est ailleurs
+        poser(REPRISE, '1');
+        location.reload();
+        return true;
+    }
+
+    function localiser() {
+        var politique = document.permissionsPolicy || document.featurePolicy;
+        if (politique && politique.allowsFeature && !politique.allowsFeature('geolocation') && recharger()) return;
+        etat.textContent = 'Recherche de la position…';
+        navigator.geolocation.getCurrentPosition(function (p) {
+            poser(REPRISE, null);
+            champ.value = p.coords.latitude.toFixed(6) + ', ' + p.coords.longitude.toFixed(6);
+            etat.textContent = 'Position trouvée, précise à ' + Math.round(p.coords.accuracy)
+                + ' m. Vérifiez-la, puis enregistrez la zone.';
+        }, function (erreur) {
+            if (erreur.code === erreur.PERMISSION_DENIED && recharger()) return;
+            poser(REPRISE, null);
+            etat.textContent = 'Position indisponible : autorisez la localisation dans le navigateur, '
+                + 'ou saisissez les coordonnées.';
+        }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+    }
+
+    bouton.addEventListener('click', localiser);
+    if (lire(REPRISE)) localiser();
+})();
+</script>
 
 </body>
 </html>

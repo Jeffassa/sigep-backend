@@ -148,6 +148,25 @@ public class Etablissement {
     @Column(name = "ecran_reseaux", length = 500)
     private String ecranReseaux;
 
+    /**
+     * Zone d'émargement : le téléphone de l'enseignant doit se trouver à moins de
+     * {@link #zoneRayonMetres} de ce point pour émarger. Sans centre : aucun contrôle.
+     */
+    @Column(name = "zone_latitude")
+    private Double zoneLatitude;
+
+    @Column(name = "zone_longitude")
+    private Double zoneLongitude;
+
+    @Column(name = "zone_rayon_metres")
+    private Integer zoneRayonMetres;
+
+    /** L'établissement vérifie la position de ses enseignants à l'émargement. */
+    @Transient
+    public boolean isZoneDefinie() {
+        return zoneLatitude != null && zoneLongitude != null && zoneRayonMetres != null;
+    }
+
     /** Libellé affichable du tenant : nom personnalisé si défini, sinon nom légal. */
     @Transient
     public String getNomEffectif() {

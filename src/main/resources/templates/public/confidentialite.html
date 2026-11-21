@@ -18,6 +18,12 @@
             <h2>Données collectées</h2>
             <p>Comptes (nom, prénom, e-mail, rôle, établissement), données d'émargement (séances, présence, signature),
                données d'abonnement et de paiement (montant, référence ; <em>aucune donnée de carte n'est stockée</em>).</p>
+            <p>Position du téléphone, seulement si l'établissement a activé la vérification de présence sur place :
+               l'application la relève au moment où l'enseignant émarge, jamais en arrière-plan. Le serveur s'en sert
+               pour vérifier que le téléphone se trouve dans le rayon défini par l'établissement, puis l'oublie :
+               <em>les coordonnées ne sont pas enregistrées</em>. En cas de refus, seule la distance à l'établissement,
+               arrondie au mètre, est inscrite au journal de sécurité. Sans réseau, la position attend l'envoi avec
+               l'émargement, chiffrée sur le téléphone.</p>
         </section>
         <section>
             <h2>Finalités & base légale</h2>

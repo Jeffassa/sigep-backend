@@ -53,7 +53,54 @@ public class EcranEmargementController {
             model.addAttribute("reseaux", e == null ? "" : e.getEcranReseaux());
         }
         model.addAttribute("ipActuelle", clientIpResolver.resolve(request));
+        model.addAttribute("zoneDefinie", e != null && e.isZoneDefinie());
+        if (!model.containsAttribute("coordonnees")) {
+            model.addAttribute("coordonnees", e != null && e.isZoneDefinie()
+                    ? String.format(java.util.Locale.ROOT, "%.6f, %.6f", e.getZoneLatitude(), e.getZoneLongitude())
+                    : "");
+        }
+        model.addAttribute("rayon", e != null && e.getZoneRayonMetres() != null
+                ? e.getZoneRayonMetres() : ci.esatic.sigep.service.ZoneEmargement.RAYON_DEFAUT);
+        model.addAttribute("rayons", List.of(100, 200, 300, 500, 1000));
         return "admin/ecran-emargement";
+    }
+
+    /**
+     * Zone d'émargement : un enseignant dont le téléphone est hors de ce cercle ne peut pas
+     * émarger. « retirer » supprime le contrôle.
+     */
+    @PostMapping("/admin/ecran-emargement/zone")
+    public RedirectView enregistrerZone(@RequestParam(required = false) String coordonnees,
+                                        @RequestParam(required = false) Integer rayon,
+                                        @RequestParam(required = false) String retirer,
+                                        RedirectAttributes flash) {
+        Etablissement e = etablissementCourantService.courant();
+        if (e == null) return new RedirectView("/admin/ecran-emargement?indispo=1");
+        if (retirer != null) {
+            e.setZoneLatitude(null);
+            e.setZoneLongitude(null);
+            e.setZoneRayonMetres(null);
+            etablissementRepository.save(e);
+            return new RedirectView("/admin/ecran-emargement?zoneRetiree=1#zone");
+        }
+        String saisie = coordonnees == null ? "" : coordonnees.trim();
+        try {
+            double[] point = ci.esatic.sigep.service.ZoneEmargement.lireCoordonnees(saisie);
+            int r = rayon == null ? ci.esatic.sigep.service.ZoneEmargement.RAYON_DEFAUT : rayon;
+            if (r < ci.esatic.sigep.service.ZoneEmargement.RAYON_MIN
+                    || r > ci.esatic.sigep.service.ZoneEmargement.RAYON_MAX) {
+                throw new IllegalArgumentException("rayon hors limites");
+            }
+            e.setZoneLatitude(point[0]);
+            e.setZoneLongitude(point[1]);
+            e.setZoneRayonMetres(r);
+            etablissementRepository.save(e);
+        } catch (IllegalArgumentException ex) {
+            flash.addFlashAttribute("zoneInvalide", true);
+            flash.addFlashAttribute("coordonnees", saisie.length() > 80 ? saisie.substring(0, 80) : saisie);
+            return new RedirectView("/admin/ecran-emargement#zone");
+        }
+        return new RedirectView("/admin/ecran-emargement?zone=1#zone");
     }
 
     /** Réseau d'où l'écran peut s'afficher. Vide : partout où son cookie l'autorise. */

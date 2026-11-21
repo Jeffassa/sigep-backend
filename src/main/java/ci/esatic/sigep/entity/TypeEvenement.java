@@ -37,6 +37,12 @@ public enum TypeEvenement {
     /** Webhook de paiement dont la signature ne correspond pas : appel forgé, ou secret désaligné. */
     WEBHOOK_SIGNATURE_INVALIDE("Webhook non signé ou invalide"),
 
+    /** Émargement tenté hors de la zone de l'établissement : QR transmis à un absent, typiquement. */
+    POSITION_HORS_ZONE("Émargement hors de l'établissement"),
+
+    /** Position fournie par une application de simulation de position. */
+    POSITION_SIMULEE("Position simulée"),
+
     /** Plafond mensuel d'émargements hors-ligne atteint par un enseignant. */
     PLAFOND_HORS_LIGNE("Plafond hors-ligne atteint"),
 

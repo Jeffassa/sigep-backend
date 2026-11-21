@@ -299,8 +299,12 @@ public class SecurityConfig {
                 })
                 .referrerPolicy(r -> r.policy(
                         org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
-                .addHeaderWriter(new org.springframework.security.web.header.writers.StaticHeadersWriter(
-                        "Permissions-Policy", "geolocation=(), microphone=(), camera=(), payment=(), usb=()"))
+                // La localisation n'est ouverte qu'à la page où l'administrateur relève la position
+                // de l'établissement (zone d'émargement), et pour ce seul site.
+                .addHeaderWriter((requete, reponse) -> reponse.setHeader("Permissions-Policy",
+                        "/admin/ecran-emargement".equals(requete.getRequestURI())
+                                ? "geolocation=(self), microphone=(), camera=(), payment=(), usb=()"
+                                : "geolocation=(), microphone=(), camera=(), payment=(), usb=()"))
                 // Le cache par défaut de Spring Security posait « no-store » sur TOUT — feuilles
                 // de style, images et jusqu'au robots.txt étaient retéléchargés à chaque page.
                 // Sur les connexions mobiles de nos utilisateurs, c'est un coût réel, et « no-store »
