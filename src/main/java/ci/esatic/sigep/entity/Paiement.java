@@ -59,6 +59,13 @@ public class Paiement {
     @Column(name = "enregistre_par")
     private String enregistrePar;
 
+    /** Période d'abonnement couverte par ce paiement ; vide pour les paiements antérieurs à V40. */
+    @Column(name = "periode_debut")
+    private java.time.LocalDate periodeDebut;
+
+    @Column(name = "periode_fin")
+    private java.time.LocalDate periodeFin;
+
     @PrePersist
     void onCreate() {
         if (datePaiement == null) {

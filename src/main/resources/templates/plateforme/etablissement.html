@@ -64,32 +64,67 @@
         <p class="text-[12px] text-muted mt-3" th:text="'Inscrit le ' + ${#temporals.format(e.dateCreation,'dd/MM/yyyy à HH:mm')}">—</p>
     </section>
 
-    <!-- Historique des paiements -->
+    <!-- Historique des abonnements : une période par paiement, la plus récente en haut -->
     <section class="chapitre" data-reveal>
         <div class="chapitre-tete">
-            
-            <h2 class="titre-section">Paiements</h2>
-            <span class="font-mono text-[13px] text-muted">Total&nbsp;:&nbsp;
+            <h2 class="titre-section">Historique des abonnements</h2>
+            <span class="font-mono text-[13px] text-muted">Total payé&nbsp;:&nbsp;
                 <strong class="text-ink" th:text="${#numbers.formatInteger(totalPaye,1,'WHITESPACE') + ' ' + symbole}">0</strong></span>
+        </div>
+        <p th:if="${#lists.isEmpty(periodes)}" class="chapitre-note">
+            Aucune période payée pour le moment. <a th:href="@{/plateforme/abonnements}" class="underline">Enregistrer un paiement</a>.
+        </p>
+        <ol th:if="${!#lists.isEmpty(periodes)}" class="frise">
+            <li th:each="pe : ${periodes}" th:classappend="${pe.enCours} ? 'periode-actuelle' : (${pe.aVenir} ? 'a-venir' : '')">
+                <div class="periode">
+                    <div class="periode-dates">
+                        <span th:text="${#temporals.format(pe.debut,'dd/MM/yyyy')} + ' → ' + ${#temporals.format(pe.fin,'dd/MM/yyyy')}">01/11/2026 → 01/12/2026</span>
+                        <span th:if="${pe.enCours}" class="periode-marque">En cours</span>
+                        <span th:if="${pe.aVenir}" class="periode-marque a-venir">À venir</span>
+                    </div>
+                    <div class="periode-montant"
+                         th:text="${#numbers.formatInteger(pe.paiement.montant,1,'WHITESPACE')} + ' ' + (${pe.paiement.devise} ?: ${symbole})">13 000 XOF</div>
+                    <div class="periode-detail">
+                        <span th:text="${pe.plan} ?: 'Plan non noté'">PRO</span><span class="sep">·</span>
+                        <span th:text="${pe.paiement.moisCredites} + ' mois'">1 mois</span><span class="sep">·</span>
+                        <span th:text="${pe.source}">En ligne · Jèko</span><span class="sep">·</span>
+                        <span th:text="'payé le ' + ${#temporals.format(pe.paiement.datePaiement,'dd/MM/yyyy')}">payé le</span>
+                        <th:block th:if="${pe.saisiePar != null}"><span class="sep">·</span>
+                            <span th:text="${pe.saisiePar}">par</span></th:block>
+                        <th:block th:if="${pe.referenceTransaction != null}"><span class="sep">·</span>
+                            <a class="font-mono underline" th:href="@{/plateforme/transactions/{r}(r=${pe.referenceTransaction})}"
+                               th:text="${pe.referenceTransaction}">JK-…</a></th:block>
+                        <th:block th:if="${pe.referenceTransaction == null and pe.paiement.reference != null}"><span class="sep">·</span>
+                            <span class="font-mono" th:text="${pe.paiement.reference}">réf</span></th:block>
+                        <th:block th:if="${pe.reconstituee}"><span class="sep">·</span>
+                            <span title="Paiement antérieur au suivi des périodes : dates recalculées à partir des paiements">dates recalculées</span></th:block>
+                    </div>
+                </div>
+            </li>
+        </ol>
+    </section>
+
+    <!-- Transactions en ligne de l'établissement -->
+    <section class="chapitre" data-reveal>
+        <div class="chapitre-tete">
+            <h2 class="titre-section">Transactions en ligne</h2>
+            <a th:href="@{/plateforme/transactions(q=${e.nom})}" class="underline text-[13px]">Voir dans Transactions</a>
         </div>
         <div class="overflow-x-auto">
             <table class="registre" data-mobile-keep="2">
-                <thead><tr>
-                    <th>Date</th><th>Montant</th>
-                    <th>Mois</th><th>Référence</th><th>Enregistré par</th>
-                </tr></thead>
+                <thead><tr><th>Date</th><th>Offre</th><th>Montant</th><th>Moyen</th><th>Statut</th><th></th></tr></thead>
                 <tbody>
-                <tr th:each="p : ${paiements}">
-                    <td th:text="${#temporals.format(p.datePaiement,'dd/MM/yyyy HH:mm')}">--</td>
-                    <td class="code" th:text="${#numbers.formatInteger(p.montant,1,'WHITESPACE') + ' ' + (p.devise != null ? p.devise : symbole)}">0</td>
-                    <td th:text="'+' + ${p.moisCredites}">+1</td>
-                    <td class="code" th:text="${p.reference} ?: '—'">—</td>
-                    <td class="code" th:text="${p.enregistrePar} ?: '—'">—</td>
+                <tr th:each="t : ${transactions}" th:classappend="${t.statut.name() == 'A_VERIFIER'} ? 'a-verifier'">
+                    <td th:text="${#temporals.format(t.dateCreation,'dd/MM/yyyy HH:mm')}">--</td>
+                    <td th:text="${t.plan} + ' · ' + ${t.mois} + ' mois'">PRO · 1 mois</td>
+                    <td class="code" th:text="${#numbers.formatInteger(t.montantAttendu,1,'WHITESPACE')} + ' ' + ${t.devise}">0</td>
+                    <td><span th:text="${t.provider} ?: '—'">WAVE</span><span class="sous" th:text="${t.fournisseur}">Jèko</span></td>
+                    <td><span class="etat" th:classappend="${t.statut.classe}" th:text="${t.statut.libelle}">Payée</span></td>
+                    <td><a th:href="@{/plateforme/transactions/{r}(r=${t.reference})}" class="underline text-[13px]"
+                           th:text="${t.statut.name() == 'A_VERIFIER'} ? 'Traiter' : 'Ouvrir'">Ouvrir</a></td>
                 </tr>
-                <tr th:if="${#lists.isEmpty(paiements)}">
-                    <td colspan="5" class="vide">
-                        Aucun paiement enregistré. <a th:href="@{/plateforme/abonnements}" class="underline">En enregistrer un</a>.
-                    </td>
+                <tr th:if="${#lists.isEmpty(transactions)}">
+                    <td colspan="6" class="vide">Aucun paiement tenté en ligne.</td>
                 </tr>
                 </tbody>
             </table>

@@ -397,7 +397,7 @@ public class MobileMoneyService {
     @SchedulerLock(name = "novasendPurge", lockAtMostFor = "PT10M")
     public void purgerAnciennesIntentions() {
         int n = store.purger(LocalDateTime.now().minus(Duration.ofDays(retentionJours)));
-        if (n > 0) log.info("Mobile Money : {} intentions terminées purgées (> {} j)", n, retentionJours);
+        if (n > 0) log.info("Mobile Money : numéro du payeur effacé sur {} transactions terminées (> {} j)", n, retentionJours);
     }
 
     /**

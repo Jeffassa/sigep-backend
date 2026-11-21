@@ -129,9 +129,15 @@ public class PaiementIntentStore {
      */
     @Transactional
     public int purger(LocalDateTime avant) {
+        // On efface le numéro, pas la transaction : l'historique des transactions de la plateforme
+        // doit rester complet. Une transaction à vérifier garde son numéro tant qu'elle n'est pas
+        // tranchée : il peut servir à la retrouver chez le fournisseur.
         List<PaiementIntent> vieilles =
-                repository.findByStatutNotAndDateCreationBefore(StatutIntent.EN_COURS, avant);
-        repository.deleteAll(vieilles);
+                repository.findByStatutNotAndDateCreationBefore(StatutIntent.EN_COURS, avant).stream()
+                        .filter(i -> i.getStatut() != StatutIntent.A_VERIFIER && i.getMsisdn() != null)
+                        .toList();
+        vieilles.forEach(i -> i.setMsisdn(null));
+        repository.saveAll(vieilles);
         return vieilles.size();
     }
 }

@@ -226,3 +226,71 @@ html.dark .constats .constat-bon::before { background: #7fd8c4; }
     .choix-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .choix-moyens { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
+
+/* ============================================================================
+   TRANSACTIONS ET ABONNEMENTS (plateforme)
+   Une étiquette par statut, lisible sans la couleur : le mot dit tout, la couleur aide
+   l'œil à trouver ce qui demande une action (« À vérifier », en ocre plein).
+   ========================================================================= */
+:root { --c-vert: #1f7a6b; --c-vert-soft: rgba(31,122,107,.12); }
+html.dark { --c-vert: #6fd3bd; --c-vert-soft: rgba(111,211,189,.14); }
+
+.etat-payee { color: var(--c-vert); background: var(--c-vert-soft); padding: 0 8px; }
+.etat-cours { color: var(--c-ink); background: var(--c-track); padding: 0 8px; }
+.etat-verifier { color: #fff; background: var(--c-cachet); padding: 0 8px; font-weight: 500; }
+html.dark .etat-verifier { color: var(--c-accent-ink); }
+.etat-payee::before, .etat-cours::before, .etat-verifier::before, .etat-discret::before {
+    content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+    background: currentColor; margin-right: 6px; vertical-align: 2px;
+}
+
+/* Onglets de filtre avec leur compte. */
+.onglets .compte { margin-left: 8px; font: 12px 'DM Mono', monospace; opacity: .75; }
+.onglets a.urgent:not(.actif) { color: var(--c-cachet); font-weight: 600; }
+
+.recherche { display: flex; gap: 8px; align-items: center; }
+.recherche input { height: 40px; padding: 0 12px; min-width: 260px; }
+
+/* Ligne cliquable du registre. */
+.registre tr.lien { cursor: pointer; }
+.registre tr.lien:hover td { background: var(--c-track); }
+.registre tr.a-verifier td:first-child { box-shadow: inset 3px 0 0 var(--c-cachet); }
+
+/* Fiche d'une transaction : libellé à gauche, valeur à droite. */
+.fiche-dl { display: grid; grid-template-columns: minmax(140px, 220px) 1fr; margin: 0; border-top: 1px solid var(--c-ink); }
+.fiche-dl dt, .fiche-dl dd { margin: 0; padding: 12px 0; border-bottom: 1px solid var(--c-line); }
+.fiche-dl dt { font: 13px/20px 'DM Mono', monospace; color: var(--c-muted); }
+.fiche-dl dd { font-size: 15px; line-height: 20px; overflow-wrap: anywhere; }
+@media (max-width: 640px) {
+    .fiche-dl { grid-template-columns: 1fr; }
+    .fiche-dl dt { border-bottom: 0; padding-bottom: 0; }
+}
+
+/* Deux décisions côte à côte, chacune dans son cadre. */
+.decisions { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.decision { padding: 20px; background: var(--c-surface); border: 1px solid var(--c-line); border-top: 3px solid var(--c-ink); }
+.decision-payee { border-top-color: var(--c-vert); }
+.decision-non { border-top-color: var(--c-muted); }
+.decision h3 { margin: 0 0 4px; font-size: 17px; font-weight: 700; }
+.decision p { margin: 0 0 12px; font-size: 14px; line-height: 20px; color: var(--c-muted); }
+.decision textarea, .decision input { width: 100%; padding: 10px 12px; font-size: 14px; }
+.decision label { display: block; margin: 10px 0 4px; font: 13px 'DM Mono', monospace; color: var(--c-muted); }
+
+/* Frise des abonnements : une période par jalon, la plus récente en haut. */
+.frise { list-style: none; margin: 0; padding: 0 0 0 28px; position: relative; }
+.frise::before { content: ""; position: absolute; left: 7px; top: 8px; bottom: 8px; width: 2px; background: var(--c-line); }
+.frise > li { position: relative; padding: 0 0 20px; }
+.frise > li::before {
+    content: ""; position: absolute; left: -28px; top: 18px; width: 16px; height: 16px;
+    border-radius: 50%; background: var(--c-bg); border: 2px solid var(--c-muted);
+}
+.frise > li.periode-actuelle::before { background: var(--c-accent); border-color: var(--c-accent); box-shadow: 0 0 0 4px var(--c-accent-soft); }
+.frise > li.a-venir::before { border-style: dashed; }
+.periode { display: grid; grid-template-columns: 1fr auto; gap: 4px 16px; padding: 14px 18px; background: var(--c-surface); border: 1px solid var(--c-line); }
+.frise > li.periode-actuelle .periode { border-color: var(--c-accent); }
+.periode-dates { font-stretch: 75%; font-weight: 800; font-size: 20px; line-height: 28px; }
+.periode-montant { font: 500 15px/28px 'DM Mono', monospace; text-align: right; white-space: nowrap; }
+.periode-detail { grid-column: 1 / -1; font-size: 13px; line-height: 20px; color: var(--c-muted); }
+.periode-detail .sep { margin: 0 6px; opacity: .5; }
+.periode-marque { display: inline-block; margin-left: 8px; padding: 0 6px; font: 600 11px/18px 'DM Mono', monospace; text-transform: uppercase; letter-spacing: .04em; vertical-align: 3px; background: var(--c-accent); color: var(--c-accent-ink); }
+.periode-marque.a-venir { background: var(--c-track); color: var(--c-ink); }

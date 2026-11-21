@@ -139,9 +139,19 @@
     </section>
 
     <section th:if="${!paiementsAVerifier.isEmpty()}" class="note note-alerte note-bloc mb-8" data-reveal>
-        <p class="font-medium" th:text="${paiementsAVerifier.size()} + ' paiement(s) à vérifier : le fournisseur n\'a pas donné de verdict clair. Contrôlez-les chez lui avant toute relance.'">Paiements à vérifier</p>
-        <p th:each="pi : ${paiementsAVerifier}" class="font-mono text-[13px] mt-1"
-           th:text="${pi.reference} + ' · ' + ${#numbers.formatInteger(pi.montantAttendu,1,'WHITESPACE')} + ' ' + ${pi.devise} + ' · ' + (${nomParEtab[pi.etablissementId]} ?: ('#' + ${pi.etablissementId}))">REF</p>
+        <p class="font-medium" th:text="${paiementsAVerifier.size()} + ' transaction(s) à vérifier : le fournisseur n\'a pas donné de verdict clair. Ouvrez-en une, contrôlez-la chez lui, puis classez-la.'">Transactions à vérifier</p>
+        <ul class="mt-2">
+            <li th:each="pi : ${paiementsAVerifier}" class="text-[13px] mt-1">
+                <a th:href="@{/plateforme/transactions/{r}(r=${pi.reference})}" class="underline">
+                    <span th:text="${#temporals.format(pi.dateCreation,'dd/MM/yyyy')}">--</span> ·
+                    <strong th:text="${nomParEtab[pi.etablissementId]} ?: ('#' + ${pi.etablissementId})">Établissement</strong> ·
+                    <span class="font-mono" th:text="${#numbers.formatInteger(pi.montantAttendu,1,'WHITESPACE')} + ' ' + ${pi.devise}">0</span> ·
+                    <span th:text="${pi.fournisseur}">Jèko</span>
+                </a>
+            </li>
+        </ul>
+        <a th:href="@{/plateforme/transactions(statut='A_VERIFIER')}" class="btn glass h-10 px-4 mt-3 text-[13px] font-medium inline-flex items-center gap-1.5">
+            <span class="material-symbols-rounded text-[18px]">swap_horiz</span> Traiter les transactions à vérifier</a>
     </section>
 
     <section id="a-traiter" class="chapitre" th:if="${!aTraiter.isEmpty()}" data-reveal>

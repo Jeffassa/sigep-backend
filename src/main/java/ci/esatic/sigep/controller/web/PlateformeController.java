@@ -68,6 +68,7 @@ public class PlateformeController {
     private final ci.esatic.sigep.service.plateforme.PilotagePlateformeService pilotage;
     private final ci.esatic.sigep.service.plateforme.EtatTechniqueService etatTechnique;
     private final ci.esatic.sigep.service.plateforme.AnalystesService analystes;
+    private final ci.esatic.sigep.service.TransactionsPlateformeService transactionsService;
 
     /** Sans émargement depuis ce nombre de jours, un client payant est en train de décrocher. */
     private static final int JOURS_AVANT_DECROCHAGE = 14;
@@ -321,7 +322,8 @@ public class PlateformeController {
         model.addAttribute("expire", abonnementService.estExpire(e));
         model.addAttribute("joursAvantExpiration", abonnementService.joursAvantExpiration(e));
         model.addAttribute("prixMensuel", planService.prixMensuel(e.getPlan()));
-        model.addAttribute("paiements", paiementRepository.findByEtablissementIdOrderByDatePaiementDesc(e.getId()));
+        model.addAttribute("periodes", transactionsService.historique(e.getId()));
+        model.addAttribute("transactions", paiementIntentRepository.findByEtablissementIdOrderByDateCreationDesc(e.getId()));
         model.addAttribute("totalPaye", paiementRepository.totalParEtablissement(e.getId()));
         return "plateforme/etablissement";
     }
@@ -499,12 +501,17 @@ public class PlateformeController {
             int m = Math.max(1, mois);
             long paye = (montant != null && montant >= 0) ? montant : (long) m * planService.prixMensuel(e.getPlan());
 
+            java.time.LocalDate debut = abonnementService.debutProlongation(e);
             paiementRepository.save(Paiement.builder()
                     .etablissementId(e.getId())
                     .montant(paye)
                     .moisCredites(m)
                     .reference(reference == null || reference.isBlank() ? null : reference.trim())
                     .enregistrePar(superAdmin != null ? superAdmin.getEmail() : null)
+                    .plan(e.getPlan())
+                    .devise(planService.devise().toUpperCase())
+                    .periodeDebut(debut)
+                    .periodeFin(debut.plusMonths(m))
                     .build());
 
             abonnementService.prolonger(e, m);

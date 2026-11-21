@@ -28,6 +28,12 @@ public interface PaiementRepository extends JpaRepository<Paiement, Long> {
     @Query("SELECT COALESCE(SUM(p.montant), 0) FROM Paiement p WHERE p.etablissementId = :id")
     long totalParEtablissement(@Param("id") Long etablissementId);
 
+    /** Historique d'un établissement, dans l'ordre : sert à reconstituer les périodes. */
+    List<Paiement> findByEtablissementIdOrderByDatePaiementAscIdAsc(Long etablissementId);
+
+    /** Le paiement crédité par une transaction en ligne (référence « Jèko JK-… » ou « NovaSend … »). */
+    java.util.Optional<Paiement> findFirstByReference(String reference);
+
     /** Idempotence webhook Stripe : un paiement a-t-il déjà cette référence ? */
     boolean existsByReference(String reference);
 }

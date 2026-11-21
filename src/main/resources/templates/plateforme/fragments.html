@@ -39,6 +39,9 @@
     <a th:href="@{/plateforme/abonnements}" class="dock-item" th:classappend="${active=='abonnements'}?'active':''">
         <span class="material-symbols-rounded">card_membership</span><span class="dock-tip">Abonnements</span>
     </a>
+    <a th:href="@{/plateforme/transactions}" class="dock-item" th:classappend="${active=='transactions'}?'active':''">
+        <span class="material-symbols-rounded">swap_horiz</span><span class="dock-tip">Transactions</span>
+    </a>
     <a th:href="@{/plateforme/paiements}" class="dock-item" th:classappend="${active=='paiements'}?'active':''">
         <span class="material-symbols-rounded">receipt_long</span><span class="dock-tip">Paiements</span>
     </a>

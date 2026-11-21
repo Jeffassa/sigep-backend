@@ -53,8 +53,12 @@ public class AbonnementService {
 
     /** Prolonge l'abonnement de {@code mois} mois (à partir d'aujourd'hui si déjà expiré). */
     public void prolonger(Etablissement e, int mois) {
-        LocalDate base = (e.getDateExpiration() == null || e.getDateExpiration().isBefore(LocalDate.now()))
+        e.setDateExpiration(debutProlongation(e).plusMonths(mois));
+    }
+
+    /** Premier jour qu'ajoute une prolongation : la fin actuelle, ou aujourd'hui si elle est passée. */
+    public LocalDate debutProlongation(Etablissement e) {
+        return (e.getDateExpiration() == null || e.getDateExpiration().isBefore(LocalDate.now()))
                 ? LocalDate.now() : e.getDateExpiration();
-        e.setDateExpiration(base.plusMonths(mois));
     }
 }

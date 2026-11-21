@@ -71,6 +71,7 @@ public class PaiementService {
         // saveAndFlush : la contrainte UNIQUE(reference) rend l'enregistrement idempotent même en
         // course (deux livraisons simultanées) — la requête perdante échoue ici, sa transaction est
         // annulée (aucun double crédit) et le webhook rejoue (la voie rapide existsByReference l'ignore).
+        java.time.LocalDate debut = abonnementService.debutProlongation(e);
         paiementRepository.saveAndFlush(Paiement.builder()
                 .etablissementId(e.getId())
                 .montant(montant)
@@ -79,6 +80,8 @@ public class PaiementService {
                 .enregistrePar(source)
                 .devise(dev)
                 .plan(cible)
+                .periodeDebut(debut)
+                .periodeFin(debut.plusMonths(m))
                 .build());
 
         // Le paiement applique le plan acheté (Pro ou Enterprise) et lève le quota, ET prolonge —

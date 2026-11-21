@@ -63,6 +63,8 @@ class ApplicationMobileTest {
     private Etablissement ecole;
     private Enseignant awa;
     private Enseignant kofi;
+    /** Établissements créés par le test : effacés après chacun (le téléchargement asynchrone exclut @Transactional). */
+    private final java.util.List<Etablissement> crees = new java.util.ArrayList<>();
 
     @BeforeEach
     void setUp() {
@@ -76,6 +78,8 @@ class ApplicationMobileTest {
         Etablissement plateforme = etablissementRepository.save(Etablissement.builder()
                 .nom("SIGEP Plateforme").slug("plateforme-apk-" + n).build());
         ecole = etablissementRepository.save(Etablissement.builder().nom("Lycée APK").slug("apk-" + n).build());
+        crees.add(plateforme);
+        crees.add(ecole);
         superAdmin = userRepository.save(User.builder().email("root-apk-" + n + "@test.local").password("{noop}x")
                 .roles(new HashSet<>(Set.of(roleSuper))).etablissement(plateforme).build());
         admin = userRepository.save(User.builder().email("adm-apk-" + n + "@test.local").password("{noop}x")
@@ -85,6 +89,18 @@ class ApplicationMobileTest {
         kofi = enseignant(n, "B", "Kofi", roleEns, StatutEnseignant.VALIDATED, true);
         enseignant(n, "C", "Sans", roleEns, StatutEnseignant.PENDING, false);       // pas de compte : pas d'envoi
         enseignant(n, "D", "Parti", roleEns, StatutEnseignant.ARCHIVE, true);     // a quitté l'établissement
+    }
+
+    @org.junit.jupiter.api.AfterEach
+    void nettoyer() {
+        java.util.Set<Long> ids = crees.stream().map(Etablissement::getId).collect(java.util.stream.Collectors.toSet());
+        enseignantRepository.deleteAll(enseignantRepository.findAll().stream()
+                .filter(x -> ids.contains(x.getEtablissementId())).toList());
+        userRepository.deleteAll(userRepository.findAll().stream()
+                .filter(u -> u.getEtablissement() != null && ids.contains(u.getEtablissement().getId())).toList());
+        etablissementRepository.deleteAll(crees);
+        crees.clear();
+        applicationRepository.deleteAll();
     }
 
     private Enseignant enseignant(long n, String suffixe, String prenom, Role role, StatutEnseignant statut,
@@ -188,6 +204,7 @@ class ApplicationMobileTest {
         deposer("1.2.1", apk(7));
         Etablissement autre = etablissementRepository.save(Etablissement.builder()
                 .nom("Autre").slug("autre-apk-" + System.nanoTime()).build());
+        crees.add(autre);
         Enseignant etranger = enseignantRepository.save(Enseignant.builder().matricule("X" + System.nanoTime())
                 .nom("X").prenom("Y").statut(StatutEnseignant.VALIDATED)
                 .user(User.builder().email("etranger-" + System.nanoTime() + "@test.local").password("{noop}x")
