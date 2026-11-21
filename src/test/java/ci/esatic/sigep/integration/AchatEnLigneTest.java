@@ -97,6 +97,8 @@ class AchatEnLigneTest {
     }
 
     @MockitoBean private DataInitializer dataInitializer;
+    /** Le lien de paiement n'est remis que par e-mail : on le lit dans le message envoyé. */
+    @MockitoBean private ci.esatic.sigep.service.MailService mailService;
     @Autowired private MockMvc mockMvc;
     @Autowired private ObjectMapper objectMapper;
     @Autowired private UserRepository userRepository;
@@ -136,6 +138,17 @@ class AchatEnLigneTest {
 
     private String page(String url) throws Exception {
         return mockMvc.perform(get(url)).andReturn().getResponse().getContentAsString();
+    }
+
+    /** La page de paiement, telle que l'e-mail envoyé au client la donne. */
+    private String pagePaiementDe(JsonNode reponse) {
+        String email = reponse.path("data").path("email").asString();
+        org.mockito.ArgumentCaptor<String> lien = org.mockito.ArgumentCaptor.forClass(String.class);
+        org.mockito.Mockito.verify(mailService).notifierPaiementAFinaliser(org.mockito.ArgumentMatchers.eq(email),
+                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), lien.capture());
+        String complet = lien.getValue();
+        assertThat(complet).startsWith("https://");
+        return complet.substring(complet.indexOf("/inscription/payer?"));
     }
 
     /** Le jeton porté par l'adresse de la page de paiement. */
@@ -180,9 +193,12 @@ class AchatEnLigneTest {
 
     @Test
     void parcoursComplet_inscription_pageDePaiement_jeko_espaceActive() throws Exception {
-        // 1. L'inscription crée l'espace et mène à la page de paiement, sans rien payer encore.
+        // 1. L'inscription crée l'espace et envoie par e-mail le lien de la page de paiement, sans
+        //    rien payer encore. La réponse elle-même ne donne pas ce lien.
         JsonNode r = inscrire("PRO");
-        String pagePaiement = r.path("data").path("paiementPage").asString();
+        assertThat(r.path("data").path("suite").asString()).isEqualTo("paiement");
+        assertThat(r.path("data").has("paiementPage")).isFalse();
+        String pagePaiement = pagePaiementDe(r);
         assertThat(pagePaiement).startsWith("/inscription/payer?jeton=").endsWith("&plan=PRO");
         Etablissement e = etablissementDe(r);
         assertThat(e.getStatut()).isEqualTo(StatutEtablissement.EN_ATTENTE);
@@ -224,7 +240,7 @@ class AchatEnLigneTest {
     @Test
     void apresUnEchec_lePaiementSeRefaitDepuisLaPageDePaiement() throws Exception {
         JsonNode r = inscrire("ENTERPRISE");
-        String jeton = jetonDe(r.path("data").path("paiementPage").asString());
+        String jeton = jetonDe(pagePaiementDe(r));
         payer(jeton, "ENTERPRISE", 1, "wave");
         PaiementIntent premier = intentRepository.findByEtablissementIdOrderByDateCreationDesc(etablissementDe(r).getId()).get(0);
         ETATS.put(premier.getNovasendId(), "{\"id\":\"" + premier.getNovasendId() + "\",\"status\":\"error\"}");
@@ -243,7 +259,7 @@ class AchatEnLigneTest {
     @Test
     void leClientPeutChangerDAvis_maisUnDoubleClicNeCreePasDeuxPaiements() throws Exception {
         JsonNode r = inscrire("PRO");
-        String jeton = jetonDe(r.path("data").path("paiementPage").asString());
+        String jeton = jetonDe(pagePaiementDe(r));
         Long id = etablissementDe(r).getId();
 
         String premiere = payer(jeton, "PRO", 1, "wave");
@@ -262,7 +278,7 @@ class AchatEnLigneTest {
     @Test
     void unJetonAltere_ouUneReferenceInconnue_nOuvrentRien() throws Exception {
         JsonNode r = inscrire("PRO");
-        String jeton = jetonDe(r.path("data").path("paiementPage").asString());
+        String jeton = jetonDe(pagePaiementDe(r));
         String[] parties = jeton.split("\\.");
         String falsifie = (Long.parseLong(parties[0]) + 1) + "." + parties[1] + "." + parties[2];
 
@@ -275,9 +291,33 @@ class AchatEnLigneTest {
     }
 
     @Test
+    void uneAdresseDejaInscrite_recoitLaMemeReponse_etRienNEstCree() throws Exception {
+        JsonNode premiere = inscrire("PRO");
+        String email = premiere.path("data").path("email").asString();
+        long avant = etablissementRepository.count();
+
+        String corps = objectMapper.writeValueAsString(Map.of(
+                "nomEtablissement", "Lycée Doublon", "adminEmail", email,
+                "adminPassword", "Autre@2026", "adminPrenom", "X", "adminNom", "Y", "plan", "PRO"));
+        String seconde = mockMvc.perform(post("/api/saas/etablissements")
+                        .contentType(MediaType.APPLICATION_JSON).content(corps))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        // Même corps de réponse, octet pour octet : le formulaire ne dit pas que l'adresse existe.
+        assertThat(seconde).isEqualTo(objectMapper.writeValueAsString(premiere));
+        assertThat(etablissementRepository.count()).isEqualTo(avant);
+        // Seul le titulaire de l'adresse l'apprend ; aucun second lien de paiement ne part.
+        org.mockito.Mockito.verify(mailService).notifierInscriptionAdresseConnue(email);
+        org.mockito.Mockito.verify(mailService, org.mockito.Mockito.times(1)).notifierPaiementAFinaliser(
+                org.mockito.ArgumentMatchers.eq(email), org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
     void linscriptionGratuite_resteExamineeParLaPlateforme() throws Exception {
         JsonNode r = inscrire(null);
-        assertThat(r.path("data").has("paiementPage")).isFalse();
+        assertThat(r.path("data").path("suite").asString()).isEqualTo("examen");
         assertThat(r.path("message").asString()).contains("en cours d'analyse");
         assertThat(etablissementDe(r).getStatut()).isEqualTo(StatutEtablissement.EN_ATTENTE);
         assertThat(intentRepository.findByEtablissementIdOrderByDateCreationDesc(etablissementDe(r).getId())).isEmpty();

@@ -57,6 +57,24 @@ public class OnboardingService {
     }
 
     /**
+     * Inscription publique. Le formulaire ne doit pas dire si une adresse a déjà un compte :
+     * dans ce cas rien n'est créé, le titulaire de l'adresse est prévenu par e-mail, et l'appelant
+     * répond comme si l'inscription avait eu lieu. Le mot de passe est haché dans les deux cas,
+     * pour que la durée de la réponse ne trahisse pas non plus l'adresse.
+     *
+     * @return l'inscription créée, ou vide si l'adresse avait déjà un compte
+     */
+    @Transactional
+    public java.util.Optional<Inscription> demander(InscriptionEtablissementRequest req, boolean paiementAttendu) {
+        if (userRepository.existsByEmail(req.getAdminEmail())) {
+            passwordEncoder.encode(req.getAdminPassword());
+            mailService.notifierInscriptionAdresseConnue(req.getAdminEmail());
+            return java.util.Optional.empty();
+        }
+        return java.util.Optional.of(creer(req, paiementAttendu));
+    }
+
+    /**
      * Crée l'établissement et son administrateur.
      *
      * @param paiementAttendu l'inscription est suivie d'un paiement : l'e-mail « dossier en cours

@@ -36,6 +36,7 @@ class OnboardingIntegrationTest {
     // Mocké pour ne pas commiter l'admin/établissement par défaut dans la base H2
     // partagée entre contextes de test (sinon collision avec d'autres tests).
     @MockitoBean private DataInitializer dataInitializer;
+    @MockitoBean private ci.esatic.sigep.service.MailService mailService;
 
     @Autowired private MockMvc mockMvc;
     @Autowired private ObjectMapper objectMapper;
@@ -68,7 +69,7 @@ class OnboardingIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.token").doesNotExist())
-                .andExpect(jsonPath("$.data.roles[0]").value("ROLE_ADMIN"));
+                .andExpect(jsonPath("$.data.suite").value("examen"));
 
         var etab = etablissementRepository.findBySlug("universite-atlantique").orElseThrow();
         assertThat(etab.getStatut()).isEqualTo(ci.esatic.sigep.entity.StatutEtablissement.EN_ATTENTE);
@@ -94,16 +95,24 @@ class OnboardingIntegrationTest {
     }
 
     @Test
-    void email_admin_en_double_est_refuse() throws Exception {
-        mockMvc.perform(post("/api/saas/etablissements")
+    void email_admin_en_double_ne_cree_rien_et_ne_se_trahit_pas() throws Exception {
+        String premiere = mockMvc.perform(post("/api/saas/etablissements")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body("École A", "dup@ecole.ci")))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
 
-        mockMvc.perform(post("/api/saas/etablissements")
+        String seconde = mockMvc.perform(post("/api/saas/etablissements")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body("École B", "dup@ecole.ci")))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        // La réponse est la même que pour une adresse nouvelle ; rien n'est créé, et seul le
+        // titulaire de l'adresse est prévenu, par e-mail.
+        assertThat(seconde).isEqualTo(premiere);
+        assertThat(etablissementRepository.findBySlug("ecole-b")).isEmpty();
+        org.mockito.Mockito.verify(mailService).notifierInscriptionAdresseConnue("dup@ecole.ci");
     }
 
     @Test

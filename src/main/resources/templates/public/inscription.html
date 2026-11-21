@@ -16,6 +16,14 @@
             <span id="erreurTexte">Erreur.</span>
         </div>
 
+        <!-- Plan payant : le lien de paiement part par e-mail, la page le dit à la place du formulaire. -->
+        <div id="envoye" class="note note-bloc hidden" role="status">
+            <p class="font-medium text-[14px]">Vérifiez votre boîte mail</p>
+            <p class="text-muted mt-1">Le lien pour choisir la durée et payer vient de partir vers
+                <strong id="envoyeAdresse"></strong>. Il reste valable 30 jours.
+                Rien reçu dans quelques minutes ? Regardez dans les courriers indésirables.</p>
+        </div>
+
         <form id="form" class="space-y-4" th:attr="data-plan=${planChoisi != null and achatEnLigne} ? ${planChoisi} : ''">
             <div>
                 <label class="etiquette" for="nomEtablissement">Établissement</label>
@@ -115,7 +123,7 @@
         });
     });
 
-    // Plan payant choisi sur l'accueil : la suite se passe sur la page de paiement.
+    // Plan payant choisi sur l'accueil : la suite se passe sur la page de paiement, ouverte par e-mail.
     var plan = form.getAttribute('data-plan') || '';
 
     function erreur(message) {
@@ -148,9 +156,12 @@
             if (r.ok) {
                 return r.json().catch(function () { return {}; }).then(function (j) {
                     var d = (j && j.data) || {};
-                    // Plan payant : direction la page de paiement (offre, durée, moyen, total).
-                    if (d.paiementPage && d.paiementPage.indexOf('/inscription/payer?') === 0) {
-                        window.location = d.paiementPage; return;
+                    // Plan payant : la page de paiement s'ouvre depuis l'e-mail envoyé.
+                    if (d.suite === 'paiement') {
+                        document.getElementById('envoyeAdresse').textContent = payload.adminEmail;
+                        form.classList.add('hidden');
+                        document.getElementById('envoye').classList.remove('hidden');
+                        return;
                     }
                     window.location = '/admin-login?registered=1';
                 });

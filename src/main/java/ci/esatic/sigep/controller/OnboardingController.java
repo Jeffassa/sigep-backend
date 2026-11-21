@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * <p>Inscription gratuite : le dossier est examiné par la plateforme, comme avant. Plan payant
  * choisi sur la page d'accueil, avec un paiement en ligne disponible : l'espace est créé en
- * attente et la réponse mène à la page de paiement, où le client choisit durée et moyen. Le
+ * attente et un e-mail mène à la page de paiement, où le client choisit durée et moyen. Le
  * paiement confirmé active l'espace, sans intervention.
  */
 @RestController
@@ -38,30 +38,40 @@ public class OnboardingController {
     @org.springframework.beans.factory.annotation.Value("${app.base-url:https://sigep.store}")
     private String baseUrl;
 
+    /** Suite d'une inscription gratuite : la plateforme examine le dossier. */
+    public static final String SUITE_EXAMEN = "examen";
+    /** Suite d'une inscription à un plan payant : le lien de paiement part par e-mail. */
+    public static final String SUITE_PAIEMENT = "paiement";
+
+    /**
+     * La réponse ne dépend que du plan demandé, jamais de l'adresse : une adresse qui a déjà un
+     * compte reçoit la même réponse qu'une nouvelle (son titulaire est prévenu par e-mail). Pour
+     * la même raison, le lien de paiement n'est remis que par e-mail : il prouve en plus que le
+     * client reçoit bien les messages de l'adresse qu'il a donnée.
+     */
     @PostMapping("/etablissements")
     public ResponseEntity<ApiResponse<Object>> inscrireEtablissement(
             @Valid @RequestBody InscriptionEtablissementRequest request) {
         ci.esatic.sigep.entity.Plan plan = planPayant(request.getPlan());
         boolean achat = plan != null && mobileMoneyService.achatEnLigne();
 
-        OnboardingService.Inscription inscription = onboardingService.creer(request, achat);
-        if (!achat) {
-            return ResponseEntity.ok(ApiResponse.success(
-                    "Dossier reçu ! Votre inscription est en cours d'analyse — vous recevrez un e-mail "
-                    + "dès la validation de votre espace.", inscription.reponse()));
+        java.util.Optional<OnboardingService.Inscription> creee = onboardingService.demander(request, achat);
+        if (achat) {
+            // L'espace existe en attente : la page de paiement, où le client choisit la durée et
+            // son moyen de paiement, ne s'ouvre que depuis l'e-mail.
+            creee.ifPresent(inscription -> mailService.notifierPaiementAFinaliser(
+                    inscription.admin().getEmail(), inscription.reponse().getPrenom(),
+                    inscription.etablissement().getNom(),
+                    baseUrl + pagePaiement(jetons.creer(inscription.etablissement().getId()), plan)));
         }
 
-        // L'espace existe : la suite se passe sur la page de paiement, où le client choisit la
-        // durée et son moyen de paiement. Il en reçoit aussi le lien, pour y revenir plus tard.
-        String page = pagePaiement(jetons.creer(inscription.etablissement().getId()), plan);
-        mailService.notifierPaiementAFinaliser(inscription.admin().getEmail(),
-                inscription.reponse().getPrenom(), inscription.etablissement().getNom(), baseUrl + page);
-
         java.util.Map<String, Object> donnees = new java.util.LinkedHashMap<>();
-        donnees.put("email", inscription.admin().getEmail());
-        donnees.put("paiementPage", page);
-        return ResponseEntity.ok(ApiResponse.success(
-                "Votre espace est créé. Il sera activé dès que votre paiement sera confirmé.", donnees));
+        donnees.put("email", request.getAdminEmail());
+        donnees.put("suite", achat ? SUITE_PAIEMENT : SUITE_EXAMEN);
+        return ResponseEntity.ok(ApiResponse.success(achat
+                ? "Vérifiez votre boîte mail : nous vous avons envoyé le lien pour payer et activer votre espace."
+                : "Dossier reçu ! Votre inscription est en cours d'analyse — vous recevrez un e-mail "
+                  + "dès la validation de votre espace.", donnees));
     }
 
     /** Adresse de la page de paiement d'une inscription. */

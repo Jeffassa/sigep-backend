@@ -70,8 +70,28 @@ public class MailService {
     }
 
     /**
-     * Inscription avec un plan payant : l'espace sera activé par le paiement. L'e-mail garde le
-     * lien vers le paiement, pour le reprendre si la page a été fermée ou si le paiement a échoué.
+     * Quelqu'un a demandé à créer un espace avec une adresse qui a déjà un compte. Le formulaire
+     * répond comme pour une adresse nouvelle ; seul le titulaire de l'adresse l'apprend, ici.
+     * Rien de ce que le demandeur a saisi (nom d'établissement, prénom) n'est repris dans le
+     * message : il n'écrit pas au titulaire à travers nous.
+     */
+    @Async
+    public void notifierInscriptionAdresseConnue(String email) {
+        envoyer(email, "SIGEP - Demande d'inscription avec votre adresse",
+                "Bonjour,\n\n"
+                + "Une demande de création d'espace SIGEP vient d'être faite avec cette adresse. "
+                + "Elle a déjà un compte SIGEP : aucun nouvel espace n'a été créé.\n\n"
+                + "Si c'est vous, connectez-vous avec votre compte actuel :\n"
+                + baseUrl + "/admin-login\n"
+                + "Mot de passe oublié ? Écrivez-nous à " + contactPlateforme + ".\n\n"
+                + "Si ce n'est pas vous, ignorez ce message : votre compte n'a pas changé.\n\n"
+                + "L'équipe SIGEP");
+    }
+
+    /**
+     * Inscription avec un plan payant : l'espace sera activé par le paiement. Le lien de paiement
+     * n'est remis que par cet e-mail : payer prouve ainsi que l'on reçoit bien les messages de
+     * cette adresse. Il reste valable 30 jours, pour reprendre un paiement interrompu.
      */
     @Async
     public void notifierPaiementAFinaliser(String email, String prenom, String nomEtablissement, String lien) {
@@ -80,7 +100,7 @@ public class MailService {
                 bonjour + "\n\n"
                 + "L'espace de « " + nomEtablissement + " » est créé. Il sera activé dès que votre "
                 + "paiement sera confirmé.\n\n"
-                + "Payer ou reprendre votre paiement :\n" + lien + "\n\n"
+                + "Choisir la durée et payer :\n" + lien + "\n\n"
                 + "Vous recevrez un e-mail de confirmation à l'activation.\n\n"
                 + "L'équipe SIGEP");
     }
