@@ -87,4 +87,28 @@ class PolitiqueScriptsTest {
         }
         assertThat(fautes).isEmpty();
     }
+
+    /**
+     * Garde-fou : la console change de page sans recharger, et ne réexécute que les scripts
+     * marqués {@code data-page-script}. Un script de page sans la marque ne s'exécute qu'au
+     * premier chargement : arrivé par le menu, la page s'affiche mais ses boutons ne font rien.
+     * Seul le script commun du fragment de la console en est exempt (il ne doit pas être rejoué).
+     */
+    @Test
+    void lesScriptsDesPagesDeConsole_sontRejouesParLaNavigation() throws IOException {
+        Pattern script = Pattern.compile("<script\\b[^>]*>");
+        List<String> fautes = new ArrayList<>();
+        for (String dossier : List.of("admin", "plateforme")) {
+            try (Stream<Path> fichiers = Files.walk(Path.of("src/main/resources/templates", dossier))) {
+                for (Path f : fichiers.filter(p -> p.toString().endsWith(".html")).toList()) {
+                    String nom = f.getFileName().toString();
+                    // Fragments communs, et la connexion, servie hors de la navigation instantanée.
+                    if (nom.equals("fragments.html") || nom.equals("login.html")) continue;
+                    Matcher s = script.matcher(Files.readString(f, StandardCharsets.UTF_8));
+                    while (s.find()) if (!s.group().contains("data-page-script")) fautes.add(f + " " + s.group());
+                }
+            }
+        }
+        assertThat(fautes).isEmpty();
+    }
 }
