@@ -21,7 +21,7 @@ th { background:var(--blue); color:white; text-align:left; padding:6px; } td { b
 </head>
 <body>
 <h1>Notes de version SIGEP 1.2.2</h1>
-<div class="meta"><strong>Mise en production :</strong> 22 novembre 2026<br><strong>Backend :</strong> migrations Flyway V40 et V41 · <strong>Application mobile :</strong> version 1.2.2 (Android 10 ou plus récent)<br><strong>Depuis :</strong> la version 1.2.1 du 21 novembre 2026</div>
+<div class="meta"><strong>Mise en production :</strong> 22 novembre 2026<br><strong>Backend :</strong> migrations Flyway V40, V41 et V42 · <strong>Application mobile :</strong> version 1.2.2 (Android 10 ou plus récent)<br><strong>Depuis :</strong> la version 1.2.1 du 21 novembre 2026</div>
 
 <h2>Ce qui change pour les établissements</h2>
 <h3>Code de vérification à la connexion</h3>
@@ -41,8 +41,9 @@ th { background:var(--blue); color:white; text-align:left; padding:6px; } td { b
 <div class="note">Les mots de passe déjà en place restent valables : la règle ne s’applique qu’au moment d’en choisir un nouveau.</div>
 <h3>Inscription d’un établissement</h3>
 <ul>
-<li>Le champ du nom propose, dès deux lettres, les écoles, lycées et universités de Côte d’Ivoire, sans tenir compte des accents ; les universités et écoles supérieures viennent en tête. Les flèches et Entrée choisissent une suggestion.</li>
-<li>Le nom reste libre : un établissement absent de l’annuaire se saisit comme avant.</li>
+<li>Le champ du nom propose, dès deux lettres, les écoles, lycées et universités de Côte d’Ivoire, sans tenir compte des accents. Les établissements des listes officielles de l’État viennent en tête, avant ceux d’OpenStreetMap. Les flèches et Entrée choisissent une suggestion.</li>
+<li>Le nom reste libre : un établissement absent des listes se saisit comme avant.</li>
+<li>La page est allégée : plus de texte sous le champ du nom ni de titre au-dessus de la jauge du mot de passe. La mention des données OpenStreetMap figure désormais dans les mentions légales.</li>
 </ul>
 
 <h3>QR d’émargement</h3>
@@ -57,6 +58,20 @@ th { background:var(--blue); color:white; text-align:left; padding:6px; } td { b
 <li>Nouvelle page <strong>Plateforme → Annuaire</strong> : le nombre d’établissements collectés, la date et le résultat de la dernière collecte, et un bouton « Actualiser maintenant ».</li>
 <li>L’annuaire se remplit au premier démarrage, puis se met à jour seul le 1<sup>er</sup> de chaque mois depuis OpenStreetMap. Une extraction vide ou anormalement réduite ne remplace pas la liste en place.</li>
 <li>Seule la Côte d’Ivoire est ouverte : Jèko n’encaisse que là. Les sept autres pays de l’UEMOA (même monnaie, le franc CFA) figurent avec leurs opérateurs de Mobile Money, « En attente d’un prestataire ».</li>
+</ul>
+
+<h3>Listes officielles et reconnaissance des établissements</h3>
+<ul>
+<li>SIGEP recopie chez lui les listes des établissements autorisés par l’État :
+  <ul>
+  <li>les universités privées (144) et grandes écoles privées (612) autorisées, publiées par le ministère de l’Enseignement supérieur (MESRS) ;</li>
+  <li>les collèges et lycées publics et privés (3 555), avec leur code officiel, d’après le classement du BEPC 2025 de la Direction des examens et concours du ministère de l’Éducation nationale ;</li>
+  <li>les universités et grandes écoles publiques (18), saisies par SIGEP.</li>
+  </ul></li>
+<li>Les listes s’importent au premier démarrage, puis seules le 2 de chaque mois. Le classement du BEPC le plus récent est trouvé automatiquement, session après session. Une liste vide ou fortement réduite ne remplace pas la précédente.</li>
+<li>Chaque inscription est rapprochée des listes : un nom qui y figure sans ambiguïté est « Reconnu », avec la liste et le code officiel ; sinon l’établissement est « À vérifier ». Les clients déjà inscrits sont rapprochés après chaque import.</li>
+<li>Sur <strong>Plateforme → Annuaire</strong>, la section « Clients à vérifier » permet de trancher, au vu de l’arrêté d’autorisation : « Vérifié » ou « Non reconnu ». Le constat est obligatoire ; l’auteur et la date sont gardés. Un nouvel import ne revient jamais sur une décision de la plateforme.</li>
+<li>Rien n’est affiché côté établissement.</li>
 </ul>
 
 <h3>Abonnements</h3>
@@ -98,6 +113,8 @@ th { background:var(--blue); color:white; text-align:left; padding:6px; } td { b
 <tr><th>Élément</th><th>Action</th></tr>
 <tr><td>Migration V40</td><td>Appliquée automatiquement au démarrage. Elle ajoute aux transactions l’auteur, la date et le constat d’une décision manuelle, et aux paiements le début et la fin de la période payée.</td></tr>
 <tr><td>Migration V41</td><td>Appliquée automatiquement au démarrage. Elle crée l’annuaire et le suivi de ses collectes, et ajoute le pays à chaque établissement.</td></tr>
+<tr><td>Migration V42</td><td>Appliquée automatiquement au démarrage. Elle crée les listes officielles et le suivi de leurs imports, et ajoute à chaque établissement son statut de reconnaissance.</td></tr>
+<tr><td>Listes officielles</td><td>Importées en production environ trois minutes et demie après le déploiement du 22 novembre 2026. Aucune variable à définir : <code>APP_OFFICIELS_MENA_URL</code> ne sert qu’à imposer l’adresse du classement si le ministère en changeait un jour le nom.</td></tr>
 <tr><td>Annuaire</td><td>Source : extractions mensuelles de l’équipe humanitaire d’OpenStreetMap (HDX), licence ODbL ; l’attribution figure sur la page Annuaire. Rempli en production une vingtaine de secondes après le démarrage du 22 novembre 2026.</td></tr>
 <tr><td>QR d’émargement</td><td>Nouvelles valeurs par défaut : 30 s d’affichage, 50 s de validité. Si <code>QR_REFRESH_SECONDS</code> ou <code>QR_EXPIRATION_MS</code> sont définies sur Render, elles priment : les supprimer pour appliquer ces valeurs.</td></tr>
 <tr><td>Variables d’environnement</td><td>Aucune nouvelle variable.</td></tr>
@@ -110,6 +127,8 @@ th { background:var(--blue); color:white; text-align:left; padding:6px; } td { b
 <li>Pas d’application iOS, et pas de prise en charge des téléphones antérieurs à Android 10.</li>
 <li>Le premier paiement réel par Jèko reste à faire.</li>
 <li>L’annuaire ne couvre que la Côte d’Ivoire, et ne connaît que les établissements présents dans OpenStreetMap.</li>
+<li>Les listes officielles ne contiennent ni les écoles primaires, ni les collèges ouverts trop récemment pour avoir présenté des candidats au BEPC : ils restent à vérifier.</li>
+<li>La liste des universités et grandes écoles publiques est saisie par SIGEP, le MESRS ne la publiant pas en ligne : elle est à relire.</li>
 <li>Les photos et les PDF scannés ne sont toujours pas lus, et les semaines alternées (A et B) ne sont pas prises en charge.</li>
 </ul>
 </body>
