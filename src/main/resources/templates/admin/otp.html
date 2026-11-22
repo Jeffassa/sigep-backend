@@ -13,10 +13,20 @@
   <div class="feuille">
     <div th:if="${error}" class="note note-alerte" th:text="${error}">Erreur</div>
     <div th:if="${info}" class="note note-ok" th:text="${info}">Information</div>
-    <form th:action="@{/admin-otp}" method="post" class="space-y-4">
+    <form id="formOtp" th:action="@{/admin-otp}" method="post" class="space-y-4" th:attr="data-erreur=${error != null}">
       <label for="code" class="etiquette">Code à 6 chiffres</label>
+      <!-- Champ unique de repli ; le script le remplace par six cases. -->
       <input id="code" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required class="w-full h-12 px-4 champ text-ink text-center tracking-[.4em] text-xl" />
-      <button type="submit" class="btn btn-ink w-full h-12 rounded-xl font-medium">Vérifier</button>
+      <div id="otpCases" class="otp-cases hidden" role="group" aria-label="Code à 6 chiffres">
+        <input class="otp-case" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" aria-label="Chiffre 1 sur 6" />
+        <input class="otp-case" type="text" inputmode="numeric" autocomplete="off" maxlength="6" aria-label="Chiffre 2 sur 6" />
+        <input class="otp-case" type="text" inputmode="numeric" autocomplete="off" maxlength="6" aria-label="Chiffre 3 sur 6" />
+        <span class="otp-tiret" aria-hidden="true"></span>
+        <input class="otp-case" type="text" inputmode="numeric" autocomplete="off" maxlength="6" aria-label="Chiffre 4 sur 6" />
+        <input class="otp-case" type="text" inputmode="numeric" autocomplete="off" maxlength="6" aria-label="Chiffre 5 sur 6" />
+        <input class="otp-case" type="text" inputmode="numeric" autocomplete="off" maxlength="6" aria-label="Chiffre 6 sur 6" />
+      </div>
+      <button id="verifier" type="submit" class="btn btn-ink w-full h-12 rounded-xl font-medium">Vérifier</button>
     </form>
 
     <form th:action="@{/admin-otp/renvoyer}" method="post" class="mt-4 text-center">
@@ -28,5 +38,91 @@
   </div>
 </main>
 </div>
+<script th:nonce="${cspNonce}" th:inline="none" data-page-script>
+(function () {
+    var form = document.getElementById('formOtp');
+    var champ = document.getElementById('code');
+    var groupe = document.getElementById('otpCases');
+    if (!form || !groupe) return;
+    var cases = Array.prototype.slice.call(groupe.querySelectorAll('.otp-case'));
+    var envoye = false;
+
+    // Les six cases remplacent le champ unique, qui reste le seul envoyé.
+    champ.type = 'hidden';
+    champ.removeAttribute('required');
+    champ.removeAttribute('pattern');
+    groupe.classList.remove('hidden');
+    document.querySelector('label[for="code"]').removeAttribute('for');
+
+    function synchroniser() {
+        champ.value = cases.map(function (c) { return c.value; }).join('');
+        if (champ.value.length === 6 && !envoye) {
+            envoye = true;
+            groupe.classList.add('complet');
+            cases.forEach(function (c) { c.blur(); });
+            setTimeout(function () { form.submit(); }, 520);
+        }
+    }
+
+    function poser(c, chiffre) {
+        c.value = chiffre;
+        c.classList.remove('rempli');
+        void c.offsetWidth;          // relance l'animation
+        if (chiffre) c.classList.add('rempli');
+    }
+
+    // Plusieurs chiffres d'un coup (collage, remplissage automatique) : répartis de case en case.
+    function repartir(depuis, chiffres) {
+        var i = depuis;
+        chiffres.split('').forEach(function (ch, k) {
+            if (i >= cases.length) return;
+            var c = cases[i++];
+            setTimeout(function () { poser(c, ch); }, k * 45);
+        });
+        setTimeout(function () {
+            cases[Math.min(i, cases.length - 1)].focus();
+            synchroniser();
+        }, chiffres.length * 45 + 10);
+    }
+
+    cases.forEach(function (c, i) {
+        c.addEventListener('input', function () {
+            var chiffres = c.value.replace(/\D/g, '');
+            if (chiffres.length > 1) { c.value = ''; repartir(i, chiffres.slice(0, 6 - i)); return; }
+            poser(c, chiffres);
+            if (chiffres && i < cases.length - 1) cases[i + 1].focus();
+            synchroniser();
+        });
+        c.addEventListener('keydown', function (e) {
+            if (e.key === 'Backspace' && !c.value && i > 0) { e.preventDefault(); poser(cases[i - 1], ''); cases[i - 1].focus(); }
+            else if (e.key === 'ArrowLeft' && i > 0) { e.preventDefault(); cases[i - 1].focus(); }
+            else if (e.key === 'ArrowRight' && i < cases.length - 1) { e.preventDefault(); cases[i + 1].focus(); }
+        });
+        c.addEventListener('focus', function () { c.select(); });
+        c.addEventListener('paste', function (e) {
+            var texte = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
+            if (!texte) return;
+            e.preventDefault();
+            repartir(i, texte.slice(0, 6 - i));
+        });
+    });
+
+    form.addEventListener('submit', function (e) {
+        if (champ.value.length !== 6) {
+            e.preventDefault();
+            groupe.classList.remove('erreur'); void groupe.offsetWidth; groupe.classList.add('erreur');
+            var vide = cases.filter(function (c) { return !c.value; })[0];
+            if (vide) vide.focus();
+        }
+    });
+
+    // Code refusé par le serveur : les cases tremblent, puis on recommence.
+    if (form.getAttribute('data-erreur') === 'true') {
+        groupe.classList.add('erreur');
+        setTimeout(function () { groupe.classList.remove('erreur'); }, 700);
+    }
+    cases[0].focus();
+})();
+</script>
 </body>
 </html>

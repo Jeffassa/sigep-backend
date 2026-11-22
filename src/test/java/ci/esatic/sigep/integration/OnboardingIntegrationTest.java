@@ -116,6 +116,31 @@ class OnboardingIntegrationTest {
     }
 
     @Test
+    void unMotDePasseFaible_estRefuse_sansRienCreer_etSansTrahirLAdresse() throws Exception {
+        mockMvc.perform(post("/api/saas/etablissements")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body("École Existante", "deja@ecole.ci")))
+                .andExpect(status().isOk());
+        String faible = "{\"nomEtablissement\":\"École Faible\",\"adminEmail\":\"%s\",\"adminPassword\":\"azerty12\"}";
+
+        String nouvelle = mockMvc.perform(post("/api/saas/etablissements")
+                        .contentType(MediaType.APPLICATION_JSON).content(faible.formatted("neuve@ecole.ci")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.data.code").value("MOT_DE_PASSE_FAIBLE"))
+                .andReturn().getResponse().getContentAsString();
+        String connue = mockMvc.perform(post("/api/saas/etablissements")
+                        .contentType(MediaType.APPLICATION_JSON).content(faible.formatted("deja@ecole.ci")))
+                .andExpect(status().isBadRequest())
+                .andReturn().getResponse().getContentAsString();
+
+        // Même refus pour une adresse nouvelle ou déjà inscrite : la règle passe avant la recherche.
+        assertThat(connue).isEqualTo(nouvelle);
+        assertThat(nouvelle).contains("au moins 10 caractères").contains("une majuscule");
+        assertThat(etablissementRepository.findBySlug("ecole-faible")).isEmpty();
+        org.mockito.Mockito.verify(mailService, org.mockito.Mockito.never()).notifierInscriptionAdresseConnue("deja@ecole.ci");
+    }
+
+    @Test
     void slug_genere_unique_pour_deux_noms_identiques() throws Exception {
         mockMvc.perform(post("/api/saas/etablissements")
                         .contentType(MediaType.APPLICATION_JSON)

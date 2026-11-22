@@ -81,15 +81,28 @@
                        autocomplete="email"/>
             </div>
             <div>
-                <label class="etiquette">Mot de passe</label>
+                <label class="etiquette" for="adminPassword">Mot de passe</label>
                 <div class="relative">
-                    <input id="adminPassword" type="password" required minlength="8"
-                           class="w-full h-12 px-4 pr-11 champ text-ink"
-                           placeholder="8 caractères minimum" autocomplete="new-password"/>
+                    <input id="adminPassword" type="password" required minlength="10" maxlength="128"
+                           class="w-full h-12 px-4 pr-11 champ text-ink" aria-describedby="forceMdp"
+                           placeholder="10 caractères minimum" autocomplete="new-password"/>
                     <button type="button" data-toggle="adminPassword" aria-label="Afficher le mot de passe"
                             class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink transition">
                         <span class="material-symbols-rounded text-[20px]">visibility</span>
                     </button>
+                </div>
+                <!-- Force du mot de passe : les mêmes règles que le serveur (PolitiqueMotDePasse). -->
+                <div id="forceMdp" class="force-mdp" data-niveau="0">
+                    <div class="force-barres" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+                    <p class="force-libelle"><span>Force du mot de passe</span><strong id="forceLibelle" aria-live="polite">—</strong></p>
+                    <ul class="force-regles">
+                        <li data-regle="longueur"><span class="force-coche" aria-hidden="true"></span>10 caractères minimum</li>
+                        <li data-regle="minuscule"><span class="force-coche" aria-hidden="true"></span>Une minuscule</li>
+                        <li data-regle="majuscule"><span class="force-coche" aria-hidden="true"></span>Une majuscule</li>
+                        <li data-regle="chiffre"><span class="force-coche" aria-hidden="true"></span>Un chiffre</li>
+                        <li data-regle="special"><span class="force-coche" aria-hidden="true"></span>Un symbole (! @ # …)</li>
+                    </ul>
+                    <p id="forceAlerte" class="force-alerte hidden"></p>
                 </div>
             </div>
             <button id="submit" type="submit"
@@ -123,6 +136,45 @@
         });
     });
 
+    /* Force du mot de passe, cochée au fil de la saisie (mêmes règles que le serveur). */
+    var mdp = document.getElementById('adminPassword');
+    var force = document.getElementById('forceMdp');
+    var forceLibelle = document.getElementById('forceLibelle');
+    var forceAlerte = document.getElementById('forceAlerte');
+    var COURANTS = ['motdepasse', 'password', 'azerty', 'qwerty', '123456', 'abcdef', 'sigep',
+        'admin', 'bienvenue', 'welcome', 'soleil', 'iloveyou', 'jetaime'];
+    var LIBELLES = ['—', 'Trop faible', 'Faible', 'Bon', 'Fort'];
+
+    function evaluer() {
+        var v = mdp.value;
+        var regles = {
+            longueur: v.length >= 10,
+            minuscule: /\p{Ll}/u.test(v),
+            majuscule: /\p{Lu}/u.test(v),
+            chiffre: /\d/.test(v),
+            special: /[^\p{L}\d]/u.test(v)
+        };
+        var faits = 0;
+        Object.keys(regles).forEach(function (k) {
+            force.querySelector('[data-regle="' + k + '"]').classList.toggle('ok', regles[k]);
+            if (regles[k]) faits++;
+        });
+        var bas = v.toLowerCase();
+        var local = (document.getElementById('adminEmail').value.split('@')[0] || '').toLowerCase();
+        var alerte = '';
+        if (local.length >= 4 && bas.indexOf(local) >= 0) alerte = 'N’utilisez pas votre adresse e-mail dans le mot de passe.';
+        else if (COURANTS.some(function (c) { return bas.indexOf(c) >= 0; })) alerte = 'Ce mot de passe est trop courant : il serait deviné en quelques secondes.';
+        var niveau = !v ? 0 : faits <= 2 ? 1 : faits < 5 ? 2 : v.length >= 14 ? 4 : 3;
+        if (alerte && niveau > 1) niveau = 1;
+        force.setAttribute('data-niveau', niveau);
+        forceLibelle.textContent = LIBELLES[niveau];
+        forceAlerte.textContent = alerte;
+        forceAlerte.classList.toggle('hidden', !alerte);
+        return niveau >= 3;
+    }
+    mdp.addEventListener('input', evaluer);
+    document.getElementById('adminEmail').addEventListener('input', function () { if (mdp.value) evaluer(); });
+
     // Plan payant choisi sur l'accueil : la suite se passe sur la page de paiement, ouverte par e-mail.
     var plan = form.getAttribute('data-plan') || '';
 
@@ -136,6 +188,12 @@
     form.addEventListener('submit', function (e) {
         e.preventDefault();
         box.classList.add('hidden');
+        if (!evaluer()) {
+            force.classList.remove('secoue'); void force.offsetWidth; force.classList.add('secoue');
+            mdp.focus();
+            erreur('Choisissez un mot de passe plus fort : cochez toutes les règles sous le champ.');
+            return;
+        }
         btn.disabled = true;
 
 
@@ -168,7 +226,7 @@
             }
             if (r.status === 429) { erreur('Trop de tentatives. Réessayez dans une minute.'); return; }
             return r.json().then(function (j) {
-                erreur((j && j.message) ? j.message : 'L\'inscription n\'a pas abouti. Réessayez dans un instant.');
+                erreur((j && j.data && typeof j.data === 'object' && !j.data.code && Object.values(j.data)[0]) || ((j && j.message) ? j.message : '') || 'L\'inscription n\'a pas abouti. Réessayez dans un instant.');
             }).catch(function () { erreur('L\'inscription n\'a pas abouti. Réessayez dans un instant.'); });
         }).catch(function () { erreur('Serveur injoignable. Réessayez dans un instant.'); });
     });

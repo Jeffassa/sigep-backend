@@ -164,8 +164,10 @@ app:
     # passe par la validation de la scolarité.
     # L'affichage est autorisé par le cookie posé depuis l'administration (Écran d'émargement),
     # et peut être limité au réseau de l'établissement depuis la même page.
-    expiration-ms: ${QR_EXPIRATION_MS:30000}
-    refresh-seconds: ${QR_REFRESH_SECONDS:10}
+    # Le code affiché change toutes les 30 s ; il reste valable 20 s de plus, le temps de signer
+    # après un scan fait juste avant le changement.
+    expiration-ms: ${QR_EXPIRATION_MS:50000}
+    refresh-seconds: ${QR_REFRESH_SECONDS:30}
   rapports:
     dossier: ${RAPPORTS_DOSSIER:rapports}
   mail:

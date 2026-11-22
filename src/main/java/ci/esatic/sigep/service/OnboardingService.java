@@ -53,6 +53,7 @@ public class OnboardingService {
 
     @Transactional
     public AuthResponse inscrire(InscriptionEtablissementRequest req) {
+        ci.esatic.sigep.security.PolitiqueMotDePasse.exiger(req.getAdminPassword(), req.getAdminEmail());
         return creer(req, false).reponse();
     }
 
@@ -66,6 +67,8 @@ public class OnboardingService {
      */
     @Transactional
     public java.util.Optional<Inscription> demander(InscriptionEtablissementRequest req, boolean paiementAttendu) {
+        // Vérifié avant de chercher l'adresse : la réponse est la même, compte existant ou non.
+        ci.esatic.sigep.security.PolitiqueMotDePasse.exiger(req.getAdminPassword(), req.getAdminEmail());
         if (userRepository.existsByEmail(req.getAdminEmail())) {
             passwordEncoder.encode(req.getAdminPassword());
             mailService.notifierInscriptionAdresseConnue(req.getAdminEmail());

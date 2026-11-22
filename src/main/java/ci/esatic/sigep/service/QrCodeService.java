@@ -27,10 +27,10 @@ public class QrCodeService {
     // Cadence/expiration/taille du QR — externalisées (M2). Défauts = comportement actuel.
     // Validité assez longue pour « scanner → signer → valider », tout en restant une preuve
     // de présence (l'anti-rejeu par jti empêche la réutilisation).
-    @org.springframework.beans.factory.annotation.Value("${app.qr.expiration-ms:120000}")
+    @org.springframework.beans.factory.annotation.Value("${app.qr.expiration-ms:50000}")
     private long qrExpirationMs;
 
-    @org.springframework.beans.factory.annotation.Value("${app.qr.refresh-seconds:15}")
+    @org.springframework.beans.factory.annotation.Value("${app.qr.refresh-seconds:30}")
     private int qrRefreshSeconds;
 
     @org.springframework.beans.factory.annotation.Value("${app.qr.size:400}")
