@@ -231,7 +231,8 @@ app:
     # Propriétaire de la plateforme SaaS. owner-email : identité du SUPER ADMIN (détection).
     # admin-email/password : compte SUPER ADMIN (espace /plateforme), créé au démarrage s'il
     # n'existe pas ; si le mot de passe est vide, il est généré et affiché UNE fois dans les logs.
-    owner-email: ${PLATFORM_OWNER_EMAIL:assalendahjeanfrancois@gmail.com}
+    # PLATFORM_OWNER_EMAIL est obligatoire en production : sans elle, aucun compte n'est super admin.
+    owner-email: ${PLATFORM_OWNER_EMAIL:}
     admin-email: ${PLATFORM_ADMIN_EMAIL:${app.platform.owner-email}}
     admin-password: ${PLATFORM_ADMIN_PASSWORD:}
     # Marque affichée dans l'interface (chrome admin, pages QR). Neutre = mono-marque SIGEP.
