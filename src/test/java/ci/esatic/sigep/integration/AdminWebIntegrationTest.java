@@ -127,7 +127,15 @@ class AdminWebIntegrationTest {
     void inscription_afficheLeFormulairePublic() throws Exception {
         mockMvc.perform(get("/inscription"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Créer mon espace")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Créer mon espace")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("id=\"forceLibelle\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("Pas dans la liste"))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("Force du mot de passe</span>"))));
+        // L'attribution exigée par la licence ODbL de l'annuaire figure dans les mentions légales.
+        mockMvc.perform(get("/mentions-legales"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("contributeurs")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("openstreetmap.org/copyright")));
     }
 
     @Test

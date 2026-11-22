@@ -336,7 +336,7 @@ html.dark .etat-verifier { color: var(--c-accent-ink); }
 .force-mdp[data-niveau="2"] i:nth-child(-n+2)::after,
 .force-mdp[data-niveau="3"] i:nth-child(-n+3)::after,
 .force-mdp[data-niveau="4"] i::after { transform: scaleX(1); }
-.force-libelle { margin: 6px 0 0; display: flex; justify-content: space-between; font: 13px/18px 'DM Mono', monospace; color: var(--c-muted); }
+.force-libelle { margin: 6px 0 0; display: flex; justify-content: flex-end; font: 13px/18px 'DM Mono', monospace; color: var(--c-muted); }
 .force-libelle strong { font-weight: 500; color: var(--force, var(--c-muted)); transition: color .3s; }
 .force-regles { list-style: none; margin: 8px 0 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px 12px; font-size: 13px; line-height: 18px; color: var(--c-muted); }
 .force-regles li { display: flex; align-items: center; gap: 7px; transition: color .25s; }
@@ -374,7 +374,5 @@ html.dark .etat-verifier { color: var(--c-accent-ink); }
 .annuaire-liste li:hover, .annuaire-liste li[aria-selected="true"] { background: var(--c-accent-soft); }
 .annuaire-nom { font-size: 14px; line-height: 19px; color: var(--c-ink); font-weight: 600; }
 .annuaire-info { font: 12px/16px 'DM Mono', monospace; color: var(--c-muted); }
-.annuaire-aide { margin: 6px 0 0; display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 12px; line-height: 16px; color: var(--c-muted); }
-.annuaire-source a { color: inherit; text-decoration: underline; }
 @keyframes annuaire-ouvre { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .annuaire-liste { animation: none; } }
