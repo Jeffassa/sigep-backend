@@ -312,6 +312,8 @@ app:
       max-refresh: ${REFRESH_RATE_LIMIT_MAX:30}
       max-signup: ${SIGNUP_RATE_LIMIT_MAX:5}
       max-admin-login: ${ADMIN_LOGIN_RATE_LIMIT_MAX:10}
+      # Suggestions d'écoles à l'inscription (publiques, deux recherches en base par appel).
+      max-annuaire: ${ANNUAIRE_RATE_LIMIT_MAX:60}
       # Budget global par IP, toutes routes (0 = désactivé). Généreux : plusieurs utilisateurs
       # partagent souvent une même IP (NAT d'établissement).
       max-global: ${RATE_LIMIT_MAX_GLOBAL:300}

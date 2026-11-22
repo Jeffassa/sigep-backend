@@ -44,6 +44,7 @@ th { background:var(--blue); color:white; text-align:left; padding:6px; } td { b
 <li>Le champ du nom propose, dès deux lettres, les écoles, lycées et universités de Côte d’Ivoire, sans tenir compte des accents. Les établissements des listes officielles de l’État viennent en tête, avant ceux d’OpenStreetMap. Les flèches et Entrée choisissent une suggestion.</li>
 <li>Le nom reste libre : un établissement absent des listes se saisit comme avant.</li>
 <li>La page est allégée : plus de texte sous le champ du nom ni de titre au-dessus de la jauge du mot de passe. La mention des données OpenStreetMap figure désormais dans les mentions légales.</li>
+<li>Les suggestions sont limitées à 60 recherches par minute depuis une même adresse, bien au-delà d’une saisie normale.</li>
 </ul>
 
 <h3>QR d’émargement</h3>
@@ -71,6 +72,8 @@ th { background:var(--blue); color:white; text-align:left; padding:6px; } td { b
 <li>Les listes s’importent au premier démarrage, puis seules le 2 de chaque mois. Le classement du BEPC le plus récent est trouvé automatiquement, session après session. Une liste vide ou fortement réduite ne remplace pas la précédente.</li>
 <li>Chaque inscription est rapprochée des listes : un nom qui y figure sans ambiguïté est « Reconnu », avec la liste et le code officiel ; sinon l’établissement est « À vérifier ». Les clients déjà inscrits sont rapprochés après chaque import.</li>
 <li>Sur <strong>Plateforme → Annuaire</strong>, la section « Clients à vérifier » permet de trancher, au vu de l’arrêté d’autorisation : « Vérifié » ou « Non reconnu ». Le constat est obligatoire ; l’auteur et la date sont gardés. Un nouvel import ne revient jamais sur une décision de la plateforme.</li>
+<li>Une fiche officielle ne reconnaît qu’un seul client, le premier inscrit. Un autre établissement qui réclame la même fiche est « À vérifier », avec la mention « fiche déjà tenue par un autre client ».</li>
+<li>« Reconnu » atteste que le nom figure sur une liste officielle, pas que la personne inscrite représente l’établissement. La page le rappelle.</li>
 <li>Rien n’est affiché côté établissement.</li>
 </ul>
 
@@ -108,6 +111,14 @@ th { background:var(--blue); color:white; text-align:left; padding:6px; } td { b
 <li>À la connexion, le code de vérification pouvait partir deux fois : seul, au sixième chiffre, puis au clic sur « Vérifier ». Le premier envoi réussissait, le second trouvait le code déjà utilisé et affichait « Code invalide ou expiré ». Le code ne part plus qu’une fois, et un envoi en double est accepté si la session est déjà vérifiée.</li>
 </ul>
 
+<h2>Maintenance technique</h2>
+<ul>
+<li>Spring Boot passe de 4.1.1 à 4.1.3. Jackson, Tomcat, le pilote PostgreSQL et Lombok suivent désormais les versions qu’il fournit.</li>
+<li>Bibliothèques PDF à jour : PDFBox 3.0.8 pour la lecture, OpenPDF 2.4.0 pour les rapports.</li>
+<li>Renforcements de la console : politique de contenu des pages complétée, mémoire bornée à la lecture d’un PDF, longueurs bornées à l’inscription d’un enseignant (nom et prénom : 80 caractères, matricule : 64).</li>
+<li>Application mobile : outils de construction à jour, pris en compte à la prochaine compilation de l’APK. L’APK 1.2.2 en service n’est pas concerné.</li>
+</ul>
+
 <h2>Exploitation</h2>
 <table>
 <tr><th>Élément</th><th>Action</th></tr>
@@ -117,7 +128,8 @@ th { background:var(--blue); color:white; text-align:left; padding:6px; } td { b
 <tr><td>Listes officielles</td><td>Importées en production environ trois minutes et demie après le déploiement du 22 novembre 2026. Aucune variable à définir : <code>APP_OFFICIELS_MENA_URL</code> ne sert qu’à imposer l’adresse du classement si le ministère en changeait un jour le nom.</td></tr>
 <tr><td>Annuaire</td><td>Source : extractions mensuelles de l’équipe humanitaire d’OpenStreetMap (HDX), licence ODbL ; l’attribution figure sur la page Annuaire. Rempli en production une vingtaine de secondes après le démarrage du 22 novembre 2026.</td></tr>
 <tr><td>QR d’émargement</td><td>Nouvelles valeurs par défaut : 30 s d’affichage, 50 s de validité. Si <code>QR_REFRESH_SECONDS</code> ou <code>QR_EXPIRATION_MS</code> sont définies sur Render, elles priment : les supprimer pour appliquer ces valeurs.</td></tr>
-<tr><td>Variables d’environnement</td><td>Aucune nouvelle variable.</td></tr>
+<tr><td>Variables d’environnement</td><td>Aucune nouvelle variable obligatoire. <code>ANNUAIRE_RATE_LIMIT_MAX</code> change, si besoin, la limite des suggestions (60 par défaut).</td></tr>
+<tr><td>Second déploiement</td><td>Mise à jour technique et reconnaissance à fiche unique, mises en ligne le soir du 22 novembre 2026 (environ quatre minutes après l’envoi). Aucune migration. Santé, en-têtes et suggestions vérifiés en production.</td></tr>
 <tr><td>Application mobile</td><td>APK 1.2.2 compilé par EAS et déposé sur <code>/plateforme/application</code> le 22 novembre 2026. Le téléchargement depuis sigep.store a été vérifié identique au fichier compilé.</td></tr>
 </table>
 
