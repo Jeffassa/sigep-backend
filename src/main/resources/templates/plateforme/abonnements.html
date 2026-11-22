@@ -10,10 +10,11 @@
     <section class="mb-8" data-reveal>
         <p class="surtitre">Plateforme · Facturation</p>
         <h1 class="titre-page">Abonnements</h1>
-        <p class="chapeau">Paiement reçu (Mobile Money) ? Validez ici : la période de l'établissement est prolongée immédiatement.</p>
+        <p class="chapeau">L'état des abonnements de chaque établissement. Un abonnement ne se prolonge que par
+            un paiement : en ligne, ou par une transaction tranchée dans
+            <a th:href="@{/plateforme/transactions}" class="underline">Transactions</a>.</p>
     </section>
 
-    <!-- Messages -->
     <div data-flash th:if="${ok}" class="note note-ok">
         <svg th:replace="~{admin/fragments :: coche}"></svg><span th:text="${ok}"></span>
     </div>
@@ -21,45 +22,28 @@
         <span th:text="${erreur}"></span>
     </div>
 
-    <!-- Renouvellements -->
     <section class="chapitre" data-reveal>
         <div class="chapitre-tete">
-            
-            <h2 class="titre-section">Valider un renouvellement</h2>
+            <h2 class="titre-section">Échéances</h2>
         </div>
         <div class="overflow-x-auto">
             <table class="registre" data-mobile-keep="2">
                 <thead><tr>
-                    <th>Établissement</th><th>Plan</th>
-                    <th>Expiration</th><th class="text-right">Enregistrer un paiement</th>
+                    <th>Établissement</th><th>Plan</th><th>Expiration</th><th class="text-right">Suivi</th>
                 </tr></thead>
                 <tbody>
-                <tr th:each="e : ${etablissements}"
-                    >
+                <tr th:each="e : ${etablissements}">
                     <td>
                         <p class="font-medium" th:text="${e.nom}">Nom</p>
                         <p class="font-mono text-[11px] text-muted" th:text="${e.slug}">slug</p>
                     </td>
                     <td class="code" th:text="${e.plan}">PLAN</td>
                     <td>
-                        <span th:text="${e.dateExpiration != null} ? ${#temporals.format(e.dateExpiration,'dd/MM/yyyy')} : 'Illimité'">--</span>
+                        <span th:text="${e.dateExpiration != null} ? ${#temporals.format(e.dateExpiration,'dd/MM/yyyy')} : (${e.plan.name() == 'FREE'} ? 'Gratuit' : 'Sans échéance')">--</span>
                         <span th:if="${expires.contains(e.id)}" class="etat etat-alerte ml-2">Expiré</span>
                     </td>
-                    <td>
-                        <form th:action="@{/plateforme/abonnements/prolonger}" method="post" class="flex items-center justify-end gap-2 flex-wrap">
-                            <input type="hidden" name="slug" th:value="${e.slug}"/>
-                            <input type="number" name="montant" min="0" step="500" th:value="${tarifParEtab[e.id]}"
-                                   th:title="'Montant reçu (' + ${symbole} + ')'" th:placeholder="${symbole}"
-                                   class="h-9 px-2 w-24 champ text-[13px]"/>
-                            <input type="text" name="reference" placeholder="Réf. (option)"
-                                   class="h-9 px-2 w-28 champ text-[13px]"/>
-                            <select name="mois" class="h-9 px-2 champ text-[13px]">
-                                <option value="1">+1 mois</option>
-                                <option value="3">+3 mois</option>
-                                <option value="12">+12 mois</option>
-                            </select>
-                            <button type="submit" class="btn btn-ink h-9 px-3 rounded-lg text-[12px] font-medium">Valider</button>
-                        </form>
+                    <td class="text-right">
+                        <a th:href="@{/plateforme/etablissements/{s}(s=${e.slug})}" class="underline text-[13px]">Historique et transactions</a>
                     </td>
                 </tr>
                 <tr th:if="${#lists.isEmpty(etablissements)}">
@@ -72,7 +56,5 @@
 </main>
 
 <div th:replace="~{plateforme/fragments :: dock('abonnements')}"></div>
-<div th:replace="~{admin/fragments :: scripts}"></div>
-
 </body>
 </html>

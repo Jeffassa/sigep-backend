@@ -53,6 +53,11 @@ import java.util.stream.Collectors;
 @RequestMapping("/plateforme")
 public class PlateformeController {
 
+    /** Quota d'enseignants du plan gratuit (même source que l'inscription). */
+    @org.springframework.beans.factory.annotation.Value("${app.plans.free-max-enseignants:10}")
+    private int FREE_MAX_ENSEIGNANTS = 10;
+
+
     private final EtablissementRepository etablissementRepository;
     private final EnseignantRepository enseignantRepository;
     private final UserRepository userRepository;
@@ -331,7 +336,6 @@ public class PlateformeController {
     /** Formulaire de création directe d'un établissement (super-admin). */
     @GetMapping("/etablissements/nouveau")
     public String nouveauEtablissementForm(Model model) {
-        model.addAttribute("plans", Plan.values());
         return "plateforme/etablissement-nouveau";
     }
 
@@ -344,15 +348,19 @@ public class PlateformeController {
                                      @RequestParam(required = false) String adminPrenom,
                                      @RequestParam(required = false) Plan plan,
                                      RedirectAttributes ra) {
-        if (nom == null || nom.isBlank() || adminEmail == null || adminEmail.isBlank()
-                || adminPassword == null || adminPassword.length() < 8) {
-            ra.addFlashAttribute("erreur",
-                    "Nom de l'établissement, e-mail admin et mot de passe (≥ 8 caractères) sont requis.");
+        if (nom == null || nom.isBlank() || adminEmail == null || adminEmail.isBlank()) {
+            ra.addFlashAttribute("erreur", "Nom de l'établissement et e-mail de l'administrateur sont requis.");
+            return "redirect:/plateforme/etablissements/nouveau";
+        }
+        java.util.List<String> manque = ci.esatic.sigep.security.PolitiqueMotDePasse.manquements(adminPassword, adminEmail);
+        if (!manque.isEmpty()) {
+            ra.addFlashAttribute("erreur", "Mot de passe trop faible. Il faut : " + String.join(", ", manque) + ".");
             return "redirect:/plateforme/etablissements/nouveau";
         }
         try {
+            // Toujours au plan gratuit : le plan payant viendra du premier paiement.
             Etablissement e = onboardingService.creerParSuperAdmin(
-                    nom, adminEmail.trim(), adminPassword, adminNom, adminPrenom, plan);
+                    nom, adminEmail.trim(), adminPassword, adminNom, adminPrenom, Plan.FREE);
             ra.addFlashAttribute("ok", "« " + e.getNom() + " » créé et activé (plan " + e.getPlan()
                     + "). L'administrateur peut se connecter : " + adminEmail.trim() + ".");
             return "redirect:/plateforme/etablissements/" + e.getSlug();
@@ -374,23 +382,39 @@ public class PlateformeController {
         return "redirect:/plateforme/etablissements/" + slug;
     }
 
-    /** Changer le plan d'un établissement (ajuste le quota par défaut du plan). */
+    /**
+     * Repasser un établissement au plan gratuit. Un plan payant ne s'active jamais à la main : il
+     * vient d'un paiement en ligne, ou d'une transaction tranchée dans Transactions.
+     */
     @PostMapping("/etablissements/plan")
     @Transactional
     public String changerPlan(@RequestParam String slug, @RequestParam Plan plan, RedirectAttributes ra) {
+        if (plan != Plan.FREE) {
+            ra.addFlashAttribute("erreur", "Un plan payant ne s'active que par un paiement : l'établissement "
+                    + "le souscrit en ligne, ou une transaction se tranche dans Transactions.");
+            return "redirect:/plateforme/etablissements/" + slug;
+        }
         modifier(slug, ra, e -> {
-            e.setPlan(plan);
-            e.setMaxEnseignants(plan == Plan.FREE ? 10 : 0); // Pro/Enterprise = illimité
-            ra.addFlashAttribute("ok", "Plan de « " + e.getNom() + " » changé en " + plan + ".");
+            e.setPlan(Plan.FREE);
+            e.setMaxEnseignants(FREE_MAX_ENSEIGNANTS);
+            e.setDateExpiration(null);
+            ra.addFlashAttribute("ok", "« " + e.getNom() + " » est repassé au plan gratuit.");
         });
         return "redirect:/plateforme/etablissements/" + slug;
     }
 
-    /** Ajuster le quota d'enseignants (0 = illimité). */
+    /** Ajuster le quota d'enseignants (0 = illimité, réservé aux plans payants). */
     @PostMapping("/etablissements/quota")
     @Transactional
     public String changerQuota(@RequestParam String slug, @RequestParam int maxEnseignants,
                                RedirectAttributes ra) {
+        Etablissement cible = etablissementRepository.findBySlug(slug).orElse(null);
+        if (cible != null && cible.getPlan() == Plan.FREE
+                && (maxEnseignants <= 0 || maxEnseignants > FREE_MAX_ENSEIGNANTS)) {
+            ra.addFlashAttribute("erreur", "Sur le plan gratuit, le quota va de 1 à " + FREE_MAX_ENSEIGNANTS
+                    + " enseignants. Au-delà, l'établissement passe à un plan payant.");
+            return "redirect:/plateforme/etablissements/" + slug;
+        }
         modifier(slug, ra, e -> {
             e.setMaxEnseignants(Math.max(0, maxEnseignants));
             ra.addFlashAttribute("ok", "Quota de « " + e.getNom() + " » réglé à "
@@ -454,7 +478,10 @@ public class PlateformeController {
         return "redirect:/plateforme";
     }
 
-    /** Renouvellements : valider un paiement reçu = enregistrer le paiement + prolonger. */
+    /**
+     * Suivi des abonnements, en lecture seule : un abonnement ne se prolonge que par un paiement
+     * réel (paiement en ligne, ou transaction tranchée dans Transactions), jamais à la main.
+     */
     @GetMapping("/abonnements")
     public String abonnements(Model model) {
         List<Etablissement> etablissements = clients();
@@ -462,11 +489,8 @@ public class PlateformeController {
                 .filter(abonnementService::estExpire)
                 .map(Etablissement::getId)
                 .collect(Collectors.toSet());
-        Map<Long, Long> tarifParEtab = etablissements.stream()
-                .collect(Collectors.toMap(Etablissement::getId, e -> planService.prixMensuel(e.getPlan())));
         model.addAttribute("etablissements", etablissements);
         model.addAttribute("expires", expires);
-        model.addAttribute("tarifParEtab", tarifParEtab);
         return "plateforme/abonnements";
     }
 
@@ -483,44 +507,6 @@ public class PlateformeController {
         model.addAttribute("encaisseMois", paiementRepository.encaisseDepuis(now.withDayOfMonth(1).atStartOfDay()));
         model.addAttribute("nbPaiements", paiements.size());
         return "plateforme/paiements";
-    }
-
-    /**
-     * Prolongation manuelle après paiement constaté (Mobile Money) : enregistre un Paiement
-     * (montant reçu, mois crédités, référence) ET prolonge la période de l'établissement.
-     */
-    @PostMapping("/abonnements/prolonger")
-    @Transactional
-    public String prolonger(@AuthenticationPrincipal User superAdmin,
-                            @RequestParam String slug,
-                            @RequestParam(defaultValue = "1") int mois,
-                            @RequestParam(required = false) Long montant,
-                            @RequestParam(required = false) String reference,
-                            RedirectAttributes ra) {
-        etablissementRepository.findBySlug(slug).ifPresentOrElse(e -> {
-            int m = Math.max(1, mois);
-            long paye = (montant != null && montant >= 0) ? montant : (long) m * planService.prixMensuel(e.getPlan());
-
-            java.time.LocalDate debut = abonnementService.debutProlongation(e);
-            paiementRepository.save(Paiement.builder()
-                    .etablissementId(e.getId())
-                    .montant(paye)
-                    .moisCredites(m)
-                    .reference(reference == null || reference.isBlank() ? null : reference.trim())
-                    .enregistrePar(superAdmin != null ? superAdmin.getEmail() : null)
-                    .plan(e.getPlan())
-                    .devise(planService.devise().toUpperCase())
-                    .periodeDebut(debut)
-                    .periodeFin(debut.plusMonths(m))
-                    .build());
-
-            abonnementService.prolonger(e, m);
-            etablissementRepository.save(e);
-            ra.addFlashAttribute("ok", "Paiement de « " + e.getNom() + " » enregistré ("
-                    + paye + " FCFA) — abonnement prolongé de " + m + " mois (jusqu'au "
-                    + e.getDateExpiration() + ").");
-        }, () -> ra.addFlashAttribute("erreur", "Établissement introuvable : " + slug));
-        return "redirect:/plateforme/abonnements";
     }
 
     /** Établissements clients (l'établissement technique « plateforme » est exclu). */

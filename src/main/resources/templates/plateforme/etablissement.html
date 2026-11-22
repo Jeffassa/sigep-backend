@@ -72,7 +72,7 @@
                 <strong class="text-ink" th:text="${#numbers.formatInteger(totalPaye,1,'WHITESPACE') + ' ' + symbole}">0</strong></span>
         </div>
         <p th:if="${#lists.isEmpty(periodes)}" class="chapitre-note">
-            Aucune période payée pour le moment. <a th:href="@{/plateforme/abonnements}" class="underline">Enregistrer un paiement</a>.
+            Aucune période payée pour le moment.
         </p>
         <ol th:if="${!#lists.isEmpty(periodes)}" class="frise">
             <li th:each="pe : ${periodes}" th:classappend="${pe.enCours} ? 'periode-actuelle' : (${pe.aVenir} ? 'a-venir' : '')">
@@ -136,26 +136,25 @@
         <h2 class="titre-section">Gestion</h2>
         <div class="grid md:grid-cols-2 gap-5">
 
-            <!-- Changer de plan -->
-            <form th:action="@{/plateforme/etablissements/plan}" method="post" class="flex items-end gap-2">
+            <!-- Plan : un plan payant vient d'un paiement ; seul le retour au gratuit se fait ici. -->
+            <div th:if="${e.plan.name() == 'FREE'}">
+                <label class="etiquette">Plan</label>
+                <p class="text-[13px] text-muted">Plan gratuit. Il passe à un plan payant dès que l'établissement paie en ligne.</p>
+            </div>
+            <form th:unless="${e.plan.name() == 'FREE'}" th:action="@{/plateforme/etablissements/plan}" method="post"
+                  data-confirm="Repasser cet établissement au plan gratuit ? Il perd son abonnement payant.">
                 <input type="hidden" name="slug" th:value="${e.slug}"/>
-                <div class="flex-1">
-                    <label class="etiquette">Plan</label>
-                    <select name="plan" class="w-full h-10 px-3 champ text-[13px]">
-                        <option value="FREE" th:selected="${e.plan.name() == 'FREE'}">Free</option>
-                        <option value="PRO" th:selected="${e.plan.name() == 'PRO'}">Pro</option>
-                        <option value="ENTERPRISE" th:selected="${e.plan.name() == 'ENTERPRISE'}">Enterprise</option>
-                    </select>
-                </div>
-                <button type="submit" class="btn btn-ink h-10 px-4 rounded-lg text-[12px] font-medium">Appliquer</button>
+                <input type="hidden" name="plan" value="FREE"/>
+                <label class="etiquette">Plan</label>
+                <button type="submit" class="btn glass h-10 px-4 rounded-lg text-[13px]">Repasser au plan gratuit</button>
             </form>
 
             <!-- Changer le quota -->
             <form th:action="@{/plateforme/etablissements/quota}" method="post" class="flex items-end gap-2">
                 <input type="hidden" name="slug" th:value="${e.slug}"/>
                 <div class="flex-1">
-                    <label class="etiquette">Quota d'enseignants (0 = illimité)</label>
-                    <input type="number" name="maxEnseignants" min="0" th:value="${e.maxEnseignants}"
+                    <label class="etiquette" th:text="${e.plan.name() == 'FREE'} ? 'Quota d’enseignants (1 à 10 sur le plan gratuit)' : 'Quota d’enseignants (0 = illimité)'">Quota d'enseignants</label>
+                    <input type="number" name="maxEnseignants" th:attr="min=${e.plan.name() == 'FREE'} ? 1 : 0,max=${e.plan.name() == 'FREE'} ? 10 : null" th:value="${e.maxEnseignants}"
                            class="w-full h-10 px-3 champ text-[13px]"/>
                 </div>
                 <button type="submit" class="btn btn-ink h-10 px-4 rounded-lg text-[12px] font-medium">Enregistrer</button>

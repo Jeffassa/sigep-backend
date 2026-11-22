@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('SIGEP | Plateforme · Annuaire')}"></head>
+<body>
+
+<div th:replace="~{plateforme/fragments :: topbar('annuaire')}"></div>
+
+<main class="max-w-[1240px] mx-auto px-5 md:px-8 py-10 pb-24">
+
+    <section class="mb-8" data-reveal>
+        <p class="surtitre">Plateforme · Prospection</p>
+        <h1 class="titre-page">Annuaire</h1>
+        <p class="chapeau">Les écoles, lycées et universités de Côte d'Ivoire, proposés à l'inscription ; le nom
+            reste libre. L'annuaire se met à jour seul chaque mois depuis OpenStreetMap. Les autres pays de l'UEMOA
+            (même monnaie) s'ouvriront avec un prestataire de paiement qui y encaisse : Jèko ne couvre que la
+            Côte d'Ivoire.</p>
+    </section>
+
+    <div data-flash th:if="${ok}" class="note note-ok">
+        <svg th:replace="~{admin/fragments :: coche}"></svg><span th:text="${ok}"></span>
+    </div>
+    <div data-flash th:if="${erreur}" class="note note-alerte"><span th:text="${erreur}"></span></div>
+
+    <section class="releve" data-reveal>
+        <div>
+            <p class="releve-libelle">Établissements</p>
+            <p class="releve-chiffre" th:text="${#numbers.formatInteger(total, 1, 'WHITESPACE')}">0</p>
+        </div>
+        <div>
+            <p class="releve-libelle">Pays ouvert</p>
+            <p class="releve-chiffre releve-mot">Côte d'Ivoire</p>
+        </div>
+        <div>
+            <p class="releve-libelle">Collecte</p>
+            <p class="releve-chiffre releve-mot" th:text="${enCours} ? 'En cours' : 'Au repos'">Au repos</p>
+        </div>
+    </section>
+
+    <section class="chapitre" data-reveal>
+        <div class="chapitre-tete" style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap">
+            <h2 class="titre-section">Par pays</h2>
+            <form th:action="@{/plateforme/annuaire/actualiser}" method="post">
+                <button type="submit" class="btn btn-ink h-10 px-4 rounded-lg text-[13px] font-medium" th:disabled="${enCours}">
+                    Actualiser maintenant
+                </button>
+            </form>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="registre" data-mobile-keep="2">
+                <thead><tr>
+                    <th>Pays</th><th class="text-right">Établissements</th><th>Dernière collecte</th><th>Mobile Money</th><th>État</th>
+                </tr></thead>
+                <tbody>
+                <tr th:each="l : ${lignes}">
+                    <td>
+                        <p class="font-medium" th:text="${l.pays.nom}">Pays</p>
+                        <p class="font-mono text-[11px] text-muted" th:text="${l.pays.code} + ' · ' + ${l.pays.indicatif} + ' · ' + ${l.pays.devise}">CI</p>
+                    </td>
+                    <td class="text-right font-mono" th:text="${#numbers.formatInteger(l.nombre, 1, 'WHITESPACE')}">0</td>
+                    <td>
+                        <span th:if="${l.derniere == null}" class="text-muted">Jamais</span>
+                        <span th:if="${l.derniere != null}" th:text="${#temporals.format(l.derniere.dateCollecte, 'dd/MM/yyyy HH:mm')}">--</span>
+                        <p th:if="${l.derniere != null and l.derniere.erreur != null}" class="text-[12px]" style="color: var(--c-cachet)"
+                           th:text="'Échec : ' + ${l.derniere.erreur}">Échec</p>
+                    </td>
+                    <td class="text-[13px]" th:text="${#strings.listJoin(l.pays.mobileMoney, ', ')}">Orange Money</td>
+                    <td>
+                        <span th:if="${l.pays.ouvert}" class="etat etat-payee">Ouvert</span>
+                        <span th:unless="${l.pays.ouvert}" class="text-[12px] text-muted">En attente d'un prestataire</span>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="text-[12px] text-muted mt-3">Données © contributeurs <a href="https://www.openstreetmap.org/copyright" class="underline">OpenStreetMap</a>,
+            licence ODbL, extraction mensuelle de l'équipe humanitaire d'OpenStreetMap (HDX).</p>
+    </section>
+</main>
+
+<div th:replace="~{plateforme/fragments :: dock('annuaire')}"></div>
+</body>
+</html>

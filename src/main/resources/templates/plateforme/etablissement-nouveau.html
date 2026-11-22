@@ -30,14 +30,8 @@
                    class="w-full h-12 px-4 champ text-[15px]"/>
         </div>
 
-        <div>
-            <label for="plan" class="etiquette">Plan</label>
-            <select id="plan" name="plan"
-                    class="w-full h-12 px-4 champ text-[15px]">
-                <option th:each="p : ${plans}" th:value="${p}" th:text="${p}" th:selected="${p.name() == 'FREE'}">PLAN</option>
-            </select>
-            <p class="text-[11px] text-muted mt-1.5">FREE = quota d'enseignants limité · PRO / ENTERPRISE = illimité.</p>
-        </div>
+        <p class="text-[12px] text-muted">L'établissement démarre au plan gratuit (10 enseignants au plus). Il passe à un plan payant
+            dès qu'il paie en ligne.</p>
 
         <hr class="border-line"/>
 
@@ -55,7 +49,7 @@
                 <div>
                     <label for="adminPassword" class="etiquette">Mot de passe (≥ 8 car.)</label>
                     <div class="relative">
-                        <input id="adminPassword" name="adminPassword" type="password" required minlength="8" placeholder="••••••••"
+                        <input id="adminPassword" name="adminPassword" type="password" required minlength="10" placeholder="••••••••"
                                class="w-full h-12 pl-4 pr-12 champ text-[15px]"/>
                         <button type="button" id="togglePwd" aria-label="Afficher le mot de passe"
                                 class="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-lg flex items-center justify-center text-muted hover:text-ink transition">

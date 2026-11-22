@@ -96,6 +96,10 @@ public class OnboardingService {
         Etablissement etablissement = etablissementRepository.save(Etablissement.builder()
                 .nom(req.getNomEtablissement().trim())
                 .slug(slugUnique(req.getNomEtablissement()))
+                // SIGEP ne vend qu'en Côte d'Ivoire : c'est le seul pays où le paiement en ligne fonctionne.
+                .paysCode(ci.esatic.sigep.annuaire.PaysUemoa.deCode(req.getPays())
+                        .filter(ci.esatic.sigep.annuaire.PaysUemoa::isOuvert)
+                        .orElse(ci.esatic.sigep.annuaire.PaysUemoa.CI).getCode())
                 .plan(Plan.FREE)
                 .maxEnseignants(freeMaxEnseignants)
                 .statut(statutInitial)

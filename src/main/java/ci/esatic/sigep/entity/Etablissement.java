@@ -77,6 +77,10 @@ public class Etablissement {
     @Builder.Default
     private String locale = "fr";
 
+    /** Pays de l'établissement (code ISO à deux lettres, UEMOA), choisi à l'inscription. */
+    @Column(name = "pays_code", length = 2)
+    private String paysCode;
+
     /** Type d'établissement (SUPERIEUR, SECONDAIRE, …) : contextualise l'analyse IA (F5). */
     @Column(name = "type_etablissement", nullable = false, length = 40)
     @Builder.Default

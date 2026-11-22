@@ -25,42 +25,16 @@
         </div>
 
         <form id="form" class="space-y-4" th:attr="data-plan=${planChoisi != null and achatEnLigne} ? ${planChoisi} : ''">
-            <div>
+            <div class="annuaire">
                 <label class="etiquette" for="nomEtablissement">Établissement</label>
-                <input id="nomEtablissement" type="text" required list="ecolesList" autocomplete="off"
+                <!-- Suggestions de l'annuaire (Côte d'Ivoire) ; tout autre nom peut être saisi librement. -->
+                <input id="nomEtablissement" type="text" required autocomplete="off" maxlength="200"
                        class="w-full h-12 px-4 champ text-ink"
-                       placeholder="Nom de votre école"/>
-                <!-- Suggestions d'établissements (Côte d'Ivoire). Liste non exhaustive :
-                     la saisie libre reste possible pour tout autre établissement. -->
-                <datalist id="ecolesList">
-                    <option value="Université Félix Houphouët-Boigny"></option>
-                    <option value="Université Nangui Abrogoua"></option>
-                    <option value="Université Péléforo Gon Coulibaly"></option>
-                    <option value="Université de Man"></option>
-                    <option value="Université Alassane Ouattara"></option>
-                    <option value="Université Jean Lorougnon Guédé"></option>
-                    <option value="Université Virtuelle de Côte d'Ivoire"></option>
-                    <option value="Institut National Polytechnique Félix Houphouët-Boigny"></option>
-                    <option value="École Normale Supérieure"></option>
-                    <option value="École Supérieure de Commerce d'Abidjan"></option>
-                    <option value="Université Internationale d'Abidjan"></option>
-                    <option value="Université Française d'Abidjan"></option>
-                    <option value="Université Polytechnique Internationale"></option>
-                    <option value="Université Protestante d'Afrique de l'Ouest"></option>
-                    <option value="Université Saint Paul"></option>
-                    <option value="Université des Lagunes"></option>
-                    <option value="Institut Universitaire d'Abidjan"></option>
-                    <option value="École Supérieure des Métiers Appliqués de Côte d'Ivoire"></option>
-                    <option value="École Supérieure de Commerce Castaing"></option>
-                    <option value="Académie de l'Entrepreneuriat et des Métiers"></option>
-                    <option value="Académie de Gestion et d'Hôtellerie"></option>
-                    <option value="École Polytechnique des Oscars"></option>
-                    <option value="Académie Internationale des Sciences et Techniques"></option>
-                    <option value="Université Polytechnique de Bingerville"></option>
-                    <option value="Université Internationale Nayeba"></option>
-                    <option value="École Polytechnique Léonard de Vinci"></option>
-                    <option value="Institut Ivoirien de Technologie"></option>
-                </datalist>
+                       role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="annuaireListe"
+                       placeholder="Votre école ou université en Côte d'Ivoire"/>
+                <ul id="annuaireListe" class="annuaire-liste hidden" role="listbox" aria-label="Établissements proposés"></ul>
+                <p class="annuaire-aide">Pas dans la liste ? Écrivez simplement son nom.
+                    <span class="annuaire-source">Annuaire © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></span></p>
             </div>
             <div class="grid grid-cols-2 gap-3">
                 <div>
@@ -174,6 +148,76 @@
     }
     mdp.addEventListener('input', evaluer);
     document.getElementById('adminEmail').addEventListener('input', function () { if (mdp.value) evaluer(); });
+
+    /* Recherche dans l'annuaire (Côte d'Ivoire) : suggestions au fil de la frappe, saisie libre conservée. */
+    var champNom = document.getElementById('nomEtablissement');
+    var liste = document.getElementById('annuaireListe');
+    var suggestions = [], actif = -1, minuterie = null, derniere = '';
+
+    function fermer() {
+        liste.classList.add('hidden');
+        champNom.setAttribute('aria-expanded', 'false');
+        champNom.removeAttribute('aria-activedescendant');
+        actif = -1;
+    }
+    function surligner(i) {
+        actif = i;
+        Array.prototype.forEach.call(liste.children, function (li, k) {
+            li.setAttribute('aria-selected', k === i ? 'true' : 'false');
+            if (k === i) { champNom.setAttribute('aria-activedescendant', li.id); li.scrollIntoView({ block: 'nearest' }); }
+        });
+    }
+    function choisir(i) {
+        if (i < 0 || i >= suggestions.length) return;
+        champNom.value = suggestions[i].nom;
+        derniere = champNom.value;
+        fermer();
+    }
+    function afficher(items) {
+        suggestions = items;
+        liste.textContent = '';
+        if (!items.length) { fermer(); return; }
+        items.forEach(function (s, i) {
+            var li = document.createElement('li');
+            li.id = 'annuaire-' + i;
+            li.setAttribute('role', 'option');
+            li.setAttribute('aria-selected', 'false');
+            var nom = document.createElement('span');
+            nom.className = 'annuaire-nom';
+            nom.textContent = s.nom;
+            var info = document.createElement('span');
+            info.className = 'annuaire-info';
+            info.textContent = [s.type, s.ville, s.paysNom].filter(Boolean).join(' · ');
+            li.appendChild(nom); li.appendChild(info);
+            li.addEventListener('mousedown', function (e) { e.preventDefault(); choisir(i); });
+            liste.appendChild(li);
+        });
+        liste.classList.remove('hidden');
+        champNom.setAttribute('aria-expanded', 'true');
+        actif = -1;
+    }
+    function chercher() {
+        var q = champNom.value.trim();
+        if (q.length < 2 || q === derniere) { if (q.length < 2) fermer(); return; }
+        fetch('/api/saas/annuaire?q=' + encodeURIComponent(q),
+              { headers: { 'Accept': 'application/json' } })
+            .then(function (r) { return r.ok ? r.json() : []; })
+            .then(function (items) { if (champNom.value.trim() === q) afficher(items || []); })
+            .catch(function () { fermer(); });
+    }
+    champNom.addEventListener('input', function () {
+        derniere = '';
+        clearTimeout(minuterie);
+        minuterie = setTimeout(chercher, 180);
+    });
+    champNom.addEventListener('keydown', function (e) {
+        if (liste.classList.contains('hidden')) return;
+        if (e.key === 'ArrowDown') { e.preventDefault(); surligner(Math.min(actif + 1, suggestions.length - 1)); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); surligner(Math.max(actif - 1, 0)); }
+        else if (e.key === 'Enter' && actif >= 0) { e.preventDefault(); choisir(actif); }
+        else if (e.key === 'Escape') { fermer(); }
+    });
+    champNom.addEventListener('blur', function () { setTimeout(fermer, 120); });
 
     // Plan payant choisi sur l'accueil : la suite se passe sur la page de paiement, ouverte par e-mail.
     var plan = form.getAttribute('data-plan') || '';

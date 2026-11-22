@@ -54,7 +54,10 @@ class TenantIsolationGuardTest {
                    "Annonce",
                    // APK de l'application Android : depose par la plateforme, le meme pour tous
                    // les etablissements ; aucune donnee d'un etablissement.
-                   "ApplicationMobile", "ApplicationMobileMorceau");
+                   "ApplicationMobile", "ApplicationMobileMorceau",
+                   // Annuaire des ecoles de l'UEMOA, collecte depuis OpenStreetMap : donnees
+                   // publiques, communes a toutes les inscriptions ; aucun client n'y figure.
+                   "AnnuaireEtablissement", "AnnuaireCollecte");
 
     /**
      * Requêtes natives autorisées à ne pas filtrer par établissement.

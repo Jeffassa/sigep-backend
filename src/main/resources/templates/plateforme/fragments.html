@@ -48,6 +48,9 @@
     <a th:href="@{/plateforme/securite}" class="dock-item" th:classappend="${active=='securite'}?'active':''">
         <span class="material-symbols-rounded">shield_person</span><span class="dock-tip">Sécurité</span>
     </a>
+    <a th:href="@{/plateforme/annuaire}" class="dock-item" th:classappend="${active=='annuaire'}?'active':''">
+        <span class="material-symbols-rounded">travel_explore</span><span class="dock-tip">Annuaire</span>
+    </a>
     <a th:href="@{/plateforme/annonces}" class="dock-item" th:classappend="${active=='annonces'}?'active':''">
         <span class="material-symbols-rounded">campaign</span><span class="dock-tip">Annonces</span>
     </a>

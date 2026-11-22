@@ -359,3 +359,22 @@ html.dark .etat-verifier { color: var(--c-accent-ink); }
 .otp-rond { display: inline-block; width: 16px; height: 16px; margin-right: 10px; vertical-align: -3px; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; animation: tourne .7s linear infinite; }
 @keyframes otp-balaye { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
 @media (prefers-reduced-motion: reduce) { .otp-chargement::after, .otp-rond { animation: none; } }
+
+
+/* ── Inscription : recherche dans l'annuaire UEMOA ─────────────────────── */
+.annuaire { position: relative; }
+.annuaire-liste {
+    position: absolute; left: 0; right: 0; top: 74px; z-index: 30; margin: 0; padding: 4px 0; list-style: none;
+    max-height: 320px; overflow-y: auto; background: var(--c-surface); border: 1px solid var(--c-line);
+    border-top: 2px solid var(--c-ink); box-shadow: 0 14px 30px -12px rgba(15,47,95,.35);
+    animation: annuaire-ouvre .16s ease-out;
+}
+.annuaire-liste.hidden { display: none; }
+.annuaire-liste li { display: flex; flex-direction: column; gap: 2px; padding: 9px 14px; cursor: pointer; }
+.annuaire-liste li:hover, .annuaire-liste li[aria-selected="true"] { background: var(--c-accent-soft); }
+.annuaire-nom { font-size: 14px; line-height: 19px; color: var(--c-ink); font-weight: 600; }
+.annuaire-info { font: 12px/16px 'DM Mono', monospace; color: var(--c-muted); }
+.annuaire-aide { margin: 6px 0 0; display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 12px; line-height: 16px; color: var(--c-muted); }
+.annuaire-source a { color: inherit; text-decoration: underline; }
+@keyframes annuaire-ouvre { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .annuaire-liste { animation: none; } }
