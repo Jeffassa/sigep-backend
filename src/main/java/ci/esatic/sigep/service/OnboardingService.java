@@ -35,6 +35,7 @@ public class OnboardingService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final MailService mailService;
+    private final ci.esatic.sigep.annuaire.ReconnaissanceService reconnaissanceService;
 
     /**
      * C5 : auto-validation des inscriptions. DÉSACTIVÉ par défaut (comportement actuel :
@@ -106,6 +107,8 @@ public class OnboardingService {
                 .actif(true)
                 .kioskKey(genererKioskKey())      // C4 : clé kiosque QR propre au tenant, dès la création
                 .build());
+        // Rapprochement avec les listes officielles de l'État : reconnu, ou à vérifier par la plateforme.
+        reconnaissanceService.rapprocher(etablissement);
 
         Role adminRole = roleRepository.findByName(ERole.ROLE_ADMIN)
                 .orElseThrow(() -> new RuntimeException("Rôle ADMIN non trouvé en base"));
@@ -157,6 +160,7 @@ public class OnboardingService {
                 .actif(true)
                 .kioskKey(genererKioskKey())
                 .build());
+        reconnaissanceService.rapprocher(etablissement);
 
         Role adminRole = roleRepository.findByName(ERole.ROLE_ADMIN)
                 .orElseThrow(() -> new RuntimeException("Rôle ADMIN non trouvé en base"));

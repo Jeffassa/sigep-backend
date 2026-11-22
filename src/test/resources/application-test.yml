@@ -20,6 +20,9 @@ app:
   # Pas d'appel a OpenStreetMap pendant les tests.
   annuaire:
     collecte-active: false
+  # Ni MESRS ni MENA pendant les tests.
+  officiels:
+    import-actif: false
   jwt:
     secret: dGVzdC1zZWNyZXQta2V5LWZvci1zaWdlcC10ZXN0cy1vbmx5LTI2Y2hhcnM=
     expiration: 86400000

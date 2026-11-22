@@ -57,7 +57,10 @@ class TenantIsolationGuardTest {
                    "ApplicationMobile", "ApplicationMobileMorceau",
                    // Annuaire des ecoles de l'UEMOA, collecte depuis OpenStreetMap : donnees
                    // publiques, communes a toutes les inscriptions ; aucun client n'y figure.
-                   "AnnuaireEtablissement", "AnnuaireCollecte");
+                   "AnnuaireEtablissement", "AnnuaireCollecte",
+                   // Listes officielles des etablissements autorises par l'Etat (MESRS, MENA) :
+                   // donnees publiques, communes a toutes les inscriptions ; aucun client n'y figure.
+                   "EtablissementOfficiel", "ImportOfficiel");
 
     /**
      * Requêtes natives autorisées à ne pas filtrer par établissement.

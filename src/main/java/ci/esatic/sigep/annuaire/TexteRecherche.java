@@ -17,6 +17,15 @@ public final class TexteRecherche {
         return sansAccents.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", " ").trim();
     }
 
+    /**
+     * La clé de rapprochement d'un nom : sa forme de recherche, sans le sigle entre parenthèses.
+     * « ABIDJAN BUSINESS SCHOOL -(ABS) » et « Abidjan Business School » ont la même clé.
+     */
+    public static String cle(String nom) {
+        if (nom == null) return "";
+        return normaliser(nom.replaceAll("\\([^)]*\\)", " "));
+    }
+
     /** Les mots d'une recherche, du plus long au plus court (le plus long filtre le mieux). */
     public static List<String> mots(String recherche) {
         String n = normaliser(recherche);

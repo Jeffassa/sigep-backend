@@ -165,6 +165,35 @@ public class Etablissement {
     @Column(name = "zone_rayon_metres")
     private Integer zoneRayonMetres;
 
+    /**
+     * Rapprochement avec les listes officielles de l'État (MESRS, MENA) : reconnu d'office si son
+     * nom y figure sans ambiguïté, sinon à vérifier par la plateforme.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "reconnaissance", nullable = false, length = 20)
+    @Builder.Default
+    private StatutReconnaissance reconnaissance = StatutReconnaissance.A_VERIFIER;
+
+    /** La fiche officielle retenue, recopiée : les listes sont remplacées à chaque import. */
+    @Column(name = "officiel_source", length = 30)
+    private String officielSource;
+
+    @Column(name = "officiel_code", length = 20)
+    private String officielCode;
+
+    @Column(name = "officiel_nom")
+    private String officielNom;
+
+    /** Décision manuelle de la plateforme : son auteur, sa date et le constat qui la fonde. */
+    @Column(name = "reconnaissance_auteur")
+    private String reconnaissanceAuteur;
+
+    @Column(name = "reconnaissance_date")
+    private LocalDateTime reconnaissanceDate;
+
+    @Column(name = "reconnaissance_constat", length = 500)
+    private String reconnaissanceConstat;
+
     /** L'établissement vérifie la position de ses enseignants à l'émargement. */
     @Transient
     public boolean isZoneDefinie() {
