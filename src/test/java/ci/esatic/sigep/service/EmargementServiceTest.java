@@ -76,7 +76,7 @@ class EmargementServiceTest {
         matiere  = Matiere.builder().id(1L).libelle("Algo avancée").build();
         classe   = Classe.builder().id(1L).libelle("L3 Génie Logiciel").filiere("GL").build();
         enseignant = Enseignant.builder()
-                .id(5L).matricule("ENS001").nom("Assale").prenom("Jean")
+                .id(5L).matricule("ENS001").nom("Kouadio").prenom("Jean")
                 .statut(StatutEnseignant.VALIDATED).user(user)
                 .etablissementId(ETAB_ID)
                 .build();
@@ -167,7 +167,7 @@ class EmargementServiceTest {
 
             assertThat(result).isNotNull();
             assertThat(result.getSeanceId()).isEqualTo(SEANCE_ID);
-            assertThat(result.getEnseignantNom()).isEqualTo("Assale");
+            assertThat(result.getEnseignantNom()).isEqualTo("Kouadio");
         }
     }
 

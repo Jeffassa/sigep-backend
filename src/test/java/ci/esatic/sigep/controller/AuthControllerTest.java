@@ -112,7 +112,7 @@ class AuthControllerTest {
         // configuré pour les API REST stateless sans token JWT fourni.
         String body = objectMapper.writeValueAsString(Map.of(
                 "matricule", "ENS001",
-                "nom", "Assale",
+                "nom", "Kouadio",
                 "prenom", "Jean",
                 "email", "prof@esatic.ci",
                 "password", "secret1234"
@@ -129,7 +129,7 @@ class AuthControllerTest {
         // mot de passe trop court (moins de 10 caractères)
         String body = objectMapper.writeValueAsString(Map.of(
                 "matricule", "ENS001",
-                "nom", "Assale",
+                "nom", "Kouadio",
                 "prenom", "Jean",
                 "email", "prof@esatic.ci",
                 "password", "abc"

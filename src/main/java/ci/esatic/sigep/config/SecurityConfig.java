@@ -295,9 +295,10 @@ public class SecurityConfig {
                     if (reponse.containsHeader("Content-Security-Policy")) return;
                     Object nonce = requete.getAttribute(ci.esatic.sigep.security.CspNonceFilter.ATTRIBUT);
                     reponse.setHeader("Content-Security-Policy",
-                            nonce == null || ci.esatic.sigep.security.CspNonceFilter.horsPolitiqueStricte(requete)
+                            (nonce == null || ci.esatic.sigep.security.CspNonceFilter.horsPolitiqueStricte(requete)
                                     ? ci.esatic.sigep.security.CspNonceFilter.POLITIQUE_SANS_NONCE
-                                    : ci.esatic.sigep.security.CspNonceFilter.politique(nonce.toString()));
+                                    : ci.esatic.sigep.security.CspNonceFilter.politique(nonce.toString()))
+                                    + ci.esatic.sigep.security.CspNonceFilter.formAction(requete));
                 })
                 .referrerPolicy(r -> r.policy(
                         org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))

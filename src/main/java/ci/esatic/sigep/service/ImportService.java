@@ -222,7 +222,7 @@ public class ImportService {
     /** Une feuille par page pour des grilles ; une seule pour une liste qui court sur plusieurs pages. */
     private List<Feuille> feuillesDuPdf(byte[] octets) throws java.io.IOException {
         List<Feuille> pages = new ArrayList<>();
-        try (org.apache.pdfbox.pdmodel.PDDocument doc = org.apache.pdfbox.Loader.loadPDF(octets)) {
+        try (org.apache.pdfbox.pdmodel.PDDocument doc = PdfLecture.ouvrir(octets)) {
             for (int p = 1; p <= doc.getNumberOfPages(); p++) {
                 List<MotPdf> mots = motsDeLaPage(doc, p);
                 if (!mots.isEmpty()) pages.add(new Feuille("", lignesDePage(mots), List.of()));

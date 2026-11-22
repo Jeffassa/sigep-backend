@@ -9,12 +9,15 @@ import lombok.Data;
 public class RegisterEnseignantRequest {
 
     @NotBlank
+    @Size(max = 64, message = "Le matricule ne doit pas dépasser 64 caractères")
     private String matricule;
 
     @NotBlank
+    @Size(max = 80, message = "Le nom ne doit pas dépasser 80 caractères")
     private String nom;
 
     @NotBlank
+    @Size(max = 80, message = "Le prénom ne doit pas dépasser 80 caractères")
     private String prenom;
 
     @NotBlank

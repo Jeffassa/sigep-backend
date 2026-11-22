@@ -192,6 +192,8 @@
     function rgba(h,a) { var c=toRgb(h); return 'rgba('+c[0]+','+c[1]+','+c[2]+','+a+')'; }
     function tip(p) { return { backgroundColor:p.surface, borderColor:p.line, borderWidth:1, textStyle:{color:p.ink,fontFamily:'DM Mono, monospace',fontSize:12}, extraCssText:'border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.15);backdrop-filter:blur(8px);' }; }
 
+    // Les noms d'enseignants entrent dans une infobulle HTML : on les échappe.
+    function esc(t){return String(t==null?'':t).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
     var elLine=document.getElementById('chartLine'), elRadar=document.getElementById('chartRadar'), elRank=document.getElementById('chartRanking');
     var line = elLine && echarts.init(elLine);
     var radar = elRadar && echarts.init(elRadar);
@@ -229,7 +231,7 @@
         var vals = arr.map(function(c){return c.taux;});
         rank.setOption({ animationDuration:DUR, animationEasing:EASE, animationDelay:function(i){return i*60;},
             grid:{left:6,right:38,top:8,bottom:6,containLabel:true},
-            tooltip:Object.assign({trigger:'item',formatter:function(x){return x.name+' · <b>'+x.value+'%</b>';}}, tip(p)),
+            tooltip:Object.assign({trigger:'item',formatter:function(x){return esc(x.name)+' · <b>'+esc(x.value)+'%</b>';}}, tip(p)),
             xAxis:{type:'value',min:0,max:100,axisLine:{show:false},axisTick:{show:false},splitLine:{lineStyle:{color:p.line,type:'dashed'}},axisLabel:{color:p.muted,fontFamily:'DM Mono, monospace',fontSize:10,formatter:'{value}%'}},
             yAxis:{type:'category',data:noms,axisTick:{show:false},axisLine:{show:false},axisLabel:{color:p.ink,fontSize:12,width:120,overflow:'truncate'}},
             series:[{type:'bar',barWidth:'58%',

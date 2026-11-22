@@ -16,4 +16,9 @@ public interface EtablissementRepository extends JpaRepository<Etablissement, Lo
     List<Etablissement> findByReconnaissanceOrderByDateCreationDesc(ci.esatic.sigep.entity.StatutReconnaissance statut);
 
     long countByReconnaissance(ci.esatic.sigep.entity.StatutReconnaissance statut);
+
+    /** Un autre client tient-il déjà cette fiche officielle (reconnu ou vérifié) ? */
+    boolean existsByOfficielSourceAndOfficielNomAndReconnaissanceInAndIdNot(
+            String officielSource, String officielNom,
+            java.util.Collection<ci.esatic.sigep.entity.StatutReconnaissance> statuts, Long id);
 }

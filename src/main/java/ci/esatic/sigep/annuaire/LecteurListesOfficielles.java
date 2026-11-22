@@ -1,6 +1,5 @@
 package ci.esatic.sigep.annuaire;
 
-import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.springframework.web.util.HtmlUtils;
@@ -63,7 +62,7 @@ public final class LecteurListesOfficielles {
      */
     public static List<EtablissementOfficiel> lireMena(byte[] pdf, LocalDateTime date) throws IOException {
         String texte;
-        try (PDDocument document = Loader.loadPDF(pdf)) {
+        try (PDDocument document = ci.esatic.sigep.service.PdfLecture.ouvrir(pdf)) {
             PDFTextStripper lecteur = new PDFTextStripper();
             lecteur.setSortByPosition(true);
             texte = lecteur.getText(document);

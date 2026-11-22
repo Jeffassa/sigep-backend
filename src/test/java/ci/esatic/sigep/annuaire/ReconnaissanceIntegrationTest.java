@@ -137,6 +137,26 @@ class ReconnaissanceIntegrationTest {
     }
 
     @Test
+    void uneFicheOfficielle_neReconnaitQuUnSeulClient() throws Exception {
+        officiel(SourceOfficielle.MENA_BEPC, CategorieOfficielle.SECONDAIRE_PUBLIC, "000777", "LYCEE MODERNE DE TEST");
+
+        Etablissement premier = inscrire("Lycée moderne de test");
+        assertThat(premier.getReconnaissance()).isEqualTo(StatutReconnaissance.RECONNU);
+
+        // Un second client qui réclame la même fiche reste à vérifier, fiche notée.
+        Etablissement second = inscrire("Lycée Moderne de Test");
+        assertThat(second.getReconnaissance()).isEqualTo(StatutReconnaissance.A_VERIFIER);
+        assertThat(second.getOfficielCode()).isEqualTo("000777");
+
+        // Un nouveau rapprochement garde la fiche au premier inscrit.
+        reconnaissance.rapprocherTous();
+        assertThat(etablissementRepository.findById(premier.getId()).orElseThrow().getReconnaissance())
+                .isEqualTo(StatutReconnaissance.RECONNU);
+        assertThat(etablissementRepository.findById(second.getId()).orElseThrow().getReconnaissance())
+                .isEqualTo(StatutReconnaissance.A_VERIFIER);
+    }
+
+    @Test
     void unNomInconnuOuAmbigu_resteAVerifier_etLaPlateformeTranche() throws Exception {
         officiel(SourceOfficielle.MENA_BEPC, CategorieOfficielle.SECONDAIRE_PRIVE, "111111", "COLLEGE SAINT JOSEPH");
         officiel(SourceOfficielle.MENA_BEPC, CategorieOfficielle.SECONDAIRE_PRIVE, "222222", "COLLEGE SAINT JOSEPH");

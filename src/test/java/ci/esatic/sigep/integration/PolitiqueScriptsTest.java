@@ -61,6 +61,17 @@ class PolitiqueScriptsTest {
     }
 
     @Test
+    void lesFormulaires_nePostentQueVersLeSite_saufLesPagesDePaiement() throws Exception {
+        for (String url : List.of("/admin-login", "/", "/inscription")) {
+            assertThat(mockMvc.perform(get(url)).andReturn().getResponse().getHeader("Content-Security-Policy"))
+                    .as(url).contains("form-action 'self'");
+        }
+        // Le formulaire de paiement est redirigé vers la page du prestataire.
+        assertThat(mockMvc.perform(get("/inscription/payer")).andReturn().getResponse().getHeader("Content-Security-Policy"))
+                .doesNotContain("form-action");
+    }
+
+    @Test
     void deuxReponses_nOntPasLeMemeNonce() throws Exception {
         String a = mockMvc.perform(get("/admin-login")).andReturn().getResponse().getHeader("Content-Security-Policy");
         String b = mockMvc.perform(get("/admin-login")).andReturn().getResponse().getHeader("Content-Security-Policy");

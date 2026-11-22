@@ -11,12 +11,17 @@ import java.util.List;
 
 /**
  * Rapproche les établissements clients des listes officielles de l'État. Un nom qui figure sans
- * ambiguïté sur une liste vaut reconnaissance ; sinon l'établissement reste à vérifier, et la
+ * ambiguïté sur une liste, et dont la fiche n'est pas déjà tenue par un autre client, vaut
+ * reconnaissance du nom (pas de l'identité de celui qui s'inscrit) ; sinon l'établissement reste à vérifier, et la
  * plateforme tranche au vu de son autorisation. Une décision de la plateforme n'est jamais
  * écrasée par un rapprochement automatique.
  */
 @Service
 public class ReconnaissanceService {
+
+    /** Statuts qui « tiennent » une fiche officielle. */
+    private static final List<StatutReconnaissance> TENANTS =
+            List.of(StatutReconnaissance.RECONNU, StatutReconnaissance.VERIFIE);
 
     private final EtablissementOfficielRepository officiels;
     private final EtablissementRepository etablissements;
@@ -32,10 +37,13 @@ public class ReconnaissanceService {
         List<EtablissementOfficiel> trouves = officiels.findByNomCle(TexteRecherche.cle(e.getNom()));
         if (trouves.size() == 1) {
             EtablissementOfficiel o = trouves.get(0);
-            e.setReconnaissance(StatutReconnaissance.RECONNU);
             e.setOfficielSource(o.getSource().name());
             e.setOfficielCode(o.getCodeOfficiel());
             e.setOfficielNom(o.getNom());
+            // Une fiche officielle ne reconnaît qu'un client : le second qui la réclame est à vérifier.
+            boolean dejaPrise = etablissements.existsByOfficielSourceAndOfficielNomAndReconnaissanceInAndIdNot(
+                    o.getSource().name(), o.getNom(), TENANTS, e.getId() == null ? -1L : e.getId());
+            e.setReconnaissance(dejaPrise ? StatutReconnaissance.A_VERIFIER : StatutReconnaissance.RECONNU);
         } else {
             // Aucun nom, ou plusieurs établissements du même nom : la plateforme tranche.
             e.setReconnaissance(StatutReconnaissance.A_VERIFIER);
@@ -49,7 +57,8 @@ public class ReconnaissanceService {
     @Transactional
     public int rapprocherTous() {
         int reconnus = 0;
-        for (Etablissement e : etablissements.findAll()) {
+        // Par ordre d'inscription : le premier client garde la fiche officielle.
+        for (Etablissement e : etablissements.findAll(org.springframework.data.domain.Sort.by("id"))) {
             if (e.getReconnaissanceAuteur() != null) continue;
             rapprocher(e);
             if (e.getReconnaissance() == StatutReconnaissance.RECONNU) reconnus++;

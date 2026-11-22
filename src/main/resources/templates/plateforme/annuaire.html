@@ -12,7 +12,8 @@
         <h1 class="titre-page">Annuaire</h1>
         <p class="chapeau">Les établissements de Côte d'Ivoire proposés à l'inscription : d'abord ceux des listes
             officielles de l'État, puis ceux d'OpenStreetMap ; le nom reste libre. Chaque inscription est rapprochée
-            des listes officielles : reconnue si son nom y figure, sinon à vérifier ici. Les autres pays de l'UEMOA
+            des listes officielles : reconnue si son nom y figure, sinon à vérifier ici. « Reconnu » dit seulement que
+            le nom est conforme à une liste, pas que l'inscrit représente l'établissement. Les autres pays de l'UEMOA
             (même monnaie) s'ouvriront avec un prestataire de paiement qui y encaisse : Jèko ne couvre que la
             Côte d'Ivoire.</p>
     </section>
@@ -46,7 +47,7 @@
         <div class="chapitre-tete"><h2 class="titre-section">Clients à vérifier</h2></div>
         <p th:if="${aVerifier.isEmpty()}" class="text-[14px] text-muted">Aucun établissement à vérifier.</p>
         <p th:unless="${aVerifier.isEmpty()}" class="text-[13px] text-muted mb-3">Leur nom ne figure pas sur les listes
-            officielles, ou plusieurs établissements y portent ce nom. Demandez l'arrêté d'autorisation d'ouverture
+            officielles, plusieurs établissements y portent ce nom, ou la fiche est déjà tenue par un autre client. Demandez l'arrêté d'autorisation d'ouverture
             (ou le code de l'établissement au ministère), puis tranchez.</p>
         <div th:unless="${aVerifier.isEmpty()}" class="overflow-x-auto">
             <table class="registre" data-mobile-keep="2">
@@ -55,6 +56,8 @@
                 <tr th:each="e : ${aVerifier}">
                     <td>
                         <a th:href="@{/plateforme/etablissements/{s}(s=${e.slug})}" class="font-medium underline" th:text="${e.nom}">Nom</a>
+                        <p th:if="${e.officielNom != null}" class="text-[12px]" style="color: var(--c-cachet)"
+                           th:text="'Fiche « ' + ${e.officielNom} + ' » déjà tenue par un autre client'">Fiche déjà tenue</p>
                     </td>
                     <td class="font-mono text-[12px]" th:text="${#temporals.format(e.dateCreation, 'dd/MM/yyyy')}">--</td>
                     <td>

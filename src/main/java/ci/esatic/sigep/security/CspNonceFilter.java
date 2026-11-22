@@ -53,6 +53,18 @@ public class CspNonceFilter extends OncePerRequestFilter {
         chain.doFilter(request, response);
     }
 
+    /**
+     * Les formulaires ne postent que vers ce site ({@code form-action 'self'}) : un formulaire
+     * injecté ne peut rien envoyer ailleurs. Exception : les pages de paiement, dont le formulaire
+     * est redirigé vers la page du prestataire (Stripe, Jèko, puis l'opérateur choisi), et le
+     * navigateur applique {@code form-action} à ces redirections.
+     */
+    public static String formAction(HttpServletRequest request) {
+        String uri = request.getRequestURI();
+        boolean paiement = uri != null && (uri.equals("/inscription/payer") || uri.startsWith("/admin/abonnement"));
+        return paiement ? "" : "; form-action 'self'";
+    }
+
     /** L'interface de documentation OpenAPI embarque ses scripts sans nonce. */
     public static boolean horsPolitiqueStricte(HttpServletRequest request) {
         String uri = request.getRequestURI();
