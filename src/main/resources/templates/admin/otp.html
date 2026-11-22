@@ -45,7 +45,21 @@
     var groupe = document.getElementById('otpCases');
     if (!form || !groupe) return;
     var cases = Array.prototype.slice.call(groupe.querySelectorAll('.otp-case'));
-    var envoye = false;
+    var bouton = document.getElementById('verifier');
+    var envoye = false;   // le code ne part qu'une fois : un second envoi le trouverait déjà consommé
+
+    function envoyer() {
+        if (envoye) return false;
+        envoye = true;
+        groupe.classList.add('complet');
+        cases.forEach(function (c) { c.blur(); c.readOnly = true; });
+        // Chargement : roue, libellé et barre qui balaie le bouton, le temps de la vérification.
+        bouton.disabled = true;
+        bouton.classList.add('otp-chargement');
+        bouton.innerHTML = '<span class="otp-rond" aria-hidden="true"></span>Vérification…';
+        bouton.setAttribute('aria-busy', 'true');
+        return true;
+    }
 
     // Les six cases remplacent le champ unique, qui reste le seul envoyé.
     champ.type = 'hidden';
@@ -56,11 +70,8 @@
 
     function synchroniser() {
         champ.value = cases.map(function (c) { return c.value; }).join('');
-        if (champ.value.length === 6 && !envoye) {
-            envoye = true;
-            groupe.classList.add('complet');
-            cases.forEach(function (c) { c.blur(); });
-            setTimeout(function () { form.submit(); }, 520);
+        if (champ.value.length === 6 && envoyer()) {
+            setTimeout(function () { form.submit(); }, 300);   // le temps de voir la vague verte
         }
     }
 
@@ -108,12 +119,12 @@
     });
 
     form.addEventListener('submit', function (e) {
-        if (champ.value.length !== 6) {
-            e.preventDefault();
-            groupe.classList.remove('erreur'); void groupe.offsetWidth; groupe.classList.add('erreur');
-            var vide = cases.filter(function (c) { return !c.value; })[0];
-            if (vide) vide.focus();
-        }
+        if (envoye) { e.preventDefault(); return; }
+        if (champ.value.length === 6) { envoyer(); return; }
+        e.preventDefault();
+        groupe.classList.remove('erreur'); void groupe.offsetWidth; groupe.classList.add('erreur');
+        var vide = cases.filter(function (c) { return !c.value; })[0];
+        if (vide) vide.focus();
     });
 
     // Code refusé par le serveur : les cases tremblent, puis on recommence.

@@ -26,12 +26,12 @@
         </label>
         <label class="flex flex-col gap-1.5 text-[13px]">
             <span class="etiquette mb-0">Nouveau mot de passe</span>
-            <input type="password" name="nouveau" required minlength="8" autocomplete="new-password" class="champ px-3 h-11 text-[14px]"/>
-            <span class="text-muted">Au moins 8 caractères, dont une lettre et un chiffre.</span>
+            <input type="password" name="nouveau" required minlength="10" maxlength="128" autocomplete="new-password" class="champ px-3 h-11 text-[14px]"/>
+            <span class="text-muted">Au moins 10 caractères, avec une minuscule, une majuscule, un chiffre et un symbole.</span>
         </label>
         <label class="flex flex-col gap-1.5 text-[13px]">
             <span class="etiquette mb-0">Confirmation</span>
-            <input type="password" name="confirmation" required minlength="8" autocomplete="new-password" class="champ px-3 h-11 text-[14px]"/>
+            <input type="password" name="confirmation" required minlength="10" maxlength="128" autocomplete="new-password" class="champ px-3 h-11 text-[14px]"/>
         </label>
         <button type="submit" class="btn btn-ink h-11 px-5 w-fit rounded-xl font-medium">Enregistrer</button>
     </form>

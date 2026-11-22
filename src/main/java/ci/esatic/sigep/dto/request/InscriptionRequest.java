@@ -17,6 +17,6 @@ public class InscriptionRequest {
     private String email;
 
     @NotBlank
-    @Size(min = 8, message = "Le mot de passe doit faire au moins 8 caractères")
+    @Size(max = 128, message = "Le mot de passe doit faire au plus 128 caractères") // le reste : PolitiqueMotDePasse
     private String password;
 }

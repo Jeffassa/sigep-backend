@@ -116,8 +116,9 @@ public class EquipeWebController {
             ra.addFlashAttribute("error", "Le nouveau mot de passe et sa confirmation sont différents.");
             return "redirect:/admin/mon-compte";
         }
-        if (nouveau.length() < 8 || !nouveau.matches(".*[A-Za-z].*") || !nouveau.matches(".*\\d.*")) {
-            ra.addFlashAttribute("error", "Il faut au moins 8 caractères, dont une lettre et un chiffre.");
+        java.util.List<String> manque = ci.esatic.sigep.security.PolitiqueMotDePasse.manquements(nouveau, utilisateur.getEmail());
+        if (!manque.isEmpty()) {
+            ra.addFlashAttribute("error", "Mot de passe trop faible. Il faut : " + String.join(", ", manque) + ".");
             return "redirect:/admin/mon-compte";
         }
         ChangerMotDePasseRequest demande = new ChangerMotDePasseRequest();

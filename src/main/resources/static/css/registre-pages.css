@@ -352,3 +352,10 @@ html.dark .etat-verifier { color: var(--c-accent-ink); }
     .otp-case, .otp-case.rempli, .otp-cases.complet .otp-case, .otp-cases.erreur, .force-mdp.secoue, .force-regles li.ok .force-coche { animation: none; transition: none; transform: none; }
     .force-barres i::after { transition: none; }
 }
+
+/* Bouton « Vérifier » pendant la vérification du code */
+.otp-chargement { position: relative; overflow: hidden; opacity: 1 !important; cursor: progress; }
+.otp-chargement::after { content: ''; position: absolute; left: 0; bottom: 0; height: 3px; width: 40%; background: var(--c-accent); animation: otp-balaye 1s ease-in-out infinite; }
+.otp-rond { display: inline-block; width: 16px; height: 16px; margin-right: 10px; vertical-align: -3px; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; animation: tourne .7s linear infinite; }
+@keyframes otp-balaye { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+@media (prefers-reduced-motion: reduce) { .otp-chargement::after, .otp-rond { animation: none; } }

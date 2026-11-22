@@ -197,6 +197,7 @@ public class AuthService {
         if (!passwordEncoder.matches(request.getAncienMotDePasse(), user.getPassword())) {
             throw new MetierException("MOT_DE_PASSE_INCORRECT", "Le mot de passe actuel est incorrect");
         }
+        ci.esatic.sigep.security.PolitiqueMotDePasse.exiger(request.getNouveauMotDePasse(), user.getEmail());
         if (passwordEncoder.matches(request.getNouveauMotDePasse(), user.getPassword())) {
             throw new MetierException("MOT_DE_PASSE_IDENTIQUE",
                     "Le nouveau mot de passe doit être différent de l'actuel");
@@ -273,6 +274,7 @@ public class AuthService {
      */
     @Transactional
     public AuthResponse inscription(InscriptionRequest request) {
+        ci.esatic.sigep.security.PolitiqueMotDePasse.exiger(request.getPassword(), request.getEmail());
         // Depuis V16, le matricule est unique PAR établissement (pas globalement) : findByMatricule
         // lèverait NonUniqueResult (HTTP 500) si deux tenants partagent un matricule. On liste et on
         // tranche proprement.
@@ -323,6 +325,7 @@ public class AuthService {
 
     @Transactional
     public AuthResponse registerEnseignant(RegisterEnseignantRequest request) {
+        ci.esatic.sigep.security.PolitiqueMotDePasse.exiger(request.getPassword(), request.getEmail());
         if (enseignantRepository.existsByMatricule(request.getMatricule())) {
             throw new IllegalArgumentException("Matricule déjà utilisé : " + request.getMatricule());
         }

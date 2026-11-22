@@ -51,6 +51,8 @@ public class AdminOtpController {
                            Authentication authentication,
                            jakarta.servlet.http.HttpServletRequest requete) {
         if (authentication == null || !estAdmin(authentication)) return "redirect:/admin-login?error=true";
+        // Envoi en double (clic pendant l'envoi automatique) : la session est déjà vérifiée, on poursuit.
+        if (Boolean.TRUE.equals(session.getAttribute(VERIFIED))) return redirectAfterOtp(session, authentication);
         Integer attempts = (Integer) session.getAttribute(ATTEMPTS);
         if (attempts == null) attempts = 0;
         String expected = (String) session.getAttribute(HASH);

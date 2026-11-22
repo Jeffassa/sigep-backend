@@ -2,7 +2,6 @@ package ci.esatic.sigep.dto.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
@@ -23,9 +22,7 @@ public class RegisterEnseignantRequest {
     private String email;
 
     @NotBlank
-    @Size(min = 8, message = "Le mot de passe doit faire au moins 8 caractères")
-    @Pattern(regexp = "^(?=.*[A-Za-z])(?=.*\\d).+$",
-             message = "Le mot de passe doit contenir au moins une lettre et un chiffre")
+    @Size(min = 10, max = 128, message = "Le mot de passe doit faire entre 10 et 128 caractères") // le reste : PolitiqueMotDePasse
     private String password;
 
     private String departement;
