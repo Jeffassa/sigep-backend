@@ -7,6 +7,10 @@ spring:
   # (mvnw spring-boot:run) — voir pom.xml. Les tests utilisent @ActiveProfiles("test").
   application:
     name: sigep-backend
+  web:
+    # Langue retenue quand le client n'en annonce aucune, comme les robots d'indexation : le
+    # site est en français, l'en-tête Content-Language doit le dire (il valait en-US).
+    locale: fr
   servlet:
     multipart:
       # Borne la taille des uploads (import Excel) pour éviter un épuisement mémoire.

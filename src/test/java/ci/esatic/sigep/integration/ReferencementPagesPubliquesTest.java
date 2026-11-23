@@ -66,6 +66,14 @@ class ReferencementPagesPubliquesTest {
         assertThat(html).as("canonique absolue de " + url).contains("https://sigep.store");
     }
 
+    @Test
+    void unRobotSansLangue_lit_queLeSiteEstEnFrancais() throws Exception {
+        // Un robot d'indexation n'annonce pas de langue. L'en-tête disait alors en-US, en
+        // contradiction avec lang="fr" de la page ; Bing lit cet en-tête.
+        var reponse = mockMvc.perform(get("/")).andReturn().getResponse();
+        assertThat(reponse.getHeader("Content-Language")).isEqualTo("fr");
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"/emargement-qr-code", "/suivi-heures-vacataires", "/etat-heures-paie-enseignants",
             "/logiciel-emargement-cote-d-ivoire"})
