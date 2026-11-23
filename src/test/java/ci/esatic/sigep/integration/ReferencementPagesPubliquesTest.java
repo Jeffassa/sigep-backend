@@ -67,6 +67,27 @@ class ReferencementPagesPubliquesTest {
     }
 
     @Test
+    void laMarque_estLisible_parUnMoteur_surLAccueil() throws Exception {
+        String html = rendu("/");
+
+        // Le nom de marque doit être écrit en clair près du titre principal, pas seulement dans le logo.
+        assertThat(html).contains("<span>SIGEP</span> · Émargement des enseignants");
+
+        // Le bloc d'identité doit rester un JSON valide après le rendu Thymeleaf.
+        int debut = html.indexOf("\"@graph\"");
+        int ouverture = html.lastIndexOf('{', debut);
+        int fermeture = html.indexOf("</script>", debut);
+        var graphe = new tools.jackson.databind.ObjectMapper()
+                .readTree(html.substring(ouverture, fermeture).trim()).get("@graph");
+
+        var organisation = graphe.get(0);
+        assertThat(organisation.get("name").asString()).isEqualTo("SIGEP");
+        assertThat(organisation.get("alternateName").asString()).isEqualTo("sigep.store");
+        assertThat(organisation.get("sameAs").get(0).asString()).startsWith("https://www.g2.com/products/sigep");
+        assertThat(graphe.get(1).get("alternateName").asString()).isEqualTo("sigep.store");
+    }
+
+    @Test
     void unRobotSansLangue_lit_queLeSiteEstEnFrancais() throws Exception {
         // Un robot d'indexation n'annonce pas de langue. L'en-tête disait alors en-US, en
         // contradiction avec lang="fr" de la page ; Bing lit cet en-tête.
