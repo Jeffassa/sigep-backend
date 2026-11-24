@@ -20,7 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
 /**
- * API publique : l'offre Enterprise vendait « SSO &amp; API » alors que {@code API_PUBLIQUE}
+ * API publique : l'offre Entreprise vendait « SSO &amp; API » alors que {@code API_PUBLIQUE}
  * n'était consultée nulle part.
  *
  * <p>Le risque propre à cette fonctionnalité est le cloisonnement. Une clé ouvre les données

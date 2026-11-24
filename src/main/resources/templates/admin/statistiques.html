@@ -45,7 +45,7 @@
                 
                 <h2 class="titre-section">Analyse et recommandations</h2>
             </div>
-            <!-- IA : actif pour les plans qui l'incluent (Pro/Enterprise) ; verrou premium sinon -->
+            <!-- IA : actif pour les plans qui l'incluent (Pro/Entreprise) ; verrou premium sinon -->
             <button th:if="${aiEnabled and etablissementPlan != 'FREE'}" id="btnAnalyseIa"
                     th:data-debut="${debut}" th:data-fin="${fin}"
                     class="btn btn-ink h-10 px-4 rounded-xl text-[13px] font-medium inline-flex items-center gap-1.5">

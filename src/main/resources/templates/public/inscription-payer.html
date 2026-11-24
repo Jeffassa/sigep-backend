@@ -52,7 +52,7 @@
                     </label>
                     <label class="offre-choix" th:if="${prixEnterprise > 0}">
                         <input type="radio" name="plan" value="ENTERPRISE" th:checked="${planChoisi == 'ENTERPRISE'}" th:attr="data-prix=${prixEnterprise}"/>
-                        <span class="offre-choix-nom">Enterprise</span>
+                        <span class="offre-choix-nom">Entreprise</span>
                         <span class="offre-choix-prix"><span th:text="${#numbers.formatInteger(prixEnterprise,1,'WHITESPACE')}">96 000</span>
                             <span th:text="${symbole} + ' / mois'">FCFA / mois</span></span>
                     </label>

@@ -155,7 +155,7 @@ public class OnboardingService {
                 .nom(nom.trim())
                 .slug(slugUnique(nom))
                 .plan(p)
-                .maxEnseignants(p == Plan.FREE ? freeMaxEnseignants : 0)   // Pro/Enterprise = illimité
+                .maxEnseignants(p == Plan.FREE ? freeMaxEnseignants : 0)   // Pro/Entreprise = illimité
                 .statut(StatutEtablissement.VALIDE)
                 .actif(true)
                 .kioskKey(genererKioskKey())

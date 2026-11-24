@@ -259,7 +259,7 @@
                 <a class="bouton bouton-or" th:href="@{/inscription(plan='PRO')}" href="/inscription?plan=PRO">Souscrire au plan Pro</a>
             </div>
             <div class="offre">
-                <h3>Enterprise</h3>
+                <h3>Entreprise</h3>
                 <p class="prix"><span th:text="${#numbers.formatInteger(prixEnterprise,1,'WHITESPACE')}">96 000</span> <small th:text="${symbole} + ' / mois'">FCFA / mois</small></p>
                 <ul>
                     <li>Tout le plan Pro</li>
@@ -267,7 +267,7 @@
                     <li>API pour vos logiciels (paie, gestion)</li>
                     <li>Support dédié</li>
                 </ul>
-                <a class="bouton" th:href="@{/inscription(plan='ENTERPRISE')}" href="/inscription?plan=ENTERPRISE">Souscrire au plan Enterprise</a>
+                <a class="bouton" th:href="@{/inscription(plan='ENTERPRISE')}" href="/inscription?plan=ENTERPRISE">Souscrire au plan Entreprise</a>
                 <p class="question">Une question avant de souscrire ?
                     <a th:href="'mailto:' + (${contactPlateforme} ?: 'contact@sigep.store')" href="mailto:contact@sigep.store">Écrivez-nous</a></p>
             </div>

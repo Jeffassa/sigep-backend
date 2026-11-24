@@ -57,7 +57,7 @@ public class Etablissement {
     private LocalDateTime dateCreation = LocalDateTime.now();
 
     /**
-     * Fin de la période d'abonnement payée (plans Pro/Enterprise). {@code null} = pas
+     * Fin de la période d'abonnement payée (plans Pro/Entreprise). {@code null} = pas
      * d'expiration (plan Free gratuit, ou tenant illimité). Au-delà de cette date,
      * l'accès au SaaS est bloqué jusqu'au renouvellement (cf. AbonnementService).
      */

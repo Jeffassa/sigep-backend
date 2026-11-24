@@ -92,7 +92,7 @@
                     <label class="offre-choix" th:if="${prixEnterprise > 0}">
                         <input type="radio" name="plan" value="ENTERPRISE" th:attr="data-prix=${prixEnterprise}"
                                th:checked="${etablissementPlan == 'ENTERPRISE'}"/>
-                        <span class="offre-choix-nom">Enterprise</span>
+                        <span class="offre-choix-nom">Entreprise</span>
                         <span class="offre-choix-prix" th:text="${#numbers.formatInteger(prixEnterprise,1,'WHITESPACE')} + ' ' + ${symbole} + ' / mois'">96 000 FCFA / mois</span>
                     </label>
                 </div>
@@ -206,7 +206,7 @@
                     <option value="PRO" th:attr="data-prix=${prixPro}"
                             th:text="'Pro : ' + ${#numbers.formatInteger(prixPro,1,'WHITESPACE')} + ' ' + ${symbole}">Pro</option>
                     <option value="ENTERPRISE" th:if="${prixEnterprise > 0}" th:attr="data-prix=${prixEnterprise}"
-                            th:text="'Enterprise : ' + ${#numbers.formatInteger(prixEnterprise,1,'WHITESPACE')} + ' ' + ${symbole}">Enterprise</option>
+                            th:text="'Entreprise : ' + ${#numbers.formatInteger(prixEnterprise,1,'WHITESPACE')} + ' ' + ${symbole}">Entreprise</option>
                 </select>
             </div>
             <div>
@@ -274,7 +274,7 @@
             <li>Réglez le montant de votre plan
                 (<strong class="text-ink" th:text="'Pro ' + ${prixPro} + ' ' + ${symbole}">Pro</strong>
                 <span th:if="${prixEnterprise > 0}"> ou <strong class="text-ink"
-                      th:text="'Enterprise ' + ${prixEnterprise} + ' ' + ${symbole}">Enterprise</strong></span>
+                      th:text="'Entreprise ' + ${prixEnterprise} + ' ' + ${symbole}">Entreprise</strong></span>
                 par mois) au <strong class="text-ink" th:text="${mobileMoney} ?: 'numéro communiqué par la plateforme'">+225 …</strong>
                 (Orange / MTN / Moov / Wave).</li>
             <li>Cliquez sur « Demander l'activation » : nous vérifions le versement et prolongeons votre période.</li>

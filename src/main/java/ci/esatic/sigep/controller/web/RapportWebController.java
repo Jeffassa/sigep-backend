@@ -49,7 +49,7 @@ public class RapportWebController {
         return "admin/rapports";
     }
 
-    /** Télécharge tous les rapports (filtrés) dans une archive ZIP. Fonction Pro/Enterprise
+    /** Télécharge tous les rapports (filtrés) dans une archive ZIP. Fonction Pro/Entreprise
      *  verrouillée côté serveur (le bouton masqué en Free ne suffit pas — URL directe possible). */
     @GetMapping("/admin/rapports/telecharger-zip")
     public ResponseEntity<byte[]> telechargerZip(
@@ -76,7 +76,7 @@ public class RapportWebController {
     }
 
     /** Export Excel de synthèse (une ligne par enseignant sur la période). Fonction
-     *  Pro/Enterprise verrouillée côté serveur (pas seulement masquée dans l'interface). */
+     *  Pro/Entreprise verrouillée côté serveur (pas seulement masquée dans l'interface). */
     @GetMapping("/admin/rapports/synthese")
     public ResponseEntity<byte[]> syntheseExcel(
             @AuthenticationPrincipal User admin,

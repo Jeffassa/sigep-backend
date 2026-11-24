@@ -150,7 +150,7 @@ public class AdminDashboardController {
         Map<String, Object> out = new HashMap<>();
         // Gating premium : l'analyse IA n'est disponible que pour les plans qui l'incluent (PRO+).
         if (admin == null || !planService.estDisponible(etablissementCourantService.courant(), Feature.ANALYSE_IA)) {
-            out.put("texte", "L'analyse IA est réservée à un plan supérieur (PRO ou Enterprise). "
+            out.put("texte", "L'analyse IA est réservée à un plan supérieur (PRO ou Entreprise). "
                     + "Passez à un plan supérieur pour l'activer.");
             return out;
         }

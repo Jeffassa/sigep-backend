@@ -128,7 +128,7 @@
                 </div>
             </form>
             <div class="mt-3 flex justify-end gap-2">
-                <!-- Exports avancés (Synthèse Excel + ZIP) : inclus dans les plans Pro/Enterprise.
+                <!-- Exports avancés (Synthèse Excel + ZIP) : inclus dans les plans Pro/Entreprise.
                      Navigation GET pilotée par JS (type=button => aucun POST accidentel). -->
                 <th:block th:if="${etablissementPlan != 'FREE'}">
                     <button type="button" id="btnSynthese" th:data-url="@{/admin/rapports/synthese}"

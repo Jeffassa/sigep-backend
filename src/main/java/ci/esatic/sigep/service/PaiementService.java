@@ -84,7 +84,7 @@ public class PaiementService {
                 .periodeFin(debut.plusMonths(m))
                 .build());
 
-        // Le paiement applique le plan acheté (Pro ou Enterprise) et lève le quota, ET prolonge —
+        // Le paiement applique le plan acheté (Pro ou Entreprise) et lève le quota, ET prolonge —
         // atomiquement, quelle que soit la source (M6).
         if (cible != null && cible != Plan.FREE) {
             e.setPlan(cible);

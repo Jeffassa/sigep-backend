@@ -146,7 +146,7 @@ public class InscriptionPaiementController {
         model.addAttribute("intent", intent);
         model.addAttribute("statut", statut.name());
         model.addAttribute("etablissementNom", e == null ? "" : e.getNomEffectif());
-        model.addAttribute("planLibelle", intent.getPlan() == Plan.PRO ? "Pro" : "Enterprise");
+        model.addAttribute("planLibelle", intent.getPlan() == Plan.PRO ? "Pro" : "Entreprise");
         model.addAttribute("paiementUrl",
                 JekoService.adresseDePaiementSure(intent.getPaymentUrl()) ? intent.getPaymentUrl() : null);
         // Après un échec, retour à la page de paiement pour choisir à nouveau.

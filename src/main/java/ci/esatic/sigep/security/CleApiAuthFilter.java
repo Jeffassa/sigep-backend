@@ -74,7 +74,7 @@ public class CleApiAuthFilter extends OncePerRequestFilter {
         }
         if (!planService.estDisponible(etablissement, Feature.API_PUBLIQUE)) {
             refuser(reponse, 403,
-                    "L'API est comprise dans le plan Enterprise. Votre plan actuel ne l'inclut pas.");
+                    "L'API est comprise dans le plan Entreprise. Votre plan actuel ne l'inclut pas.");
             return;
         }
 
