@@ -87,7 +87,14 @@ a:focus-visible, button:focus-visible, summary:focus-visible, input:focus-visibl
 .nav { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 32px; min-height: 96px; }
 .nav a { font-weight: 600; font-size: 15px; padding: 12px 0; text-decoration: none; }
 .nav a:hover { text-decoration: underline; }
-.nav .marque { font-stretch: 75%; font-weight: 900; font-size: 32px; letter-spacing: .02em; margin-right: auto; padding: 0; }
+.nav .marque { font-stretch: 75%; font-weight: 900; font-size: 32px; letter-spacing: .02em; margin-right: auto; padding: 0; position: relative; }
+/* L'arrivée du logo : le mot sort de derrière un trait de stylo rouge. Le mot n'est coupé qu'à
+   gauche, au ras du trait ; sans le script d'animation, le trait reste invisible. */
+.marque-mot { display: inline-block; clip-path: inset(-.3em -.3em -.3em 0); }
+.marque-barre {
+    position: absolute; left: -7px; top: 8%; bottom: 8%; width: 4px;
+    background: var(--kola); opacity: 0; transform-origin: 50% 50%; pointer-events: none;
+}
 
 /* ----- L'accroche ----- */
 .accroche { display: flex; flex-wrap: wrap; gap: 32px 48px; align-items: flex-start; padding-top: 32px; }

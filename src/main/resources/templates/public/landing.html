@@ -68,7 +68,7 @@
 <!-- ===================== LA PAGE DE CAHIER ===================== -->
 <div class="seyes" id="haut">
     <nav class="nav marge" aria-label="Navigation principale">
-        <a class="marque" th:href="@{/}" href="/" th:text="${marque} ?: 'SIGEP'">SIGEP</a>
+        <a class="marque" th:href="@{/}" href="/"><span class="marque-barre" aria-hidden="true"></span><span class="marque-mot" th:text="${marque} ?: 'SIGEP'">SIGEP</span></a>
         <a class="optionnel" href="#journee">La journée</a>
         <a class="optionnel" href="#paie">La paie</a>
         <a href="#tarifs">Tarifs</a>

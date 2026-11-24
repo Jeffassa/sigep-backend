@@ -109,7 +109,13 @@
         /* ----- L'en-tête : la page s'ouvre ----- */
         var ouverture = gsap.timeline({ defaults: { ease: 'power3.out' }, paused: !ouvertureAttendue });
         ouverture
-            .fromTo('.nav > a', { opacity: 0, y: -12 }, { opacity: 1, y: 0, duration: 0.6, stagger: 0.05 }, 0)
+            // Le logo : un trait se dresse, « SIGEP » sort de derrière lui, puis le trait s'efface.
+            // Le mot est coupé à gauche (voir .marque-mot) : il naît au ras du trait.
+            .fromTo('.marque-barre', { opacity: 1, scaleY: 0 }, { scaleY: 1, duration: 0.35, ease: 'power2.out' }, 0)
+            .fromTo('.marque-mot', { xPercent: -105, clipPath: 'inset(-0.3em -0.3em -0.3em 105%)' },
+                { xPercent: 0, clipPath: 'inset(-0.3em -0.3em -0.3em 0%)', duration: 0.8, ease: 'power4.out' }, 0.3)
+            .to('.marque-barre', { scaleY: 0, opacity: 0, duration: 0.35, ease: 'power2.in' }, 1.15)
+            .fromTo('.nav > a:not(.marque)', { opacity: 0, y: -12 }, { opacity: 1, y: 0, duration: 0.6, stagger: 0.05 }, 0)
             .fromTo('.accroche .sur', { backgroundSize: '0% 100%' }, { backgroundSize: '100% 100%', duration: 0.7, ease: 'power2.inOut' }, 0.35)
             .fromTo('.accroche-texte .corps', { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.8 }, 0.45)
             .fromTo('.appel', { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.8 }, 0.6)
