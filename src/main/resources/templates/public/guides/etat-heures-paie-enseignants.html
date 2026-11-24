@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{public/guides/fragments :: head('État des heures des enseignants pour la paie | SIGEP', 'L’état mensuel des heures faites par chaque enseignant, vérifié à l’écran puis exporté en CSV ou Excel pour le service paie : heures à payer, séances en attente, oublis et retards.')}"></head>
+<body>
+<div class="seyes">
+    <nav th:replace="~{public/guides/fragments :: entete}"></nav>
+    <nav th:replace="~{public/guides/fragments :: fil('État des heures pour la paie')}"></nav>
+
+    <header class="guide-tete marge">
+        <p class="surtitre">Paie des enseignants</p>
+        <h1>L’état des heures du mois, <span class="it">prêt pour la paie.</span></h1>
+        <p class="corps chapeau">À la fin du mois, il ne reste rien à recompter : les heures se sont totalisées au fil des séances émargées. Vous choisissez le mois, vous vérifiez les lignes à l’écran, et vous envoyez au service paie un fichier qu’il sait lire.</p>
+        <div class="appel">
+            <a class="bouton" th:href="@{/inscription}">Démarrer gratuitement</a>
+            <span class="mono">Export paie inclus<br/>dans le plan Pro</span>
+        </div>
+    </header>
+</div>
+
+<main class="guide-corps">
+    <div class="marge">
+        <section>
+            <h2 class="titre-section">Vérifier avant d’envoyer</h2>
+            <p class="corps">Un fichier de paie qu’on découvre une fois ouvert dans un tableur se corrige trop tard. La page Paie de SIGEP affiche d’abord les lignes du mois choisi, enseignant par enseignant : l’écart se repère et se règle avant que le chiffre parte.</p>
+        </section>
+
+        <section>
+            <h2 class="titre-section">Ce que contient l’état</h2>
+            <p class="corps">Une ligne par enseignant et par mois, avec :</p>
+            <ul>
+                <li><strong>l’identité</strong> : matricule, nom, prénom, grade et département ;</li>
+                <li><strong>les heures à payer</strong> : séances prévues, séances émargées et heures correspondantes, à la durée réelle ;</li>
+                <li><strong>ce qui reste à trancher</strong>, à part : séances en attente de validation, séances non émargées, séances encore à venir dans le mois ;</li>
+                <li><strong>les signaux</strong> : retards, émargements faits hors ligne, horaires incohérents.</li>
+            </ul>
+            <p class="encadre">Seules les heures émargées sont comptées à payer. Une séance oubliée n’est ni payée par défaut, ni perdue : elle apparaît dans sa colonne, en attendant qu’on la règle.</p>
+        </section>
+
+        <section>
+            <h2 class="titre-section">Un fichier que tout le monde lit</h2>
+            <p class="corps">L’état sort en <strong>CSV</strong> ou en <strong>Excel</strong>. Ce n’est pas un connecteur vers un logiciel de paie : c’est un fichier que Sage, Odoo, un tableur ou un logiciel maison savent tous ouvrir. Pour aller plus loin, le plan Entreprise donne accès à une API qui alimente directement vos logiciels de paie ou de gestion.</p>
+        </section>
+
+        <section>
+            <h2 class="titre-section">Le bon accès pour chacun</h2>
+            <p class="corps">L’établissement peut ouvrir un accès <strong>Comptabilité</strong>, à côté des accès Scolarité et Direction. Le comptable y retrouve la paie, les rapports et les statistiques : il consulte et exporte l’état du mois sans toucher au planning ni aux enseignants.</p>
+        </section>
+    </div>
+</main>
+
+<section class="guide-questions seyes" aria-labelledby="titre-questions">
+    <div class="marge">
+        <h2 id="titre-questions" class="titre-section">Questions</h2>
+        <div class="liste-questions">
+            <details><summary>Dans quel format sort l’état des heures ?<span class="signe" aria-hidden="true">+</span></summary><p class="corps">En CSV ou en Excel, une ligne par enseignant et par mois, lisible par un tableur comme par la plupart des logiciels de paie.</p></details>
+            <details><summary>Une séance non émargée est-elle payée ?<span class="signe" aria-hidden="true">+</span></summary><p class="corps">Non. Elle figure dans une colonne à part, avec ses heures, pour que l’établissement décide en connaissance de cause.</p></details>
+            <details><summary>Quel plan faut-il pour l’export paie ?<span class="signe" aria-hidden="true">+</span></summary><p class="corps">L’export des heures pour la paie fait partie du plan Pro. Le plan gratuit couvre l’émargement, le planning et les rapports de base.</p></details>
+        </div>
+    </div>
+</section>
+
+<section th:replace="~{public/guides/fragments :: autres('paie')}"></section>
+<footer th:replace="~{public/guides/fragments :: fin}"></footer>
+
+<script th:nonce="${cspNonce}" type="application/ld+json" th:inline="text">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Accueil", "item": "[[${baseUrl}]]/" },
+        { "@type": "ListItem", "position": 2, "name": "État des heures pour la paie", "item": "[[${baseUrl}]]/etat-heures-paie-enseignants" }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        { "@type": "Question", "name": "Dans quel format sort l’état des heures ?",
+          "acceptedAnswer": { "@type": "Answer", "text": "En CSV ou en Excel, une ligne par enseignant et par mois, lisible par un tableur comme par la plupart des logiciels de paie." } },
+        { "@type": "Question", "name": "Une séance non émargée est-elle payée ?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Non. Elle figure dans une colonne à part, avec ses heures, pour que l’établissement décide en connaissance de cause." } },
+        { "@type": "Question", "name": "Quel plan faut-il pour l’export paie ?",
+          "acceptedAnswer": { "@type": "Answer", "text": "L’export des heures pour la paie fait partie du plan Pro. Le plan gratuit couvre l’émargement, le planning et les rapports de base." } }
+      ]
+    }
+  ]
+}
+</script>
+</body>
+</html>

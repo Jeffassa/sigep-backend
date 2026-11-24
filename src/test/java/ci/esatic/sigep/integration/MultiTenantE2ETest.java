@@ -136,7 +136,7 @@ class MultiTenantE2ETest {
     private long creerEnseignantEtRecupererId(String token, String matricule, String email) throws Exception {
         String body = objectMapper.writeValueAsString(Map.of(
                 "matricule", matricule, "nom", "Prof", "prenom", "Test",
-                "email", email, "password", "Secret2026"));
+                "email", email, "password", "Secret@2026"));
         mockMvc.perform(post("/api/auth/register/enseignant")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON).content(body))

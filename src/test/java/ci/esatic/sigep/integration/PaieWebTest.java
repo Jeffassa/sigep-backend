@@ -123,7 +123,7 @@ class PaieWebTest {
         assertThat(reponse.getStatus()).isEqualTo(200);
         assertThat(reponse.getContentAsString())
                 .as("un verrou doit dire de quoi il s'agit, et ou lever la restriction")
-                .contains("plans Pro et Enterprise").contains("/admin/abonnement");
+                .contains("plans Pro et Entreprise").contains("/admin/abonnement");
     }
 
     @Test

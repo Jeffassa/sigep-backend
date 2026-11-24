@@ -7,11 +7,15 @@ spring:
   # (mvnw spring-boot:run) — voir pom.xml. Les tests utilisent @ActiveProfiles("test").
   application:
     name: sigep-backend
+  web:
+    # Langue retenue quand le client n'en annonce aucune, comme les robots d'indexation : le
+    # site est en français, l'en-tête Content-Language doit le dire (il valait en-US).
+    locale: fr
   servlet:
     multipart:
       # Borne la taille des uploads (import Excel) pour éviter un épuisement mémoire.
       max-file-size: ${MULTIPART_MAX_FILE_SIZE:10MB}
-      max-request-size: ${MULTIPART_MAX_REQUEST_SIZE:12MB}
+      max-request-size: ${MULTIPART_MAX_REQUEST_SIZE:50MB}
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/sigep_db}
     username: ${DB_USERNAME:postgres}
@@ -40,6 +44,11 @@ spring:
     properties:
       hibernate:
         format_sql: false
+        # Les relations paresseuses d'une liste (enseignant, matière, classe, salle d'une séance)
+        # se chargent par lots au lieu d'une requête par ligne. En production, chaque requête
+        # coûte 60 à 80 ms de trajet jusqu'à la base : les alertes en faisaient 85, le tableau
+        # de bord 68.
+        default_batch_fetch_size: 100
         # Dialecte volontairement non spécifié : Hibernate le détecte tout seul
         # (sinon avertissement HHH90000025 "does not need to be specified explicitly").
   output:
@@ -58,8 +67,9 @@ spring:
           auth: true
           starttls:
             enable: true
-  # Cache applicatif. OPTIONNEL : 'simple' (mémoire locale, défaut) tant que Redis n'est pas
-  # provisionné. Pour activer le cache distribué : CACHE_TYPE=redis + REDIS_URL (voir ci-dessous).
+  # Cache applicatif. 'simple' (défaut) = mémoire locale bornée, tant que Redis n'est pas
+  # provisionné. Pour le cache partagé : CACHE_TYPE=redis + SPRING_DATA_REDIS_URL (voir plus bas).
+  # Les caches, leurs durées et leurs règles sont déclarés dans CacheConfig.
   task:
     scheduling:
       # Plusieurs threads : sinon un seul cron lent (ex. appel réseau à un prestataire) gèle
@@ -76,7 +86,9 @@ spring:
       # Pour l'activer, définir la variable d'env SPRING_DATA_REDIS_URL (Spring la relie tout seul),
       # ex. rediss://default:<password>@<host>:<port> (Upstash/Render), + CACHE_TYPE=redis et/ou
       # RATE_LIMIT_REDIS_ENABLED=true. NE PAS déclarer d'url vide ici : Lettuce refuse "" au démarrage.
-      timeout: ${REDIS_TIMEOUT:2s}
+      # Délai d'une commande. Court exprès : le cache sert à gagner du temps, une lecture lente
+      # coûte plus cher que la requête qu'elle évite. Au-delà, l'application relit la base.
+      timeout: ${REDIS_TIMEOUT:1s}
       connect-timeout: ${REDIS_CONNECT_TIMEOUT:2s}
 
 server:
@@ -138,6 +150,8 @@ springdoc:
     path: /swagger-ui.html
 
 app:
+  keep-alive:
+    url: ${APP_KEEP_ALIVE_URL:}
   jwt:
     # SECURITE : JWT_SECRET OBLIGATOIRE en variable d'environnement (min 256 bits, base64). Voir .env.example
     secret: ${JWT_SECRET}
@@ -150,17 +164,14 @@ app:
   qr:
     # SECURITE (E3) : validité COURTE du QR d'émargement en ligne pour réduire la fenêtre
     # de relais d'une capture d'écran (un QR photographié n'est réutilisable que quelques
-    # secondes). Le mode hors-ligne, lui, tolère l'expiration (preuve via l'iat signé).
-    expiration-ms: ${QR_EXPIRATION_MS:45000}
-    refresh-seconds: ${QR_REFRESH_SECONDS:15}
-    display:
-      # SECURITE : l'affichage du QR d'émargement est une preuve de présence physique.
-      # Il NE doit PAS être public sur internet. Définir au moins l'un des deux ci-dessous,
-      # sinon les pages /api/qr/display renvoient 403 (fail-closed) :
-      #  - QR_DISPLAY_KEY : clé secrète que l'écran/kiosque ajoute en paramètre (?key=...)
-      #  - QR_DISPLAY_ALLOWED_IPS : IP(s) publiques autorisées (réseau de l'établissement), séparées par des virgules
-      key: ${QR_DISPLAY_KEY:}
-      allowed-ips: ${QR_DISPLAY_ALLOWED_IPS:}
+    # secondes). Le mode hors-ligne, lui, tolère l'expiration (preuve via l'iat signé) et
+    # passe par la validation de la scolarité.
+    # L'affichage est autorisé par le cookie posé depuis l'administration (Écran d'émargement),
+    # et peut être limité au réseau de l'établissement depuis la même page.
+    # Le code affiché change toutes les 30 s ; il reste valable 20 s de plus, le temps de signer
+    # après un scan fait juste avant le changement.
+    expiration-ms: ${QR_EXPIRATION_MS:50000}
+    refresh-seconds: ${QR_REFRESH_SECONDS:30}
   rapports:
     dossier: ${RAPPORTS_DOSSIER:rapports}
   mail:
@@ -176,6 +187,15 @@ app:
     model: ${AI_MODEL:claude-opus-4-8}
     # Modèle standard (plans inférieurs) — maîtrise du coût par plan (E10).
     model-standard: ${AI_MODEL_STANDARD:claude-haiku-4-5}
+  cache:
+    # Préfixe de toutes les clés Redis. Le numéro de version se change quand le format d'une
+    # valeur change : les anciennes clés s'éteignent d'elles-mêmes à l'expiration.
+    prefixe: ${CACHE_PREFIXE:sigep:v1:}
+  seo:
+    # Codes de preuve de propriété (Google Search Console, Bing Webmaster Tools) : la valeur
+    # « content » de la balise fournie par l'outil. Vides = aucune balise posée.
+    google-site-verification: ${GOOGLE_SITE_VERIFICATION:}
+    bing-site-verification: ${BING_SITE_VERIFICATION:}
   analytics:
     # Analytics web sans cookie (Plausible). Vide = désactivé. Ex. PLAUSIBLE_DOMAIN=sigep.store
     plausible-domain: ${PLAUSIBLE_DOMAIN:}
@@ -183,6 +203,10 @@ app:
     # C5 : auto-validation des inscriptions self-service. false = validation manuelle par le
     # super-admin (défaut, comportement actuel). true = espace actif immédiatement.
     auto-validation: ${ONBOARDING_AUTO_VALIDATION:false}
+  marche:
+    # Nombre d'établissements que SIGEP peut viser (source extérieure, renseignée par le gérant).
+    # Sert à l'analyste « Marché » du tableau de bord de la plateforme. 0 = part de marché non calculée.
+    etablissements-cibles: ${MARCHE_ETABLISSEMENTS_CIBLES:0}
   billing:
     # Devise de facturation (code ISO en minuscules). SOURCE UNIQUE : sert à l'affichage ET à
     # Stripe — les deux ne peuvent donc pas diverger.
@@ -211,7 +235,8 @@ app:
     # Propriétaire de la plateforme SaaS. owner-email : identité du SUPER ADMIN (détection).
     # admin-email/password : compte SUPER ADMIN (espace /plateforme), créé au démarrage s'il
     # n'existe pas ; si le mot de passe est vide, il est généré et affiché UNE fois dans les logs.
-    owner-email: ${PLATFORM_OWNER_EMAIL:assalendahjeanfrancois@gmail.com}
+    # PLATFORM_OWNER_EMAIL est obligatoire en production : sans elle, aucun compte n'est super admin.
+    owner-email: ${PLATFORM_OWNER_EMAIL:}
     admin-email: ${PLATFORM_ADMIN_EMAIL:${app.platform.owner-email}}
     admin-password: ${PLATFORM_ADMIN_PASSWORD:}
     # Marque affichée dans l'interface (chrome admin, pages QR). Neutre = mono-marque SIGEP.
@@ -230,10 +255,20 @@ app:
     enabled: ${STRIPE_ENABLED:false}
     secret-key: ${STRIPE_SECRET_KEY:}
     webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
-  mobile-money:
-    # Webhook Mobile Money générique (C7). Secret partagé exigé (fail-closed si vide).
-    # L'agrégateur (CinetPay/PayDunya/Wave/Orange) poste sur /api/paiement/mobile-money/webhook.
-    webhook-secret: ${MOBILE_MONEY_WEBHOOK_SECRET:}
+  jeko:
+    # Encaissement Mobile Money via Jèko (page de paiement hébergée : Wave, Orange Money, MTN,
+    # Moov, Djamo). Prioritaire sur NovaSend quand les deux sont configurés.
+    # ATTENTION : Jèko n'a PAS de bac à sable — toute demande porte sur de l'argent réel.
+    enabled: ${JEKO_ENABLED:false}
+    base-url: ${JEKO_BASE_URL:https://api.jeko.africa}
+    # Jèko Business > Paramètres > API & Webhooks > Créer une clé API : la clé et son identifiant.
+    api-key: ${JEKO_API_KEY:}
+    api-key-id: ${JEKO_API_KEY_ID:}
+    # Identifiant du magasin qui reçoit les paiements (page Magasins, bouton copier).
+    store-id: ${JEKO_STORE_ID:}
+    # Secret du webhook, affiché UNE SEULE FOIS à sa création. Vide = webhook refusé ; le
+    # relanceur périodique confirme alors les paiements, un peu moins vite.
+    webhook-secret: ${JEKO_WEBHOOK_SECRET:}
   novasend:
     # Encaissement Mobile Money automatisé via NovaSend (WAVE / ORANGE / MOMO / MOOV).
     # Désactivé par défaut : activer avec NOVASEND_ENABLED=true + identifiants API.
@@ -282,13 +317,15 @@ app:
       max-refresh: ${REFRESH_RATE_LIMIT_MAX:30}
       max-signup: ${SIGNUP_RATE_LIMIT_MAX:5}
       max-admin-login: ${ADMIN_LOGIN_RATE_LIMIT_MAX:10}
+      # Suggestions d'écoles à l'inscription (publiques, deux recherches en base par appel).
+      max-annuaire: ${ANNUAIRE_RATE_LIMIT_MAX:60}
       # Budget global par IP, toutes routes (0 = désactivé). Généreux : plusieurs utilisateurs
       # partagent souvent une même IP (NAT d'établissement).
       max-global: ${RATE_LIMIT_MAX_GLOBAL:300}
       # Plafond de clés en mémoire (garde anti-épuisement du limiteur lui-même).
       max-keys: ${RATE_LIMIT_MAX_KEYS:50000}
       # Rate-limit DISTRIBUÉ via Redis (partagé entre instances, survit aux redémarrages).
-      # Nécessite REDIS_URL. false = compteurs en mémoire locale (défaut, mono-instance).
+      # Nécessite SPRING_DATA_REDIS_URL (et non REDIS_URL). false = compteurs en mémoire locale.
       redis-enabled: ${RATE_LIMIT_REDIS_ENABLED:false}
       # Budget par UTILISATEUR authentifié (en plus du budget par IP) sur les endpoints coûteux
       # (génération de rapports, import Excel, analyse IA). Empêche un compte de saturer l'instance.

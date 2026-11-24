@@ -35,6 +35,7 @@ public class OnboardingService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final MailService mailService;
+    private final ci.esatic.sigep.annuaire.ReconnaissanceService reconnaissanceService;
 
     /**
      * C5 : auto-validation des inscriptions. DÉSACTIVÉ par défaut (comportement actuel :
@@ -48,8 +49,44 @@ public class OnboardingService {
     @org.springframework.beans.factory.annotation.Value("${app.plans.free-max-enseignants:10}")
     private int freeMaxEnseignants;
 
+    /** Ce que crée une inscription : l'établissement et son premier administrateur. */
+    public record Inscription(Etablissement etablissement, User admin, AuthResponse reponse) {}
+
     @Transactional
     public AuthResponse inscrire(InscriptionEtablissementRequest req) {
+        ci.esatic.sigep.security.PolitiqueMotDePasse.exiger(req.getAdminPassword(), req.getAdminEmail());
+        return creer(req, false).reponse();
+    }
+
+    /**
+     * Inscription publique. Le formulaire ne doit pas dire si une adresse a déjà un compte :
+     * dans ce cas rien n'est créé, le titulaire de l'adresse est prévenu par e-mail, et l'appelant
+     * répond comme si l'inscription avait eu lieu. Le mot de passe est haché dans les deux cas,
+     * pour que la durée de la réponse ne trahisse pas non plus l'adresse.
+     *
+     * @return l'inscription créée, ou vide si l'adresse avait déjà un compte
+     */
+    @Transactional
+    public java.util.Optional<Inscription> demander(InscriptionEtablissementRequest req, boolean paiementAttendu) {
+        // Vérifié avant de chercher l'adresse : la réponse est la même, compte existant ou non.
+        ci.esatic.sigep.security.PolitiqueMotDePasse.exiger(req.getAdminPassword(), req.getAdminEmail());
+        if (userRepository.existsByEmail(req.getAdminEmail())) {
+            passwordEncoder.encode(req.getAdminPassword());
+            mailService.notifierInscriptionAdresseConnue(req.getAdminEmail());
+            return java.util.Optional.empty();
+        }
+        return java.util.Optional.of(creer(req, paiementAttendu));
+    }
+
+    /**
+     * Crée l'établissement et son administrateur.
+     *
+     * @param paiementAttendu l'inscription est suivie d'un paiement : l'e-mail « dossier en cours
+     *                        d'examen » n'est pas envoyé, puisque c'est le paiement confirmé qui
+     *                        activera l'espace, sans examen.
+     */
+    @Transactional
+    public Inscription creer(InscriptionEtablissementRequest req, boolean paiementAttendu) {
         if (userRepository.existsByEmail(req.getAdminEmail())) {
             throw new IllegalArgumentException("Email déjà utilisé : " + req.getAdminEmail());
         }
@@ -60,12 +97,18 @@ public class OnboardingService {
         Etablissement etablissement = etablissementRepository.save(Etablissement.builder()
                 .nom(req.getNomEtablissement().trim())
                 .slug(slugUnique(req.getNomEtablissement()))
+                // SIGEP ne vend qu'en Côte d'Ivoire : c'est le seul pays où le paiement en ligne fonctionne.
+                .paysCode(ci.esatic.sigep.annuaire.PaysUemoa.deCode(req.getPays())
+                        .filter(ci.esatic.sigep.annuaire.PaysUemoa::isOuvert)
+                        .orElse(ci.esatic.sigep.annuaire.PaysUemoa.CI).getCode())
                 .plan(Plan.FREE)
                 .maxEnseignants(freeMaxEnseignants)
                 .statut(statutInitial)
                 .actif(true)
                 .kioskKey(genererKioskKey())      // C4 : clé kiosque QR propre au tenant, dès la création
                 .build());
+        // Rapprochement avec les listes officielles de l'État : reconnu, ou à vérifier par la plateforme.
+        reconnaissanceService.rapprocher(etablissement);
 
         Role adminRole = roleRepository.findByName(ERole.ROLE_ADMIN)
                 .orElseThrow(() -> new RuntimeException("Rôle ADMIN non trouvé en base"));
@@ -79,19 +122,20 @@ public class OnboardingService {
 
         if (autoValidation) {
             mailService.notifierEtablissementValide(admin.getEmail(), etablissement.getNom());
-        } else {
+        } else if (!paiementAttendu) {
             mailService.notifierInscriptionEtablissementRecue(
                     admin.getEmail(), req.getAdminPrenom(), etablissement.getNom());
         }
 
         // Pas de token : le compte ne devient utilisable qu'après validation du dossier.
-        return AuthResponse.builder()
+        AuthResponse reponse = AuthResponse.builder()
                 .id(admin.getId())
                 .email(admin.getEmail())
                 .roles(List.of(ERole.ROLE_ADMIN.name()))
                 .nom(req.getAdminNom())
                 .prenom(req.getAdminPrenom())
                 .build();
+        return new Inscription(etablissement, admin, reponse);
     }
 
     /**
@@ -111,11 +155,12 @@ public class OnboardingService {
                 .nom(nom.trim())
                 .slug(slugUnique(nom))
                 .plan(p)
-                .maxEnseignants(p == Plan.FREE ? freeMaxEnseignants : 0)   // Pro/Enterprise = illimité
+                .maxEnseignants(p == Plan.FREE ? freeMaxEnseignants : 0)   // Pro/Entreprise = illimité
                 .statut(StatutEtablissement.VALIDE)
                 .actif(true)
                 .kioskKey(genererKioskKey())
                 .build());
+        reconnaissanceService.rapprocher(etablissement);
 
         Role adminRole = roleRepository.findByName(ERole.ROLE_ADMIN)
                 .orElseThrow(() -> new RuntimeException("Rôle ADMIN non trouvé en base"));

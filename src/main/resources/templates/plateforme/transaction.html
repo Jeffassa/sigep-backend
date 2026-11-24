@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('SIGEP | Plateforme · Transaction')}"></head>
+<body>
+
+<div th:replace="~{plateforme/fragments :: topbar('transactions')}"></div>
+
+<main class="max-w-[980px] mx-auto px-5 md:px-8 py-10 pb-24">
+
+    <a th:href="@{/plateforme/transactions}" class="inline-flex items-center gap-1.5 text-[13px] text-muted hover:text-ink mb-6">
+        <span class="material-symbols-rounded text-[18px]">arrow_back</span> Toutes les transactions
+    </a>
+
+    <div data-flash th:if="${ok}" class="note note-ok">
+        <svg th:replace="~{admin/fragments :: coche}"></svg><span th:text="${ok}"></span>
+    </div>
+    <div data-flash th:if="${erreur}" class="note note-alerte"><span th:text="${erreur}"></span></div>
+
+    <section class="mb-8" data-reveal>
+        <p class="surtitre">Transaction · <span th:text="${t.fournisseur}">Jèko</span></p>
+        <h1 class="titre-page">
+            <span th:text="${#numbers.formatInteger(t.montantAttendu,1,'WHITESPACE')} + ' ' + ${t.devise}">13 000 XOF</span>
+        </h1>
+        <p class="mt-2"><span class="etat" th:classappend="${t.statut.classe}" th:text="${t.statut.libelle}">À vérifier</span></p>
+    </section>
+
+    <!-- Ce que dit le statut, et ce qu'il demande -->
+    <div th:switch="${t.statut.name()}" class="mb-8" data-reveal>
+        <div th:case="'A_VERIFIER'" class="note note-alerte note-bloc">
+            <p class="font-medium">Le fournisseur n'a pas donné de verdict clair.</p>
+            <p class="text-muted mt-1">L'argent a peut-être été débité. Cherchez la référence ci-dessous dans le tableau de bord
+                <span th:text="${t.fournisseur}">Jèko</span>, puis classez la transaction.</p>
+        </div>
+        <div th:case="'EN_COURS'" class="note note-bloc">
+            <p class="font-medium">Paiement en attente du client.</p>
+            <p class="text-muted mt-1">SIGEP interroge le fournisseur régulièrement : sans verdict à la fin du suivi, la transaction passera « À vérifier ».</p>
+        </div>
+        <div th:case="'REUSSI'" class="note note-ok note-bloc">
+            <p class="font-medium">Payée : l'abonnement a été crédité.</p>
+        </div>
+        <div th:case="'EXPIRE'" class="note note-bloc">
+            <p class="font-medium">Jamais confirmée dans le délai.</p>
+            <p class="text-muted mt-1">Si le fournisseur montre malgré tout un encaissement, confirmez-la payée.</p>
+        </div>
+        <div th:case="'ECHOUE'" class="note note-bloc">
+            <p class="font-medium">Non payée : rien n'a été crédité.</p>
+            <p class="text-muted mt-1">Si le fournisseur montre malgré tout un encaissement, confirmez-la payée.</p>
+        </div>
+    </div>
+
+    <!-- Détail -->
+    <section class="chapitre" data-reveal>
+        <div class="chapitre-tete"><h2 class="titre-section">Détail</h2></div>
+        <dl class="fiche-dl">
+            <dt>Établissement</dt>
+            <dd>
+                <a th:if="${etab != null}" class="underline font-medium"
+                   th:href="@{/plateforme/etablissements/{s}(s=${etab.slug})}" th:text="${etab.nom}">Établissement</a>
+                <span th:if="${etab == null}" class="text-muted" th:text="'Supprimé (#' + ${t.etablissementId} + ')'">—</span>
+            </dd>
+            <dt>Offre</dt><dd th:text="${t.plan} + ' · ' + ${t.mois} + ' mois'">PRO · 1 mois</dd>
+            <dt>Montant attendu</dt><dd class="font-mono" th:text="${#numbers.formatInteger(t.montantAttendu,1,'WHITESPACE')} + ' ' + ${t.devise}">0</dd>
+            <dt>Moyen de paiement</dt><dd th:text="${t.provider} ?: '—'">WAVE</dd>
+            <dt>Référence SIGEP</dt><dd class="font-mono" th:text="${t.reference}">JK-…</dd>
+            <dt>Identifiant chez le fournisseur</dt><dd class="font-mono" th:text="${t.novasendId} ?: '—'">—</dd>
+            <dt>Créée le</dt><dd th:text="${#temporals.format(t.dateCreation,'dd/MM/yyyy à HH:mm')}">—</dd>
+            <dt>Dernière mise à jour</dt><dd th:text="${t.dateMaj != null} ? ${#temporals.format(t.dateMaj,'dd/MM/yyyy à HH:mm')} : '—'">—</dd>
+            <dt>Dernier message</dt><dd th:text="${t.message} ?: '—'">—</dd>
+            <th:block th:if="${t.traitePar != null}">
+                <dt>Tranchée par</dt>
+                <dd><span th:text="${t.traitePar}">admin</span>, le
+                    <span th:text="${#temporals.format(t.dateTraitement,'dd/MM/yyyy à HH:mm')}">—</span></dd>
+                <dt>Constat</dt><dd th:text="${t.noteTraitement}">—</dd>
+            </th:block>
+            <th:block th:if="${paiement != null}">
+                <dt>Paiement crédité</dt>
+                <dd><span class="font-mono" th:text="${#numbers.formatInteger(paiement.montant,1,'WHITESPACE')} + ' ' + (${paiement.devise} ?: ${symbole})">0</span>
+                    · +<span th:text="${paiement.moisCredites}">1</span> mois
+                    <span th:if="${paiement.periodeDebut != null}"
+                          th:text="' · du ' + ${#temporals.format(paiement.periodeDebut,'dd/MM/yyyy')} + ' au ' + ${#temporals.format(paiement.periodeFin,'dd/MM/yyyy')}">—</span></dd>
+            </th:block>
+        </dl>
+    </section>
+
+    <!-- Décision -->
+    <section th:if="${confirmable or classable}" class="chapitre" data-reveal>
+        <div class="chapitre-tete"><h2 class="titre-section">Votre décision</h2></div>
+        <p class="chapitre-note">Décidez seulement après avoir vu la transaction chez le fournisseur. Votre nom,
+            la date et votre constat sont gardés avec la transaction et inscrits au journal de sécurité.</p>
+        <div class="decisions">
+            <form th:if="${confirmable}" th:action="@{/plateforme/transactions/{r}/payee(r=${t.reference})}" method="post"
+                  class="decision decision-payee"
+                  data-confirm="Confirmer cette transaction payée ? L'abonnement de l'établissement sera crédité.">
+                <h3>Elle est payée</h3>
+                <p>Le fournisseur montre l'argent reçu. L'abonnement est crédité de
+                    <span th:text="${t.mois}">1</span> mois de <span th:text="${t.plan}">PRO</span>,
+                    et l'établissement reçoit la confirmation par e-mail.</p>
+                <label th:for="'montant'">Montant reçu (<span th:text="${t.devise}">XOF</span>)</label>
+                <input id="montant" name="montant" type="number" min="1" required class="champ"
+                       th:value="${t.montantAttendu}"/>
+                <label for="note-payee">Ce que vous avez constaté</label>
+                <textarea id="note-payee" name="note" rows="3" maxlength="500" required class="champ"
+                          th:placeholder="'Ex. : encaissement visible chez ' + ${t.fournisseur} + ', même montant, même référence.'"
+                          th:text="${brouillon}"></textarea>
+                <button type="submit" class="btn btn-ink h-11 px-5 mt-4 text-[14px] font-medium">Confirmer payée</button>
+            </form>
+            <form th:if="${classable}" th:action="@{/plateforme/transactions/{r}/non-payee(r=${t.reference})}" method="post"
+                  class="decision decision-non"
+                  data-confirm="Classer cette transaction non payée ? Rien ne sera crédité.">
+                <h3>Elle n'est pas payée</h3>
+                <p>Le fournisseur ne montre aucun encaissement, ou la transaction est inconnue chez lui.
+                    Rien n'est crédité ; la transaction est close.</p>
+                <label for="note-non">Ce que vous avez constaté</label>
+                <textarea id="note-non" name="note" rows="3" maxlength="500" required class="champ"
+                          th:placeholder="'Ex. : aucune transaction à cette référence chez ' + ${t.fournisseur} + '.'"
+                          th:text="${brouillon}"></textarea>
+                <button type="submit" class="btn glass h-11 px-5 mt-4 text-[14px] font-medium">Classer non payée</button>
+            </form>
+        </div>
+    </section>
+
+    <!-- Autres transactions de l'établissement -->
+    <section th:if="${!autres.isEmpty()}" class="chapitre" data-reveal>
+        <div class="chapitre-tete"><h2 class="titre-section">Autres transactions de l'établissement</h2></div>
+        <div class="overflow-x-auto">
+            <table class="registre" data-mobile-keep="2">
+                <thead><tr><th>Date</th><th>Offre</th><th>Montant</th><th>Statut</th><th></th></tr></thead>
+                <tbody>
+                <tr th:each="a : ${autres}" th:classappend="${a.statut.name() == 'A_VERIFIER'} ? 'a-verifier'">
+                    <td th:text="${#temporals.format(a.dateCreation,'dd/MM/yyyy HH:mm')}">--</td>
+                    <td th:text="${a.plan} + ' · ' + ${a.mois} + ' mois'">PRO · 1 mois</td>
+                    <td class="code" th:text="${#numbers.formatInteger(a.montantAttendu,1,'WHITESPACE')} + ' ' + ${a.devise}">0</td>
+                    <td><span class="etat" th:classappend="${a.statut.classe}" th:text="${a.statut.libelle}">Payée</span></td>
+                    <td><a th:href="@{/plateforme/transactions/{r}(r=${a.reference})}" class="underline text-[13px]">Ouvrir</a></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+<div th:replace="~{plateforme/fragments :: dock('transactions')}"></div>
+<div th:replace="~{admin/fragments :: scripts}"></div>
+
+</body>
+</html>

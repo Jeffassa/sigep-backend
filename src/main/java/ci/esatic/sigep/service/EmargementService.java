@@ -55,7 +55,7 @@ public class EmargementService {
                 .orElseThrow(() -> new ResourceNotFoundException("Seance", "id", request.getSeanceId()));
 
         Etablissement etab = etablissementDe(enseignant);
-        boolean enRetard = validerRegles(enseignant, seance, request.getQrToken(), etab);
+        boolean enRetard = validerRegles(enseignant, seance, request.getQrToken(), etab, request.position());
         validerSignature(request.getSignatureBase64());
 
         seance.setStatut(StatutSeance.EMARGE);
@@ -123,10 +123,12 @@ public class EmargementService {
             journaliserRefus(ci.esatic.sigep.entity.TypeEvenement.QR_AUTRE_ETABLISSEMENT,
                     ci.esatic.sigep.entity.SeveriteEvenement.CRITIQUE, enseignant,
                     "QR presente par un enseignant d'un autre etablissement");
-            throw new MetierException("QR_AUTRE_ETABLISSEMENT", "Ce QR n'appartient pas a votre etablissement.");
+            throw new MetierException("QR_AUTRE_ETABLISSEMENT", "Ce QR appartient à un autre établissement. Si vous y enseignez, choisissez-le dans votre profil.");
         }
         // Le QR doit avoir été émis PENDANT la fenêtre de la séance (preuve de présence différée).
         boolean enRetard = verifierFenetreScan(seance, etab, qr.emisLe(), zone);
+        // Position relevée au moment du scan, gardée chiffrée dans la file du téléphone.
+        verifierPosition(etab, enseignant, request.position());
         // Règle 6 : anti-rejeu — un même QR ne sert qu'une fois par enseignant.
         if (!qrReplayGuard.tryConsume(enseignant.getId(), qr.jti())) {
             journaliserRefus(ci.esatic.sigep.entity.TypeEvenement.QR_REJOUE,
@@ -316,7 +318,8 @@ public class EmargementService {
     }
 
     /** Règles d'émargement EN LIGNE : communes + QR frais + appartenance tenant + anti-rejeu. */
-    private boolean validerRegles(Enseignant enseignant, Seance seance, String qrToken, Etablissement etab) {
+    private boolean validerRegles(Enseignant enseignant, Seance seance, String qrToken, Etablissement etab,
+                                  ZoneEmargement.Position position) {
         boolean enRetard = validerReglesCommunes(enseignant, seance, etab);
 
         // Lecture UNIQUE du QR (une seule vérification de signature pour les 3 contrôles).
@@ -332,8 +335,12 @@ public class EmargementService {
             journaliserRefus(ci.esatic.sigep.entity.TypeEvenement.QR_AUTRE_ETABLISSEMENT,
                     ci.esatic.sigep.entity.SeveriteEvenement.CRITIQUE, enseignant,
                     "QR presente par un enseignant d'un autre etablissement");
-            throw new MetierException("QR_AUTRE_ETABLISSEMENT", "Ce QR n'appartient pas a votre etablissement.");
+            throw new MetierException("QR_AUTRE_ETABLISSEMENT", "Ce QR appartient à un autre établissement. Si vous y enseignez, choisissez-le dans votre profil.");
         }
+
+        // Regle 5ter : le téléphone est dans la zone de l'établissement, s'il en a défini une.
+        // Contrôlée avant l'anti-rejeu : un refus ne consomme pas le QR.
+        verifierPosition(etab, enseignant, position);
 
         // Regle 6 : anti-rejeu — un meme token ne peut servir qu'une fois par enseignant
         if (!qrReplayGuard.tryConsume(enseignant.getId(), qr.jti())) {
@@ -344,6 +351,39 @@ public class EmargementService {
         }
 
         return enRetard;
+    }
+
+    /**
+     * Refuse un émargement venu d'ailleurs que la zone de l'établissement. Les coordonnées reçues
+     * ne sont ni enregistrées ni consignées : le journal ne garde que la distance arrondie.
+     */
+    private void verifierPosition(Etablissement etab, Enseignant enseignant, ZoneEmargement.Position position) {
+        ZoneEmargement.Resultat r = ZoneEmargement.verifier(etab, position);
+        switch (r.verdict()) {
+            case SANS_CONTROLE, ACCEPTE -> { }
+            case ABSENTE -> throw new MetierException("POSITION_REQUISE",
+                    "Votre établissement vérifie que vous êtes sur place : autorisez la localisation "
+                    + "de SIGEP et activez-la sur le téléphone, puis rescannez le code.");
+            case IMPRECISE -> throw new MetierException("POSITION_IMPRECISE",
+                    "Position trop imprécise : activez la localisation précise du téléphone, "
+                    + "approchez-vous d'une fenêtre et rescannez le code.");
+            case SIMULEE -> {
+                journaliserRefus(ci.esatic.sigep.entity.TypeEvenement.POSITION_SIMULEE,
+                        ci.esatic.sigep.entity.SeveriteEvenement.ALERTE, enseignant,
+                        "Position fournie par une application de simulation");
+                throw new MetierException("POSITION_SIMULEE",
+                        "Position simulée détectée : désactivez l'application qui modifie votre position.");
+            }
+            case HORS_ZONE -> {
+                journaliserRefus(ci.esatic.sigep.entity.TypeEvenement.POSITION_HORS_ZONE,
+                        ci.esatic.sigep.entity.SeveriteEvenement.ALERTE, enseignant,
+                        "Emargement a " + r.distanceMetres() + " m de l'etablissement (rayon "
+                        + etab.getZoneRayonMetres() + " m)");
+                throw new MetierException("POSITION_HORS_ZONE",
+                        "Vous êtes à environ " + r.distanceMetres() + " m de l'établissement : "
+                        + "l'émargement se fait sur place.");
+            }
+        }
     }
 
     /**

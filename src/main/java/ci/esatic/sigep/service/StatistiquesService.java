@@ -7,7 +7,6 @@ import ci.esatic.sigep.repository.EmargementRepository;
 import ci.esatic.sigep.repository.EnseignantRepository;
 import ci.esatic.sigep.repository.SeanceRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,9 +35,6 @@ public class StatistiquesService {
     private final EmargementRepository emargementRepository;
     private final DemandeRattrapageRepository rattrapageRepository;
 
-    // E8 : forfait horaire du tableau de bord global (approximation admin), configurable.
-    @Value("${app.stats.heures-par-seance:2.0}")
-    private double heuresParSeance;
     private static final DateTimeFormatter SEM_FMT = DateTimeFormatter.ofPattern("dd/MM");
     private static final String[] JOURS = {"Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"};
     private static final String[] CRENEAUX = {"08h", "10h", "12h", "14h", "16h", "18h"};
@@ -65,7 +61,8 @@ public class StatistiquesService {
         m.put("emargees", emargees);
         m.put("taux", taux);
         m.put("tauxDelta", delta);
-        m.put("heures", arrondi(emargees * heuresParSeance));
+        Map<Long, Double> heuresParEnseignant = heuresReelles(debut, fin);
+        m.put("heures", arrondi(heuresParEnseignant.values().stream().mapToDouble(Double::doubleValue).sum()));
         m.put("profsActifs", enseignantRepository.count());
         m.put("rattrapages", rattrapageRepository.countByStatut(StatutDemande.EN_ATTENTE));
 
@@ -99,7 +96,7 @@ public class StatistiquesService {
         m.put("heatmap", buildHeatmap(hmTot, hmEmarg));
 
         // Répartitions
-        List<Map<String, Object>> parEnseignant = parEnseignant(debut, fin);
+        List<Map<String, Object>> parEnseignant = parEnseignant(debut, fin, heuresParEnseignant);
         List<Map<String, Object>> parClasse = mapAgg(seanceRepository.tauxParClasse(debut, fin));
         List<Map<String, Object>> parMatiere = mapAgg(seanceRepository.tauxParMatiere(debut, fin));
         m.put("parEnseignant", parEnseignant);
@@ -114,7 +111,16 @@ public class StatistiquesService {
         return m;
     }
 
-    private List<Map<String, Object>> parEnseignant(LocalDate debut, LocalDate fin) {
+    /** Heures émargées par enseignant, sur la durée réelle de chaque séance. */
+    private Map<Long, Double> heuresReelles(LocalDate debut, LocalDate fin) {
+        Map<Long, Double> heures = new HashMap<>();
+        for (Object[] r : seanceRepository.horairesEmargees(debut, fin)) {
+            heures.merge((Long) r[0], DureeSeance.de((LocalTime) r[1], (LocalTime) r[2]).heures(), Double::sum);
+        }
+        return heures;
+    }
+
+    private List<Map<String, Object>> parEnseignant(LocalDate debut, LocalDate fin, Map<Long, Double> heures) {
         List<Map<String, Object>> out = new ArrayList<>();
         // UNE seule requête d'agrégation (fini le N+1 : findAll + 2 counts par enseignant).
         for (Object[] r : seanceRepository.tauxParEnseignant(debut, fin)) {
@@ -130,7 +136,7 @@ public class StatistiquesService {
             m.put("total", tot);
             m.put("emargees", em);
             m.put("taux", tx);
-            m.put("heures", arrondi(em * heuresParSeance));
+            m.put("heures", arrondi(heures.getOrDefault((Long) r[0], 0.0)));
             m.put("niveau", Assiduite.niveau(tx));
             out.add(m);
         }
@@ -179,12 +185,23 @@ public class StatistiquesService {
 
     private List<Map<String, Object>> tendance(int nbSemaines) {
         LocalDate lundi = LocalDate.now().with(DayOfWeek.MONDAY);
+        LocalDate premierLundi = lundi.minusWeeks(nbSemaines - 1L);
+        // Une seule requête groupée par jour, ventilée ensuite par semaine : deux comptages par
+        // semaine coûtaient seize trajets jusqu'à la base, soit plus d'une seconde en production.
+        long[] prevues = new long[nbSemaines];
+        long[] emargees = new long[nbSemaines];
+        for (Object[] r : seanceRepository.activiteParJour(premierLundi, lundi.plusDays(6))) {
+            int semaine = (int) (java.time.temporal.ChronoUnit.DAYS.between(premierLundi, (LocalDate) r[0]) / 7);
+            if (semaine < 0 || semaine >= nbSemaines) continue;
+            prevues[semaine] += ((Number) r[1]).longValue();
+            emargees[semaine] += r[2] == null ? 0 : ((Number) r[2]).longValue();
+        }
         List<Map<String, Object>> out = new ArrayList<>();
         for (int i = nbSemaines - 1; i >= 0; i--) {
             LocalDate l = lundi.minusWeeks(i);
-            LocalDate dim = l.plusDays(6);
-            long s = seanceRepository.countAllByDateBetween(l, dim);
-            long e = seanceRepository.countAllEmargesByDateBetween(l, dim);
+            int k = nbSemaines - 1 - i;
+            long s = prevues[k];
+            long e = emargees[k];
             Map<String, Object> mm = new HashMap<>();
             mm.put("label", l.format(SEM_FMT));
             mm.put("taux", pct(e, s));

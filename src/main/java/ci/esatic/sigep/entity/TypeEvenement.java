@@ -19,7 +19,7 @@ public enum TypeEvenement {
     /** Code à 6 chiffres erroné. En rafale : quelqu'un tente de deviner le second facteur. */
     OTP_ECHOUE("Second facteur refusé"),
 
-    /** Ouverture par code de secours. Hors incident connu, c'est le signe d'une compromission. */
+    /** Ne se produit plus : conservé pour relire les évènements déjà au journal. */
     OTP_CODE_SECOURS("Code de secours utilisé"),
 
     /** Plafond de requêtes atteint : flood, balayage, ou force brute. */
@@ -37,6 +37,12 @@ public enum TypeEvenement {
     /** Webhook de paiement dont la signature ne correspond pas : appel forgé, ou secret désaligné. */
     WEBHOOK_SIGNATURE_INVALIDE("Webhook non signé ou invalide"),
 
+    /** Émargement tenté hors de la zone de l'établissement : QR transmis à un absent, typiquement. */
+    POSITION_HORS_ZONE("Émargement hors de l'établissement"),
+
+    /** Position fournie par une application de simulation de position. */
+    POSITION_SIMULEE("Position simulée"),
+
     /** Plafond mensuel d'émargements hors-ligne atteint par un enseignant. */
     PLAFOND_HORS_LIGNE("Plafond hors-ligne atteint"),
 
@@ -49,7 +55,13 @@ public enum TypeEvenement {
      * <p>Consignée au même titre que les incidents : savoir QUI a coupé les sessions d'un
      * établissement, et quand, fait partie de ce qu'on veut relire après coup.
      */
-    REMEDIATION("Action corrective");
+    REMEDIATION("Action corrective"),
+
+    /**
+     * Jeton de session déjà remplacé, présenté de nouveau : il en existe une copie. Toutes les
+     * sessions du compte ont été fermées.
+     */
+    SESSION_COPIEE("Session copiée");
 
     private final String libelle;
 

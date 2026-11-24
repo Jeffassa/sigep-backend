@@ -84,6 +84,23 @@ public class PaiementIntent {
     @Column(name = "date_maj")
     private LocalDateTime dateMaj;
 
+    /** Super administrateur qui a tranché la transaction à la main ; vide si le fournisseur l'a fait. */
+    @Column(name = "traite_par", length = 180)
+    private String traitePar;
+
+    @Column(name = "date_traitement")
+    private LocalDateTime dateTraitement;
+
+    /** Pourquoi : ce qui a été constaté chez le fournisseur. */
+    @Column(name = "note_traitement", length = 500)
+    private String noteTraitement;
+
+    /** Fournisseur, déduit de la référence (les références Jèko commencent par « JK- »). */
+    @Transient
+    public String getFournisseur() {
+        return reference != null && reference.startsWith("JK-") ? "Jèko" : "NovaSend";
+    }
+
     @PrePersist
     void onCreate() {
         if (dateCreation == null) dateCreation = LocalDateTime.now();

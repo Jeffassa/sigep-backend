@@ -33,12 +33,11 @@ class CarteQrAccueilTest {
     void laCarteDAccueil_dessineUnCodeEtNonUnCarreVide() throws Exception {
         String html = mockMvc.perform(get("/")).andReturn().getResponse().getContentAsString();
 
-        int carte = html.indexOf("Émargement QR");
+        int carte = html.indexOf("class=\"qr-box\"");
         assertThat(carte).as("la carte doit exister").isNotNegative();
 
-        String bloc = html.substring(carte, Math.min(carte + 4000, html.length()));
-        assertThat(bloc).as("le motif doit etre dessine, pas laisse a un fond CSS")
-                .contains("qr-box").contains("<path");
+        String bloc = html.substring(carte, Math.min(carte + 1000, html.length()));
+        assertThat(bloc).as("le motif doit etre dessine, pas laisse a un fond CSS").contains("<path");
         assertThat(bloc).doesNotContain("<div class=\"qr-box\"></div>");
 
         // Le fond qui ne dessinait rien ne doit pas revenir.

@@ -17,6 +17,7 @@ import ci.esatic.sigep.repository.UserRepository;
 import ci.esatic.sigep.security.CleApiAuthFilter;
 import ci.esatic.sigep.security.JwtService;
 import ci.esatic.sigep.service.CleApiService;
+import ci.esatic.sigep.service.JetonEcranSalle;
 import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -65,6 +66,7 @@ class EtablissementSuspenduTest {
     @Autowired private CleApiRepository cleApiRepository;
     @Autowired private PasswordEncoder passwordEncoder;
     @Autowired private JwtService jwtService;
+    @Autowired private JetonEcranSalle jetonEcranSalle;
 
     private Etablissement ecole;
     private User compte;
@@ -160,11 +162,15 @@ class EtablissementSuspenduTest {
 
     @Test
     void lEcranDeSalle_sEteintQuandLAccesEstSuspendu() throws Exception {
-        mockMvc.perform(get("/api/qr/display").param("etab", ecole.getSlug()).param("key", ecole.getKioskKey()))
+        jakarta.servlet.http.Cookie autorisation = new jakarta.servlet.http.Cookie(JetonEcranSalle.COOKIE,
+                jetonEcranSalle.cookie(ecole, false).getValue());
+        mockMvc.perform(get("/api/qr/display").param("etab", ecole.getSlug()).cookie(autorisation))
                 .andExpect(status().isOk());
 
         expirer();
 
+        mockMvc.perform(get("/api/qr/display").param("etab", ecole.getSlug()).cookie(autorisation))
+                .andExpect(status().isForbidden());
         mockMvc.perform(get("/api/qr/display").param("etab", ecole.getSlug()).param("key", ecole.getKioskKey()))
                 .andExpect(status().isForbidden());
     }

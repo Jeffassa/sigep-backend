@@ -28,6 +28,7 @@ import static org.mockito.Mockito.when;
 class MobileMoneyServiceTest {
 
     private NovaSendService novaSend;
+    private JekoService jeko;
     private PaiementIntentStore store;
     private PlanService planService;
     private MobileMoneyService service;
@@ -39,7 +40,8 @@ class MobileMoneyServiceTest {
         novaSend = Mockito.mock(NovaSendService.class);
         store = Mockito.mock(PaiementIntentStore.class);
         planService = Mockito.mock(PlanService.class);
-        service = new MobileMoneyService(novaSend, store, planService);
+        jeko = Mockito.mock(JekoService.class);
+        service = new MobileMoneyService(novaSend, jeko, store, planService);
         ReflectionTestUtils.setField(service, "baseUrl", "https://sigep.store");
         ReflectionTestUtils.setField(service, "expirationMinutes", 30);
         ReflectionTestUtils.setField(service, "suiviHeures", 48);
@@ -162,5 +164,82 @@ class MobileMoneyServiceTest {
         assertThat(service.normaliserMsisdn("0700000000")).isNull();   // sans indicatif : refusé
         assertThat(service.normaliserMsisdn("abc")).isNull();
         assertThat(service.normaliserMsisdn(null)).isNull();
+    }
+
+    // ------------------------------------------------------------------ Jèko
+
+    private static final String REF_JEKO = "JK-ref-456";
+
+    private PaiementIntent intentJeko() {
+        return PaiementIntent.builder()
+                .reference(REF_JEKO).etablissementId(4L).plan(Plan.PRO).mois(2)
+                .montantAttendu(26000L).devise("XOF").provider("WAVE").novasendId("pr-9")
+                .statut(StatutIntent.EN_COURS).dateCreation(LocalDateTime.now())
+                .build();
+    }
+
+    private JekoService.Lecture lectureJeko(String statut, long montant, String devise) {
+        return new JekoService.Lecture(JekoService.Etat.VERDICT,
+                new JekoService.Demande("pr-9", REF_JEKO, statut, null, montant, devise, null));
+    }
+
+    @Test
+    void jeko_paiementConformeEnCentimes_crediteLAbonnement() {
+        when(store.parReference(REF_JEKO)).thenReturn(Optional.of(intentJeko()));
+        when(jeko.lire("pr-9")).thenReturn(lectureJeko("success", 2_600_000L, "XOF"));
+        when(store.crediter(REF_JEKO, 26000L)).thenReturn(StatutIntent.REUSSI);
+
+        assertThat(service.verifierEtCrediter(REF_JEKO)).isEqualTo(StatutIntent.REUSSI);
+        verify(store).crediter(REF_JEKO, 26000L);
+        verify(novaSend, never()).statut(anyString());   // un paiement Jèko ne se lit que chez Jèko
+    }
+
+    @Test
+    void jeko_montantExprimeEnFrancs_estAussiReconnu() {
+        when(store.parReference(REF_JEKO)).thenReturn(Optional.of(intentJeko()));
+        when(jeko.lire("pr-9")).thenReturn(lectureJeko("success", 26000L, "XOF"));
+        when(store.crediter(REF_JEKO, 26000L)).thenReturn(StatutIntent.REUSSI);
+
+        assertThat(service.verifierEtCrediter(REF_JEKO)).isEqualTo(StatutIntent.REUSSI);
+    }
+
+    @Test
+    void jeko_montantDivergent_partEnArbitrage_sansCredit() {
+        when(store.parReference(REF_JEKO)).thenReturn(Optional.of(intentJeko()));
+        when(jeko.lire("pr-9")).thenReturn(lectureJeko("success", 100_000L, "XOF"));   // 1 000 F au lieu de 26 000
+        when(store.marquer(eq(REF_JEKO), eq(StatutIntent.A_VERIFIER), anyString())).thenReturn(StatutIntent.A_VERIFIER);
+
+        assertThat(service.verifierEtCrediter(REF_JEKO)).isEqualTo(StatutIntent.A_VERIFIER);
+        verify(store, never()).crediter(anyString(), anyLong());
+    }
+
+    @Test
+    void jeko_paiementEchoue_estClos_sansCredit() {
+        when(store.parReference(REF_JEKO)).thenReturn(Optional.of(intentJeko()));
+        when(jeko.lire("pr-9")).thenReturn(lectureJeko("error", 0L, ""));
+        when(store.marquer(eq(REF_JEKO), eq(StatutIntent.ECHOUE), anyString())).thenReturn(StatutIntent.ECHOUE);
+
+        assertThat(service.verifierEtCrediter(REF_JEKO)).isEqualTo(StatutIntent.ECHOUE);
+        verify(store, never()).crediter(anyString(), anyLong());
+    }
+
+    @Test
+    void jeko_injoignable_neClotRien() {
+        when(store.parReference(REF_JEKO)).thenReturn(Optional.of(intentJeko()));
+        when(jeko.lire("pr-9")).thenReturn(new JekoService.Lecture(JekoService.Etat.INJOIGNABLE, null));
+
+        assertThat(service.verifierEtCrediter(REF_JEKO)).isEqualTo(StatutIntent.EN_COURS);
+        verify(store, never()).marquer(anyString(), org.mockito.ArgumentMatchers.any(), anyString());
+        verify(store, never()).crediter(anyString(), anyLong());
+    }
+
+    @Test
+    void jeko_estPrioritaireSurNovaSend_etNEstJamaisUnModeTest() {
+        when(jeko.isEnabled()).thenReturn(true);
+        when(novaSend.isEnabled()).thenReturn(true);
+        when(novaSend.estSandbox()).thenReturn(true);
+
+        assertThat(service.passerelle()).isEqualTo("JEKO");
+        assertThat(service.estSandbox()).isFalse();
     }
 }

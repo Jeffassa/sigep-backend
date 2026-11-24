@@ -127,7 +127,15 @@ class AdminWebIntegrationTest {
     void inscription_afficheLeFormulairePublic() throws Exception {
         mockMvc.perform(get("/inscription"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Créer mon espace")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Créer mon espace")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("id=\"forceLibelle\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("Pas dans la liste"))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("Force du mot de passe</span>"))));
+        // L'attribution exigée par la licence ODbL de l'annuaire figure dans les mentions légales.
+        mockMvc.perform(get("/mentions-legales"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("contributeurs")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("openstreetmap.org/copyright")));
     }
 
     @Test
@@ -162,6 +170,15 @@ class AdminWebIntegrationTest {
                 // Titre de page stable (les libellés des sections de paiement évoluent).
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Abonnement")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Mobile Money")));
+    }
+
+    @Test
+    @WithMockUser(username = "admin@esatic.ci", roles = "ADMIN")
+    void ecranEmargement_devraitSeRendreCorrectement() throws Exception {
+        // L'application y renvoie après chaque renouvellement de la clé d'écran.
+        mockMvc.perform(get("/admin/ecran-emargement"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Ouvrir l'écran de la salle")));
     }
 
     @Test

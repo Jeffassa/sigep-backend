@@ -23,5 +23,6 @@ Disallow: /admin/
 Disallow: /plateforme
 Disallow: /api
 Disallow: /actuator
+Disallow: /telecharger/
 
 Sitemap: https://sigep.store/sitemap.xml

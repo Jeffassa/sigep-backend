@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<!--
+  Fragments des pages thématiques : une page par besoin que l'on tape dans un moteur de recherche
+  (émargement par QR code, heures des vacataires, état pour la paie, Côte d'Ivoire).
+
+  Elles reprennent le papier et la typographie de l'accueil (registre.css), sans son mouvement :
+  pas de GSAP ni de Three.js, une page de lecture doit s'afficher d'un coup, même sur un téléphone
+  modeste. Leurs données structurées (fil d'Ariane, questions) ne décrivent que ce que la page
+  montre à l'écran.
+-->
+<head th:fragment="head(titre, description)">
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title th:text="${titre}">SIGEP</title>
+    <meta name="description" th:content="${description}"/>
+    <meta name="robots" content="index,follow,max-image-preview:large"/>
+    <link rel="canonical" th:href="${canonicalUrl}"/>
+
+    <meta property="og:type" content="article"/>
+    <meta property="og:site_name" th:content="${marque} ?: 'SIGEP'"/>
+    <meta property="og:title" th:content="${titre}"/>
+    <meta property="og:description" th:content="${description}"/>
+    <meta property="og:url" th:content="${canonicalUrl}"/>
+    <meta property="og:locale" content="fr_FR"/>
+    <meta property="og:image" th:content="${baseUrl} + '/images/og-sigep.png?v=3'"/>
+    <meta property="og:image:width" content="1200"/>
+    <meta property="og:image:height" content="630"/>
+    <meta property="og:image:alt" content="SIGEP, émargement des enseignants par QR code"/>
+    <meta name="twitter:card" content="summary_large_image"/>
+    <meta name="twitter:title" th:content="${titre}"/>
+    <meta name="twitter:description" th:content="${description}"/>
+    <meta name="twitter:image" th:content="${baseUrl} + '/images/og-sigep.png?v=3'"/>
+
+    <link rel="icon" th:href="@{/favicon.ico}" sizes="any"/>
+    <link rel="apple-touch-icon" th:href="@{/images/logo_sigep.png}"/>
+    <meta name="theme-color" content="#0f2f5f"/>
+    <script th:nonce="${cspNonce}" th:if="${plausibleDomain}" defer th:data-domain="${plausibleDomain}"
+            src="https://plausible.io/js/script.js"></script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="crossorigin"/>
+    <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&amp;family=Bodoni+Moda:ital,opsz,wght@1,6..96,400..700&amp;family=DM+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" th:href="@{/css/registre.css}"/>
+    <link rel="stylesheet" th:href="@{/css/guides.css}"/>
+</head>
+<body>
+
+<!-- En-tête : la marque ramène à l'accueil, le reste mène aux deux actions possibles. -->
+<nav th:fragment="entete" class="nav marge" aria-label="Navigation principale">
+    <a class="marque" th:href="@{/}" th:text="${marque} ?: 'SIGEP'">SIGEP</a>
+    <a class="optionnel" th:href="@{/} + '#tarifs'">Tarifs</a>
+    <a th:href="@{/admin-login}">Connexion</a>
+    <a class="bouton bouton-petit" th:href="@{/inscription}">Démarrer gratuitement</a>
+</nav>
+
+<!-- Fil d'Ariane visible ; le même chemin est décrit en données dans chaque page. -->
+<nav th:fragment="fil(libelle)" class="fil marge" aria-label="Fil d'Ariane">
+    <a th:href="@{/}">Accueil</a> <span aria-hidden="true">/</span> <span th:text="${libelle}">Page</span>
+</nav>
+
+<!-- Les autres pages : chacune renvoie vers les trois autres, et toutes vers l'inscription. -->
+<section th:fragment="autres(courant)" class="autres seyes" aria-labelledby="titre-autres">
+    <div class="marge">
+        <h2 id="titre-autres" class="titre-section">Pour aller plus loin</h2>
+        <ul class="cartes">
+            <li th:unless="${courant == 'qr'}"><a th:href="@{/emargement-qr-code}"><strong>Émargement par QR code</strong><span>Le code en salle, la signature sur le téléphone, la séance comptée.</span></a></li>
+            <li th:unless="${courant == 'vacataires'}"><a th:href="@{/suivi-heures-vacataires}"><strong>Heures des vacataires</strong><span>Un seul compte pour plusieurs établissements, chaque heure au bon endroit.</span></a></li>
+            <li th:unless="${courant == 'paie'}"><a th:href="@{/etat-heures-paie-enseignants}"><strong>État des heures pour la paie</strong><span>Le fichier du mois, vérifié à l'écran avant de partir au service paie.</span></a></li>
+            <li th:unless="${courant == 'ci'}"><a th:href="@{/logiciel-emargement-cote-d-ivoire}"><strong>SIGEP en Côte d'Ivoire</strong><span>FCFA, Mobile Money, connexion intermittente : pensé pour ici.</span></a></li>
+        </ul>
+    </div>
+</section>
+
+<footer th:fragment="fin" class="fin">
+    <div class="large">
+        <p class="titre2">Rangez la feuille de présence. <span class="it">Gardez la signature.</span></p>
+        <a class="bouton bouton-or" th:href="@{/inscription}">Inscrire mon établissement</a>
+        <div class="pied">
+            <span>© 2026 <span th:text="${marque} ?: 'SIGEP'">SIGEP</span> · Système Intelligent de Gestion des Enseignements et du Pointage</span>
+            <nav aria-label="Informations légales">
+                <a th:href="'mailto:' + (${contactPlateforme} ?: 'contact@sigep.store')">Contact</a>
+                <a th:href="@{/mentions-legales}">Mentions légales</a>
+                <a th:href="@{/confidentialite}">Confidentialité</a>
+                <a th:href="@{/cgu}">CGU</a>
+            </nav>
+        </div>
+    </div>
+    <div th:replace="~{admin/fragments :: cookieConsent}"></div>
+</footer>
+
+</body>
+</html>

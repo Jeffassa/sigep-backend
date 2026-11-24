@@ -81,36 +81,24 @@ class PaiementIntegrationTest {
     }
 
     @Test
-    void validerUnRenouvellement_enregistreUnPaiement_etProlonge() throws Exception {
-        mockMvc.perform(post("/plateforme/abonnements/prolonger").with(user(superAdmin)).with(csrf())
-                        .param("slug", cible.getSlug()).param("mois", "3")
-                        .param("montant", "30000").param("reference", "TX-001"))
-                .andExpect(status().is3xxRedirection());
+    void aucunAbonnementNeSeProlongeALaMain() throws Exception {
+        // L'ancien formulaire « Valider » créditait un abonnement sans aucune transaction.
+        int code = mockMvc.perform(post("/plateforme/abonnements/prolonger").with(user(superAdmin)).with(csrf())
+                        .param("slug", cible.getSlug()).param("mois", "12").param("montant", "0"))
+                .andReturn().getResponse().getStatus();
+        assertThat(code).isGreaterThanOrEqualTo(400);
 
         em.flush(); em.clear();
-        List<Paiement> paiements = paiementRepository.findByEtablissementIdOrderByDatePaiementDesc(cible.getId());
-        assertThat(paiements).hasSize(1);
-        assertThat(paiements.get(0).getMontant()).isEqualTo(30000L);
-        assertThat(paiements.get(0).getMoisCredites()).isEqualTo(3);
-        assertThat(paiements.get(0).getReference()).isEqualTo("TX-001");
-        assertThat(paiements.get(0).getEnregistrePar()).isEqualTo(superAdmin.getEmail());
-        assertThat(paiementRepository.totalEncaisse()).isEqualTo(30000L);
-
-        // L'abonnement a bien été prolongé (date d'expiration désormais renseignée et future).
-        assertThat(etablissementRepository.findBySlug(cible.getSlug()).orElseThrow().getDateExpiration())
-                .isNotNull();
+        assertThat(paiementRepository.findByEtablissementIdOrderByDatePaiementDesc(cible.getId())).isEmpty();
+        assertThat(etablissementRepository.findBySlug(cible.getSlug()).orElseThrow().getDateExpiration()).isNull();
     }
 
     @Test
-    void montant_absent_utilise_le_tarif_du_plan() throws Exception {
-        // Pas de montant fourni → mois × prix du plan Pro. On lit le tarif CONFIGURÉ plutôt que
-        // de le coder en dur : le test reste valable si la grille tarifaire ou la devise change.
-        long attendu = 2 * planService.prixMensuel(ci.esatic.sigep.entity.Plan.PRO);
-        mockMvc.perform(post("/plateforme/abonnements/prolonger").with(user(superAdmin)).with(csrf())
-                        .param("slug", cible.getSlug()).param("mois", "2"))
-                .andExpect(status().is3xxRedirection());
-        em.flush(); em.clear();
-        assertThat(paiementRepository.totalEncaisse()).isEqualTo(attendu);
+    void laPageAbonnements_nOffreAucunFormulaireDeValidation() throws Exception {
+        mockMvc.perform(get("/plateforme/abonnements").with(user(superAdmin)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(cible.getNom())))
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("abonnements/prolonger"))));
     }
 
     @Test

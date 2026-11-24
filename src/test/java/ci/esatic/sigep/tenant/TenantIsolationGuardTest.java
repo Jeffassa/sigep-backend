@@ -48,7 +48,19 @@ class TenantIsolationGuardTest {
                    // avant toute identification d'etablissement, et ceux qui comptent le plus
                    // sont les tentatives de FRANCHIR le cloisonnement — les filtrer par tenant
                    // reviendrait a les cacher au super-administrateur.
-                   "EvenementSecurite");
+                   "EvenementSecurite",
+                   // Annonce de la plateforme : publiee par le super-administrateur et adressee
+                   // a TOUS les etablissements ; elle ne contient aucune donnee d'un etablissement.
+                   "Annonce",
+                   // APK de l'application Android : depose par la plateforme, le meme pour tous
+                   // les etablissements ; aucune donnee d'un etablissement.
+                   "ApplicationMobile", "ApplicationMobileMorceau",
+                   // Annuaire des ecoles de l'UEMOA, collecte depuis OpenStreetMap : donnees
+                   // publiques, communes a toutes les inscriptions ; aucun client n'y figure.
+                   "AnnuaireEtablissement", "AnnuaireCollecte",
+                   // Listes officielles des etablissements autorises par l'Etat (MESRS, MENA) :
+                   // donnees publiques, communes a toutes les inscriptions ; aucun client n'y figure.
+                   "EtablissementOfficiel", "ImportOfficiel");
 
     /**
      * Requêtes natives autorisées à ne pas filtrer par établissement.

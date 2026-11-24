@@ -19,6 +19,7 @@ COPY --from=build /app/target/sigep-backend-*.jar app.jar
 USER app
 EXPOSE 8080
 # egd=urandom : évite l'attente d'entropie au démarrage (warning SecureRandom SHA1PRNG)
-ENV JAVA_OPTS="-XX:MaxRAMPercentage=75 -Djava.security.egd=file:/dev/./urandom"
+# TieredStopAtLevel=1 : un démarrage plus court au prix d'un pic de performance moindre, sans objet ici.
+ENV JAVA_OPTS="-XX:MaxRAMPercentage=75 -XX:TieredStopAtLevel=1 -Djava.security.egd=file:/dev/./urandom"
 # Démarrage. Le profil et les secrets sont fournis par variables d'environnement.
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

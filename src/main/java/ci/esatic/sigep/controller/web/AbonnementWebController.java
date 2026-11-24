@@ -8,7 +8,6 @@ import ci.esatic.sigep.service.StripeService;
 import ci.esatic.sigep.tenant.plan.PlanService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
@@ -29,16 +28,14 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @Controller
 @RequiredArgsConstructor
 @Slf4j
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN','DIRECTION','SCOLARITE','COMPTABILITE')")
 public class AbonnementWebController {
-
-    @Value("${app.platform.owner-email:assalendahjeanfrancois@gmail.com}")
-    private String ownerEmail;
 
     private final StripeService stripeService;
     private final StripePaymentService stripePaymentService;
     private final PlanService planService;
     private final ci.esatic.sigep.service.MobileMoneyService mobileMoneyService;
+    private final MobileMoneyWebController mobileMoneyWeb;
 
     @GetMapping("/admin/abonnement")
     public String abonnement(@AuthenticationPrincipal User user,
@@ -61,9 +58,9 @@ public class AbonnementWebController {
             }
         }
 
-        model.addAttribute("ownerEmail", ownerEmail);
         model.addAttribute("stripeEnabled", stripeService.isEnabled());
         model.addAttribute("momoEnabled", mobileMoneyService.isEnabled());
+        model.addAttribute("momoPasserelle", mobileMoneyService.passerelle());
         model.addAttribute("momoSandbox", mobileMoneyService.isEnabled() && mobileMoneyService.estSandbox());
         model.addAttribute("prixPro", planService.prixMensuel(Plan.PRO));
         model.addAttribute("prixEnterprise", planService.prixMensuel(Plan.ENTERPRISE));
@@ -72,6 +69,26 @@ public class AbonnementWebController {
         model.addAttribute("plansPayants", planService.plansPayants());
         model.addAttribute("paiementReconcilie", paiementReconcilie);
         return "admin/abonnement";
+    }
+
+    /**
+     * Le formulaire unique de la page : la carte part chez Stripe, tout autre moyen est un
+     * opérateur Mobile Money confié à Jèko. Chaque prestataire garde sa route et ses contrôles.
+     */
+    @PostMapping("/admin/abonnement/regler")
+    public String regler(@AuthenticationPrincipal User user,
+                         @RequestParam(defaultValue = "PRO") String plan,
+                         @RequestParam(defaultValue = "1") int mois,
+                         @RequestParam(required = false) String moyen,
+                         RedirectAttributes ra) {
+        if (moyen == null || moyen.isBlank()) {
+            ra.addFlashAttribute("erreurAbo", "Choisissez un moyen de paiement.");
+            return "redirect:/admin/abonnement";
+        }
+        if ("carte".equalsIgnoreCase(moyen.trim())) {
+            return payer(user, plan, mois, ra);
+        }
+        return mobileMoneyWeb.payerAvecJeko(user, plan, mois, moyen.trim(), ra);
     }
 
     /**

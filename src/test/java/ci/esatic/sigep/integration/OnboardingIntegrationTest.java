@@ -36,6 +36,7 @@ class OnboardingIntegrationTest {
     // Mocké pour ne pas commiter l'admin/établissement par défaut dans la base H2
     // partagée entre contextes de test (sinon collision avec d'autres tests).
     @MockitoBean private DataInitializer dataInitializer;
+    @MockitoBean private ci.esatic.sigep.service.MailService mailService;
 
     @Autowired private MockMvc mockMvc;
     @Autowired private ObjectMapper objectMapper;
@@ -68,7 +69,7 @@ class OnboardingIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.token").doesNotExist())
-                .andExpect(jsonPath("$.data.roles[0]").value("ROLE_ADMIN"));
+                .andExpect(jsonPath("$.data.suite").value("examen"));
 
         var etab = etablissementRepository.findBySlug("universite-atlantique").orElseThrow();
         assertThat(etab.getStatut()).isEqualTo(ci.esatic.sigep.entity.StatutEtablissement.EN_ATTENTE);
@@ -78,16 +79,65 @@ class OnboardingIntegrationTest {
     }
 
     @Test
-    void email_admin_en_double_est_refuse() throws Exception {
-        mockMvc.perform(post("/api/saas/etablissements")
+    void planPayant_sansPaiementEnLigne_devientUneInscriptionGratuite() throws Exception {
+        // Jèko n'est pas configuré ici : un plan payant choisi sur l'accueil ne doit ni échouer ni
+        // promettre un paiement, mais créer l'espace comme une inscription ordinaire.
+        String corps = objectMapper.writeValueAsString(Map.of(
+                "nomEtablissement", "Collège Sans Paiement", "adminEmail", "sans-paiement@college.ci",
+                "adminPassword", "Secret@2026", "plan", "PRO"));
+        mockMvc.perform(post("/api/saas/etablissements").contentType(MediaType.APPLICATION_JSON).content(corps))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("en cours d'analyse")))
+                .andExpect(jsonPath("$.data.paiementPage").doesNotExist());
+        var etab = etablissementRepository.findBySlug("college-sans-paiement").orElseThrow();
+        assertThat(etab.getStatut()).isEqualTo(ci.esatic.sigep.entity.StatutEtablissement.EN_ATTENTE);
+        assertThat(etab.getPlan()).isEqualTo(ci.esatic.sigep.entity.Plan.FREE);
+    }
+
+    @Test
+    void email_admin_en_double_ne_cree_rien_et_ne_se_trahit_pas() throws Exception {
+        String premiere = mockMvc.perform(post("/api/saas/etablissements")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body("École A", "dup@ecole.ci")))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
 
-        mockMvc.perform(post("/api/saas/etablissements")
+        String seconde = mockMvc.perform(post("/api/saas/etablissements")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body("École B", "dup@ecole.ci")))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        // La réponse est la même que pour une adresse nouvelle ; rien n'est créé, et seul le
+        // titulaire de l'adresse est prévenu, par e-mail.
+        assertThat(seconde).isEqualTo(premiere);
+        assertThat(etablissementRepository.findBySlug("ecole-b")).isEmpty();
+        org.mockito.Mockito.verify(mailService).notifierInscriptionAdresseConnue("dup@ecole.ci");
+    }
+
+    @Test
+    void unMotDePasseFaible_estRefuse_sansRienCreer_etSansTrahirLAdresse() throws Exception {
+        mockMvc.perform(post("/api/saas/etablissements")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body("École Existante", "deja@ecole.ci")))
+                .andExpect(status().isOk());
+        String faible = "{\"nomEtablissement\":\"École Faible\",\"adminEmail\":\"%s\",\"adminPassword\":\"azerty12\"}";
+
+        String nouvelle = mockMvc.perform(post("/api/saas/etablissements")
+                        .contentType(MediaType.APPLICATION_JSON).content(faible.formatted("neuve@ecole.ci")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.data.code").value("MOT_DE_PASSE_FAIBLE"))
+                .andReturn().getResponse().getContentAsString();
+        String connue = mockMvc.perform(post("/api/saas/etablissements")
+                        .contentType(MediaType.APPLICATION_JSON).content(faible.formatted("deja@ecole.ci")))
+                .andExpect(status().isBadRequest())
+                .andReturn().getResponse().getContentAsString();
+
+        // Même refus pour une adresse nouvelle ou déjà inscrite : la règle passe avant la recherche.
+        assertThat(connue).isEqualTo(nouvelle);
+        assertThat(nouvelle).contains("au moins 10 caractères").contains("une majuscule");
+        assertThat(etablissementRepository.findBySlug("ecole-faible")).isEmpty();
+        org.mockito.Mockito.verify(mailService, org.mockito.Mockito.never()).notifierInscriptionAdresseConnue("deja@ecole.ci");
     }
 
     @Test

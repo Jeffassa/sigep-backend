@@ -30,6 +30,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -77,15 +78,47 @@ class SuperAdminMvp1IntegrationTest {
     }
 
     @Test
-    void superAdmin_changeLePlan_ajusteAussiLeQuota() throws Exception {
+    void superAdmin_nActivePasUnPlanPayantSansPaiement() throws Exception {
         mockMvc.perform(post("/plateforme/etablissements/plan").with(user(superAdmin)).with(csrf())
                         .param("slug", cible.getSlug()).param("plan", "PRO"))
-                .andExpect(status().is3xxRedirection());
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attributeExists("erreur"));
 
         em.flush(); em.clear();
         Etablissement maj = etablissementRepository.findBySlug(cible.getSlug()).orElseThrow();
-        assertThat(maj.getPlan()).isEqualTo(Plan.PRO);
-        assertThat(maj.getMaxEnseignants()).isZero(); // illimité
+        assertThat(maj.getPlan()).isEqualTo(Plan.FREE);
+        assertThat(maj.getMaxEnseignants()).isEqualTo(10);
+    }
+
+    @Test
+    void superAdmin_repasseUnPlanPayantAuGratuit() throws Exception {
+        cible.setPlan(Plan.PRO); cible.setMaxEnseignants(0); cible.setDateExpiration(java.time.LocalDate.now().plusMonths(2));
+        etablissementRepository.save(cible);
+        mockMvc.perform(post("/plateforme/etablissements/plan").with(user(superAdmin)).with(csrf())
+                        .param("slug", cible.getSlug()).param("plan", "FREE"))
+                .andExpect(flash().attributeExists("ok"));
+
+        em.flush(); em.clear();
+        Etablissement maj = etablissementRepository.findBySlug(cible.getSlug()).orElseThrow();
+        assertThat(maj.getPlan()).isEqualTo(Plan.FREE);
+        assertThat(maj.getMaxEnseignants()).isEqualTo(10);
+        assertThat(maj.getDateExpiration()).isNull();
+    }
+
+    @Test
+    void leQuotaDuPlanGratuit_neDepassePasSaLimite() throws Exception {
+        mockMvc.perform(post("/plateforme/etablissements/quota").with(user(superAdmin)).with(csrf())
+                        .param("slug", cible.getSlug()).param("maxEnseignants", "0"))
+                .andExpect(flash().attributeExists("erreur"));
+        mockMvc.perform(post("/plateforme/etablissements/quota").with(user(superAdmin)).with(csrf())
+                        .param("slug", cible.getSlug()).param("maxEnseignants", "50"))
+                .andExpect(flash().attributeExists("erreur"));
+        mockMvc.perform(post("/plateforme/etablissements/quota").with(user(superAdmin)).with(csrf())
+                        .param("slug", cible.getSlug()).param("maxEnseignants", "5"))
+                .andExpect(flash().attributeExists("ok"));
+
+        em.flush(); em.clear();
+        assertThat(etablissementRepository.findBySlug(cible.getSlug()).orElseThrow().getMaxEnseignants()).isEqualTo(5);
     }
 
     @Test

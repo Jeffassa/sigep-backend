@@ -17,9 +17,18 @@ public class InscriptionEtablissementRequest {
     private String adminEmail;
 
     @NotBlank
-    @Size(min = 8, message = "Le mot de passe doit faire au moins 8 caractères")
+    @Size(max = 128, message = "Le mot de passe doit faire au plus 128 caractères") // le reste : PolitiqueMotDePasse
     private String adminPassword;
+
+    /** Pays de l'établissement (code ISO, UEMOA) ; vide = non précisé. */
+    private String pays;
 
     private String adminNom;
     private String adminPrenom;
+
+    /**
+     * Plan souscrit depuis la page d'accueil : vide ou FREE = inscription gratuite. La durée et le
+     * moyen de paiement se choisissent ensuite, sur la page de paiement.
+     */
+    private String plan;
 }

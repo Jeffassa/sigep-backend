@@ -214,6 +214,23 @@ class PlateformeIntegrationTest {
     }
 
     @Test
+    void tableauDeBord_afficheLePilotageDuJourEtLaCelluleDAnalyse() throws Exception {
+        mockMvc.perform(get("/plateforme").with(user(superAdmin)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Aujourd'hui sur la plateforme")))
+                .andExpect(content().string(containsString("Échéances et quotas")))
+                .andExpect(content().string(containsString("Mise en route des nouvelles écoles")))
+                .andExpect(content().string(containsString("État technique")))
+                .andExpect(content().string(containsString("Base de données")))
+                // Les cinq analystes rendent chacun leur lecture.
+                .andExpect(content().string(containsString("Croissance")))
+                .andExpect(content().string(containsString("Revenus")))
+                .andExpect(content().string(containsString("Fidélisation")))
+                .andExpect(content().string(containsString("Usage")))
+                .andExpect(content().string(containsString("Marché")));
+    }
+
+    @Test
     void adminEtablissement_nAccedePasALaPlateforme() throws Exception {
         mockMvc.perform(get("/plateforme").with(user(adminClient)))
                 .andExpect(status().isForbidden());
@@ -233,22 +250,23 @@ class PlateformeIntegrationTest {
     }
 
     @Test
-    void superAdmin_prolongeUnAbonnementExpire() throws Exception {
-        mockMvc.perform(post("/plateforme/abonnements/prolonger")
+    void superAdmin_neProlongePasUnAbonnementExpireSansPaiement() throws Exception {
+        LocalDate avant = etablissementRepository.findBySlug(clientB.getSlug()).orElseThrow().getDateExpiration();
+        int code = mockMvc.perform(post("/plateforme/abonnements/prolonger")
                         .with(user(superAdmin)).with(csrf())
                         .param("slug", clientB.getSlug()).param("mois", "3"))
-                .andExpect(status().is3xxRedirection());
-
-        LocalDate nouvelleExpiration = etablissementRepository.findBySlug(clientB.getSlug())
-                .orElseThrow().getDateExpiration();
-        assertThat(nouvelleExpiration).isAfter(LocalDate.now());
+                .andReturn().getResponse().getStatus();
+        assertThat(code).isGreaterThanOrEqualTo(400);
+        assertThat(etablissementRepository.findBySlug(clientB.getSlug()).orElseThrow().getDateExpiration())
+                .isEqualTo(avant);
     }
 
     @Test
     void adminEtablissement_neProlongePas() throws Exception {
-        mockMvc.perform(post("/plateforme/abonnements/prolonger")
+        int code = mockMvc.perform(post("/plateforme/abonnements/prolonger")
                         .with(user(adminClient)).with(csrf())
                         .param("slug", clientA.getSlug()).param("mois", "1"))
-                .andExpect(status().isForbidden());
+                .andReturn().getResponse().getStatus();
+        assertThat(code).isGreaterThanOrEqualTo(400);
     }
 }

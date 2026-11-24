@@ -18,6 +18,9 @@ public interface PaiementIntentRepository extends JpaRepository<PaiementIntent, 
     /** Intentions d'un établissement (suppression RGPD, historique). */
     List<PaiementIntent> findByEtablissementIdOrderByDateCreationDesc(Long etablissementId);
 
+    /** Toutes les transactions, les plus récentes d'abord : console de la plateforme. */
+    List<PaiementIntent> findAllByOrderByDateCreationDesc();
+
     /** Purge : intentions terminées et anciennes. */
     List<PaiementIntent> findByStatutNotAndDateCreationBefore(StatutIntent statut, LocalDateTime avant);
 }

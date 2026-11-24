@@ -50,6 +50,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
     /** Initiation Mobile Money : chaque appel pousse une demande sur un téléphone réel. */
     private static final String MOMO_INIT_PATH = "/admin/abonnement/momo";
     private static final String ANALYSE_IA_PATH = "/admin/api/stats/analyse"; // appels Claude facturés (GET)
+    /** Suggestions d'écoles à l'inscription : publiques, deux recherches en base par appel. */
+    private static final String ANNUAIRE_PATH = "/api/saas/annuaire";
 
     private final ConcurrentHashMap<String, Deque<Long>> hits = new ConcurrentHashMap<>();
 
@@ -87,6 +89,10 @@ public class RateLimitFilter extends OncePerRequestFilter {
     /** Budget strict de l'analyse IA (appels Claude facturés) par IP/min. */
     @Value("${app.security.login-rate-limit.max-ai:5}")
     private int maxAi;
+
+    /** Budget des suggestions d'écoles par IP/min : large pour la frappe, étroit pour un aspirateur. */
+    @Value("${app.security.login-rate-limit.max-annuaire:60}")
+    private int maxAnnuaire;
 
     /** Budget par UTILISATEUR authentifié (en plus du budget IP) sur les endpoints coûteux
      *  (génération de rapports, import Excel, analyse IA) — empêche un compte de saturer l'instance. */
@@ -156,6 +162,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
         if (uri == null) return 0;
         // Analyse IA : GET coûteux (appels Claude facturés) → budget strict indépendant de la méthode.
         if (ANALYSE_IA_PATH.equals(uri)) return maxAi;
+        if (ANNUAIRE_PATH.equals(uri)) return maxAnnuaire;
         if (!"POST".equalsIgnoreCase(request.getMethod())) return 0;
         if (LOGIN_PATH.equals(uri)) return maxLogin;
         if (REFRESH_PATH.equals(uri)) return maxRefresh;
@@ -205,7 +212,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
         return uri.startsWith("/css/") || uri.startsWith("/js/") || uri.startsWith("/images/")
                 || uri.startsWith("/webjars/") || "/favicon.ico".equals(uri)
                 || uri.startsWith("/actuator/health")
-                || uri.startsWith("/api/qr/display/") // écran kiosque : rafraîchi en continu
+                || uri.equals("/api/qr/display")     // écran kiosque : rafraîchi en continu
                 || uri.startsWith("/api/stripe/")     // webhook Stripe (ne jamais bloquer/retarder)
                 || uri.startsWith("/api/paiement/novasend/"); // webhook NovaSend (idem)
     }
@@ -214,7 +221,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
      *  Délègue à Redis (distribué) si activé, sinon compteur mémoire local (fenêtre glissante). */
     private boolean estBloque(String cle, int max) {
         if (redisEnabled && redisStore != null) {
-            return redisStore.overLimit(cle, max, WINDOW_MS);
+            Boolean bloque = redisStore.overLimit(cle, max, WINDOW_MS);
+            if (bloque != null) return bloque;
+            // Redis ne répond pas : on continue de compter, ici, en mémoire.
         }
         long now = System.currentTimeMillis();
         // Garde mémoire : au plafond, ne pas créer de nouvelle clé (fail-open borné).

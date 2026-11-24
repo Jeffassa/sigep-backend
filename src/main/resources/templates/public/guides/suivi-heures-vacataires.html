@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{public/guides/fragments :: head('Suivi des heures des enseignants vacataires | SIGEP', 'Suivez les heures de vos vacataires séance par séance : émargement par QR code, durée réelle, oublis visibles et un seul compte pour l’enseignant qui intervient dans plusieurs établissements.')}"></head>
+<body>
+<div class="seyes">
+    <nav th:replace="~{public/guides/fragments :: entete}"></nav>
+    <nav th:replace="~{public/guides/fragments :: fil('Heures des vacataires')}"></nav>
+
+    <header class="guide-tete marge">
+        <p class="surtitre">Enseignants vacataires</p>
+        <h1>Les heures des vacataires, <span class="it">sans contestation.</span></h1>
+        <p class="corps chapeau">Un vacataire est payé à l’heure, enseigne souvent dans plusieurs établissements, et chaque fin de mois ouvre la même discussion : combien d’heures ont réellement été faites ? Avec SIGEP, chaque séance est signée dans la salle et comptée à sa durée réelle. Le chiffre du mois se lit, il ne se négocie plus.</p>
+        <div class="appel">
+            <a class="bouton" th:href="@{/inscription}">Démarrer gratuitement</a>
+            <span class="mono">Gratuit jusqu’à 10 enseignants<br/>Sans carte bancaire</span>
+        </div>
+    </header>
+</div>
+
+<main class="guide-corps">
+    <div class="marge">
+        <section>
+            <h2 class="titre-section">Chaque heure, au bon endroit</h2>
+            <ul>
+                <li><strong>Signée en salle.</strong> Le vacataire scanne le QR code affiché pendant la séance et signe sur son téléphone : l’heure existe parce qu’elle a été faite, pas parce qu’elle a été déclarée.</li>
+                <li><strong>Comptée à sa durée réelle.</strong> Une séance de 3 heures compte 3 heures, une séance d’une heure et demie compte 1,5 heure : aucun forfait.</li>
+                <li><strong>Les retards apparaissent.</strong> L’état du mois indique, pour chaque enseignant, les séances émargées en retard selon la tolérance que vous fixez.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2 class="titre-section">Un seul compte pour plusieurs établissements</h2>
+            <p class="corps">Le vacataire garde une seule adresse e-mail et un seul mot de passe pour tous les établissements qui l’emploient sur SIGEP. Dans l’application, il choisit l’établissement où il enseigne aujourd’hui.</p>
+            <p class="corps">Chaque établissement ne voit que ses propres séances et ses propres heures : ce qu’un enseignant fait ailleurs ne lui est jamais montré.</p>
+        </section>
+
+        <section>
+            <h2 class="titre-section">Les oublis se voient le jour même</h2>
+            <p class="corps">Une séance prévue au planning et non émargée reste visible dans la console. La scolarité relance l’enseignant tant que la séance est fraîche, au lieu de découvrir le trou au moment de payer. Dans l’état du mois, ces séances sont séparées des heures à payer : rien n’est compté par défaut, rien n’est perdu en silence.</p>
+        </section>
+
+        <section>
+            <h2 class="titre-section">Remplacements et calendrier</h2>
+            <ul>
+                <li>un vacataire qui en remplace un autre sur une période reçoit ses séances, et les heures vont à celui qui a fait cours ;</li>
+                <li>les jours fériés et les vacances sont sautés par les cours répétés ;</li>
+                <li>le vacataire peut proposer son propre emploi du temps depuis l’application, et la scolarité le valide.</li>
+            </ul>
+        </section>
+    </div>
+</main>
+
+<section class="guide-questions seyes" aria-labelledby="titre-questions">
+    <div class="marge">
+        <h2 id="titre-questions" class="titre-section">Questions</h2>
+        <div class="liste-questions">
+            <details><summary>Le vacataire doit-il créer un compte par établissement ?<span class="signe" aria-hidden="true">+</span></summary><p class="corps">Non. Il garde une seule adresse et un seul mot de passe, et choisit dans l’application l’établissement où il enseigne.</p></details>
+            <details><summary>Un établissement voit-il les heures faites ailleurs ?<span class="signe" aria-hidden="true">+</span></summary><p class="corps">Non. Chaque établissement ne voit que les séances et les heures faites chez lui.</p></details>
+            <details><summary>Que devient une séance oubliée au scan ?<span class="signe" aria-hidden="true">+</span></summary><p class="corps">Elle reste visible comme non émargée. La scolarité peut relancer l’enseignant, et l’état du mois la distingue des heures à payer.</p></details>
+        </div>
+    </div>
+</section>
+
+<section th:replace="~{public/guides/fragments :: autres('vacataires')}"></section>
+<footer th:replace="~{public/guides/fragments :: fin}"></footer>
+
+<script th:nonce="${cspNonce}" type="application/ld+json" th:inline="text">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Accueil", "item": "[[${baseUrl}]]/" },
+        { "@type": "ListItem", "position": 2, "name": "Heures des vacataires", "item": "[[${baseUrl}]]/suivi-heures-vacataires" }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        { "@type": "Question", "name": "Le vacataire doit-il créer un compte par établissement ?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Non. Il garde une seule adresse et un seul mot de passe, et choisit dans l’application l’établissement où il enseigne." } },
+        { "@type": "Question", "name": "Un établissement voit-il les heures faites ailleurs ?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Non. Chaque établissement ne voit que les séances et les heures faites chez lui." } },
+        { "@type": "Question", "name": "Que devient une séance oubliée au scan ?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Elle reste visible comme non émargée. La scolarité peut relancer l’enseignant, et l’état du mois la distingue des heures à payer." } }
+      ]
+    }
+  ]
+}
+</script>
+</body>
+</html>

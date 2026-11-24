@@ -1,7 +1,6 @@
 package ci.esatic.sigep.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
@@ -19,8 +18,6 @@ public class ChangerMotDePasseRequest {
     private String ancienMotDePasse;
 
     @NotBlank(message = "Le nouveau mot de passe est obligatoire")
-    @Size(min = 8, message = "Le mot de passe doit faire au moins 8 caractères")
-    @Pattern(regexp = "^(?=.*[A-Za-z])(?=.*\\d).+$",
-             message = "Le mot de passe doit contenir au moins une lettre et un chiffre")
+    @Size(max = 128, message = "Le mot de passe doit faire au plus 128 caractères") // le reste : PolitiqueMotDePasse
     private String nouveauMotDePasse;
 }

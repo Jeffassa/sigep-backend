@@ -60,7 +60,7 @@ public class RapportController {
                 .body(bytes);
     }
 
-    // Télécharger plusieurs rapports en archive ZIP — fonction Pro/Enterprise (verrou serveur)
+    // Télécharger plusieurs rapports en archive ZIP — fonction Pro/Entreprise (verrou serveur)
     @PostMapping("/bulk-download")
     public ResponseEntity<byte[]> bulkDownload(
             @org.springframework.security.core.annotation.AuthenticationPrincipal ci.esatic.sigep.entity.User admin,

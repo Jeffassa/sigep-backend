@@ -71,6 +71,7 @@ public class PaiementService {
         // saveAndFlush : la contrainte UNIQUE(reference) rend l'enregistrement idempotent même en
         // course (deux livraisons simultanées) — la requête perdante échoue ici, sa transaction est
         // annulée (aucun double crédit) et le webhook rejoue (la voie rapide existsByReference l'ignore).
+        java.time.LocalDate debut = abonnementService.debutProlongation(e);
         paiementRepository.saveAndFlush(Paiement.builder()
                 .etablissementId(e.getId())
                 .montant(montant)
@@ -79,9 +80,11 @@ public class PaiementService {
                 .enregistrePar(source)
                 .devise(dev)
                 .plan(cible)
+                .periodeDebut(debut)
+                .periodeFin(debut.plusMonths(m))
                 .build());
 
-        // Le paiement applique le plan acheté (Pro ou Enterprise) et lève le quota, ET prolonge —
+        // Le paiement applique le plan acheté (Pro ou Entreprise) et lève le quota, ET prolonge —
         // atomiquement, quelle que soit la source (M6).
         if (cible != null && cible != Plan.FREE) {
             e.setPlan(cible);
@@ -92,13 +95,27 @@ public class PaiementService {
             e.setActif(true);
             log.info("Établissement {} réactivé suite à paiement", e.getId());
         }
+        // Achat en libre-service : l'inscription suivie d'un paiement confirmé n'attend pas
+        // d'examen, le paiement vaut validation. Un dossier REFUSÉ, lui, ne se rouvre pas seul :
+        // l'argent est enregistré et signalé, la décision reste humaine.
+        boolean activeParLePaiement = e.getStatut() == ci.esatic.sigep.entity.StatutEtablissement.EN_ATTENTE;
+        if (activeParLePaiement) {
+            e.setStatut(ci.esatic.sigep.entity.StatutEtablissement.VALIDE);
+            log.info("Établissement {} activé par son paiement ({})", e.getId(), source);
+        } else if (e.getStatut() == ci.esatic.sigep.entity.StatutEtablissement.REFUSE) {
+            log.error("Paiement reçu pour l'établissement {} dont le dossier est REFUSÉ ({}) : "
+                    + "à traiter par la plateforme (remboursement ou réouverture)", e.getId(), reference);
+        }
         abonnementService.prolonger(e, m);
         etablissementRepository.save(e);
 
         final Etablissement etab = e;
-        userRepository.findFirstByEtablissementIdOrderByIdAsc(e.getId())
-                .ifPresent(u -> mailService.notifierPaiementEnLigne(
-                        u.getEmail(), etab.getNom(), montant, etab.getDateExpiration()));
+        userRepository.findFirstByEtablissementIdOrderByIdAsc(e.getId()).ifPresent(u -> {
+            if (activeParLePaiement) {
+                mailService.notifierEtablissementValide(u.getEmail(), etab.getNom());
+            }
+            mailService.notifierPaiementEnLigne(u.getEmail(), etab.getNom(), montant, etab.getDateExpiration());
+        });
 
         log.info("Paiement enregistré ({}) : établissement={} montant={} {} plan={} mois={}",
                 source, e.getId(), montant, dev, cible, m);
