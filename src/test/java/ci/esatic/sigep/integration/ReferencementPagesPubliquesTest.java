@@ -71,7 +71,7 @@ class ReferencementPagesPubliquesTest {
         String html = rendu("/");
 
         // Le nom de marque doit être écrit en clair près du titre principal, pas seulement dans le logo.
-        assertThat(html).contains("<span>SIGEP</span> · Émargement des enseignants");
+        assertThat(html).contains("<span>SIGEP</span>, l'émargement des enseignants");
 
         // Le bloc d'identité doit rester un JSON valide après le rendu Thymeleaf.
         int debut = html.indexOf("\"@graph\"");
