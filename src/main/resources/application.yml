@@ -11,6 +11,15 @@ spring:
     # Langue retenue quand le client n'en annonce aucune, comme les robots d'indexation : le
     # site est en français, l'en-tête Content-Language doit le dire (il valait en-US).
     locale: fr
+    resources:
+      # Chaque feuille de style et chaque script reçoit une empreinte de son contenu dans son
+      # adresse (/css/registre-<empreinte>.css) : après un déploiement, le navigateur ne garde
+      # pas une ancienne version du CSS face à une page et un script neufs.
+      chain:
+        strategy:
+          content:
+            enabled: true
+            paths: /css/**,/js/**
   servlet:
     multipart:
       # Borne la taille des uploads (import Excel) pour éviter un épuisement mémoire.

@@ -248,4 +248,17 @@ class ReferencementPagesPubliquesTest {
                 .contains("noindex,nofollow")
                 .doesNotContain("index,follow,max-image-preview");
     }
+
+    /** Après un déploiement, une page neuve ne doit pas tomber sur une feuille de style restée en
+     *  cache : l'adresse du CSS et du script porte une empreinte de leur contenu. */
+    @Test
+    void lesFeuillesEtScripts_portentUneEmpreinte_quiChangeAvecLeurContenu() throws Exception {
+        String html = rendu("/");
+        var css = java.util.regex.Pattern.compile("/css/registre-[0-9a-f]{32}\\.css").matcher(html);
+        var js = java.util.regex.Pattern.compile("/js/accueil-mouvement-[0-9a-f]{32}\\.js").matcher(html);
+        assertThat(css.find()).as("empreinte de registre.css").isTrue();
+        assertThat(js.find()).as("empreinte d'accueil-mouvement.js").isTrue();
+        assertThat(rendu(css.group())).contains(".marque-barre");
+        assertThat(rendu(js.group())).contains("marque-barre");
+    }
 }

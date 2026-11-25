@@ -217,8 +217,10 @@ a:focus-visible, button:focus-visible, summary:focus-visible, input:focus-visibl
 }
 .offre { padding: 24px 32px 32px; border-bottom: 1px solid var(--ligne); }
 .offre h3 { font-stretch: 75%; font-weight: 800; font-size: 30px; }
-.prix { margin-top: 8px; font-stretch: 75%; font-weight: 900; font-size: 72px; line-height: 80px; }
-.prix small { font: 400 14px var(--chiffres); letter-spacing: 0; white-space: nowrap; }
+/* Le prix et son unité sont deux blocs : quand la colonne est étroite, « FCFA / mois » passe
+   sous le chiffre, collé à lui, au lieu de flotter seul sur une ligne de 80 px. */
+.prix { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 10px; margin-top: 8px; font-stretch: 75%; font-weight: 900; font-size: 72px; line-height: 80px; }
+.prix small { font: 400 14px/20px var(--chiffres); letter-spacing: 0; white-space: nowrap; }
 .offre ul { list-style: none; margin: 16px 0 24px; padding: 0; font-size: 17px; line-height: 32px; }
 .offre .lien { display: inline-block; padding: 12px 0; font-weight: 700; }
 .offre-mise { background: var(--nuit); color: var(--creme); border-bottom: 0; }
