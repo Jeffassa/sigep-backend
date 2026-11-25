@@ -1,6 +1,7 @@
 package ci.esatic.sigep.controller.web;
 
 import ci.esatic.sigep.entity.Etablissement;
+import ci.esatic.sigep.exception.MetierException;
 import ci.esatic.sigep.repository.EtablissementRepository;
 import ci.esatic.sigep.service.EtablissementCourantService;
 import ci.esatic.sigep.service.JetonEcranSalle;
@@ -44,6 +45,7 @@ public class EcranEmargementController {
     private final EtablissementRepository etablissementRepository;
     private final JetonEcranSalle jetonEcranSalle;
     private final ci.esatic.sigep.security.ClientIpResolver clientIpResolver;
+    private final ci.esatic.sigep.service.EcranEmargementService ecranEmargementService;
 
     @GetMapping("/admin/ecran-emargement")
     public String page(Model model, HttpServletRequest request) {
@@ -74,28 +76,15 @@ public class EcranEmargementController {
                                         @RequestParam(required = false) Integer rayon,
                                         @RequestParam(required = false) String retirer,
                                         RedirectAttributes flash) {
-        Etablissement e = etablissementCourantService.courant();
-        if (e == null) return new RedirectView("/admin/ecran-emargement?indispo=1");
+        if (etablissementCourantService.courant() == null) return new RedirectView("/admin/ecran-emargement?indispo=1");
         if (retirer != null) {
-            e.setZoneLatitude(null);
-            e.setZoneLongitude(null);
-            e.setZoneRayonMetres(null);
-            etablissementRepository.save(e);
+            ecranEmargementService.retirerZone();
             return new RedirectView("/admin/ecran-emargement?zoneRetiree=1#zone");
         }
         String saisie = coordonnees == null ? "" : coordonnees.trim();
         try {
-            double[] point = ci.esatic.sigep.service.ZoneEmargement.lireCoordonnees(saisie);
-            int r = rayon == null ? ci.esatic.sigep.service.ZoneEmargement.RAYON_DEFAUT : rayon;
-            if (r < ci.esatic.sigep.service.ZoneEmargement.RAYON_MIN
-                    || r > ci.esatic.sigep.service.ZoneEmargement.RAYON_MAX) {
-                throw new IllegalArgumentException("rayon hors limites");
-            }
-            e.setZoneLatitude(point[0]);
-            e.setZoneLongitude(point[1]);
-            e.setZoneRayonMetres(r);
-            etablissementRepository.save(e);
-        } catch (IllegalArgumentException ex) {
+            ecranEmargementService.reglerZone(saisie, rayon);
+        } catch (MetierException ex) {
             flash.addFlashAttribute("zoneInvalide", true);
             flash.addFlashAttribute("coordonnees", saisie.length() > 80 ? saisie.substring(0, 80) : saisie);
             return new RedirectView("/admin/ecran-emargement#zone");
@@ -107,16 +96,11 @@ public class EcranEmargementController {
     @PostMapping("/admin/ecran-emargement/reseau")
     public RedirectView enregistrerReseau(@RequestParam(required = false) String reseaux,
                                           RedirectAttributes flash) {
-        Etablissement e = etablissementCourantService.courant();
-        if (e == null) return new RedirectView("/admin/ecran-emargement?indispo=1");
+        if (etablissementCourantService.courant() == null) return new RedirectView("/admin/ecran-emargement?indispo=1");
         String saisie = reseaux == null ? "" : reseaux.trim();
         try {
-            List<String> entrees = ReseauEcran.lire(saisie);
-            String propre = String.join(", ", entrees);
-            if (propre.length() > ReseauEcran.LONGUEUR_MAX) throw new IllegalArgumentException("liste trop longue");
-            e.setEcranReseaux(propre.isEmpty() ? null : propre);
-            etablissementRepository.save(e);
-        } catch (IllegalArgumentException ex) {
+            ecranEmargementService.reglerReseau(saisie);
+        } catch (MetierException ex) {
             flash.addFlashAttribute("reseauInvalide", ex.getMessage());
             flash.addFlashAttribute("reseaux", saisie.length() > ReseauEcran.LONGUEUR_MAX
                     ? saisie.substring(0, ReseauEcran.LONGUEUR_MAX) : saisie);

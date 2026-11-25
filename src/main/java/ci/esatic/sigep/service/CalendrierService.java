@@ -31,6 +31,8 @@ public class CalendrierService {
     private final SeanceRepository seanceRepository;
     private final EnseignantRepository enseignantRepository;
     private final MailService mailService;
+    private final EtablissementCourantService etablissementCourantService;
+    private final ci.esatic.sigep.repository.EtablissementRepository etablissementRepository;
 
     public record Remplacement(int remplacees, int conflits) {}
 
@@ -69,12 +71,74 @@ public class CalendrierService {
         return semestres().stream().filter(s -> s.contient(jour)).findFirst();
     }
 
+    /** Tolérance d'émargement, au plus deux heures avant comme après. */
+    public static final int TOLERANCE_MAX_MINUTES = 120;
+
+    @Transactional
+    public void reglerTolerance(int avant, int apres) {
+        var etab = etablissementCourantService.courant();
+        if (etab == null || avant < 0 || apres < 0 || avant > TOLERANCE_MAX_MINUTES || apres > TOLERANCE_MAX_MINUTES) {
+            throw new IllegalArgumentException("La tolérance doit rester entre 0 et " + TOLERANCE_MAX_MINUTES + " minutes.");
+        }
+        etab.setToleranceAvantMinutes(avant);
+        etab.setToleranceApresMinutes(apres);
+        etablissementRepository.save(etab);
+    }
+
+    /** Retire une période du calendrier. Les séances déjà retirées ne reviennent pas. */
+    @Transactional
+    public PeriodeCalendrier supprimerPeriode(Long id) {
+        PeriodeCalendrier p = periode(id);
+        periodeRepository.delete(p);
+        return p;
+    }
+
+    /** La période, si elle appartient à l'établissement. */
+    @Transactional(readOnly = true)
+    public PeriodeCalendrier periode(Long id) {
+        return periodeRepository.findById(id)
+                .orElseThrow(() -> new ci.esatic.sigep.exception.ResourceNotFoundException("Periode", "id", id));
+    }
+
+    /**
+     * Ce que ferait un remplacement, sans rien changer ni écrire à personne.
+     */
+    @Transactional(readOnly = true)
+    public Remplacement simulerRemplacement(Long absentId, Long remplacantId, LocalDate debut, LocalDate fin) {
+        Repartition r = repartir(absentId, remplacantId, debut, fin);
+        return new Remplacement(r.aConfier().size(), r.conflits());
+    }
+
     /**
      * Confie à un remplaçant les séances non encore assurées d'un enseignant absent. Un créneau où
      * le remplaçant enseigne déjà reste à l'enseignant prévu et est compté comme conflit.
      */
     @Transactional
     public Remplacement remplacer(Long absentId, Long remplacantId, LocalDate debut, LocalDate fin) {
+        Repartition r = repartir(absentId, remplacantId, debut, fin);
+        List<String> lignes = new ArrayList<>();
+        for (Seance s : r.aConfier()) {
+            // Après un second remplacement, c'est toujours l'enseignant prévu au départ qu'on garde.
+            if (s.getEnseignantRemplace() == null) s.setEnseignantRemplace(r.absent());
+            s.setEnseignant(r.remplacant());
+            lignes.add(s.getDate().format(JOUR) + " " + s.getHeureDebut() + "-" + s.getHeureFin()
+                    + " : " + s.getMatiere().getLibelle() + " (" + s.getClasse().getLibelle() + ")");
+        }
+        Enseignant remplacant = r.remplacant();
+        Enseignant absent = r.absent();
+        if (!lignes.isEmpty() && remplacant.getUser() != null) {
+            mailService.envoyerMessage(remplacant.getUser().getEmail(), "SIGEP - Séances à remplacer",
+                    "Bonjour " + remplacant.getPrenom() + ",\n\nVous remplacez " + absent.getPrenom() + " "
+                            + absent.getNom() + " sur ces séances :\n\n" + String.join("\n", lignes)
+                            + "\n\nElles apparaissent dans votre planning.\n\nSIGEP");
+        }
+        return new Remplacement(lignes.size(), r.conflits());
+    }
+
+    private record Repartition(Enseignant absent, Enseignant remplacant, List<Seance> aConfier, int conflits) {}
+
+    /** Calcule, sans rien modifier, quelles séances iraient au remplaçant. */
+    private Repartition repartir(Long absentId, Long remplacantId, LocalDate debut, LocalDate fin) {
         if (Objects.equals(absentId, remplacantId)) {
             throw new IllegalArgumentException("Choisissez deux enseignants différents.");
         }
@@ -90,7 +154,7 @@ public class CalendrierService {
         }
 
         List<Seance> occupees = new ArrayList<>(seanceRepository.findByEnseignantIdAndDateBetween(remplacantId, debut, fin));
-        List<String> lignes = new ArrayList<>();
+        List<Seance> aConfier = new ArrayList<>();
         int conflits = 0;
         for (Seance s : seanceRepository.findByEnseignantIdAndDateBetween(absentId, debut, fin)) {
             if (s.getStatut() != StatutSeance.A_FAIRE) continue;
@@ -98,20 +162,10 @@ public class CalendrierService {
                 conflits++;
                 continue;
             }
-            // Après un second remplacement, c'est toujours l'enseignant prévu au départ qu'on garde.
-            if (s.getEnseignantRemplace() == null) s.setEnseignantRemplace(absent);
-            s.setEnseignant(remplacant);
             occupees.add(s);
-            lignes.add(s.getDate().format(JOUR) + " " + s.getHeureDebut() + "-" + s.getHeureFin()
-                    + " : " + s.getMatiere().getLibelle() + " (" + s.getClasse().getLibelle() + ")");
+            aConfier.add(s);
         }
-        if (!lignes.isEmpty() && remplacant.getUser() != null) {
-            mailService.envoyerMessage(remplacant.getUser().getEmail(), "SIGEP - Séances à remplacer",
-                    "Bonjour " + remplacant.getPrenom() + ",\n\nVous remplacez " + absent.getPrenom() + " "
-                            + absent.getNom() + " sur ces séances :\n\n" + String.join("\n", lignes)
-                            + "\n\nElles apparaissent dans votre planning.\n\nSIGEP");
-        }
-        return new Remplacement(lignes.size(), conflits);
+        return new Repartition(absent, remplacant, aConfier, conflits);
     }
 
     private static boolean chevauche(Seance a, Seance b) {

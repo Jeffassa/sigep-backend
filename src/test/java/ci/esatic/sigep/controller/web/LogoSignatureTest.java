@@ -17,20 +17,20 @@ class LogoSignatureTest {
 
     @Test
     void lesVraisFormats_passent() {
-        assertThat(LogoEtablissementController.signatureConforme(
+        assertThat(ci.esatic.sigep.service.LogoService.signatureConforme(
                 octets(0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A), "image/png")).isTrue();
-        assertThat(LogoEtablissementController.signatureConforme(
+        assertThat(ci.esatic.sigep.service.LogoService.signatureConforme(
                 octets(0xFF, 0xD8, 0xFF, 0xE0), "image/jpeg")).isTrue();
-        assertThat(LogoEtablissementController.signatureConforme(
+        assertThat(ci.esatic.sigep.service.LogoService.signatureConforme(
                 octets('R', 'I', 'F', 'F', 0, 0, 0, 0, 'W', 'E', 'B', 'P'), "image/webp")).isTrue();
     }
 
     @Test
     void unePageHtmlDeguiseeEnImage_estRefusee() {
         byte[] html = "<html><script>alert(1)</script></html>".getBytes(StandardCharsets.UTF_8);
-        assertThat(LogoEtablissementController.signatureConforme(html, "image/png")).isFalse();
-        assertThat(LogoEtablissementController.signatureConforme(html, "image/jpeg")).isFalse();
-        assertThat(LogoEtablissementController.signatureConforme(
+        assertThat(ci.esatic.sigep.service.LogoService.signatureConforme(html, "image/png")).isFalse();
+        assertThat(ci.esatic.sigep.service.LogoService.signatureConforme(html, "image/jpeg")).isFalse();
+        assertThat(ci.esatic.sigep.service.LogoService.signatureConforme(
                 octets(0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A), "image/jpeg")).isFalse();
     }
 }

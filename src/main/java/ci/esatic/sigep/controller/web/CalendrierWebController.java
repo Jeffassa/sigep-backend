@@ -3,7 +3,6 @@ package ci.esatic.sigep.controller.web;
 import ci.esatic.sigep.entity.StatutEnseignant;
 import ci.esatic.sigep.entity.TypePeriode;
 import ci.esatic.sigep.repository.EnseignantRepository;
-import ci.esatic.sigep.repository.EtablissementRepository;
 import ci.esatic.sigep.repository.PeriodeCalendrierRepository;
 import ci.esatic.sigep.service.CalendrierService;
 import ci.esatic.sigep.service.EtablissementCourantService;
@@ -24,12 +23,9 @@ import java.time.LocalDate;
 @RequiredArgsConstructor
 public class CalendrierWebController {
 
-    private static final int TOLERANCE_MAX_MINUTES = 120;
-
     private final CalendrierService calendrierService;
     private final PeriodeCalendrierRepository periodeRepository;
     private final EnseignantRepository enseignantRepository;
-    private final EtablissementRepository etablissementRepository;
     private final EtablissementCourantService etablissementCourantService;
 
     @GetMapping("/admin/calendrier")
@@ -42,15 +38,12 @@ public class CalendrierWebController {
 
     @PostMapping("/admin/calendrier/tolerance")
     public String tolerance(@RequestParam int avant, @RequestParam int apres, RedirectAttributes ra) {
-        var etab = etablissementCourantService.courant();
-        if (etab == null || avant < 0 || apres < 0 || avant > TOLERANCE_MAX_MINUTES || apres > TOLERANCE_MAX_MINUTES) {
-            ra.addFlashAttribute("error", "La tolérance doit rester entre 0 et " + TOLERANCE_MAX_MINUTES + " minutes.");
-            return "redirect:/admin/calendrier";
+        try {
+            calendrierService.reglerTolerance(avant, apres);
+            ra.addFlashAttribute("success", "Tolérance d'émargement enregistrée.");
+        } catch (IllegalArgumentException e) {
+            ra.addFlashAttribute("error", e.getMessage());
         }
-        etab.setToleranceAvantMinutes(avant);
-        etab.setToleranceApresMinutes(apres);
-        etablissementRepository.save(etab);
-        ra.addFlashAttribute("success", "Tolérance d'émargement enregistrée.");
         return "redirect:/admin/calendrier";
     }
 
@@ -72,8 +65,12 @@ public class CalendrierWebController {
 
     @PostMapping("/admin/calendrier/periodes/{id}/supprimer")
     public String supprimer(@PathVariable Long id, RedirectAttributes ra) {
-        periodeRepository.deleteById(id);
-        ra.addFlashAttribute("success", "Période retirée du calendrier. Les séances déjà retirées ne reviennent pas.");
+        try {
+            calendrierService.supprimerPeriode(id);
+            ra.addFlashAttribute("success", "Période retirée du calendrier. Les séances déjà retirées ne reviennent pas.");
+        } catch (ci.esatic.sigep.exception.ResourceNotFoundException | ci.esatic.sigep.tenant.AccesTenantRefuseException e) {
+            ra.addFlashAttribute("error", "Période introuvable.");
+        }
         return "redirect:/admin/calendrier";
     }
 

@@ -8,6 +8,7 @@ import ci.esatic.sigep.repository.MatiereRepository;
 import ci.esatic.sigep.repository.SalleRepository;
 import ci.esatic.sigep.repository.EtablissementRepository;
 import ci.esatic.sigep.service.EtablissementCourantService;
+import ci.esatic.sigep.service.ReferentielService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -38,6 +39,7 @@ public class ReferentielWebController {
     private final EtablissementRepository etablissementRepository;
     private final ci.esatic.sigep.service.ImportService importService;
     private final ci.esatic.sigep.service.CalendrierService calendrierService;
+    private final ReferentielService referentielService;
     private final ci.esatic.sigep.repository.EnseignantRepository enseignantRepository;
     private final tools.jackson.databind.ObjectMapper objectMapper;
 
@@ -56,157 +58,71 @@ public class ReferentielWebController {
 
     @PostMapping("/admin/planning/format")
     public String modifierFormatPlanning(@RequestParam String format, RedirectAttributes ra) {
-        var etab = etablissementCourantService.courant();
-        String valeur = format == null ? "STANDARD" : format.trim().toUpperCase();
-        if (etab == null || !java.util.Set.of("STANDARD", "UNIVERSITAIRE", "SECONDAIRE").contains(valeur)) {
-            ra.addFlashAttribute("error", "Format d'emploi du temps invalide.");
-        } else {
-            etab.setFormatEmploiDuTemps(valeur);
-            // Le tenant est relu et géré par le contexte admin ; save explicite pour persister la préférence.
-            etablissementRepository.save(etab);
+        try {
+            referentielService.changerFormatPlanning(format);
             ra.addFlashAttribute("success", "Format d'emploi du temps mis à jour.");
+        } catch (ci.esatic.sigep.exception.MetierException e) {
+            ra.addFlashAttribute("error", e.getMessage());
         }
         return "redirect:/admin/referentiels";
     }
 
-    // --- Matières ---
+    // --- Matières, classes, sites, salles : règles dans ReferentielService (partagées avec l'agent) ---
     @PostMapping("/admin/matieres")
     public String creerMatiere(@RequestParam String libelle,
                                @RequestParam(required = false) String description, RedirectAttributes ra) {
-        String lib = libelle == null ? "" : libelle.trim();
-        if (lib.isEmpty()) {
-            ra.addFlashAttribute("error", "Le libellé de la matière est obligatoire.");
-        } else if (matiereRepository.existsByLibelleIgnoreCase(lib)) {
-            ra.addFlashAttribute("error", "Cette matière existe déjà : " + lib);
-        } else {
-            matiereRepository.save(Matiere.builder().libelle(lib)
-                    .description(description != null ? description.trim() : null).build());
-            ra.addFlashAttribute("success", "Matière « " + lib + " » ajoutée.");
-        }
-        return "redirect:/admin/referentiels";
+        return agir(ra, () -> "Matière « " + referentielService.creerMatiere(libelle, description).getLibelle() + " » ajoutée.");
     }
 
     @PostMapping("/admin/matieres/{id}/supprimer")
     public String supprimerMatiere(@PathVariable Long id, RedirectAttributes ra) {
-        try {
-            matiereRepository.deleteById(id);
-            ra.addFlashAttribute("success", "Matière supprimée.");
-        } catch (Exception e) {
-            ra.addFlashAttribute("error", "Suppression impossible : cette matière est utilisée par des séances.");
-        }
-        return "redirect:/admin/referentiels";
+        return agir(ra, () -> { referentielService.supprimer(ReferentielService.Type.MATIERE, id); return "Matière supprimée."; });
     }
 
-    // --- Classes ---
     @PostMapping("/admin/classes")
     public String creerClasse(@RequestParam String libelle,
                               @RequestParam(required = false) String filiere,
                               @RequestParam(required = false) Integer niveau, RedirectAttributes ra) {
-        String lib = libelle == null ? "" : libelle.trim();
-        if (lib.isEmpty()) {
-            ra.addFlashAttribute("error", "Le libellé de la classe est obligatoire.");
-        } else if (classeRepository.existsByLibelleIgnoreCase(lib)) {
-            ra.addFlashAttribute("error", "Cette classe existe déjà : " + lib);
-        } else {
-            classeRepository.save(Classe.builder().libelle(lib)
-                    .filiere(filiere != null ? filiere.trim() : null).niveau(niveau).build());
-            ra.addFlashAttribute("success", "Classe « " + lib + " » ajoutée.");
-        }
-        return "redirect:/admin/referentiels";
+        return agir(ra, () -> "Classe « " + referentielService.creerClasse(libelle, filiere, niveau).getLibelle() + " » ajoutée.");
     }
 
     @PostMapping("/admin/classes/{id}/supprimer")
     public String supprimerClasse(@PathVariable Long id, RedirectAttributes ra) {
-        try {
-            classeRepository.deleteById(id);
-            ra.addFlashAttribute("success", "Classe supprimée.");
-        } catch (Exception e) {
-            ra.addFlashAttribute("error", "Suppression impossible : cette classe est utilisée par des séances.");
-        }
-        return "redirect:/admin/referentiels";
+        return agir(ra, () -> { referentielService.supprimer(ReferentielService.Type.CLASSE, id); return "Classe supprimée."; });
     }
 
-    // --- Campus ---
     @PostMapping("/admin/campus")
     public String creerCampus(@RequestParam String nom,
                               @RequestParam(required = false) String adresse,
                               RedirectAttributes ra) {
-        String n = nom == null ? "" : nom.trim();
-        if (n.isEmpty()) {
-            ra.addFlashAttribute("error", "Le nom de l'établissement est obligatoire.");
-            return "redirect:/admin/referentiels";
-        }
-        if (campusRepository.existsByNomIgnoreCase(n)) {
-            ra.addFlashAttribute("error", "Cet établissement existe déjà : " + n);
-            return "redirect:/admin/referentiels";
-        }
-        try {
-            // Le quota se compte AVANT l'ajout : le plan gratuit n'en autorise qu'un.
-            planService.verifierQuotaCampus(etablissementCourantService.courant(),
-                    campusRepository.count());
-        } catch (ci.esatic.sigep.tenant.plan.PlanLimiteException e) {
-            ra.addFlashAttribute("error", e.getMessage());
-            return "redirect:/admin/referentiels";
-        }
-        campusRepository.save(ci.esatic.sigep.entity.Campus.builder()
-                .nom(n)
-                .adresse(adresse != null && !adresse.isBlank() ? adresse.trim() : null)
-                .build());
-        ra.addFlashAttribute("success", "Établissement « " + n + " » ajouté.");
-        return "redirect:/admin/referentiels";
+        return agir(ra, () -> "Établissement « " + referentielService.creerCampus(nom, adresse).getNom() + " » ajouté.");
     }
 
     @PostMapping("/admin/campus/{id}/supprimer")
     public String supprimerCampus(@PathVariable Long id, RedirectAttributes ra) {
-        long sallesRattachees = salleRepository.countByCampusId(id);
-        if (sallesRattachees > 0) {
-            // Refuser plutôt que détacher en silence : l'administrateur doit savoir que des
-            // salles perdraient leur site, et décider lui-même où les remettre.
-            ra.addFlashAttribute("error", "Suppression impossible : " + sallesRattachees
-                    + " salle(s) sont rattachées à cet établissement. Déplacez-les d'abord.");
-            return "redirect:/admin/referentiels";
-        }
-        try {
-            campusRepository.deleteById(id);
-            ra.addFlashAttribute("success", "Établissement supprimé.");
-        } catch (Exception e) {
-            ra.addFlashAttribute("error", "Suppression impossible.");
-        }
-        return "redirect:/admin/referentiels";
+        return agir(ra, () -> { referentielService.supprimer(ReferentielService.Type.CAMPUS, id); return "Établissement supprimé."; });
     }
 
-    // --- Salles ---
     @PostMapping("/admin/salles")
     public String creerSalle(@RequestParam String libelle, @RequestParam(required = false) String batiment,
                              @RequestParam(required = false) Integer capacite,
                              @RequestParam(required = false) Long campusId, RedirectAttributes ra) {
-        String lib = libelle == null ? "" : libelle.trim().toUpperCase();
-        if (lib.isEmpty()) {
-            ra.addFlashAttribute("error", "Le nom de la salle est obligatoire.");
-        } else if (!lib.matches("[A-Z0-9_\\-]{1,20}")) {
-            ra.addFlashAttribute("error",
-                    "Le nom de salle doit être court et sans espace (lettres, chiffres, - ou _). Ex : A101.");
-        } else if (salleRepository.existsByLibelleIgnoreCase(lib)) {
-            ra.addFlashAttribute("error", "Cette salle existe déjà : " + lib);
-        } else {
-            // Le campus n'est retenu que s'il appartient bien à cet établissement : le filtre
-            // multi-tenant rend introuvable celui d'un autre, et l'identifiant est alors ignoré.
-            Long campus = (campusId != null && campusRepository.existsById(campusId)) ? campusId : null;
-            salleRepository.save(Salle.builder().libelle(lib)
-                    .batiment(batiment != null ? batiment.trim() : null).capacite(capacite)
-                    .campusId(campus).build());
-            ra.addFlashAttribute("success", "Salle « " + lib + " » ajoutée.");
-        }
-        return "redirect:/admin/referentiels";
+        return agir(ra, () -> "Salle « " + referentielService.creerSalle(libelle, batiment, capacite, campusId).getLibelle() + " » ajoutée.");
     }
 
     @PostMapping("/admin/salles/{id}/supprimer")
     public String supprimerSalle(@PathVariable Long id, RedirectAttributes ra) {
+        return agir(ra, () -> { referentielService.supprimer(ReferentielService.Type.SALLE, id); return "Salle supprimée."; });
+    }
+
+    /** Exécute l'action et range son message, ou le refus, pour la page des référentiels. */
+    private String agir(RedirectAttributes ra, java.util.function.Supplier<String> action) {
         try {
-            salleRepository.deleteById(id);
-            ra.addFlashAttribute("success", "Salle supprimée.");
-        } catch (Exception e) {
-            ra.addFlashAttribute("error", "Suppression impossible : cette salle est utilisée par des séances.");
+            ra.addFlashAttribute("success", action.get());
+        } catch (ci.esatic.sigep.exception.MetierException | ci.esatic.sigep.tenant.plan.PlanLimiteException e) {
+            ra.addFlashAttribute("error", e.getMessage());
+        } catch (ci.esatic.sigep.exception.ResourceNotFoundException | ci.esatic.sigep.tenant.AccesTenantRefuseException e) {
+            ra.addFlashAttribute("error", "Élément introuvable.");
         }
         return "redirect:/admin/referentiels";
     }
@@ -238,6 +154,7 @@ public class ReferentielWebController {
         }
         int importees = 0, doublons = 0, fermes = 0;
         java.util.List<String> erreurs = new java.util.ArrayList<>();
+        java.util.List<String> nouveaux = new java.util.ArrayList<>();
         java.util.List<ci.esatic.sigep.service.ImportService.LigneRelue> aRelire = new java.util.ArrayList<>();
         for (org.springframework.web.multipart.MultipartFile fichier : deposes) {
             String nom = fichier.getOriginalFilename() == null ? "" : fichier.getOriginalFilename();
@@ -256,6 +173,9 @@ public class ReferentielWebController {
                     @SuppressWarnings("unchecked")
                     java.util.List<String> lignes = (java.util.List<String>) r.get("erreurs");
                     lignes.forEach(e -> erreurs.add(prefixe + e));
+                    @SuppressWarnings("unchecked")
+                    java.util.List<String> ajoutes = (java.util.List<String>) r.get("nouveauxReferentiels");
+                    ajoutes.stream().filter(n -> !nouveaux.contains(n)).forEach(nouveaux::add);
                 } else {
                     erreurs.add(prefixe + "format non pris en charge. Déposez un fichier Excel, CSV, Word (.docx) ou un PDF non scanné.");
                 }
@@ -268,7 +188,8 @@ public class ReferentielWebController {
         String message = importees + " séance(s) importée(s)"
                 + (doublons > 0 ? ", " + doublons + " déjà présente(s) ignorée(s)" : "")
                 + (fermes > 0 ? ", " + fermes + " date(s) sautée(s) : établissement fermé" : "")
-                + (!erreurs.isEmpty() ? ", " + erreurs.size() + " point(s) à corriger" : "") + ".";
+                + (!erreurs.isEmpty() ? ", " + erreurs.size() + " point(s) à corriger" : "") + "."
+                + ci.esatic.sigep.service.ImportService.avisNouveauxReferentiels(nouveaux);
         if (!aRelire.isEmpty()) {
             model.addAttribute("lignes", aRelire);
             model.addAttribute("erreursImport", erreurs);

@@ -1,27 +1,18 @@
 package ci.esatic.sigep.controller.web;
 
-import ci.esatic.sigep.entity.ERole;
 import ci.esatic.sigep.entity.Enseignant;
-import ci.esatic.sigep.entity.Etablissement;
-import ci.esatic.sigep.entity.Role;
 import ci.esatic.sigep.entity.StatutEnseignant;
-import ci.esatic.sigep.entity.User;
 import ci.esatic.sigep.repository.EnseignantRepository;
-import ci.esatic.sigep.repository.RoleRepository;
-import ci.esatic.sigep.repository.UserRepository;
+import ci.esatic.sigep.exception.MetierException;
+import ci.esatic.sigep.exception.ResourceNotFoundException;
 import ci.esatic.sigep.service.EnseignantService;
-import ci.esatic.sigep.service.EtablissementCourantService;
+import ci.esatic.sigep.service.GestionEnseignantsService;
 import ci.esatic.sigep.service.ImportService;
-import ci.esatic.sigep.service.MailService;
 import ci.esatic.sigep.tenant.TenantContext;
-import ci.esatic.sigep.tenant.plan.PlanService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -34,7 +25,6 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /** Espace admin : gestion des enseignants (annuaire, création, import, statut) + messagerie. */
 @Controller
@@ -42,19 +32,14 @@ import java.util.Set;
 public class EnseignantWebController {
 
     private final EnseignantRepository enseignantRepository;
-    private final UserRepository userRepository;
-    private final RoleRepository roleRepository;
-    private final PasswordEncoder passwordEncoder;
     private final EnseignantService enseignantService;
     private final ImportService importService;
-    private final MailService mailService;
-    private final PlanService planService;
-    private final EtablissementCourantService etablissementCourantService;
     private final ci.esatic.sigep.repository.SeanceRepository seanceRepository;
     private final ci.esatic.sigep.repository.EmargementRepository emargementRepository;
     private final ci.esatic.sigep.repository.RapportPdfRepository rapportPdfRepository;
     private final ci.esatic.sigep.repository.DemandeRattrapageRepository demandeRattrapageRepository;
     private final ci.esatic.sigep.service.CompteEnseignantService compteEnseignantService;
+    private final GestionEnseignantsService gestionEnseignants;
 
     @GetMapping("/admin/enseignants")
     public String enseignants(@RequestParam(defaultValue = "") String search,
@@ -103,87 +88,32 @@ public class EnseignantWebController {
     }
 
     @PostMapping("/admin/enseignants")
-    @Transactional
-    public String creerEnseignant(@AuthenticationPrincipal User admin,
-                                   @RequestParam String matricule,
+    public String creerEnseignant(@RequestParam String matricule,
                                    @RequestParam String nom,
                                    @RequestParam String prenom,
                                    @RequestParam(required = false) String departement,
                                    @RequestParam(required = false) String grade,
                                    @RequestParam String email,
                                    RedirectAttributes ra) {
-        // Quota du plan (Free ≤ 10 enseignants) : appliqué sur TOUS les chemins de création.
-        Etablissement etabCourant = etablissementCourantService.courant();
-        if (etabCourant != null
-                && planService.quotaEnseignantsAtteint(etabCourant,
-                    enseignantRepository.countByEtablissementId(etabCourant.getId()))) {
-            ra.addFlashAttribute("error", "Votre plan permet " + etabCourant.getMaxEnseignants()
-                    + " enseignants, et ce nombre est atteint. Passez au plan Pro pour en ajouter d'autres.");
-            return "redirect:/admin/enseignants";
-        }
-        if (enseignantRepository.existsByMatricule(matricule)) {
-            ra.addFlashAttribute("error", "Le matricule " + matricule + " est déjà utilisé.");
-            return "redirect:/admin/enseignants/nouveau";
-        }
-        User compteExistant;
+        // Les règles (quota du plan, matricule, compte existant, établissement) sont celles du
+        // service partagé avec l'agent : ce formulaire n'en applique aucune pour son compte.
+        GestionEnseignantsService.Creation creation;
         try {
-            compteExistant = compteEnseignantService
-                    .compteARattacher(email, etabCourant != null ? etabCourant.getId() : null).orElse(null);
-        } catch (IllegalArgumentException e) {
-            ra.addFlashAttribute("error", "Impossible d'utiliser " + email + " : " + e.getMessage() + ".");
-            return "redirect:/admin/enseignants/nouveau";
+            creation = gestionEnseignants.creer(
+                    new GestionEnseignantsService.NouvelEnseignant(matricule, nom, prenom, departement, grade, email));
+        } catch (MetierException e) {
+            ra.addFlashAttribute("error", e.getMessage());
+            return "QUOTA_ATTEINT".equals(e.getCode())
+                    ? "redirect:/admin/enseignants" : "redirect:/admin/enseignants/nouveau";
         }
-        // Vacataire déjà inscrit ailleurs : sa fiche rejoint ce compte, dont le mot de passe ne change pas.
-        if (compteExistant != null) {
-            enseignantRepository.save(Enseignant.builder()
-                    .matricule(matricule).nom(nom).prenom(prenom).departement(departement).grade(grade)
-                    .statut(StatutEnseignant.VALIDATED)
-                    .user(compteExistant)
-                    .build());
-            mailService.notifierRattachementEtablissement(
-                    etabCourant != null ? etabCourant.getEmailFrom() : null, email, prenom,
-                    etabCourant != null ? etabCourant.getNomEffectif() : "Un établissement");
-            ra.addFlashAttribute("success", "Enseignant " + prenom + " " + nom
+        Enseignant cree = creation.enseignant();
+        if (creation.issue() == GestionEnseignantsService.Issue.RATTACHE) {
+            ra.addFlashAttribute("success", "Enseignant " + cree.getPrenom() + " " + cree.getNom()
                     + " ajouté. Il a déjà un compte SIGEP et garde son mot de passe : il a été prévenu par e-mail.");
-            return "redirect:/admin/enseignants";
+        } else {
+            ra.addFlashAttribute("success",
+                    cree.getPrenom() + " " + cree.getNom() + " est ajouté : ses accès lui ont été envoyés par e-mail.");
         }
-
-        Role role = roleRepository.findByName(ERole.ROLE_ENSEIGNANT).orElseThrow();
-        String password = ci.esatic.sigep.security.SecurityUtils.genererMotDePasseProvisoire();
-
-        // E1 (isolation) : rattacher le compte à l'établissement courant, comme les autres
-        // chemins de création (AuthService.registerEnseignant/inscription, OnboardingService).
-        // Sans cela, user.etablissement=null → à la connexion mobile, aucun tenant posé → filtre
-        // Hibernate + garde @PostLoad désactivés → lecture inter-tenant possible.
-        User user = User.builder()
-                .email(email)
-                .password(passwordEncoder.encode(password))
-                .mustChangePassword(true)
-                .roles(Set.of(role))
-                .etablissement(etablissementCourantService.courant())
-                .build();
-        userRepository.save(user);
-
-        Enseignant enseignant = Enseignant.builder()
-                .matricule(matricule)
-                .nom(nom)
-                .prenom(prenom)
-                .departement(departement)
-                .grade(grade)
-                // VALIDATED, pas PENDING : c'est l'administration elle-même qui vient de créer ce
-                // compte et d'en envoyer le mot de passe. Le laisser en attente lui ferait recevoir
-                // des identifiants refusés à la connexion, puisque PENDING bloque le login.
-                .statut(StatutEnseignant.VALIDATED)
-                .user(user)
-                .build();
-        enseignantRepository.save(enseignant);
-
-        mailService.notifierIdentifiantsProvisoires(
-            etabCourant != null ? etabCourant.getEmailFrom() : null,
-            email, prenom, password);
-
-        ra.addFlashAttribute("success",
-                prenom + " " + nom + " est ajouté : ses accès lui ont été envoyés par e-mail.");
         return "redirect:/admin/enseignants";
     }
 
@@ -224,21 +154,8 @@ public class EnseignantWebController {
                                  @RequestParam String sujet,
                                  @RequestParam String corps,
                                  RedirectAttributes ra) {
-        int envoyes = 0;
-        if ("ALL".equals(destinataire)) {
-            for (Enseignant e : enseignantRepository.findAll()) {
-                if (e.getUser() != null && e.getUser().getEmail() != null) {
-                    mailService.envoyerMessage(e.getUser().getEmail(), sujet, corps);
-                    envoyes++;
-                }
-            }
-        } else {
-            Enseignant e = enseignantRepository.findById(Long.valueOf(destinataire)).orElse(null);
-            if (e != null && e.getUser() != null) {
-                mailService.envoyerMessage(e.getUser().getEmail(), sujet, corps);
-                envoyes = 1;
-            }
-        }
+        Long enseignantId = "ALL".equals(destinataire) ? null : Long.valueOf(destinataire);
+        int envoyes = gestionEnseignants.envoyerMessage(enseignantId, sujet, corps);
         ra.addFlashAttribute("success", envoyes == 1 ? "1 message envoyé." : envoyes + " messages envoyés.");
         return "redirect:/admin/messages";
     }
@@ -298,7 +215,7 @@ public class EnseignantWebController {
      * <p>Sans cette action, un envoi perdu — filtré, mal saisi, ou jamais parti — laissait
      * l'enseignant sans aucun accès et sans recours : le secret n'est stocké nulle part en clair,
      * et l'administration ne peut donc pas le lui redonner. Il fallait supprimer puis recréer
-     * le compte, ce qui emportait son historique.
+     * le compte, ce qui emportait son historique. Règles et envoi : {@link GestionEnseignantsService}.
      */
     @PostMapping("/admin/enseignants/{id}/renvoyer-acces")
     public String renvoyerAcces(@PathVariable Long id,
@@ -307,35 +224,15 @@ public class EnseignantWebController {
                                 @RequestParam(defaultValue = "false") boolean archives,
                                 @RequestParam(defaultValue = "0") int page,
                                 RedirectAttributes ra) {
-        var enseignant = enseignantRepository.findById(id).orElse(null);
-        if (enseignant == null || enseignant.getUser() == null) {
+        try {
+            String adresse = gestionEnseignants.renvoyerAcces(id);
+            ra.addFlashAttribute("success", "Nouveaux acces envoyes a " + adresse + ".");
+        } catch (ResourceNotFoundException e) {
             ra.addFlashAttribute("error",
                     "Cet enseignant n'a pas de compte : renseignez son e-mail en le recreant.");
-            return retourListe(search, departement, archives, page);
+        } catch (MetierException e) {
+            ra.addFlashAttribute("error", e.getMessage());
         }
-        var compte = enseignant.getUser();
-        // Compte partagé : seul l'établissement où l'enseignant travaille peut lui renvoyer des
-        // accès, pour qu'un autre ne puisse pas fermer ses sessions à répétition.
-        Long ici = enseignant.getEtablissementId();
-        boolean partage = compteEnseignantService.fiches(compte.getId()).size() > 1;
-        if (partage && (compte.getEtablissement() == null || !compte.getEtablissement().getId().equals(ici))) {
-            ra.addFlashAttribute("error", "Ce compte est partagé avec un autre établissement : "
-                    + "l'enseignant doit choisir le vôtre dans l'application, ou demander ses accès là où il travaille.");
-            return retourListe(search, departement, archives, page);
-        }
-        String secret = ci.esatic.sigep.security.SecurityUtils.genererMotDePasseProvisoire();
-        compte.setPassword(passwordEncoder.encode(secret));
-        // L'ancien secret devient caduc et le nouveau devra etre remplace a la connexion.
-        compte.setMustChangePassword(true);
-        userRepository.save(compte);
-
-        Etablissement etab = etablissementCourantService.courant();
-        mailService.notifierIdentifiantsProvisoires(
-                etab != null ? etab.getEmailFrom() : null,
-                compte.getEmail(), enseignant.getPrenom(), secret);
-
-        ra.addFlashAttribute("success",
-                "Nouveaux acces envoyes a " + compte.getEmail() + ".");
         return retourListe(search, departement, archives, page);
     }
 

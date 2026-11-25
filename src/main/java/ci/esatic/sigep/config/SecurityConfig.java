@@ -35,6 +35,7 @@ public class SecurityConfig {
     private final ci.esatic.sigep.service.JournalSecuriteService journalSecurite;
     private final ci.esatic.sigep.security.ClientIpResolver clientIpResolver;
     private final ci.esatic.sigep.security.CleApiAuthFilter cleApiAuthFilter;
+    private final ci.esatic.sigep.security.AgentAuthFilter agentAuthFilter;
     private final ci.esatic.sigep.security.FreinConnexion freinConnexion;
 
     /** Voir {@link AdminOtpInterceptor} : interrupteur de secours du second facteur. */
@@ -186,9 +187,37 @@ public class SecurityConfig {
         return http.build();
     }
 
-    /** Chaîne 3 : API REST — JWT stateless */
+    /**
+     * Chaîne 3 : API de l'agent — authentifiée par clé d'agent.
+     *
+     * <p>Même raison d'ordre que la chaîne 2 : sans elle, « /api/agent/** » retomberait sur la
+     * chaîne JWT. L'identité posée par le filtre est l'administrateur lié à la clé ; les règles
+     * d'accès s'appliquent à ses rôles, comme dans la console.
+     */
     @Bean
     @Order(3)
+    public SecurityFilterChain agentFilterChain(HttpSecurity http) throws Exception {
+        http
+                .securityMatcher("/api/agent/**")
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth.anyRequest().hasRole("ADMIN"))
+                .addFilterBefore(agentAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
+                .exceptionHandling(ex -> ex.authenticationEntryPoint((requete, reponse, e) -> {
+                    reponse.setStatus(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED);
+                    reponse.setContentType("application/json;charset=UTF-8");
+                    reponse.getWriter().write(
+                            "{\"success\":false,\"message\":\"Clé d'agent requise.\"}");
+                }));
+        appliquerHeadersSecurite(http);
+        exigerHttps(http);
+        return http.build();
+    }
+
+    /** Chaîne 4 : API REST — JWT stateless */
+    @Bean
+    @Order(4)
     public SecurityFilterChain apiFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)

@@ -130,6 +130,18 @@ public class ImportService {
         return resultat(filename, saved.size(), ctx, enseignant.getPrenom() + " " + enseignant.getNom());
     }
 
+    /**
+     * Phrase à joindre au bilan quand l'import a ajouté des matières, classes ou salles :
+     * « Z99 » au lieu de « A99 » passerait sinon inaperçu. Vide si rien n'a été ajouté.
+     */
+    public static String avisNouveauxReferentiels(List<String> nouveaux) {
+        if (nouveaux == null || nouveaux.isEmpty()) return "";
+        String liste = String.join(", ", nouveaux.stream().limit(10).toList())
+                + (nouveaux.size() > 10 ? " et " + (nouveaux.size() - 10) + " autre(s)" : "");
+        return " Ajoutés aux référentiels : " + liste
+                + ". Vérifiez qu'il ne s'agit pas d'une faute de frappe.";
+    }
+
     /** Résultat d'import homogène (E3) : totaux + détail des lignes en erreur. */
     private Map<String, Object> resultat(String filename, int importes, ContexteImport ctx, String enseignant) {
         Map<String, Object> result = new LinkedHashMap<>();
@@ -139,6 +151,8 @@ public class ImportService {
         result.put("lignesEnErreur", ctx.erreurs.size());
         result.put("erreurs", ctx.erreurs);          // liste "Ligne N : motif" (affichable à l'admin)
         result.put("referentielsCrees", ctx.referentielsCrees);
+        // Nommés : une salle « Z99 » créée au passage est souvent une faute de frappe à corriger.
+        result.put("nouveauxReferentiels", ctx.nouveaux);
         result.put("doublonsIgnores", ctx.doublons);
         result.put("joursFermesIgnores", ctx.joursFermes);
         return result;
@@ -1226,6 +1240,8 @@ public class ImportService {
         final Map<String, Salle> salles = charger(salleRepository.findAll(), Salle::getLibelle);
         final List<String> erreurs = new ArrayList<>();
         int referentielsCrees = 0;
+        /** « salle « Z99 » » : ce que l'import ajoute aux référentiels, pour que l'établissement le vérifie. */
+        final List<String> nouveaux = new ArrayList<>();
         int doublons = 0;
         int joursFermes = 0;
         /** L'enseignant importe lui-même : ses séances attendent l'accord de la scolarité. */
@@ -1297,6 +1313,7 @@ public class ImportService {
         Matiere upsertMatiere(String libelle) {
             return matieres.computeIfAbsent(cle(libelle), k -> {
                 referentielsCrees++;
+                nouveaux.add("matière « " + libelle.trim() + " »");
                 Matiere m = Matiere.builder().libelle(libelle).build();
                 return simulation ? m : matiereRepository.save(m);
             });
@@ -1305,6 +1322,7 @@ public class ImportService {
         Classe upsertClasse(String libelle) {
             return classes.computeIfAbsent(cle(libelle), k -> {
                 referentielsCrees++;
+                nouveaux.add("classe « " + libelle.trim() + " »");
                 Classe c = Classe.builder().libelle(libelle).build();
                 return simulation ? c : classeRepository.save(c);
             });
@@ -1313,6 +1331,7 @@ public class ImportService {
         Salle upsertSalle(String libelle) {
             return salles.computeIfAbsent(cle(libelle), k -> {
                 referentielsCrees++;
+                nouveaux.add("salle « " + libelle.trim() + " »");
                 Salle s = Salle.builder().libelle(libelle).build();
                 return simulation ? s : salleRepository.save(s);
             });

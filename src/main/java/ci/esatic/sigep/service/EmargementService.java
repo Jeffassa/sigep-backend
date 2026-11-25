@@ -203,11 +203,7 @@ public class EmargementService {
     /** Admin : valide un émargement hors-ligne en attente → la séance devient émargée (comptée). */
     @Transactional
     public void validerHorsLigne(Long emargementId) {
-        Emargement e = emargementRepository.findById(emargementId)
-                .orElseThrow(() -> new ResourceNotFoundException("Emargement", "id", emargementId));
-        if (!e.isHorsLigne() || e.isValide()) {
-            throw new MetierException("ETAT_INVALIDE", "Cet emargement n'est pas en attente de validation.");
-        }
+        Emargement e = horsLigneEnAttente(emargementId);
         e.setValide(true);
         e.getSeance().setStatut(StatutSeance.EMARGE);
         seanceRepository.save(e.getSeance());
@@ -219,17 +215,24 @@ public class EmargementService {
     /** Admin : refuse un émargement hors-ligne en attente → la séance redevient à faire (record supprimé). */
     @Transactional
     public void refuserHorsLigne(Long emargementId) {
-        Emargement e = emargementRepository.findById(emargementId)
-                .orElseThrow(() -> new ResourceNotFoundException("Emargement", "id", emargementId));
-        if (!e.isHorsLigne() || e.isValide()) {
-            throw new MetierException("ETAT_INVALIDE", "Cet emargement n'est pas en attente de validation.");
-        }
+        Emargement e = horsLigneEnAttente(emargementId);
         Seance seance = e.getSeance();
         seance.setStatut(StatutSeance.A_FAIRE);
         seanceRepository.save(seance);
         log.warn("Emargement HORS-LIGNE REFUSE par l'admin - Seance {} Enseignant {} (supprime)",
                 seance.getId(), e.getEnseignant().getId());
         emargementRepository.delete(e);
+    }
+
+    /** L'émargement hors ligne, s'il attend bien une décision ; sinon un refus explicite. Sans effet. */
+    @Transactional(readOnly = true)
+    public Emargement horsLigneEnAttente(Long emargementId) {
+        Emargement e = emargementRepository.findById(emargementId)
+                .orElseThrow(() -> new ResourceNotFoundException("Emargement", "id", emargementId));
+        if (!e.isHorsLigne() || e.isValide()) {
+            throw new MetierException("ETAT_INVALIDE", "Cet emargement n'est pas en attente de validation.");
+        }
+        return e;
     }
 
     public List<EmargementResponse> getHistorique(Long userId) {

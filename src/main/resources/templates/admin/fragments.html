@@ -216,6 +216,8 @@
                 <span class="material-symbols-rounded">event</span><span>Calendrier et remplacements</span></a>
             <a th:if="${menu == null}" class="palette-item" th:href="@{/admin/equipe}" data-key="equipe comptes scolarite comptabilite direction acces">
                 <span class="material-symbols-rounded">manage_accounts</span><span>Équipe</span></a>
+            <a th:if="${menu == null}" class="palette-item" th:href="@{/admin/agent}" data-key="agent assistant ia jeff automatiser cle journal">
+                <span class="material-symbols-rounded">smart_toy</span><span>Agent</span></a>
             <a th:if="${menu == null or menu.contains('referentiels')}" class="palette-item" th:href="@{/admin/referentiels}" data-key="referentiels matieres classes salles modele emploi du temps">
                 <span class="material-symbols-rounded">library_books</span><span>Référentiels (matières · classes · salles)</span></a>
             <a class="palette-item" th:href="@{/admin/statistiques}" data-key="statistiques stats analyse tendances kpi recommandations heatmap">

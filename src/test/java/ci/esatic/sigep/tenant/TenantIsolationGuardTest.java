@@ -75,9 +75,14 @@ class TenantIsolationGuardTest {
      * connu — c'est précisément la clé qui va le désigner. Le filtrer par un établissement qu'on
      * ignore encore n'aurait aucun sens. L'établissement lu devient ensuite le seul périmètre de
      * la requête, posé par TenantInterceptor à partir de CleApiPrincipal.
+     *
+     * <p><b>CleAgentRepository.chercherActiveParEmpreinte</b> : même raison, pour la clé d'agent.
+     * L'établissement est ensuite celui de l'administrateur lié à la clé, posé par
+     * TenantInterceptor comme pour une session de la console.
      */
     private static final Set<String> REQUETES_SANS_TENANT_JUSTIFIEES =
-            Set.of("CleApiRepository.chercherActiveParEmpreinte");
+            Set.of("CleApiRepository.chercherActiveParEmpreinte",
+                    "CleAgentRepository.chercherActiveParEmpreinte");
 
     @Test
     void toutesLesEntitesMetierSontCloisonneesParTenant() throws Exception {
