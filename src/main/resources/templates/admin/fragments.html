@@ -218,6 +218,8 @@
                 <span class="material-symbols-rounded">manage_accounts</span><span>Équipe</span></a>
             <a th:if="${menu == null}" class="palette-item" th:href="@{/admin/agent}" data-key="agent assistant ia jeff automatiser cle journal">
                 <span class="material-symbols-rounded">smart_toy</span><span>Agent</span></a>
+            <a th:if="${menu == null}" class="palette-item" th:href="@{/admin/assistant}" data-key="assistant ia discussion demander claude chat aide">
+                <span class="material-symbols-rounded">forum</span><span>Assistant</span></a>
             <a th:if="${menu == null or menu.contains('referentiels')}" class="palette-item" th:href="@{/admin/referentiels}" data-key="referentiels matieres classes salles modele emploi du temps">
                 <span class="material-symbols-rounded">library_books</span><span>Référentiels (matières · classes · salles)</span></a>
             <a class="palette-item" th:href="@{/admin/statistiques}" data-key="statistiques stats analyse tendances kpi recommandations heatmap">

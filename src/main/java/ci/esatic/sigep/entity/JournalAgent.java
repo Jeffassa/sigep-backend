@@ -27,8 +27,14 @@ public class JournalAgent implements TenantScoped {
     @Column(name = "etablissement_id")
     private Long etablissementId;
 
-    @Column(name = "cle_id", nullable = false)
+    /** Clé de l'agent ; vide pour l'assistant de la console, qui agit sans clé. */
+    @Column(name = "cle_id")
     private Long cleId;
+
+    /** AGENT (clé d'agent, ex. JEFF) ou ASSISTANT (assistant de la console). */
+    @Builder.Default
+    @Column(nullable = false, length = 20)
+    private String source = "AGENT";
 
     @Column(name = "user_id")
     private Long userId;

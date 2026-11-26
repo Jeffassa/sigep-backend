@@ -53,6 +53,21 @@ public class Etablissement {
     @Builder.Default
     private int maxEnseignants = 10;
 
+    /**
+     * Assistant de la console activé par l'établissement. Il envoie des données (pseudonymisées) à
+     * un fournisseur d'IA hors de Côte d'Ivoire : désactivé tant qu'un administrateur ne l'a pas
+     * choisi, et l'on garde qui l'a fait, et quand.
+     */
+    @Builder.Default
+    @Column(name = "assistant_active", nullable = false)
+    private boolean assistantActive = false;
+
+    @Column(name = "assistant_active_le")
+    private java.time.LocalDateTime assistantActiveLe;
+
+    @Column(name = "assistant_active_par")
+    private String assistantActivePar;
+
     @Builder.Default
     private LocalDateTime dateCreation = LocalDateTime.now();
 

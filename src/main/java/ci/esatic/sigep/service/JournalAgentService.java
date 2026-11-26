@@ -32,8 +32,15 @@ public class JournalAgentService {
 
     public void enregistrer(Long etablissementId, Long cleId, Long userId, String methode, String chemin,
                             int statutHttp, boolean simulation, String resume) {
+        enregistrer("AGENT", etablissementId, cleId, userId, methode, chemin, statutHttp, simulation, resume);
+    }
+
+    /** @param source AGENT (clé d'agent) ou ASSISTANT (assistant de la console, sans clé) */
+    public void enregistrer(String source, Long etablissementId, Long cleId, Long userId, String methode, String chemin,
+                            int statutHttp, boolean simulation, String resume) {
         try {
             repository.save(JournalAgent.builder()
+                    .source(source)
                     .etablissementId(etablissementId)
                     .cleId(cleId)
                     .userId(userId)

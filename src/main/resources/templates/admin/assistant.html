@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('SIGEP | Assistant')}"></head>
+<body>
+
+<div th:replace="~{admin/fragments :: topbar('assistant')}"></div>
+
+<main class="max-w-[860px] mx-auto px-5 md:px-8 py-10 pb-36">
+
+    <div class="mb-8" data-reveal>
+        <p class="surtitre">Intégration</p>
+        <h1 class="titre-page">Assistant</h1>
+        <p class="chapeau">Demandez en une phrase : « valide les séances importées de cette semaine », « qui n'a pas émargé hier ? ». L'assistant prépare, vous confirmez.</p>
+    </div>
+
+    <div data-flash th:if="${success}" class="feuille mb-5 flex items-center gap-2 text-[13px]" data-reveal
+         style="background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.35)">
+        <svg th:replace="~{admin/fragments :: coche}"></svg><span th:text="${success}">OK</span>
+    </div>
+    <div data-flash th:if="${error}" class="feuille mb-5 flex items-center gap-2 text-[13px]" data-reveal>
+        <span th:text="${error}">Erreur</span>
+    </div>
+
+    <!-- Fermé côté plateforme, ou hors du plan -->
+    <section th:unless="${etat.service and etat.plan}" class="feuille" data-reveal>
+        <h2 class="titre-section">Pas encore disponible</h2>
+        <p th:unless="${etat.plan}" class="text-[14px]">L'assistant fait partie du plan Entreprise.
+            <a th:href="@{/admin/abonnement}" class="underline">Voir les plans</a></p>
+        <p th:if="${etat.plan and !etat.service}" class="text-[14px]">L'assistant n'est pas encore ouvert sur la plateforme.</p>
+    </section>
+
+    <!-- Activation : l'établissement choisit en connaissance de cause -->
+    <section th:if="${etat.service and etat.plan and !etat.active}" class="feuille" data-reveal>
+        <h2 class="titre-section">Activer l'assistant</h2>
+        <div class="text-[14px] space-y-3">
+            <p>L'assistant s'appuie sur <strong>Claude</strong>, un modèle d'intelligence artificielle d'<strong>Anthropic</strong>,
+               société établie aux États-Unis. Pour vous répondre, il lui transmet votre demande et les données de SIGEP
+               qu'il consulte (séances, heures, statistiques).</p>
+            <ul class="list-disc pl-5 space-y-1">
+                <li>Les <strong>noms, prénoms, matricules et e-mails</strong> partent remplacés par des codes ; vous voyez
+                    les vraies valeurs, Anthropic non. Un nom que vous tapez et que SIGEP ne connaît pas encore part tel quel.</li>
+                <li>Les données quittent la Côte d'Ivoire : transfert encadré par la loi n° 2013-450. Anthropic ne s'en
+                    sert pas pour entraîner ses modèles.</li>
+                <li>Rien ne change sans votre clic : l'assistant simule chaque modification, vous la confirmez ou l'écartez.</li>
+                <li>Chacune de ses actions est notée dans le <a th:href="@{/admin/agent}" class="underline">journal de l'agent</a>.
+                    La conversation n'est pas enregistrée ; elle s'efface à la déconnexion.</li>
+                <li>Vous pouvez le désactiver à tout moment.</li>
+            </ul>
+            <p class="text-muted">Détails dans la <a th:href="@{/confidentialite}" class="underline">politique de confidentialité</a>.</p>
+        </div>
+        <form th:action="@{/admin/assistant/activer}" method="post" class="mt-5 flex flex-col gap-3">
+            <label class="flex items-start gap-2 text-[14px]">
+                <input type="checkbox" name="accord" value="true" class="mt-1"/>
+                <span>J'ai lu ce que l'assistant transmet et à qui, et je l'active pour mon établissement.</span>
+            </label>
+            <button type="submit" class="btn btn-ink h-11 px-5 rounded-xl font-medium self-start">Activer l'assistant</button>
+        </form>
+    </section>
+
+    <!-- La conversation -->
+    <section th:if="${etat.utilisable()}" data-reveal>
+        <div id="fil" class="flex flex-col gap-4 mb-5" aria-live="polite">
+            <p th:if="${etat.lignes.isEmpty()}" class="text-[14px] text-muted" id="vide">Posez votre première question.</p>
+            <th:block th:each="l : ${etat.lignes}">
+                <div th:class="${l.role() == 'admin'} ? 'bulle bulle-admin' : (${l.role() == 'systeme'} ? 'bulle bulle-systeme' : 'bulle bulle-assistant')"
+                     th:text="${l.texte()}">…</div>
+                <div th:each="lien : ${l.liens()}" class="pl-1">
+                    <a th:href="${lien.url()}" class="btn h-9 px-4 rounded-xl text-[13px] inline-flex items-center" th:text="${lien.libelle()}">Fichier</a>
+                </div>
+            </th:block>
+        </div>
+
+        <form id="demande" class="feuille flex flex-col gap-3"
+              th:attr="data-csrf=${_csrf != null ? _csrf.token : ''},data-csrf-entete=${_csrf != null ? _csrf.headerName : ''}">
+            <textarea id="texte" rows="3" maxlength="4000" class="w-full px-4 py-3 champ"
+                      placeholder="Ex. : quelles séances attendent ma validation ?"></textarea>
+            <div class="flex items-center gap-3 flex-wrap">
+                <button type="submit" id="envoyer" class="btn btn-ink h-11 px-5 rounded-xl font-medium">Envoyer</button>
+                <span id="etatEnvoi" class="text-[13px] text-muted"></span>
+                <span class="text-[12px] text-muted ml-auto">
+                    <span id="restantes" th:text="${etat.restantes()}">100</span> message(s) restant(s) aujourd'hui</span>
+            </div>
+        </form>
+
+        <div class="mt-6 flex gap-3 flex-wrap">
+            <form th:action="@{/admin/assistant/nouvelle}" method="post">
+                <button type="submit" class="btn h-9 px-4 rounded-xl text-[13px]">Nouvelle conversation</button>
+            </form>
+            <form th:action="@{/admin/assistant/desactiver}" method="post">
+                <button type="submit" class="btn h-9 px-4 rounded-xl text-[13px]">Désactiver l'assistant</button>
+            </form>
+        </div>
+        <p class="text-[12px] text-muted mt-3" th:if="${etat.activeLe() != null}"
+           th:text="'Activé le ' + ${#temporals.format(etat.activeLe(), 'dd/MM/yyyy à HH:mm')} + ' par ' + ${etat.activePar()} + '.'">Activé.</p>
+    </section>
+
+</main>
+
+<div th:replace="~{admin/fragments :: dock('assistant')}"></div>
+<div th:replace="~{admin/fragments :: palette}"></div>
+<div th:replace="~{admin/fragments :: scripts}"></div>
+
+<style th:nonce="${cspNonce}">
+    .bulle { white-space: pre-wrap; font-size: 14px; line-height: 1.55; padding: 12px 16px; border-radius: 14px; max-width: 92%; }
+    .bulle-admin { align-self: flex-end; background: var(--ink, #1f2937); color: var(--paper, #fff); }
+    .bulle-assistant { align-self: flex-start; border: 1px solid var(--line, #e5e7eb); }
+    .bulle-systeme { align-self: center; font-size: 13px; color: var(--muted, #6b7280); }
+    .proposition { align-self: flex-start; border: 1px dashed var(--line, #d1d5db); border-radius: 14px; padding: 12px 16px; max-width: 92%; font-size: 14px; }
+</style>
+
+<script th:nonce="${cspNonce}" data-page-script th:inline="none">
+(function () {
+    var formulaire = document.getElementById('demande');
+    if (!formulaire) return;
+    var fil = document.getElementById('fil');
+    var champ = document.getElementById('texte');
+    var bouton = document.getElementById('envoyer');
+    var etat = document.getElementById('etatEnvoi');
+    var restantes = document.getElementById('restantes');
+    var entetes = { 'Content-Type': 'application/json', 'Accept': 'application/json' };
+    if (formulaire.dataset.csrfEntete) entetes[formulaire.dataset.csrfEntete] = formulaire.dataset.csrf;
+
+    // Tout texte est posé en textContent : rien de ce que renvoie le modèle n'est interprété en HTML.
+    function bulle(classe, texte) {
+        var vide = document.getElementById('vide');
+        if (vide) vide.remove();
+        var d = document.createElement('div');
+        d.className = 'bulle ' + classe;
+        d.textContent = texte;
+        fil.appendChild(d);
+        d.scrollIntoView({ block: 'nearest' });
+        return d;
+    }
+
+    function poster(url, corps) {
+        return fetch(url, { method: 'POST', headers: entetes, credentials: 'same-origin',
+                            body: corps ? JSON.stringify(corps) : null })
+            .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, corps: j }; }); });
+    }
+
+    function proposition(a) {
+        var d = document.createElement('div');
+        d.className = 'proposition';
+        var t = document.createElement('p');
+        t.textContent = a.apercu;
+        var ligne = document.createElement('div');
+        ligne.className = 'flex gap-2 mt-3';
+        var oui = document.createElement('button');
+        oui.type = 'button';
+        oui.className = 'btn btn-ink h-9 px-4 rounded-xl text-[13px]';
+        oui.textContent = a.libelle;
+        var non = document.createElement('button');
+        non.type = 'button';
+        non.className = 'btn h-9 px-4 rounded-xl text-[13px]';
+        non.textContent = 'Écarter';
+        function fermer(texte) { ligne.remove(); var r = document.createElement('p'); r.className = 'text-[13px] mt-2'; r.textContent = texte; d.appendChild(r); }
+        oui.addEventListener('click', function () {
+            oui.disabled = non.disabled = true;
+            poster('/admin/assistant/actions/' + encodeURIComponent(a.id) + '/confirmer')
+                .then(function (r) { fermer(r.ok ? '✓ ' + r.corps.message : r.corps.erreur); })
+                .catch(function () { fermer('Le serveur ne répond pas : réessayez.'); });
+        });
+        non.addEventListener('click', function () {
+            oui.disabled = non.disabled = true;
+            poster('/admin/assistant/actions/' + encodeURIComponent(a.id) + '/annuler').then(function () { fermer('Écartée.'); });
+        });
+        ligne.appendChild(oui);
+        ligne.appendChild(non);
+        d.appendChild(t);
+        d.appendChild(ligne);
+        fil.appendChild(d);
+    }
+
+    function lien(l) {
+        var p = document.createElement('div');
+        p.className = 'pl-1';
+        var a = document.createElement('a');
+        a.className = 'btn h-9 px-4 rounded-xl text-[13px] inline-flex items-center';
+        // Seuls les liens de la console : le modèle ne fournit pas l'adresse, SIGEP la construit.
+        if (typeof l.url === 'string' && l.url.indexOf('/admin/') === 0) a.href = l.url;
+        a.textContent = l.libelle;
+        p.appendChild(a);
+        fil.appendChild(p);
+    }
+
+    formulaire.addEventListener('submit', function (ev) {
+        ev.preventDefault();
+        var texte = champ.value.trim();
+        if (!texte) return;
+        bulle('bulle-admin', texte);
+        champ.value = '';
+        bouton.disabled = true;
+        etat.textContent = 'L’assistant réfléchit…';
+        poster('/admin/assistant/message', { texte: texte })
+            .then(function (r) {
+                if (!r.ok) { bulle('bulle-systeme', r.corps.erreur || 'Erreur.'); return; }
+                if (r.corps.texte) bulle('bulle-assistant', r.corps.texte);
+                (r.corps.actions || []).forEach(proposition);
+                (r.corps.liens || []).forEach(lien);
+                if (restantes) restantes.textContent = r.corps.restantes;
+            })
+            .catch(function () { bulle('bulle-systeme', 'Le serveur ne répond pas : réessayez.'); })
+            .finally(function () { bouton.disabled = false; etat.textContent = ''; champ.focus(); });
+    });
+
+    champ.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); formulaire.requestSubmit(); }
+    });
+})();
+</script>
+</body>
+</html>

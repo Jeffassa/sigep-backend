@@ -30,7 +30,22 @@
             <p>Fourniture du service de gestion des émargements (exécution du contrat), facturation (obligation légale),
                amélioration du service (intérêt légitime). Aucune revente de données.</p>
         </section>
-<section>
+        <section>
+            <h2>Assistant de la console (intelligence artificielle)</h2>
+            <p>Les établissements du plan Entreprise peuvent activer un assistant qui pilote leur tableau de bord sur
+               demande. <em>Il est désactivé par défaut</em> : un administrateur de l'établissement doit l'activer, et
+               l'on conserve qui l'a fait et quand. Il peut être désactivé à tout moment.</p>
+            <p>L'assistant s'appuie sur le modèle Claude d'<strong>Anthropic, PBC</strong> (États-Unis), sous-traitant.
+               Il lui transmet la demande de l'administrateur et les données de SIGEP nécessaires pour y répondre
+               (séances, heures, statistiques). Les <strong>noms, prénoms, matricules et adresses e-mail</strong> sont
+               remplacés par des codes avant l'envoi et rétablis au retour ; un nom saisi par l'administrateur et encore
+               inconnu de SIGEP part tel quel. Ce transfert hors de Côte d'Ivoire se fait dans le cadre de la loi
+               n° 2013-450 ; Anthropic n'utilise pas ces échanges pour entraîner ses modèles.</p>
+            <p>La conversation n'est pas enregistrée par SIGEP : elle s'efface à la fin de la session. Les actions de
+               l'assistant sont notées dans le journal de l'agent de l'établissement, conservé un an. Aucune modification
+               n'est faite sans la confirmation de l'administrateur.</p>
+        </section>
+        <section>
             <h2>Durée de conservation</h2>
             <p>Les données sont conservées pendant la durée de la relation contractuelle, puis archivées ou supprimées
                dans un délai d'un an après la fin de l'abonnement. Les pièces de facturation sont conservées pendant la

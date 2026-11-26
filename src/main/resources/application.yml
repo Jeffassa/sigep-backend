@@ -196,6 +196,20 @@ app:
     model: ${AI_MODEL:claude-opus-4-8}
     # Modèle standard (plans inférieurs) — maîtrise du coût par plan (E10).
     model-standard: ${AI_MODEL_STANDARD:claude-haiku-4-5}
+    # Assistant de la console (plan Entreprise). Fermé par défaut ; ouvert avec ASSISTANT_ENABLED=true
+    # et ANTHROPIC_API_KEY. Chaque établissement doit ensuite l'activer lui-même.
+    assistant:
+      enabled: ${ASSISTANT_ENABLED:false}
+      model: ${ASSISTANT_MODEL:claude-opus-5-5}
+      # low, medium, high, xhigh, max : profondeur de réflexion, donc coût.
+      effort: ${ASSISTANT_EFFORT:medium}
+      # Repli côté serveur d'Anthropic quand le modèle refuse une demande.
+      repli: ${ASSISTANT_REPLI:true}
+      # Messages par établissement et par jour : borne la facture.
+      max-requetes-jour: ${ASSISTANT_MAX_REQUETES_JOUR:100}
+      max-etapes: 10
+      max-messages: 80
+      duree-conversation: PT2H
   cache:
     # Préfixe de toutes les clés Redis. Le numéro de version se change quand le format d'une
     # valeur change : les anciennes clés s'éteignent d'elles-mêmes à l'expiration.
