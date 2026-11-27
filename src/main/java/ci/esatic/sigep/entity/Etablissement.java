@@ -53,11 +53,26 @@ public class Etablissement {
     @Builder.Default
     private int maxEnseignants = 10;
 
+    /**
+     * Assistant de la console activé par l'établissement. Il envoie des données (pseudonymisées) à
+     * un fournisseur d'IA hors de Côte d'Ivoire : désactivé tant qu'un administrateur ne l'a pas
+     * choisi, et l'on garde qui l'a fait, et quand.
+     */
+    @Builder.Default
+    @Column(name = "assistant_active", nullable = false)
+    private boolean assistantActive = false;
+
+    @Column(name = "assistant_active_le")
+    private java.time.LocalDateTime assistantActiveLe;
+
+    @Column(name = "assistant_active_par")
+    private String assistantActivePar;
+
     @Builder.Default
     private LocalDateTime dateCreation = LocalDateTime.now();
 
     /**
-     * Fin de la période d'abonnement payée (plans Pro/Enterprise). {@code null} = pas
+     * Fin de la période d'abonnement payée (plans Pro/Entreprise). {@code null} = pas
      * d'expiration (plan Free gratuit, ou tenant illimité). Au-delà de cette date,
      * l'accès au SaaS est bloqué jusqu'au renouvellement (cf. AbonnementService).
      */
@@ -76,6 +91,10 @@ public class Etablissement {
     @Column(nullable = false, length = 10)
     @Builder.Default
     private String locale = "fr";
+
+    /** Pays de l'établissement (code ISO à deux lettres, UEMOA), choisi à l'inscription. */
+    @Column(name = "pays_code", length = 2)
+    private String paysCode;
 
     /** Type d'établissement (SUPERIEUR, SECONDAIRE, …) : contextualise l'analyse IA (F5). */
     @Column(name = "type_etablissement", nullable = false, length = 40)
@@ -143,6 +162,58 @@ public class Etablissement {
     /** Clé kiosque QR propre au tenant (autorise l'affichage du QR) — remplace la variable globale (C4). */
     @Column(name = "kiosk_key", length = 64)
     private String kioskKey;
+
+    /** Réseau d'où l'écran d'émargement peut s'afficher (IP ou plages CIDR). Vide : partout. */
+    @Column(name = "ecran_reseaux", length = 500)
+    private String ecranReseaux;
+
+    /**
+     * Zone d'émargement : le téléphone de l'enseignant doit se trouver à moins de
+     * {@link #zoneRayonMetres} de ce point pour émarger. Sans centre : aucun contrôle.
+     */
+    @Column(name = "zone_latitude")
+    private Double zoneLatitude;
+
+    @Column(name = "zone_longitude")
+    private Double zoneLongitude;
+
+    @Column(name = "zone_rayon_metres")
+    private Integer zoneRayonMetres;
+
+    /**
+     * Rapprochement avec les listes officielles de l'État (MESRS, MENA) : reconnu d'office si son
+     * nom y figure sans ambiguïté, sinon à vérifier par la plateforme.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "reconnaissance", nullable = false, length = 20)
+    @Builder.Default
+    private StatutReconnaissance reconnaissance = StatutReconnaissance.A_VERIFIER;
+
+    /** La fiche officielle retenue, recopiée : les listes sont remplacées à chaque import. */
+    @Column(name = "officiel_source", length = 30)
+    private String officielSource;
+
+    @Column(name = "officiel_code", length = 20)
+    private String officielCode;
+
+    @Column(name = "officiel_nom")
+    private String officielNom;
+
+    /** Décision manuelle de la plateforme : son auteur, sa date et le constat qui la fonde. */
+    @Column(name = "reconnaissance_auteur")
+    private String reconnaissanceAuteur;
+
+    @Column(name = "reconnaissance_date")
+    private LocalDateTime reconnaissanceDate;
+
+    @Column(name = "reconnaissance_constat", length = 500)
+    private String reconnaissanceConstat;
+
+    /** L'établissement vérifie la position de ses enseignants à l'émargement. */
+    @Transient
+    public boolean isZoneDefinie() {
+        return zoneLatitude != null && zoneLongitude != null && zoneRayonMetres != null;
+    }
 
     /** Libellé affichable du tenant : nom personnalisé si défini, sinon nom légal. */
     @Transient

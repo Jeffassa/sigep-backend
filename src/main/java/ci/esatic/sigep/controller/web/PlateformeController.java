@@ -53,6 +53,11 @@ import java.util.stream.Collectors;
 @RequestMapping("/plateforme")
 public class PlateformeController {
 
+    /** Quota d'enseignants du plan gratuit (même source que l'inscription). */
+    @org.springframework.beans.factory.annotation.Value("${app.plans.free-max-enseignants:10}")
+    private int FREE_MAX_ENSEIGNANTS = 10;
+
+
     private final EtablissementRepository etablissementRepository;
     private final EnseignantRepository enseignantRepository;
     private final UserRepository userRepository;
@@ -62,6 +67,23 @@ public class PlateformeController {
     private final PlanService planService;
     private final SuppressionEtablissementService suppressionEtablissementService;
     private final PaiementRepository paiementRepository;
+    private final ci.esatic.sigep.repository.SeanceRepository seanceRepository;
+    private final ci.esatic.sigep.repository.EmargementRepository emargementRepository;
+    private final ci.esatic.sigep.repository.PaiementIntentRepository paiementIntentRepository;
+    private final ci.esatic.sigep.service.plateforme.PilotagePlateformeService pilotage;
+    private final ci.esatic.sigep.service.plateforme.EtatTechniqueService etatTechnique;
+    private final ci.esatic.sigep.service.plateforme.AnalystesService analystes;
+    private final ci.esatic.sigep.service.TransactionsPlateformeService transactionsService;
+
+    /** Sans émargement depuis ce nombre de jours, un client payant est en train de décrocher. */
+    private static final int JOURS_AVANT_DECROCHAGE = 14;
+
+    /** Une ligne du tableau : ce qu'un établissement fait réellement de SIGEP. */
+    public record SanteEtablissement(Etablissement e, long enseignants, long seances30j, long tauxPct,
+                                     java.time.LocalDateTime dernierEmargement, Long joursRestants,
+                                     String etat, int priorite, String motif, String contact) {
+        public boolean aTraiter() { return priorite <= 3; }
+    }
 
     /** Vue d'ensemble : dossiers à valider + KPIs (dont MRR) + liste filtrable des clients. */
     @GetMapping({"", "/"})
@@ -99,10 +121,22 @@ public class PlateformeController {
         List<Etablissement> enAttente = tous.stream()
                 .filter(e -> e.getStatut() == StatutEtablissement.EN_ATTENTE)
                 .toList();
+        // Le contact de chaque établissement, lu en une requête : il sert aux dossiers en attente,
+        // aux établissements à traiter et à la mise en route.
         Map<Long, String> adminParEtab = new HashMap<>();
-        for (Etablissement e : enAttente) {
-            userRepository.findFirstByEtablissementIdOrderByIdAsc(e.getId())
-                    .ifPresent(u -> adminParEtab.put(e.getId(), u.getEmail()));
+        for (Object[] l : userRepository.premierCompteParEtablissement()) {
+            if (l[0] != null) adminParEtab.put((Long) l[0], (String) l[1]);
+        }
+        // Les paiements, lus une fois : totaux, mois en cours, série mensuelle et derniers paiements.
+        List<Paiement> paiements = paiementRepository.findAllByOrderByDatePaiementDesc();
+        LocalDateTime debutMois = LocalDate.now().withDayOfMonth(1).atStartOfDay();
+        LocalDateTime debutMoisPrecedent = debutMois.minusMonths(1);
+        long totalEncaisse = 0, encaisseMois = 0, encaisseMoisPrecedent = 0;
+        for (Paiement p : paiements) {
+            totalEncaisse += p.getMontant();
+            if (p.getDatePaiement() == null) continue;
+            if (!p.getDatePaiement().isBefore(debutMois)) encaisseMois += p.getMontant();
+            else if (!p.getDatePaiement().isBefore(debutMoisPrecedent)) encaisseMoisPrecedent += p.getMontant();
         }
 
         // Recherche + filtres sur la liste principale.
@@ -115,6 +149,32 @@ public class PlateformeController {
                 .filter(e -> statut == null || statut.isBlank() || e.getStatut().name().equals(statut))
                 .toList();
 
+        // Ce que chaque établissement fait réellement de SIGEP, sur les 30 derniers jours.
+        Map<Long, long[]> activite = new HashMap<>();
+        for (Object[] l : seanceRepository.activiteParEtablissement(now.minusDays(30), now)) {
+            if (l[0] != null) activite.put((Long) l[0], new long[] {((Number) l[1]).longValue(), ((Number) l[2]).longValue()});
+        }
+        Map<Long, java.time.LocalDateTime> dernierEmargement = new HashMap<>();
+        for (Object[] l : emargementRepository.dernierEmargementParEtablissement()) {
+            if (l[0] != null) dernierEmargement.put((Long) l[0], (java.time.LocalDateTime) l[1]);
+        }
+        List<SanteEtablissement> sante = tous.stream()
+                .map(e -> sante(e, enseignantsParEtab, activite, dernierEmargement, expires, now, adminParEtab))
+                .sorted(java.util.Comparator.comparingInt(SanteEtablissement::priorite)
+                        .thenComparing(s -> s.e().getNom(), String.CASE_INSENSITIVE_ORDER))
+                .toList();
+        Set<Long> filtresIds = filtres.stream().map(Etablissement::getId).collect(Collectors.toSet());
+        model.addAttribute("lignes", sante.stream().filter(s -> filtresIds.contains(s.e().getId())).toList());
+        model.addAttribute("aTraiter", sante.stream().filter(SanteEtablissement::aTraiter).toList());
+        model.addAttribute("nbDecroches", sante.stream().filter(s -> "Décroche".equals(s.etat())).count());
+        model.addAttribute("nbJamaisUtilises", sante.stream().filter(s -> "Jamais utilisé".equals(s.etat())).count());
+        model.addAttribute("revenuARisque", sante.stream()
+                .filter(s -> s.priorite() <= 3 && s.e().getPlan() != Plan.FREE)
+                .mapToLong(s -> planService.prixMensuel(s.e().getPlan())).sum());
+        model.addAttribute("paiementsAVerifier", paiementIntentRepository
+                .findByStatutOrderByDateCreationAsc(ci.esatic.sigep.entity.StatutIntent.A_VERIFIER));
+        model.addAttribute("encaisseMoisPrecedent", encaisseMoisPrecedent);
+
         model.addAttribute("etablissements", filtres);
         model.addAttribute("enseignantsParEtab", enseignantsParEtab);
         model.addAttribute("expires", expires);
@@ -124,9 +184,8 @@ public class PlateformeController {
         model.addAttribute("nbExpires", (long) expires.size());
         model.addAttribute("mrr", mrr);
         model.addAttribute("inscriptionsMois", inscriptionsMois);
-        model.addAttribute("totalEncaisse", paiementRepository.totalEncaisse());
-        model.addAttribute("encaisseMois", paiementRepository.encaisseDepuis(
-                now.withDayOfMonth(1).atStartOfDay()));
+        model.addAttribute("totalEncaisse", totalEncaisse);
+        model.addAttribute("encaisseMois", encaisseMois);
         model.addAttribute("enAttente", enAttente);
         model.addAttribute("adminParEtab", adminParEtab);
         model.addAttribute("q", q);
@@ -154,7 +213,7 @@ public class PlateformeController {
         for (int i = 7; i >= 0; i--) derniersMois.add(courant.minusMonths(i));
 
         Map<YearMonth, Long> encParMois = new HashMap<>();
-        for (var p : paiementRepository.findAllByOrderByDatePaiementDesc()) {
+        for (var p : paiements) {
             if (p.getDatePaiement() != null) {
                 encParMois.merge(YearMonth.from(p.getDatePaiement()), p.getMontant(), Long::sum);
             }
@@ -196,10 +255,62 @@ public class PlateformeController {
         // Activité récente : 5 derniers paiements + noms d'établissement pour les afficher.
         model.addAttribute("nomParEtab", tous.stream()
                 .collect(Collectors.toMap(Etablissement::getId, Etablissement::getNomEffectif, (a, b) -> a)));
-        model.addAttribute("derniersPaiements",
-                paiementRepository.findAllByOrderByDatePaiementDesc().stream().limit(5).toList());
+        model.addAttribute("derniersPaiements", paiements.stream().limit(5).toList());
+
+        // ===== Pilotage quotidien : usage du jour, mise en route, échéances, état technique =====
+        var echeances = pilotage.echeances(tous, enseignantsParEtab, expires);
+        model.addAttribute("pouls", pilotage.pouls(now));
+        model.addAttribute("aujourdHui", now);
+        model.addAttribute("miseEnRoute", pilotage.miseEnRoute(tous, enseignantsParEtab,
+                pilotage.seancesParEtablissement(), dernierEmargement, adminParEtab, now));
+        model.addAttribute("echeances", echeances);
+        model.addAttribute("technique", etatTechnique.etat());
+
+        // ===== Cellule d'analyse : constats et prévisions calculés sur nos serveurs =====
+        var rapport = analystes.analyser(new ci.esatic.sigep.service.plateforme.AnalystesService.Entrees(
+                now, tous, enseignantsParEtab, activite, dernierEmargement, expires,
+                nouveauxParMois, encaisseParMois, echeances.gainPotentiel()));
+        model.addAttribute("analystes", rapport.analystes());
+        model.addAttribute("moisFuturs", rapport.moisFuturs());
+        model.addAttribute("nouveauxPrevus", rapport.nouveauxPrevus());
 
         return "plateforme/dashboard";
+    }
+
+    private SanteEtablissement sante(Etablissement e, Map<Long, Long> enseignantsParEtab, Map<Long, long[]> activite,
+                                     Map<Long, java.time.LocalDateTime> dernierEmargement, Set<Long> expires, LocalDate now,
+                                     Map<Long, String> contacts) {
+        long[] a = activite.getOrDefault(e.getId(), new long[] {0, 0});
+        long taux = a[0] == 0 ? 0 : Math.round(a[1] * 100.0 / a[0]);
+        java.time.LocalDateTime dernier = dernierEmargement.get(e.getId());
+        Long jours = abonnementService.joursAvantExpiration(e);
+        long enseignants = enseignantsParEtab.getOrDefault(e.getId(), 0L);
+
+        String etat;
+        int priorite;
+        String motif;
+        if (e.getStatut() == StatutEtablissement.EN_ATTENTE) {
+            etat = "Dossier à valider"; priorite = 0; motif = "Inscription en attente de votre décision";
+        } else if (e.getStatut() == StatutEtablissement.REFUSE) {
+            etat = "Refusé"; priorite = 7; motif = null;
+        } else if (!e.isActif()) {
+            etat = "Suspendu"; priorite = 6; motif = null;
+        } else if (expires.contains(e.getId())) {
+            etat = "Expiré"; priorite = 1; motif = "Abonnement expiré : accès coupé jusqu'au renouvellement";
+        } else if (jours != null && abonnementService.doitRappeler(e)) {
+            etat = "Expire bientôt"; priorite = 2; motif = "Abonnement à renouveler dans " + jours + " jour(s)";
+        } else if (dernier == null) {
+            etat = "Jamais utilisé"; priorite = 3;
+            motif = enseignants == 0 ? "Aucun enseignant enregistré : l'accompagner au démarrage"
+                    : "Aucun émargement encore : l'accompagner au démarrage";
+        } else if (dernier.isBefore(now.minusDays(JOURS_AVANT_DECROCHAGE).atStartOfDay())) {
+            etat = "Décroche"; priorite = 3;
+            motif = "Aucun émargement depuis le " + dernier.toLocalDate().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+        } else {
+            etat = "Actif"; priorite = 5; motif = null;
+        }
+        String contact = contacts.get(e.getId());
+        return new SanteEtablissement(e, enseignants, a[0], taux, dernier, jours, etat, priorite, motif, contact);
     }
 
     /** Fiche détaillée d'un établissement : infos, administrateurs, effectif + actions. */
@@ -216,7 +327,8 @@ public class PlateformeController {
         model.addAttribute("expire", abonnementService.estExpire(e));
         model.addAttribute("joursAvantExpiration", abonnementService.joursAvantExpiration(e));
         model.addAttribute("prixMensuel", planService.prixMensuel(e.getPlan()));
-        model.addAttribute("paiements", paiementRepository.findByEtablissementIdOrderByDatePaiementDesc(e.getId()));
+        model.addAttribute("periodes", transactionsService.historique(e.getId()));
+        model.addAttribute("transactions", paiementIntentRepository.findByEtablissementIdOrderByDateCreationDesc(e.getId()));
         model.addAttribute("totalPaye", paiementRepository.totalParEtablissement(e.getId()));
         return "plateforme/etablissement";
     }
@@ -224,7 +336,6 @@ public class PlateformeController {
     /** Formulaire de création directe d'un établissement (super-admin). */
     @GetMapping("/etablissements/nouveau")
     public String nouveauEtablissementForm(Model model) {
-        model.addAttribute("plans", Plan.values());
         return "plateforme/etablissement-nouveau";
     }
 
@@ -237,15 +348,19 @@ public class PlateformeController {
                                      @RequestParam(required = false) String adminPrenom,
                                      @RequestParam(required = false) Plan plan,
                                      RedirectAttributes ra) {
-        if (nom == null || nom.isBlank() || adminEmail == null || adminEmail.isBlank()
-                || adminPassword == null || adminPassword.length() < 8) {
-            ra.addFlashAttribute("erreur",
-                    "Nom de l'établissement, e-mail admin et mot de passe (≥ 8 caractères) sont requis.");
+        if (nom == null || nom.isBlank() || adminEmail == null || adminEmail.isBlank()) {
+            ra.addFlashAttribute("erreur", "Nom de l'établissement et e-mail de l'administrateur sont requis.");
+            return "redirect:/plateforme/etablissements/nouveau";
+        }
+        java.util.List<String> manque = ci.esatic.sigep.security.PolitiqueMotDePasse.manquements(adminPassword, adminEmail);
+        if (!manque.isEmpty()) {
+            ra.addFlashAttribute("erreur", "Mot de passe trop faible. Il faut : " + String.join(", ", manque) + ".");
             return "redirect:/plateforme/etablissements/nouveau";
         }
         try {
+            // Toujours au plan gratuit : le plan payant viendra du premier paiement.
             Etablissement e = onboardingService.creerParSuperAdmin(
-                    nom, adminEmail.trim(), adminPassword, adminNom, adminPrenom, plan);
+                    nom, adminEmail.trim(), adminPassword, adminNom, adminPrenom, Plan.FREE);
             ra.addFlashAttribute("ok", "« " + e.getNom() + " » créé et activé (plan " + e.getPlan()
                     + "). L'administrateur peut se connecter : " + adminEmail.trim() + ".");
             return "redirect:/plateforme/etablissements/" + e.getSlug();
@@ -267,23 +382,39 @@ public class PlateformeController {
         return "redirect:/plateforme/etablissements/" + slug;
     }
 
-    /** Changer le plan d'un établissement (ajuste le quota par défaut du plan). */
+    /**
+     * Repasser un établissement au plan gratuit. Un plan payant ne s'active jamais à la main : il
+     * vient d'un paiement en ligne, ou d'une transaction tranchée dans Transactions.
+     */
     @PostMapping("/etablissements/plan")
     @Transactional
     public String changerPlan(@RequestParam String slug, @RequestParam Plan plan, RedirectAttributes ra) {
+        if (plan != Plan.FREE) {
+            ra.addFlashAttribute("erreur", "Un plan payant ne s'active que par un paiement : l'établissement "
+                    + "le souscrit en ligne, ou une transaction se tranche dans Transactions.");
+            return "redirect:/plateforme/etablissements/" + slug;
+        }
         modifier(slug, ra, e -> {
-            e.setPlan(plan);
-            e.setMaxEnseignants(plan == Plan.FREE ? 10 : 0); // Pro/Enterprise = illimité
-            ra.addFlashAttribute("ok", "Plan de « " + e.getNom() + " » changé en " + plan + ".");
+            e.setPlan(Plan.FREE);
+            e.setMaxEnseignants(FREE_MAX_ENSEIGNANTS);
+            e.setDateExpiration(null);
+            ra.addFlashAttribute("ok", "« " + e.getNom() + " » est repassé au plan gratuit.");
         });
         return "redirect:/plateforme/etablissements/" + slug;
     }
 
-    /** Ajuster le quota d'enseignants (0 = illimité). */
+    /** Ajuster le quota d'enseignants (0 = illimité, réservé aux plans payants). */
     @PostMapping("/etablissements/quota")
     @Transactional
     public String changerQuota(@RequestParam String slug, @RequestParam int maxEnseignants,
                                RedirectAttributes ra) {
+        Etablissement cible = etablissementRepository.findBySlug(slug).orElse(null);
+        if (cible != null && cible.getPlan() == Plan.FREE
+                && (maxEnseignants <= 0 || maxEnseignants > FREE_MAX_ENSEIGNANTS)) {
+            ra.addFlashAttribute("erreur", "Sur le plan gratuit, le quota va de 1 à " + FREE_MAX_ENSEIGNANTS
+                    + " enseignants. Au-delà, l'établissement passe à un plan payant.");
+            return "redirect:/plateforme/etablissements/" + slug;
+        }
         modifier(slug, ra, e -> {
             e.setMaxEnseignants(Math.max(0, maxEnseignants));
             ra.addFlashAttribute("ok", "Quota de « " + e.getNom() + " » réglé à "
@@ -347,7 +478,10 @@ public class PlateformeController {
         return "redirect:/plateforme";
     }
 
-    /** Renouvellements : valider un paiement reçu = enregistrer le paiement + prolonger. */
+    /**
+     * Suivi des abonnements, en lecture seule : un abonnement ne se prolonge que par un paiement
+     * réel (paiement en ligne, ou transaction tranchée dans Transactions), jamais à la main.
+     */
     @GetMapping("/abonnements")
     public String abonnements(Model model) {
         List<Etablissement> etablissements = clients();
@@ -355,11 +489,8 @@ public class PlateformeController {
                 .filter(abonnementService::estExpire)
                 .map(Etablissement::getId)
                 .collect(Collectors.toSet());
-        Map<Long, Long> tarifParEtab = etablissements.stream()
-                .collect(Collectors.toMap(Etablissement::getId, e -> planService.prixMensuel(e.getPlan())));
         model.addAttribute("etablissements", etablissements);
         model.addAttribute("expires", expires);
-        model.addAttribute("tarifParEtab", tarifParEtab);
         return "plateforme/abonnements";
     }
 
@@ -376,39 +507,6 @@ public class PlateformeController {
         model.addAttribute("encaisseMois", paiementRepository.encaisseDepuis(now.withDayOfMonth(1).atStartOfDay()));
         model.addAttribute("nbPaiements", paiements.size());
         return "plateforme/paiements";
-    }
-
-    /**
-     * Prolongation manuelle après paiement constaté (Mobile Money) : enregistre un Paiement
-     * (montant reçu, mois crédités, référence) ET prolonge la période de l'établissement.
-     */
-    @PostMapping("/abonnements/prolonger")
-    @Transactional
-    public String prolonger(@AuthenticationPrincipal User superAdmin,
-                            @RequestParam String slug,
-                            @RequestParam(defaultValue = "1") int mois,
-                            @RequestParam(required = false) Long montant,
-                            @RequestParam(required = false) String reference,
-                            RedirectAttributes ra) {
-        etablissementRepository.findBySlug(slug).ifPresentOrElse(e -> {
-            int m = Math.max(1, mois);
-            long paye = (montant != null && montant >= 0) ? montant : (long) m * planService.prixMensuel(e.getPlan());
-
-            paiementRepository.save(Paiement.builder()
-                    .etablissementId(e.getId())
-                    .montant(paye)
-                    .moisCredites(m)
-                    .reference(reference == null || reference.isBlank() ? null : reference.trim())
-                    .enregistrePar(superAdmin != null ? superAdmin.getEmail() : null)
-                    .build());
-
-            abonnementService.prolonger(e, m);
-            etablissementRepository.save(e);
-            ra.addFlashAttribute("ok", "Paiement de « " + e.getNom() + " » enregistré ("
-                    + paye + " FCFA) — abonnement prolongé de " + m + " mois (jusqu'au "
-                    + e.getDateExpiration() + ").");
-        }, () -> ra.addFlashAttribute("erreur", "Établissement introuvable : " + slug));
-        return "redirect:/plateforme/abonnements";
     }
 
     /** Établissements clients (l'établissement technique « plateforme » est exclu). */

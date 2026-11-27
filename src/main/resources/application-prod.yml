@@ -48,9 +48,9 @@ app:
     # En prod : exiger HTTPS et faire confiance au proxy TLS (X-Forwarded-*).
     require-https: ${APP_SECURITY_REQUIRE_HTTPS:true}
     trust-forwarded-for: ${TRUST_FORWARDED_FOR:true}
-    # Épinglé explicitement : nombre de reverse proxys de confiance en amont (Render = 1).
-    # 1 topologie = 1 valeur. Si un CDN/WAF est ajouté devant (ex. Cloudflare), passer à 2.
-    trusted-proxy-count: ${TRUSTED_PROXY_COUNT:1}
+    # Relais sautés en lisant X-Forwarded-For : Cloudflare et réseaux privés sont connus du code.
+    # Ajouter ici d'autres plages (CIDR, séparées par des virgules) si un relais s'intercale.
+    proxys-de-confiance: ${PROXYS_DE_CONFIANCE:}
   # Dossier des rapports PDF : volume persistant (sinon perdus au redémarrage du conteneur).
   rapports:
     dossier: ${RAPPORTS_DOSSIER:/data/rapports}

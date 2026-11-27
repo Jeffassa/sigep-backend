@@ -44,7 +44,7 @@ public class RelanceService {
     /** Logique exécutée dans le contexte (transaction + filtre) d'un établissement. */
     private void relancerPourTenantCourant(LocalDate today, String expediteurTenant) {
         List<Seance> nonEmargees = seanceRepository.findAllByDateOrderByHeureDebutAsc(today).stream()
-                .filter(s -> s.getStatut() != StatutSeance.EMARGE)
+                .filter(s -> s.getStatut() != StatutSeance.EMARGE && s.getStatut() != StatutSeance.A_VALIDER)
                 .collect(Collectors.toList());
         if (nonEmargees.isEmpty()) return;
 

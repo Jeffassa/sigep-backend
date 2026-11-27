@@ -1,58 +1,139 @@
 <!DOCTYPE html>
-<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<html lang="fr" xmlns:th="http://www.thymeleaf.org" data-toujours-clair>
 <head th:replace="~{admin/fragments :: head('SIGEP | Vérification')}" />
-<body class="min-h-screen flex items-center justify-center px-5">
-<main class="w-full max-w-[420px]" data-reveal>
-  <div class="text-center mb-8"><span class="font-serif text-[44px] leading-none">SIGEP</span>
-    <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mt-2">Vérification administrateur</p></div>
-  <div class="glass-strong rounded-3xl p-8">
-    <h2 class="font-serif text-[26px] mb-1">Code envoyé</h2>
-    <p class="text-[14px] text-muted mb-6">Saisissez le code reçu par email pour accéder à votre espace.</p>
-    <div th:if="${error}" class="p-3 mb-4 rounded-xl text-[13px]" style="background:rgba(186,26,26,.08);color:#7a0010;border:1px solid rgba(186,26,26,.2)" th:text="${error}">Erreur</div>
-    <div th:if="${info}" class="p-3 mb-4 rounded-xl text-[13px]" style="background:rgba(23,105,63,.08);color:#0d4a2b;border:1px solid rgba(23,105,63,.2)" th:text="${info}">Information</div>
-    <form th:action="@{/admin-otp}" method="post" class="space-y-4">
-      <label for="code" class="block font-mono text-[11px] uppercase tracking-wider text-muted mb-2">Code à 6 chiffres</label>
-      <input id="code" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required class="w-full h-12 px-4 rounded-xl bg-white/60 border border-line text-ink text-center tracking-[.4em] text-xl" />
-      <button type="submit" class="btn btn-ink w-full h-12 rounded-xl font-medium">Vérifier</button>
+<body class="porte">
+<aside class="porte-nuit">
+    <a th:href="@{/}" class="marque">SIGEP</a>
+    <p class="accroche">Une dernière <em>signature.</em></p>
+</aside>
+<div class="porte-page">
+<main>
+  <h1 class="titre-page">Code envoyé</h1>
+  <p class="text-[15px] text-muted mb-6">Saisissez le code reçu par e-mail.</p>
+  <div class="feuille">
+    <div th:if="${error}" class="note note-alerte" th:text="${error}">Erreur</div>
+    <div th:if="${info}" class="note note-ok" th:text="${info}">Information</div>
+    <form id="formOtp" th:action="@{/admin-otp}" method="post" class="space-y-4" th:attr="data-erreur=${error != null}">
+      <label for="code" class="etiquette">Code à 6 chiffres</label>
+      <!-- Champ unique de repli ; le script le remplace par six cases. -->
+      <input id="code" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required class="w-full h-12 px-4 champ text-ink text-center tracking-[.4em] text-xl" />
+      <div id="otpCases" class="otp-cases hidden" role="group" aria-label="Code à 6 chiffres">
+        <input class="otp-case" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" aria-label="Chiffre 1 sur 6" />
+        <input class="otp-case" type="text" inputmode="numeric" autocomplete="off" maxlength="6" aria-label="Chiffre 2 sur 6" />
+        <input class="otp-case" type="text" inputmode="numeric" autocomplete="off" maxlength="6" aria-label="Chiffre 3 sur 6" />
+        <span class="otp-tiret" aria-hidden="true"></span>
+        <input class="otp-case" type="text" inputmode="numeric" autocomplete="off" maxlength="6" aria-label="Chiffre 4 sur 6" />
+        <input class="otp-case" type="text" inputmode="numeric" autocomplete="off" maxlength="6" aria-label="Chiffre 5 sur 6" />
+        <input class="otp-case" type="text" inputmode="numeric" autocomplete="off" maxlength="6" aria-label="Chiffre 6 sur 6" />
+      </div>
+      <button id="verifier" type="submit" class="btn btn-ink w-full h-12 rounded-xl font-medium">Vérifier</button>
     </form>
-    <details class="mt-5">
-      <summary class="text-[13px] text-muted cursor-pointer select-none hover:text-ink">
-        Utiliser mon code de secours
-      </summary>
-      <!-- Aucun code configuré : on le dit, plutôt que de proposer un champ qui ne peut
-           qu'échouer. C'est ce silence qui rendait le diagnostic impossible. -->
-      <p th:unless="${secoursConfigure}" class="mt-3 text-[12px] leading-relaxed"
-         style="color:#7a0010">
-        Aucun code de secours n'est configuré sur ce serveur. La variable
-        <code>APP_SECURITY_ADMIN_OTP_RECOVERY_HASH</code> est absente ou vide. Vérifiez-la dans
-        la configuration de l'hébergeur, puis redéployez.
-      </p>
-      <form th:if="${secoursConfigure}" th:action="@{/admin-otp}" method="post" class="mt-3 space-y-3">
-        <p class="text-[12px] text-muted leading-relaxed">
-          Le code conservé hors ligne : 5 groupes de 4 caractères séparés par des tirets.
-          Ne le confondez pas avec l'empreinte installée sur le serveur, une suite de
-          64 caractères. À n'employer que si aucun courriel n'arrive ; la casse, les tirets et
-          les espaces n'ont pas d'importance.
-        </p>
-        <input name="code" autocomplete="off" spellcheck="false" autocapitalize="characters"
-               autocorrect="off" required
-               placeholder="XXXX-XXXX-XXXX-XXXX-XXXX"
-               class="w-full h-11 px-4 rounded-xl bg-white/60 border border-line text-ink text-center tracking-[.15em] font-mono text-[13px]" />
-        <button type="submit" class="btn w-full h-11 rounded-xl border border-line font-medium hover:bg-ink hover:text-white">
-          Ouvrir avec le code de secours
-        </button>
-      </form>
-    </details>
 
     <form th:action="@{/admin-otp/renvoyer}" method="post" class="mt-4 text-center">
       <button type="submit" class="text-[13px] text-muted hover:text-ink underline underline-offset-4">
-        Rien reçu ? Renvoyer un code
+        Renvoyer un code
       </button>
     </form>
-    <p class="text-[12px] text-muted text-center mt-4 leading-relaxed">
-      Le code expire au bout de 5 minutes. Pensez à regarder vos courriers indésirables.
-    </p>
+    <p class="text-[12px] text-muted text-center mt-4">Valable 5 minutes. Pensez aux courriers indésirables.</p>
   </div>
 </main>
+</div>
+<script th:nonce="${cspNonce}" th:inline="none" data-page-script>
+(function () {
+    var form = document.getElementById('formOtp');
+    var champ = document.getElementById('code');
+    var groupe = document.getElementById('otpCases');
+    if (!form || !groupe) return;
+    var cases = Array.prototype.slice.call(groupe.querySelectorAll('.otp-case'));
+    var bouton = document.getElementById('verifier');
+    var envoye = false;   // le code ne part qu'une fois : un second envoi le trouverait déjà consommé
+
+    function envoyer() {
+        if (envoye) return false;
+        envoye = true;
+        groupe.classList.add('complet');
+        cases.forEach(function (c) { c.blur(); c.readOnly = true; });
+        // Chargement : roue, libellé et barre qui balaie le bouton, le temps de la vérification.
+        bouton.disabled = true;
+        bouton.classList.add('otp-chargement');
+        bouton.innerHTML = '<span class="otp-rond" aria-hidden="true"></span>Vérification…';
+        bouton.setAttribute('aria-busy', 'true');
+        return true;
+    }
+
+    // Les six cases remplacent le champ unique, qui reste le seul envoyé.
+    champ.type = 'hidden';
+    champ.removeAttribute('required');
+    champ.removeAttribute('pattern');
+    groupe.classList.remove('hidden');
+    document.querySelector('label[for="code"]').removeAttribute('for');
+
+    function synchroniser() {
+        champ.value = cases.map(function (c) { return c.value; }).join('');
+        if (champ.value.length === 6 && envoyer()) {
+            setTimeout(function () { form.submit(); }, 300);   // le temps de voir la vague verte
+        }
+    }
+
+    function poser(c, chiffre) {
+        c.value = chiffre;
+        c.classList.remove('rempli');
+        void c.offsetWidth;          // relance l'animation
+        if (chiffre) c.classList.add('rempli');
+    }
+
+    // Plusieurs chiffres d'un coup (collage, remplissage automatique) : répartis de case en case.
+    function repartir(depuis, chiffres) {
+        var i = depuis;
+        chiffres.split('').forEach(function (ch, k) {
+            if (i >= cases.length) return;
+            var c = cases[i++];
+            setTimeout(function () { poser(c, ch); }, k * 45);
+        });
+        setTimeout(function () {
+            cases[Math.min(i, cases.length - 1)].focus();
+            synchroniser();
+        }, chiffres.length * 45 + 10);
+    }
+
+    cases.forEach(function (c, i) {
+        c.addEventListener('input', function () {
+            var chiffres = c.value.replace(/\D/g, '');
+            if (chiffres.length > 1) { c.value = ''; repartir(i, chiffres.slice(0, 6 - i)); return; }
+            poser(c, chiffres);
+            if (chiffres && i < cases.length - 1) cases[i + 1].focus();
+            synchroniser();
+        });
+        c.addEventListener('keydown', function (e) {
+            if (e.key === 'Backspace' && !c.value && i > 0) { e.preventDefault(); poser(cases[i - 1], ''); cases[i - 1].focus(); }
+            else if (e.key === 'ArrowLeft' && i > 0) { e.preventDefault(); cases[i - 1].focus(); }
+            else if (e.key === 'ArrowRight' && i < cases.length - 1) { e.preventDefault(); cases[i + 1].focus(); }
+        });
+        c.addEventListener('focus', function () { c.select(); });
+        c.addEventListener('paste', function (e) {
+            var texte = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
+            if (!texte) return;
+            e.preventDefault();
+            repartir(i, texte.slice(0, 6 - i));
+        });
+    });
+
+    form.addEventListener('submit', function (e) {
+        if (envoye) { e.preventDefault(); return; }
+        if (champ.value.length === 6) { envoyer(); return; }
+        e.preventDefault();
+        groupe.classList.remove('erreur'); void groupe.offsetWidth; groupe.classList.add('erreur');
+        var vide = cases.filter(function (c) { return !c.value; })[0];
+        if (vide) vide.focus();
+    });
+
+    // Code refusé par le serveur : les cases tremblent, puis on recommence.
+    if (form.getAttribute('data-erreur') === 'true') {
+        groupe.classList.add('erreur');
+        setTimeout(function () { groupe.classList.remove('erreur'); }, 700);
+    }
+    cases[0].focus();
+})();
+</script>
 </body>
 </html>

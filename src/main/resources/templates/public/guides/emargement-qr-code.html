@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{public/guides/fragments :: head('Émargement des enseignants par QR code | SIGEP', 'L’enseignant scanne le QR code affiché en salle et signe sur son téléphone. La séance est comptée à sa durée réelle, sans feuille de présence à ressaisir.')}"></head>
+<body>
+<div class="seyes">
+    <nav th:replace="~{public/guides/fragments :: entete}"></nav>
+    <nav th:replace="~{public/guides/fragments :: fil('Émargement par QR code')}"></nav>
+
+    <header class="guide-tete marge">
+        <p class="surtitre">Émargement des enseignants</p>
+        <h1>L’émargement par QR code, <span class="it">séance par séance.</span></h1>
+        <p class="corps chapeau">Un écran affiche dans la salle un QR code qui change sans cesse. L’enseignant le scanne avec son téléphone et signe : la séance est comptée, à sa durée réelle, et la scolarité la voit aussitôt. La feuille de présence à faire circuler, à ramasser puis à recompter disparaît.</p>
+        <div class="appel">
+            <a class="bouton" th:href="@{/inscription}">Démarrer gratuitement</a>
+            <span class="mono">Gratuit jusqu’à 10 enseignants<br/>Sans carte bancaire</span>
+        </div>
+    </header>
+</div>
+
+<main class="guide-corps">
+    <div class="marge">
+        <section>
+            <h2 class="titre-section">Comment se passe un émargement</h2>
+            <ol>
+                <li><strong>Le planning est en place.</strong> La scolarité dépose son emploi du temps (Excel, CSV, Word ou PDF) : séances, classes, salles et enseignants sont créés.</li>
+                <li><strong>Le code s’affiche en salle.</strong> Un écran, une télévision ou un vidéoprojecteur relié à un navigateur affiche le QR code de l’établissement. Il se renouvelle toutes les 30 secondes.</li>
+                <li><strong>L’enseignant scanne et signe.</strong> Depuis l’application Android, il scanne le code, retrouve sa séance et signe sur l’écran du téléphone.</li>
+                <li><strong>La séance est comptée.</strong> Elle passe à « émargée » dans la console, avec ses heures, prête pour l’état de paie du mois.</li>
+            </ol>
+        </section>
+
+        <section>
+            <h2 class="titre-section">Pourquoi un code qui change</h2>
+            <p class="corps">Un QR code fixe, collé au mur, se photographie une fois et sert ensuite depuis n’importe où. Celui de SIGEP est fait pour qu’on ne puisse signer qu’en étant dans la salle :</p>
+            <ul>
+                <li>un nouveau code toutes les 30 secondes, et un code photographié n’est plus accepté au bout de 50 secondes ;</li>
+                <li>un même code ne sert qu’une fois par enseignant ;</li>
+                <li>l’écran ne s’ouvre que depuis la console de l’établissement, et peut être limité au réseau de ses locaux.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2 class="titre-section">Et sans réseau dans la salle ?</h2>
+            <p class="corps">Le scan est gardé dans le téléphone et part dès que la connexion revient. La séance apparaît alors « en attente » : la scolarité la valide, et elle rejoint les heures du mois. Une coupure ne fait perdre aucune heure, et ne laisse passer aucune heure sans contrôle.</p>
+        </section>
+
+        <section>
+            <h2 class="titre-section">Feuille papier ou QR code</h2>
+            <div class="defile" tabindex="0" role="region" aria-label="Comparaison entre la feuille papier et l’émargement par QR code">
+                <table class="comparatif">
+                    <thead><tr><th scope="col"></th><th scope="col">Feuille de présence</th><th scope="col">Émargement QR avec SIGEP</th></tr></thead>
+                    <tbody>
+                        <tr><td>Signature</td><td>Sur une feuille qui circule, parfois après coup</td><td>Dans la salle, pendant la séance, horodatée</td></tr>
+                        <tr><td>Heures</td><td>Recomptées à la main en fin de mois</td><td>Totalisées au fil des séances, à la durée réelle</td></tr>
+                        <tr><td>Oubli</td><td>Découvert au moment de payer</td><td>Visible le jour même, pour relancer l’enseignant</td></tr>
+                        <tr><td>Paie</td><td>Ressaisie dans un tableur</td><td>Export CSV ou Excel par enseignant et par mois</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section>
+            <h2 class="titre-section">Ce qu’il faut pour commencer</h2>
+            <ul>
+                <li>un écran avec un navigateur et une connexion dans chaque salle où l’on émarge ;</li>
+                <li>un téléphone Android par enseignant, avec l’application SIGEP ;</li>
+                <li>côté scolarité, un navigateur : rien à installer.</li>
+            </ul>
+            <p class="encadre">Le plan gratuit couvre l’émargement, le planning et les rapports de base jusqu’à 10 enseignants. Vous passez au plan Pro le jour où vous en avez besoin.</p>
+        </section>
+    </div>
+</main>
+
+<section class="guide-questions seyes" aria-labelledby="titre-questions">
+    <div class="marge">
+        <h2 id="titre-questions" class="titre-section">Questions</h2>
+        <div class="liste-questions">
+            <details><summary>Un enseignant peut-il émarger sans être dans la salle ?<span class="signe" aria-hidden="true">+</span></summary><p class="corps">C’est ce que le code tournant empêche : une photo du code n’est plus acceptée au bout de 30 secondes, et l’écran peut être limité au réseau de l’établissement.</p></details>
+            <details><summary>Faut-il un écran par salle ?<span class="signe" aria-hidden="true">+</span></summary><p class="corps">Il faut un écran là où l’on émarge. La télévision ou le vidéoprojecteur déjà présents dans la salle suffisent.</p></details>
+            <details><summary>L’application existe-t-elle sur iPhone ?<span class="signe" aria-hidden="true">+</span></summary><p class="corps">Aujourd’hui, l’application de l’enseignant est disponible sur Android. La scolarité, elle, travaille depuis n’importe quel navigateur.</p></details>
+        </div>
+    </div>
+</section>
+
+<section th:replace="~{public/guides/fragments :: autres('qr')}"></section>
+<footer th:replace="~{public/guides/fragments :: fin}"></footer>
+
+<script th:nonce="${cspNonce}" type="application/ld+json" th:inline="text">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Accueil", "item": "[[${baseUrl}]]/" },
+        { "@type": "ListItem", "position": 2, "name": "Émargement par QR code", "item": "[[${baseUrl}]]/emargement-qr-code" }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        { "@type": "Question", "name": "Un enseignant peut-il émarger sans être dans la salle ?",
+          "acceptedAnswer": { "@type": "Answer", "text": "C’est ce que le code tournant empêche : une photo du code n’est plus acceptée au bout de 30 secondes, et l’écran peut être limité au réseau de l’établissement." } },
+        { "@type": "Question", "name": "Faut-il un écran par salle ?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Il faut un écran là où l’on émarge. La télévision ou le vidéoprojecteur déjà présents dans la salle suffisent." } },
+        { "@type": "Question", "name": "L’application existe-t-elle sur iPhone ?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Aujourd’hui, l’application de l’enseignant est disponible sur Android. La scolarité, elle, travaille depuis n’importe quel navigateur." } }
+      ]
+    }
+  ]
+}
+</script>
+</body>
+</html>

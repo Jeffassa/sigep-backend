@@ -11,4 +11,14 @@ public interface EtablissementRepository extends JpaRepository<Etablissement, Lo
 
     /** Établissements actifs (pour itérer les tâches planifiées par tenant). */
     List<Etablissement> findByActifTrue();
+
+    /** Rapprochement avec les listes officielles : les établissements d'un statut, les plus récents d'abord. */
+    List<Etablissement> findByReconnaissanceOrderByDateCreationDesc(ci.esatic.sigep.entity.StatutReconnaissance statut);
+
+    long countByReconnaissance(ci.esatic.sigep.entity.StatutReconnaissance statut);
+
+    /** Un autre client tient-il déjà cette fiche officielle (reconnu ou vérifié) ? */
+    boolean existsByOfficielSourceAndOfficielNomAndReconnaissanceInAndIdNot(
+            String officielSource, String officielNom,
+            java.util.Collection<ci.esatic.sigep.entity.StatutReconnaissance> statuts, Long id);
 }

@@ -2,8 +2,8 @@ package ci.esatic.sigep.controller;
 
 import ci.esatic.sigep.security.SecurityUtils;
 import ci.esatic.sigep.service.MobileMoneyService;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -93,13 +93,13 @@ public class NovaSendWebhookController {
 
         try {
             JsonNode racine = objectMapper.readTree(payload);
-            String reference = racine.path("reference").asText("");
+            String reference = racine.path("reference").asString("");
             if (reference.isBlank()) {
                 log.warn("Webhook NovaSend : référence absente du corps.");
                 return ResponseEntity.ok("");   // 200 : rien à rejouer, inutile que NovaSend insiste
             }
             log.info("Webhook NovaSend reçu : reference={} status={}",
-                    reference, racine.path("status").asText(""));
+                    reference, racine.path("status").asString(""));
             // Vérification serveur + crédit idempotent (même chemin que le retour navigateur
             // et le relanceur : aucun double crédit possible).
             mobileMoneyService.verifierEtCrediter(reference);
@@ -130,9 +130,9 @@ public class NovaSendWebhookController {
     private String resumeEvenement(String payload) {
         try {
             JsonNode n = objectMapper.readTree(payload);
-            return "type=" + n.path("type").asText("?")
-                 + " status=" + n.path("status").asText("?")
-                 + " reference=" + n.path("reference").asText("?");
+            return "type=" + n.path("type").asString("?")
+                 + " status=" + n.path("status").asString("?")
+                 + " reference=" + n.path("reference").asString("?");
         } catch (Exception e) {
             return "corps non JSON (" + (payload == null ? 0 : payload.length()) + " caractères)";
         }

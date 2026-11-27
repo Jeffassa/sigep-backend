@@ -49,7 +49,7 @@ public class RapportWebController {
         return "admin/rapports";
     }
 
-    /** Télécharge tous les rapports (filtrés) dans une archive ZIP. Fonction Pro/Enterprise
+    /** Télécharge tous les rapports (filtrés) dans une archive ZIP. Fonction Pro/Entreprise
      *  verrouillée côté serveur (le bouton masqué en Free ne suffit pas — URL directe possible). */
     @GetMapping("/admin/rapports/telecharger-zip")
     public ResponseEntity<byte[]> telechargerZip(
@@ -76,7 +76,7 @@ public class RapportWebController {
     }
 
     /** Export Excel de synthèse (une ligne par enseignant sur la période). Fonction
-     *  Pro/Enterprise verrouillée côté serveur (pas seulement masquée dans l'interface). */
+     *  Pro/Entreprise verrouillée côté serveur (pas seulement masquée dans l'interface). */
     @GetMapping("/admin/rapports/synthese")
     public ResponseEntity<byte[]> syntheseExcel(
             @AuthenticationPrincipal User admin,
@@ -116,9 +116,9 @@ public class RapportWebController {
                 return "redirect:/admin/rapports";
             }
             List<?> result = rapportService.genererTousRapports(d, f);
-            ra.addFlashAttribute("success", result.size() + " rapport(s) genere(s) avec succes.");
+            ra.addFlashAttribute("success", result.size() == 1 ? "1 rapport généré." : result.size() + " rapports générés.");
         } catch (Exception e) {
-            ra.addFlashAttribute("error", "Erreur lors de la generation : " + e.getMessage());
+            ra.addFlashAttribute("error", "Les rapports n'ont pas pu être générés. Réessayez dans un instant.");
         }
         return "redirect:/admin/rapports";
     }

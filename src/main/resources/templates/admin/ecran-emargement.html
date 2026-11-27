@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{admin/fragments :: head('SIGEP | Écran d''émargement')}"></head>
+<head th:replace="~{admin/fragments :: head('SIGEP | Écran de salle')}"></head>
 <body>
 
 <div th:replace="~{admin/fragments :: topbar('')}"></div>
@@ -8,52 +8,146 @@
 <main class="max-w-[900px] mx-auto px-5 md:px-8 py-10 pb-36">
 
     <div class="mb-8" data-reveal>
-        <p class="font-mono text-[11px] uppercase tracking-[0.3em] text-muted mb-2">Émargement</p>
-        <h1 class="font-serif text-[clamp(34px,5vw,52px)] leading-[1.02] tracking-tight">Écran d'émargement</h1>
-        <p class="text-muted text-[14px] mt-2">Affichez le QR de salle sur un écran/vidéoprojecteur ; les enseignants le scannent pour émarger.</p>
+        <p class="surtitre">Émargement</p>
+        <h1 class="titre-page">Écran d'émargement</h1>
+        <p class="chapeau">Affichez le QR de salle sur un écran ou un vidéoprojecteur : les enseignants le scannent pour émarger.</p>
     </div>
 
-    <div th:if="${param.regenere}" class="glass rounded-2xl p-3.5 mb-5 flex items-center gap-2 text-[13px]" data-reveal
+    <div th:if="${param.regenere}" class="feuille mb-5 flex items-center gap-2 text-[13px]" data-reveal
          style="background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.35)">
         <svg th:replace="~{admin/fragments :: coche}"></svg>
-        <span>Nouvelle clé générée. L'ancien lien d'écran ne fonctionne plus.</span>
+        <span>Nouvelle clé générée. Les écrans déjà installés sont désactivés : rouvrez-les depuis cette page.</span>
     </div>
-    <div th:if="${param.indispo}" class="glass rounded-2xl p-3.5 mb-5 flex items-center gap-2 text-[13px]" data-reveal
-         style="background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.35)">
-        <span class="material-symbols-rounded text-[18px]" style="color:#ef4444">error</span>
+    <div th:if="${param.reseau}" class="feuille mb-5 flex items-center gap-2 text-[13px]" data-reveal
+         style="background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.35)">
+        <svg th:replace="~{admin/fragments :: coche}"></svg>
+        <span>Réseau de l'écran enregistré.</span>
+    </div>
+    <div th:if="${reseauInvalide}" class="feuille mb-5 flex items-center gap-2 text-[13px]" data-reveal
+         style="background:rgba(178,74,46,.12);border-color:rgba(178,74,46,.35)">
+        <span>Adresse illisible : <strong th:text="${reseauInvalide}"></strong>. Saisissez des adresses IP ou des plages comme 196.47.20.0/24.</span>
+    </div>
+    <div th:if="${param.indispo}" class="feuille mb-5 flex items-center gap-2 text-[13px]" data-reveal
+         style="background:rgba(178,74,46,.12);border-color:rgba(178,74,46,.35)">
         <span>Écran indisponible pour ce compte (aucun établissement rattaché).</span>
     </div>
 
-    <div class="glass rounded-2xl p-6 flex flex-col gap-5" data-reveal>
+    <div class="feuille flex flex-col gap-4" data-reveal>
         <div class="flex items-start gap-3">
-            <span class="material-symbols-rounded text-[28px] text-ink">qr_code_2</span>
             <div>
-                <h2 class="text-[16px] font-medium">Ouvrir l'écran de la salle</h2>
+                <h2 class="titre-section">Ouvrir l'écran de la salle</h2>
                 <p class="text-muted text-[13px] mt-1">
-                    S'ouvre dans un nouvel onglet, prêt à projeter. Le QR se renouvelle automatiquement.
-                    La clé d'accès reste côté serveur : elle n'apparaît sur aucune page.
+                    Ouvrez-le une fois depuis l'ordinateur de la salle : cet appareil reste autorisé,
+                    même après votre déconnexion. Le QR se renouvelle automatiquement.
                 </p>
             </div>
         </div>
         <a th:href="@{/admin/ecran-emargement/ouvrir}" target="_blank" rel="noopener"
-           class="btn btn-gold h-12 px-6 rounded-2xl flex items-center justify-center gap-2 w-fit text-[14px] font-medium">
+           class="btn btn-gold h-14 px-6 flex items-center justify-center gap-2 w-fit text-[14px] font-medium">
             <span class="material-symbols-rounded text-[20px]">open_in_new</span> Ouvrir l'écran d'émargement
         </a>
     </div>
 
-    <div class="glass rounded-2xl p-6 mt-5 flex flex-col gap-4" data-reveal>
+    <div class="feuille mt-8 flex flex-col gap-4" data-reveal>
+        <div>
+            <h2 class="titre-section">Réseau de l'établissement</h2>
+            <p class="text-muted text-[13px] mt-1">
+                Facultatif. Indiquez l'adresse internet de l'établissement : l'écran ne s'affichera
+                que depuis ce réseau, même si un appareil autorisé quitte les locaux. Laissez vide
+                pour l'afficher partout.
+            </p>
+            <p class="text-[13px] mt-2">Adresse de votre connexion actuelle :
+                <code class="font-mono" th:text="${ipActuelle}">—</code></p>
+        </div>
+        <form th:action="@{/admin/ecran-emargement/reseau}" method="post" class="flex flex-col gap-3">
+            <label for="reseaux" class="text-[13px] font-medium">Adresses ou plages autorisées</label>
+            <textarea id="reseaux" name="reseaux" rows="3" maxlength="500" class="champ px-3 py-2 font-mono text-[13px] w-full"
+                      placeholder="196.47.20.9, 41.202.10.0/24" th:text="${reseaux}"></textarea>
+            <p class="text-muted text-[12px]">Si votre fournisseur change l'adresse de la box, l'écran
+                affichera un refus : mettez la liste à jour, ou videz-la.</p>
+            <button type="submit" class="btn glass h-11 px-5 rounded-2xl flex items-center gap-2 w-fit text-[13px] font-medium">
+                <span class="material-symbols-rounded text-[18px]">lan</span> Enregistrer le réseau
+            </button>
+        </form>
+    </div>
+
+    <div id="zone" class="feuille mt-8 flex flex-col gap-4" data-reveal>
+        <div>
+            <h2 class="titre-section">Émargement sur place</h2>
+            <p class="text-muted text-[13px] mt-1">
+                Facultatif. Indiquez où se trouve l'établissement : un enseignant ne pourra émarger que
+                si son téléphone est dans ce rayon. Un code photographié et envoyé à un collègue absent
+                ne sert alors plus à rien. Laissez vide pour ne pas vérifier la position.
+            </p>
+            <p class="text-muted text-[13px] mt-2">
+                Le téléphone envoie sa position au moment d'émarger. SIGEP calcule la distance puis
+                l'oublie : la position des enseignants n'est jamais enregistrée. Les enseignants
+                doivent avoir l'application 1.2.1 ou plus récente et autoriser la localisation.
+            </p>
+        </div>
+
+        <div th:if="${param.zone}" class="flex items-center gap-2 text-[13px]">
+            <svg th:replace="~{admin/fragments :: coche}"></svg>
+            <span>Zone enregistrée : la position est vérifiée à chaque émargement.</span>
+        </div>
+        <div th:if="${param.zoneRetiree}" class="flex items-center gap-2 text-[13px]">
+            <svg th:replace="~{admin/fragments :: coche}"></svg>
+            <span>Zone retirée : la position n'est plus vérifiée.</span>
+        </div>
+        <div th:if="${zoneInvalide}" class="text-[13px]" style="color:#b24a2e">
+            Coordonnées illisibles. Saisissez la latitude puis la longitude, séparées par une virgule,
+            par exemple <code class="font-mono">5.359950, -4.008260</code>.
+        </div>
+
+        <form th:action="@{/admin/ecran-emargement/zone}" method="post" class="flex flex-col gap-3">
+            <label for="coordonnees" class="text-[13px] font-medium">Coordonnées de l'établissement</label>
+            <input id="coordonnees" name="coordonnees" type="text" maxlength="80" inputmode="decimal"
+                   class="champ h-11 px-3 font-mono text-[13px] w-full"
+                   placeholder="5.359950, -4.008260" th:value="${coordonnees}"/>
+            <p class="text-muted text-[12px]">Sur place, utilisez la position de cet appareil. Sinon,
+                faites un clic droit sur l'établissement dans une carte en ligne et copiez ses coordonnées.</p>
+            <button type="button" id="maPosition"
+                    class="btn glass h-10 px-4 rounded-2xl flex items-center gap-2 w-fit text-[13px] font-medium">
+                <span class="material-symbols-rounded text-[18px]">my_location</span> Utiliser la position de cet appareil
+            </button>
+            <p id="maPositionEtat" class="text-muted text-[12px]" aria-live="polite"></p>
+
+            <label for="rayon" class="text-[13px] font-medium mt-2">Rayon accepté</label>
+            <select id="rayon" name="rayon" class="champ h-11 px-3 text-[13px] w-fit">
+                <option th:each="r : ${rayons}" th:value="${r}" th:selected="${r == rayon}"
+                        th:text="${r} + ' m'">300 m</option>
+            </select>
+            <p class="text-muted text-[12px]">Couvrez tout le site, bâtiments annexes compris. Dans un
+                bâtiment, la position d'un téléphone peut se tromper de plusieurs dizaines de mètres :
+                300 m convient à la plupart des campus.</p>
+
+            <button type="submit"
+                    class="btn glass h-11 px-5 rounded-2xl flex items-center gap-2 w-fit text-[13px] font-medium mt-1">
+                <span class="material-symbols-rounded text-[18px]">location_on</span> Enregistrer la zone
+            </button>
+        </form>
+        <form th:if="${zoneDefinie}" th:action="@{/admin/ecran-emargement/zone}" method="post"
+              data-confirm="Retirer la zone ? La position des enseignants ne sera plus vérifiée.">
+            <input type="hidden" name="retirer" value="1"/>
+            <button type="submit"
+                    class="btn glass h-11 px-5 rounded-2xl flex items-center gap-2 w-fit text-[13px] font-medium">
+                <span class="material-symbols-rounded text-[18px]">location_off</span> Retirer la zone
+            </button>
+        </form>
+    </div>
+
+    <div class="feuille mt-8 flex flex-col gap-4" data-reveal>
         <div class="flex items-start gap-3">
-            <span class="material-symbols-rounded text-[28px] text-ink">key</span>
             <div>
-                <h2 class="text-[16px] font-medium">Sécurité de la clé d'écran</h2>
+                <h2 class="titre-section">Sécurité de la clé d'écran</h2>
                 <p class="text-muted text-[13px] mt-1">
-                    Si un lien d'écran a pu fuiter (capture, partage), régénérez la clé : tout ancien
-                    lien cessera immédiatement de fonctionner. Il faudra rouvrir l'écran sur chaque salle.
+                    Si un écran a pu être copié, régénérez la clé : tous les écrans installés cessent
+                    immédiatement d'afficher le QR. Il faudra rouvrir l'écran dans chaque salle.
                 </p>
             </div>
         </div>
         <form th:action="@{/admin/ecran-emargement/regenerer-cle}" method="post"
-              onsubmit="return confirm('Régénérer la clé ? Les écrans déjà ouverts devront être rechargés depuis ce panneau.');">
+              data-confirm="Régénérer la clé ? Les écrans déjà ouverts devront être rechargés depuis ce panneau.">
             <button type="submit" class="btn glass h-11 px-5 rounded-2xl flex items-center gap-2 w-fit text-[13px] font-medium">
                 <span class="material-symbols-rounded text-[18px]">autorenew</span> Régénérer la clé d'écran
             </button>
@@ -65,6 +159,50 @@
 <div th:replace="~{admin/fragments :: dock('')}"></div>
 <div th:replace="~{admin/fragments :: palette}"></div>
 <div th:replace="~{admin/fragments :: scripts}"></div>
+<script th:nonce="${cspNonce}" data-page-script th:inline="none">
+(function () {
+    // La position de cet ordinateur ou de ce téléphone remplit le champ ; rien n'est envoyé
+    // avant « Enregistrer la zone ».
+    var bouton = document.getElementById('maPosition');
+    var etat = document.getElementById('maPositionEtat');
+    var champ = document.getElementById('coordonnees');
+    if (!bouton) return;
+    if (!navigator.geolocation) { bouton.hidden = true; return; }
+
+    // La localisation n'est permise qu'à cette page. Arrivée par la navigation instantanée de la
+    // console, la page garde la règle de la précédente, qui l'interdit : on la recharge alors
+    // une fois, et la recherche reprend d'elle-même.
+    var REPRISE = 'sigep-zone-localiser';
+    function lire(cle) { try { return sessionStorage.getItem(cle); } catch (e) { return null; } }
+    function poser(cle, v) { try { if (v) sessionStorage.setItem(cle, v); else sessionStorage.removeItem(cle); } catch (e) {} }
+    function recharger() {
+        if (lire(REPRISE)) return false;          // déjà rechargée : la cause est ailleurs
+        poser(REPRISE, '1');
+        location.reload();
+        return true;
+    }
+
+    function localiser() {
+        var politique = document.permissionsPolicy || document.featurePolicy;
+        if (politique && politique.allowsFeature && !politique.allowsFeature('geolocation') && recharger()) return;
+        etat.textContent = 'Recherche de la position…';
+        navigator.geolocation.getCurrentPosition(function (p) {
+            poser(REPRISE, null);
+            champ.value = p.coords.latitude.toFixed(6) + ', ' + p.coords.longitude.toFixed(6);
+            etat.textContent = 'Position trouvée, précise à ' + Math.round(p.coords.accuracy)
+                + ' m. Vérifiez-la, puis enregistrez la zone.';
+        }, function (erreur) {
+            if (erreur.code === erreur.PERMISSION_DENIED && recharger()) return;
+            poser(REPRISE, null);
+            etat.textContent = 'Position indisponible : autorisez la localisation dans le navigateur, '
+                + 'ou saisissez les coordonnées.';
+        }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+    }
+
+    bouton.addEventListener('click', localiser);
+    if (lire(REPRISE)) localiser();
+})();
+</script>
 
 </body>
 </html>

@@ -76,7 +76,7 @@ class EmargementServiceTest {
         matiere  = Matiere.builder().id(1L).libelle("Algo avancée").build();
         classe   = Classe.builder().id(1L).libelle("L3 Génie Logiciel").filiere("GL").build();
         enseignant = Enseignant.builder()
-                .id(5L).matricule("ENS001").nom("Assale").prenom("Jean")
+                .id(5L).matricule("ENS001").nom("Kouadio").prenom("Jean")
                 .statut(StatutEnseignant.VALIDATED).user(user)
                 .etablissementId(ETAB_ID)
                 .build();
@@ -167,7 +167,7 @@ class EmargementServiceTest {
 
             assertThat(result).isNotNull();
             assertThat(result.getSeanceId()).isEqualTo(SEANCE_ID);
-            assertThat(result.getEnseignantNom()).isEqualTo("Assale");
+            assertThat(result.getEnseignantNom()).isEqualTo("Kouadio");
         }
     }
 
@@ -559,5 +559,107 @@ class EmargementServiceTest {
         List<EmargementResponse> result = emargementService.getHistorique(USER_ID);
 
         assertThat(result).isEmpty();
+    }
+
+    // =========================================================================
+    // Zone d'émargement : le téléphone doit être sur place
+    // =========================================================================
+
+    private static final double ZONE_LAT = 5.359950;
+    private static final double ZONE_LON = -4.008260;
+
+    /** L'établissement de l'enseignant définit une zone de 300 m autour de ZONE_LAT/ZONE_LON. */
+    private void etablissementAvecZone() {
+        Etablissement etab = Etablissement.builder().nom("ESATIC").slug("esatic").build();
+        etab.setId(ETAB_ID);
+        etab.setZoneLatitude(ZONE_LAT);
+        etab.setZoneLongitude(ZONE_LON);
+        etab.setZoneRayonMetres(300);
+        when(etablissementRepository.findById(ETAB_ID)).thenReturn(Optional.of(etab));
+    }
+
+    private static void placer(EmargementRequest req, double dLat) {
+        req.setLatitude(ZONE_LAT + dLat);
+        req.setLongitude(ZONE_LON);
+        req.setPrecisionMetres(20.0);
+        req.setPositionSimulee(false);
+    }
+
+    private void preparerEmargementEnLigne(Seance seance) {
+        when(enseignantRepository.findByUserId(USER_ID)).thenReturn(Optional.of(enseignant));
+        when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seance));
+        when(emargementRepository.existsBySeanceId(SEANCE_ID)).thenReturn(false);
+        stubQrValide();
+    }
+
+    @Test
+    void zone_unEmargementVenuDAilleurs_estRefuse_sansConsommerLeQr() {
+        try (MockedStatic<LocalTime> lt = mockStatic(LocalTime.class, CALLS_REAL_METHODS)) {
+            lt.when(() -> LocalTime.now(any(java.time.ZoneId.class))).thenReturn(FIXED_NOW);
+            etablissementAvecZone();
+            preparerEmargementEnLigne(seanceDansLaFenetre());
+            EmargementRequest req = buildRequest("qr-relaye", SIGNATURE_VALIDE);
+            placer(req, 0.02);   // ~2,2 km
+
+            assertThatThrownBy(() -> emargementService.emarger(USER_ID, req))
+                    .isInstanceOf(MetierException.class)
+                    .hasMessageContaining("de l'établissement");
+            verify(qrReplayGuard, never()).tryConsume(any(), any());
+            verify(emargementRepository, never()).save(any());
+            verify(journalSecurite).enregistrer(eq(TypeEvenement.POSITION_HORS_ZONE), any(), any(), any(),
+                    any(), org.mockito.ArgumentMatchers.argThat(d -> d.contains(" m de l'etablissement")
+                            && !d.contains("5.3") && !d.contains("-4.0")), any());
+        }
+    }
+
+    @Test
+    void zone_sansPosition_lEmargementEstRefuse() {
+        try (MockedStatic<LocalTime> lt = mockStatic(LocalTime.class, CALLS_REAL_METHODS)) {
+            lt.when(() -> LocalTime.now(any(java.time.ZoneId.class))).thenReturn(FIXED_NOW);
+            etablissementAvecZone();
+            preparerEmargementEnLigne(seanceDansLaFenetre());
+
+            assertThatThrownBy(() -> emargementService.emarger(USER_ID, buildRequest("qr", SIGNATURE_VALIDE)))
+                    .isInstanceOf(MetierException.class)
+                    .hasMessageContaining("autorisez la localisation");
+            verify(qrReplayGuard, never()).tryConsume(any(), any());
+        }
+    }
+
+    @Test
+    void zone_surPlace_lEmargementPasse() {
+        try (MockedStatic<LocalTime> lt = mockStatic(LocalTime.class, CALLS_REAL_METHODS)) {
+            lt.when(() -> LocalTime.now(any(java.time.ZoneId.class))).thenReturn(FIXED_NOW);
+            etablissementAvecZone();
+            Seance seance = seanceDansLaFenetre();
+            preparerEmargementEnLigne(seance);
+            when(qrReplayGuard.tryConsume(any(), any())).thenReturn(true);
+            when(seanceRepository.save(any())).thenReturn(seance);
+            when(emargementRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+            EmargementRequest req = buildRequest("qr", SIGNATURE_VALIDE);
+            placer(req, 0.001);  // ~110 m
+
+            assertThat(emargementService.emarger(USER_ID, req)).isNotNull();
+            assertThat(seance.getStatut()).isEqualTo(StatutSeance.EMARGE);
+        }
+    }
+
+    @Test
+    void zone_horsLigne_laPositionDuScanEstControleeALaSynchro() {
+        etablissementAvecZone();
+        Seance seance = seanceDansLaFenetre();
+        when(enseignantRepository.findByUserId(USER_ID)).thenReturn(Optional.of(enseignant));
+        when(seanceRepository.findById(SEANCE_ID)).thenReturn(Optional.of(seance));
+        when(emargementRepository.existsBySeanceId(SEANCE_ID)).thenReturn(false);
+        stubQrDiffereValide(scanLeJourA(10, 0));
+        EmargementHorsLigneRequest req = buildHorsLigne("qr-token");
+        req.setLatitude(ZONE_LAT + 0.05);   // ~5,5 km
+        req.setLongitude(ZONE_LON);
+        req.setPrecisionMetres(15.0);
+
+        assertThatThrownBy(() -> emargementService.emargerHorsLigne(USER_ID, req))
+                .isInstanceOf(MetierException.class)
+                .hasMessageContaining("sur place");
+        verify(qrReplayGuard, never()).tryConsume(any(), any());
     }
 }

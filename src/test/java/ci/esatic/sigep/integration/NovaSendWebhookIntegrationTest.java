@@ -4,9 +4,9 @@ import ci.esatic.sigep.config.DataInitializer;
 import ci.esatic.sigep.service.MobileMoneyService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -35,9 +35,9 @@ class NovaSendWebhookIntegrationTest {
     private static final String SECRET = "secret-de-test";
     private static final String CORPS = "{\"reference\":\"ref-abc\",\"status\":\"success\",\"amount\":13000,\"currency\":\"XOF\"}";
 
-    @MockBean private DataInitializer dataInitializer;
+    @MockitoBean private DataInitializer dataInitializer;
     /** Mocké : on teste la barrière de signature, pas la logique de crédit. */
-    @MockBean private MobileMoneyService mobileMoneyService;
+    @MockitoBean private MobileMoneyService mobileMoneyService;
 
     @Autowired private MockMvc mockMvc;
 

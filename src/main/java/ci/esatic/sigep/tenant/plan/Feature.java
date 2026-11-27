@@ -9,5 +9,7 @@ public enum Feature {
     SSO,
     /** Export des heures faites, par enseignant et par mois, a destination du service paie. */
     EXPORT_PAIE,
-    API_PUBLIQUE
+    API_PUBLIQUE,
+    /** Un agent (assistant IA) agit sur le tableau de bord à la place d'un administrateur. */
+    AGENT
 }

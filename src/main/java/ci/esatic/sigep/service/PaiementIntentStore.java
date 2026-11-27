@@ -72,8 +72,10 @@ public class PaiementIntentStore {
         if (i == null) return null;
         if (i.getStatut() != StatutIntent.EN_COURS) return i.getStatut();   // déjà traitée
 
+        boolean jeko = reference.startsWith(JekoService.PREFIXE_REFERENCE);
         boolean enregistre = paiementService.enregistrer(i.getEtablissementId(), i.getMois(),
-                montantRecu, "NovaSend " + reference, "NovaSend (Mobile Money)",
+                montantRecu, (jeko ? "Jèko " : "NovaSend ") + reference,
+                jeko ? "Jèko (Mobile Money)" : "NovaSend (Mobile Money)",
                 i.getPlan(), i.getDevise());
 
         i.setStatut(StatutIntent.REUSSI);
@@ -108,6 +110,11 @@ public class PaiementIntentStore {
         return repository.findByStatutOrderByDateCreationAsc(StatutIntent.EN_COURS);
     }
 
+    @Transactional(readOnly = true)
+    public Optional<PaiementIntent> derniere(Long etablissementId) {
+        return repository.findByEtablissementIdOrderByDateCreationDesc(etablissementId).stream().findFirst();
+    }
+
     /** Une initiation est-elle déjà en vol pour cet établissement ? (anti double-clic) */
     @Transactional(readOnly = true)
     public Optional<PaiementIntent> enCoursPourEtablissement(Long etablissementId) {
@@ -122,9 +129,15 @@ public class PaiementIntentStore {
      */
     @Transactional
     public int purger(LocalDateTime avant) {
+        // On efface le numéro, pas la transaction : l'historique des transactions de la plateforme
+        // doit rester complet. Une transaction à vérifier garde son numéro tant qu'elle n'est pas
+        // tranchée : il peut servir à la retrouver chez le fournisseur.
         List<PaiementIntent> vieilles =
-                repository.findByStatutNotAndDateCreationBefore(StatutIntent.EN_COURS, avant);
-        repository.deleteAll(vieilles);
+                repository.findByStatutNotAndDateCreationBefore(StatutIntent.EN_COURS, avant).stream()
+                        .filter(i -> i.getStatut() != StatutIntent.A_VERIFIER && i.getMsisdn() != null)
+                        .toList();
+        vieilles.forEach(i -> i.setMsisdn(null));
+        repository.saveAll(vieilles);
         return vieilles.size();
     }
 }

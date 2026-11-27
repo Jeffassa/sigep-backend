@@ -66,7 +66,7 @@ public class StripeService {
     public String creerSessionCheckout(Etablissement etab, Plan plan, int mois, long montant, String email)
             throws StripeException {
         Stripe.apiKey = secretKey;
-        String libelle = plan == Plan.ENTERPRISE ? "Enterprise" : "Pro";
+        String libelle = plan == Plan.ENTERPRISE ? "Entreprise" : "Pro";
         SessionCreateParams params = SessionCreateParams.builder()
                 .setMode(SessionCreateParams.Mode.PAYMENT)
                 // {CHECKOUT_SESSION_ID} est remplacé par Stripe : permet la réconciliation au retour.

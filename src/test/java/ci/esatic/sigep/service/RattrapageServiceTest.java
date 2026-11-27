@@ -61,7 +61,7 @@ class RattrapageServiceTest {
         salle   = Salle.builder().id(1L).libelle("A101").batiment("A").capacite(30).build();
 
         enseignant = Enseignant.builder()
-                .id(5L).matricule("ENS001").nom("Assale").prenom("Jean")
+                .id(5L).matricule("ENS001").nom("Kouadio").prenom("Jean")
                 .statut(StatutEnseignant.VALIDATED).user(user)
                 .build();
 
@@ -111,7 +111,7 @@ class RattrapageServiceTest {
 
         assertThat(result).isNotNull();
         assertThat(result.getStatut()).isEqualTo(StatutDemande.EN_ATTENTE);
-        assertThat(result.getEnseignantNom()).isEqualTo("Assale");
+        assertThat(result.getEnseignantNom()).isEqualTo("Kouadio");
         assertThat(result.getMatiereLibelle()).isEqualTo("Algo avancée");
     }
 

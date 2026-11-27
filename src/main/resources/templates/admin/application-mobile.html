@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('SIGEP | Application mobile')}"></head>
+<body>
+
+<div th:replace="~{admin/fragments :: topbar('enseignants')}"></div>
+
+<main class="max-w-[900px] mx-auto px-5 md:px-8 py-10 pb-36">
+
+    <div class="mb-8" data-reveal>
+        <p class="surtitre">Enseignants</p>
+        <h1 class="titre-page">Application mobile</h1>
+        <p class="chapeau">Les enseignants émargent depuis l'application Android SIGEP. Envoyez-leur le lien
+            pour l'installer : chacun le reçoit par e-mail, avec les étapes d'installation.</p>
+    </div>
+
+    <div data-flash th:if="${ok}" class="feuille mb-5 flex items-center gap-2 text-[13px]"
+         style="background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.35)">
+        <svg th:replace="~{admin/fragments :: coche}"></svg><span th:text="${ok}"></span>
+    </div>
+    <div data-flash th:if="${erreur}" class="feuille mb-5 text-[13px]"
+         style="background:rgba(178,74,46,.12);border-color:rgba(178,74,46,.35)">
+        <span th:text="${erreur}"></span>
+    </div>
+
+    <div th:if="${apk == null}" class="feuille" data-reveal>
+        <h2 class="titre-section">Bientôt disponible</h2>
+        <p class="text-muted text-[13px] mt-1">L'application n'est pas encore en téléchargement sur SIGEP.
+            Revenez dans quelques jours, ou écrivez à l'équipe SIGEP.</p>
+    </div>
+
+    <th:block th:if="${apk != null}">
+        <div class="feuille flex flex-col gap-4" data-reveal>
+            <div>
+                <h2 class="titre-section">SIGEP <span th:text="${apk.version}">1.2.1</span> pour Android</h2>
+                <p class="text-muted text-[13px] mt-1">
+                    Android 10 ou plus récent ·
+                    <span th:text="${tailleMo} + ' Mo'">50 Mo</span> ·
+                    mise en ligne le <span th:text="${#temporals.format(apk.dateDepot, 'dd/MM/yyyy')}">21/11/2026</span>
+                </p>
+            </div>
+            <a th:href="@{${cheminTelechargement}}" download
+               class="btn btn-gold h-12 px-6 flex items-center justify-center gap-2 w-fit text-[14px] font-medium">
+                <span class="material-symbols-rounded text-[20px]">download</span> Télécharger l'APK
+            </a>
+            <div>
+                <p class="text-[13px] font-medium">Lien à partager</p>
+                <code class="font-mono text-[13px] break-all" th:text="${lien}">https://sigep.store/telecharger/sigep-android.apk</code>
+                <p class="text-muted text-[12px] mt-1">Ce lien donne toujours la dernière version. Vous pouvez aussi
+                    le diffuser vous-même, par message ou sur un groupe.</p>
+            </div>
+        </div>
+
+        <div class="feuille mt-8 flex flex-col gap-4" data-reveal>
+            <div>
+                <h2 class="titre-section">Envoyer le lien par e-mail</h2>
+                <p class="text-muted text-[13px] mt-1" th:if="${!enseignants.isEmpty()}">
+                    <span th:text="${enseignants.size()}">12</span> enseignant(s) actif(s) avec une adresse e-mail.
+                    Ceux sans adresse n'apparaissent pas : complétez leur fiche dans la page Enseignants.
+                </p>
+                <p class="text-muted text-[13px] mt-1" th:if="${enseignants.isEmpty()}">
+                    Aucun enseignant actif n'a d'adresse e-mail. Complétez leur fiche dans la page Enseignants.
+                </p>
+            </div>
+
+            <form th:if="${!enseignants.isEmpty()}" th:action="@{/admin/enseignants/application-mobile/envoyer}" method="post"
+                  data-confirm="Envoyer le lien de l'application à tous les enseignants ?">
+                <button type="submit"
+                        class="btn glass h-11 px-5 rounded-2xl flex items-center gap-2 w-fit text-[13px] font-medium">
+                    <span class="material-symbols-rounded text-[18px]">forward_to_inbox</span> Envoyer à tous les enseignants
+                </button>
+            </form>
+
+            <form th:if="${!enseignants.isEmpty()}" th:action="@{/admin/enseignants/application-mobile/envoyer}" method="post"
+                  class="flex flex-col gap-3">
+                <label for="enseignantId" class="text-[13px] font-medium">Ou à un seul enseignant</label>
+                <div class="flex flex-wrap gap-3 items-center">
+                    <select id="enseignantId" name="enseignantId" required class="champ h-11 px-3 text-[13px]">
+                        <option th:each="x : ${enseignants}" th:value="${x.id}"
+                                th:text="${x.nom} + ' ' + ${x.prenom} + ' · ' + ${x.user.email}">Nom Prénom · adresse</option>
+                    </select>
+                    <button type="submit"
+                            class="btn glass h-11 px-5 rounded-2xl flex items-center gap-2 w-fit text-[13px] font-medium">
+                        <span class="material-symbols-rounded text-[18px]">send</span> Envoyer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </th:block>
+
+</main>
+
+<div th:replace="~{admin/fragments :: dock('enseignants')}"></div>
+<div th:replace="~{admin/fragments :: palette}"></div>
+<div th:replace="~{admin/fragments :: scripts}"></div>
+
+</body>
+</html>

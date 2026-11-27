@@ -1,0 +1,21 @@
+# Universités et grandes écoles publiques de Côte d'Ivoire, saisies par SIGEP d'après leurs textes
+# de création : le MESRS ne publie en ligne que la liste des établissements privés.
+# Format : catégorie;nom;ville. À compléter ici, puis « Actualiser les listes » sur la plateforme.
+UNIVERSITE_PUBLIQUE;Université Félix Houphouët-Boigny (UFHB);Abidjan
+UNIVERSITE_PUBLIQUE;Université Nangui Abrogoua (UNA);Abidjan
+UNIVERSITE_PUBLIQUE;Université Virtuelle de Côte d'Ivoire (UVCI);Abidjan
+UNIVERSITE_PUBLIQUE;Université Alassane Ouattara (UAO);Bouaké
+UNIVERSITE_PUBLIQUE;Université Jean Lorougnon Guédé (UJLoG);Daloa
+UNIVERSITE_PUBLIQUE;Université Peleforo Gon Coulibaly (UPGC);Korhogo
+UNIVERSITE_PUBLIQUE;Université de Man (UMan);Man
+UNIVERSITE_PUBLIQUE;Université de San-Pédro (USP);San-Pédro
+UNIVERSITE_PUBLIQUE;Université de Bondoukou (UB);Bondoukou
+GRANDE_ECOLE_PUBLIQUE;Institut National Polytechnique Félix Houphouët-Boigny (INP-HB);Yamoussoukro
+GRANDE_ECOLE_PUBLIQUE;École Supérieure Africaine des Technologies de l'Information et de la Communication (ESATIC);Abidjan
+GRANDE_ECOLE_PUBLIQUE;École Normale Supérieure (ENS);Abidjan
+GRANDE_ECOLE_PUBLIQUE;École Nationale Supérieure de Statistique et d'Économie Appliquée (ENSEA);Abidjan
+GRANDE_ECOLE_PUBLIQUE;École Nationale d'Administration (ENA);Abidjan
+GRANDE_ECOLE_PUBLIQUE;Institut National de la Jeunesse et des Sports (INJS);Abidjan
+GRANDE_ECOLE_PUBLIQUE;Institut National Supérieur des Arts et de l'Action Culturelle (INSAAC);Abidjan
+GRANDE_ECOLE_PUBLIQUE;Institut National de Formation des Agents de Santé (INFAS);Abidjan
+GRANDE_ECOLE_PUBLIQUE;Institut National de Formation Sociale (INFS);Abidjan

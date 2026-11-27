@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('SIGEP | Agent')}"></head>
+<body>
+
+<div th:replace="~{admin/fragments :: topbar('agent')}"></div>
+
+<main class="max-w-[1000px] mx-auto px-5 md:px-8 py-10 pb-36">
+
+    <div class="mb-8" data-reveal>
+        <p class="surtitre">Intégration</p>
+        <h1 class="titre-page">Agent</h1>
+        <p class="chapeau">Confiez des tâches du tableau de bord à un assistant : il agit avec vos droits, et tout ce qu'il fait est noté ici.</p>
+    </div>
+
+    <div data-flash th:if="${success}" class="feuille mb-5 flex items-center gap-2 text-[13px]" data-reveal
+         style="background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.35)">
+        <svg th:replace="~{admin/fragments :: coche}"></svg><span th:text="${success}">OK</span>
+    </div>
+    <div data-flash th:if="${error}" class="feuille mb-5 flex items-center gap-2 text-[13px]" data-reveal>
+        <span th:text="${error}">Erreur</span>
+    </div>
+
+    <!-- Montrée une seule fois : seule son empreinte est conservée. -->
+    <div th:if="${cleEnClair}" class="feuille mb-6" data-reveal>
+        <p class="font-mono text-[10px] uppercase tracking-wider text-muted mb-2">Clé de l'agent</p>
+        <p class="font-mono text-[15px] break-all mb-3" th:text="${cleEnClair}">sigep_agent_…</p>
+        <p class="text-[13px] text-muted">Copiez-la maintenant et rangez-la dans le coffre de votre assistant. Elle ne sera plus jamais affichée.</p>
+    </div>
+
+    <div th:if="${!agentDisponible}" class="feuille mb-6" data-reveal>
+        <p class="text-[14px]">L'agent fait partie du plan Entreprise.
+            <a th:href="@{/admin/abonnement}" class="underline">Voir les plans</a></p>
+    </div>
+
+    <section th:if="${agentDisponible}" class="feuille mb-6" data-reveal>
+        <h2 class="titre-section">Créer une clé</h2>
+        <p class="text-[13px] text-muted mb-4">L'agent agira en votre nom : il ne pourra rien faire que vous ne puissiez faire vous-même. Si votre compte perd ses droits, l'agent les perd aussi.</p>
+        <form th:action="@{/admin/agent/cles}" method="post" class="flex flex-col sm:flex-row gap-3 items-start sm:items-end">
+            <div class="flex-grow">
+                <label class="etiquette">Nom de l'agent</label>
+                <input type="text" name="libelle" maxlength="120" placeholder="Assistant du secrétariat"
+                       class="w-full h-11 px-4 champ"/>
+            </div>
+            <button type="submit" class="btn btn-ink h-11 px-5 rounded-xl font-medium whitespace-nowrap">Créer</button>
+        </form>
+    </section>
+
+    <section class="chapitre mb-6" data-reveal th:if="${agentDisponible or !cles.isEmpty()}">
+        <div class="chapitre-tete"><h2 class="titre-section">Clés</h2></div>
+        <div class="overflow-x-auto">
+            <table class="registre">
+                <thead>
+                <tr>
+                    <th>Nom</th>
+                    <th>Début</th>
+                    <th>Dernier appel</th>
+                    <th>État</th>
+                    <th class="text-right">Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:if="${cles.isEmpty()}">
+                    <td colspan="5" class="vide">Aucune clé pour le moment.</td>
+                </tr>
+                <tr th:each="c : ${cles}">
+                    <td th:text="${c.libelle}">Nom</td>
+                    <td class="code" th:text="${c.prefixe} + '…'">sigep_agent_…</td>
+                    <td class="discret"
+                        th:text="${c.derniereUtilisation != null} ? ${#temporals.format(c.derniereUtilisation, 'dd/MM/yyyy HH:mm')} : 'Jamais'">—</td>
+                    <td>
+                        <span th:if="${c.estActive()}" class="visa">Active</span>
+                        <span th:unless="${c.estActive()}" class="etat etat-discret">Révoquée</span>
+                    </td>
+                    <td class="text-right">
+                        <form th:if="${c.estActive()}" th:action="@{'/admin/agent/cles/' + ${c.id} + '/revoquer'}" method="post"
+                              data-confirm="Révoquer cette clé ? L'agent qui l'utilise ne pourra plus rien faire.">
+                            <button type="submit" class="btn glass h-9 px-4 rounded-lg text-[13px]">Révoquer</button>
+                        </form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="chapitre" data-reveal>
+        <div class="chapitre-tete"><h2 class="titre-section">Ce que l'agent a fait</h2></div>
+        <div class="overflow-x-auto">
+            <table class="registre">
+                <thead>
+                <tr>
+                    <th>Quand</th>
+                    <th>Action</th>
+                    <th>Résultat</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:if="${journal.isEmpty()}">
+                    <td colspan="3" class="vide">L'agent n'a encore rien fait.</td>
+                </tr>
+                <tr th:each="j : ${journal}">
+                    <td class="discret whitespace-nowrap" th:text="${#temporals.format(j.dateHeure, 'dd/MM/yyyy HH:mm')}">—</td>
+                    <td>
+                        <span th:text="${j.resume} ?: (${j.methode} + ' ' + ${j.chemin})">Action</span>
+                        <span th:if="${j.simulation}" class="etat etat-discret">Simulation</span>
+                    </td>
+                    <td>
+                        <span th:if="${j.estReussi()}" class="visa">Fait</span>
+                        <span th:unless="${j.estReussi()}" class="etat etat-discret" th:text="'Refusé (' + ${j.statutHttp} + ')'">Refusé</span>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+</main>
+
+<div th:replace="~{admin/fragments :: dock('agent')}"></div>
+<div th:replace="~{admin/fragments :: palette}"></div>
+<div th:replace="~{admin/fragments :: scripts}"></div>
+
+</body>
+</html>

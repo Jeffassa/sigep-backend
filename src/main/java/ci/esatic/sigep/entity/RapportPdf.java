@@ -42,7 +42,9 @@ public class RapportPdf implements TenantScoped {
 
     // Octets du PDF stockés en base (bytea) : le disque de l'hébergeur est éphémère
     // (fichier perdu au redéploiement/veille) -> la base est la source fiable du téléchargement.
-    @Column(name = "contenu_pdf")
+    // Longueur explicite : sans elle, une base générée par Hibernate (H2 des tests) borne la
+    // colonne à 255 octets. En production, la colonne vient de V5 (bytea, sans borne).
+    @Column(name = "contenu_pdf", length = 20 * 1024 * 1024)
     private byte[] contenuPdf;
 
     private Long tailleFichierOctets;

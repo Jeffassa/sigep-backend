@@ -1,13 +1,22 @@
 package ci.esatic.sigep.controller.web;
 
 import ci.esatic.sigep.entity.Etablissement;
+import ci.esatic.sigep.exception.MetierException;
 import ci.esatic.sigep.repository.EtablissementRepository;
 import ci.esatic.sigep.service.EtablissementCourantService;
+import ci.esatic.sigep.service.JetonEcranSalle;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import ci.esatic.sigep.service.ReseauEcran;
+import java.util.List;
 import org.springframework.web.servlet.view.RedirectView;
 
 import java.net.URLEncoder;
@@ -18,9 +27,9 @@ import java.nio.charset.StandardCharsets;
  * dans le HTML des pages (C4 durci, cf. audit).
  *
  * <ul>
- *   <li>{@code GET /admin/ecran-emargement/ouvrir} : résout la clé kiosque du tenant CÔTÉ SERVEUR
- *       et redirige (302) vers la page QR publique. La clé n'apparaît que dans l'onglet cible,
- *       jamais dans le DOM des pages admin. C'est la cible du bouton « Écran d'émargement ».</li>
+ *   <li>{@code GET /admin/ecran-emargement/ouvrir} : pose sur l'appareil un cookie signé à partir
+ *       de la clé kiosque, puis redirige (302) vers la page QR. La clé n'apparaît ni dans le DOM
+ *       des pages admin, ni dans l'adresse de l'écran. Cible du bouton « Écran d'émargement ».</li>
  *   <li>{@code GET /admin/ecran-emargement} : petite page de gestion (ouvrir + régénérer la clé).</li>
  *   <li>{@code POST /admin/ecran-emargement/regenerer-cle} : révoque la clé fuitée en en générant
  *       une nouvelle (rend la capacité réellement révocable depuis l'admin).</li>
@@ -34,23 +43,84 @@ public class EcranEmargementController {
 
     private final EtablissementCourantService etablissementCourantService;
     private final EtablissementRepository etablissementRepository;
+    private final JetonEcranSalle jetonEcranSalle;
+    private final ci.esatic.sigep.security.ClientIpResolver clientIpResolver;
+    private final ci.esatic.sigep.service.EcranEmargementService ecranEmargementService;
 
     @GetMapping("/admin/ecran-emargement")
-    public String page(Model model) {
+    public String page(Model model, HttpServletRequest request) {
         Etablissement e = etablissementCourantService.courant();
         model.addAttribute("ecranPret", e != null && e.getSlug() != null);
+        if (!model.containsAttribute("reseaux")) {
+            model.addAttribute("reseaux", e == null ? "" : e.getEcranReseaux());
+        }
+        model.addAttribute("ipActuelle", clientIpResolver.resolve(request));
+        model.addAttribute("zoneDefinie", e != null && e.isZoneDefinie());
+        if (!model.containsAttribute("coordonnees")) {
+            model.addAttribute("coordonnees", e != null && e.isZoneDefinie()
+                    ? String.format(java.util.Locale.ROOT, "%.6f, %.6f", e.getZoneLatitude(), e.getZoneLongitude())
+                    : "");
+        }
+        model.addAttribute("rayon", e != null && e.getZoneRayonMetres() != null
+                ? e.getZoneRayonMetres() : ci.esatic.sigep.service.ZoneEmargement.RAYON_DEFAUT);
+        model.addAttribute("rayons", List.of(100, 200, 300, 500, 1000));
         return "admin/ecran-emargement";
     }
 
-    /** Redirige vers la page QR du tenant, clé injectée côté serveur (jamais dans le DOM admin). */
+    /**
+     * Zone d'émargement : un enseignant dont le téléphone est hors de ce cercle ne peut pas
+     * émarger. « retirer » supprime le contrôle.
+     */
+    @PostMapping("/admin/ecran-emargement/zone")
+    public RedirectView enregistrerZone(@RequestParam(required = false) String coordonnees,
+                                        @RequestParam(required = false) Integer rayon,
+                                        @RequestParam(required = false) String retirer,
+                                        RedirectAttributes flash) {
+        if (etablissementCourantService.courant() == null) return new RedirectView("/admin/ecran-emargement?indispo=1");
+        if (retirer != null) {
+            ecranEmargementService.retirerZone();
+            return new RedirectView("/admin/ecran-emargement?zoneRetiree=1#zone");
+        }
+        String saisie = coordonnees == null ? "" : coordonnees.trim();
+        try {
+            ecranEmargementService.reglerZone(saisie, rayon);
+        } catch (MetierException ex) {
+            flash.addFlashAttribute("zoneInvalide", true);
+            flash.addFlashAttribute("coordonnees", saisie.length() > 80 ? saisie.substring(0, 80) : saisie);
+            return new RedirectView("/admin/ecran-emargement#zone");
+        }
+        return new RedirectView("/admin/ecran-emargement?zone=1#zone");
+    }
+
+    /** Réseau d'où l'écran peut s'afficher. Vide : partout où son cookie l'autorise. */
+    @PostMapping("/admin/ecran-emargement/reseau")
+    public RedirectView enregistrerReseau(@RequestParam(required = false) String reseaux,
+                                          RedirectAttributes flash) {
+        if (etablissementCourantService.courant() == null) return new RedirectView("/admin/ecran-emargement?indispo=1");
+        String saisie = reseaux == null ? "" : reseaux.trim();
+        try {
+            ecranEmargementService.reglerReseau(saisie);
+        } catch (MetierException ex) {
+            flash.addFlashAttribute("reseauInvalide", ex.getMessage());
+            flash.addFlashAttribute("reseaux", saisie.length() > ReseauEcran.LONGUEUR_MAX
+                    ? saisie.substring(0, ReseauEcran.LONGUEUR_MAX) : saisie);
+            return new RedirectView("/admin/ecran-emargement");
+        }
+        return new RedirectView("/admin/ecran-emargement?reseau=1");
+    }
+
+    /**
+     * Autorise cet appareil par un cookie, puis ouvre la page QR du tenant. La clé n'apparaît ni
+     * dans les pages admin, ni dans l'adresse de l'écran, ni dans son historique.
+     */
     @GetMapping("/admin/ecran-emargement/ouvrir")
-    public RedirectView ouvrir() {
+    public RedirectView ouvrir(HttpServletRequest request, HttpServletResponse response) {
         Etablissement e = assurerCle();
         if (e == null) {
             return new RedirectView("/admin/ecran-emargement?indispo=1");
         }
-        String url = "/api/qr/display?etab=" + enc(e.getSlug()) + "&key=" + enc(e.getKioskKey());
-        return new RedirectView(url);
+        response.addHeader(HttpHeaders.SET_COOKIE, jetonEcranSalle.cookie(e, request.isSecure()).toString());
+        return new RedirectView("/api/qr/display?etab=" + enc(e.getSlug()));
     }
 
     /** Régénère la clé kiosque (révocation d'une clé potentiellement fuitée). */

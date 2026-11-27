@@ -77,12 +77,7 @@ public class RattrapageService {
 
     @Transactional
     public RattrapageResponse accepterAvecSalle(Long demandeId, ci.esatic.sigep.entity.Salle salle) {
-        DemandeRattrapage demande = demandeRepository.findById(demandeId)
-                .orElseThrow(() -> new ResourceNotFoundException("Demande", "id", demandeId));
-
-        if (demande.getStatut() != StatutDemande.EN_ATTENTE) {
-            throw new IllegalArgumentException("Cette demande a deja ete traitee");
-        }
+        DemandeRattrapage demande = demandeEnAttente(demandeId);
 
         Seance seanceRattrapage = Seance.builder()
                 .date(demande.getDateSouhaitee())
@@ -107,17 +102,23 @@ public class RattrapageService {
 
     @Transactional
     public RattrapageResponse refuser(Long demandeId) {
-        DemandeRattrapage demande = demandeRepository.findById(demandeId)
-                .orElseThrow(() -> new ResourceNotFoundException("Demande", "id", demandeId));
-
-        if (demande.getStatut() != StatutDemande.EN_ATTENTE) {
-            throw new IllegalArgumentException("Cette demande a deja ete traitee");
-        }
+        DemandeRattrapage demande = demandeEnAttente(demandeId);
 
         demande.setStatut(StatutDemande.REFUSE);
         DemandeRattrapage saved = demandeRepository.save(demande);
         notifierDecision(saved, false);
         return toResponse(saved);
+    }
+
+    /** La demande, si elle attend encore une décision ; sinon un refus explicite. Sans effet. */
+    @Transactional(readOnly = true)
+    public DemandeRattrapage demandeEnAttente(Long demandeId) {
+        DemandeRattrapage demande = demandeRepository.findById(demandeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Demande", "id", demandeId));
+        if (demande.getStatut() != StatutDemande.EN_ATTENTE) {
+            throw new IllegalArgumentException("Cette demande a deja ete traitee");
+        }
+        return demande;
     }
 
     private void notifierDecision(DemandeRattrapage d, boolean accepte) {

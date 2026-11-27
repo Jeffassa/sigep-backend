@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('SIGEP | Plateforme · Transactions')}"></head>
+<body>
+
+<div th:replace="~{plateforme/fragments :: topbar('transactions')}"></div>
+
+<main class="max-w-[1240px] mx-auto px-5 md:px-8 py-10 pb-24">
+
+    <section class="mb-8" data-reveal>
+        <p class="surtitre">Plateforme · Facturation</p>
+        <h1 class="titre-page">Transactions</h1>
+        <p class="chapeau">Chaque paiement tenté en ligne, avec son statut. En temps normal, le fournisseur
+            tranche et l'abonnement suit. Une transaction « À vérifier » attend votre décision :
+            ouvrez-la, contrôlez-la chez le fournisseur, puis classez-la.</p>
+    </section>
+
+    <div data-flash th:if="${ok}" class="note note-ok">
+        <svg th:replace="~{admin/fragments :: coche}"></svg><span th:text="${ok}"></span>
+    </div>
+    <div data-flash th:if="${erreur}" class="note note-alerte"><span th:text="${erreur}"></span></div>
+
+    <!-- Relevé -->
+    <section class="releve" data-reveal>
+        <div>
+            <p class="releve-libelle">Transactions</p>
+            <p class="releve-chiffre" th:text="${total}">0</p>
+        </div>
+        <div>
+            <p class="releve-libelle">Payées</p>
+            <p class="releve-chiffre" th:text="${nbPayees}">0</p>
+            <p class="releve-note" th:text="${#numbers.formatInteger(encaisse,1,'WHITESPACE')} + ' ' + ${symbole} + ' encaissés en ligne'">0</p>
+        </div>
+        <div th:classappend="${nbAVerifier > 0} ? 'releve-urgent'">
+            <a th:href="@{/plateforme/transactions(statut='A_VERIFIER')}">
+                <p class="releve-libelle">À vérifier</p>
+                <p class="releve-chiffre" th:text="${nbAVerifier}">0</p>
+                <p class="releve-note">votre décision est attendue</p>
+            </a>
+        </div>
+        <div>
+            <p class="releve-libelle">En cours</p>
+            <p class="releve-chiffre" th:text="${nbEnCours}">0</p>
+            <p class="releve-note">suivies automatiquement</p>
+        </div>
+    </section>
+
+    <section class="chapitre" data-reveal>
+        <div class="chapitre-tete">
+            <nav class="onglets" aria-label="Filtrer par statut">
+                <a th:href="@{/plateforme/transactions(q=${q})}" th:classappend="${statutChoisi == null} ? 'actif'">
+                    Toutes<span class="compte" th:text="${total}">0</span></a>
+                <a th:each="s : ${statuts}" th:href="@{/plateforme/transactions(statut=${s.name()},q=${q})}"
+                   th:classappend="${(statutChoisi == s ? 'actif ' : '') + (s.name() == 'A_VERIFIER' and compte[s.name()] > 0 ? 'urgent' : '')}">
+                    <span th:text="${s.libelle}">Statut</span><span class="compte" th:text="${compte[s.name()]}">0</span></a>
+            </nav>
+            <form th:action="@{/plateforme/transactions}" method="get" class="recherche" role="search">
+                <input th:if="${statutChoisi != null}" type="hidden" name="statut" th:value="${statutChoisi.name()}"/>
+                <input type="search" name="q" th:value="${q}" class="champ text-[14px]"
+                       placeholder="Établissement ou référence" aria-label="Rechercher une transaction"/>
+                <button type="submit" class="btn glass h-10 px-4 text-[13px] font-medium">Rechercher</button>
+            </form>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="registre" data-mobile-keep="2">
+                <thead><tr>
+                    <th>Date</th><th>Établissement</th><th>Offre</th><th>Montant</th>
+                    <th>Moyen</th><th>Statut</th><th></th>
+                </tr></thead>
+                <tbody>
+                <tr th:each="t : ${transactions}" th:classappend="${t.statut.name() == 'A_VERIFIER'} ? 'a-verifier'">
+                    <td>
+                        <span th:text="${#temporals.format(t.dateCreation,'dd/MM/yyyy')}">--</span>
+                        <span class="sous" th:text="${#temporals.format(t.dateCreation,'HH:mm')}">--</span>
+                    </td>
+                    <td class="fort">
+                        <a th:if="${etabs[t.etablissementId] != null}" class="underline"
+                           th:href="@{/plateforme/etablissements/{s}(s=${etabs[t.etablissementId].slug})}"
+                           th:text="${etabs[t.etablissementId].nom}">Établissement</a>
+                        <span th:if="${etabs[t.etablissementId] == null}" class="discret"
+                              th:text="'Supprimé (#' + ${t.etablissementId} + ')'">Supprimé</span>
+                    </td>
+                    <td>
+                        <span th:text="${t.plan}">PRO</span>
+                        <span class="sous" th:text="${t.mois} + ' mois'">1 mois</span>
+                    </td>
+                    <td class="code" th:text="${#numbers.formatInteger(t.montantAttendu,1,'WHITESPACE')} + ' ' + ${t.devise}">0</td>
+                    <td>
+                        <span th:text="${t.provider} ?: '—'">WAVE</span>
+                        <span class="sous" th:text="${t.fournisseur}">Jèko</span>
+                    </td>
+                    <td><span class="etat" th:classappend="${t.statut.classe}" th:text="${t.statut.libelle}">Payée</span></td>
+                    <td>
+                        <a th:href="@{/plateforme/transactions/{r}(r=${t.reference})}"
+                           class="btn glass h-9 px-3 text-[13px] font-medium inline-flex items-center gap-1"
+                           th:text="${t.statut.name() == 'A_VERIFIER'} ? 'Traiter' : 'Ouvrir'">Ouvrir</a>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(transactions)}">
+                    <td colspan="7" class="vide" th:text="${total == 0} ? 'Aucune transaction pour le moment.' : 'Aucune transaction ne correspond.'">—</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <p th:if="${tronquee}" class="chapitre-note mt-3"
+           th:text="${nbFiltrees} + ' transactions : seules les ' + ${transactions.size()} + ' plus récentes sont affichées. Filtrez ou recherchez pour resserrer.'">—</p>
+        <p class="chapitre-note mt-3">Les paiements enregistrés à la main, hors ligne, figurent dans
+            <a th:href="@{/plateforme/paiements}" class="underline">Paiements</a>.</p>
+    </section>
+</main>
+
+<div th:replace="~{plateforme/fragments :: dock('transactions')}"></div>
+<div th:replace="~{admin/fragments :: scripts}"></div>
+
+</body>
+</html>

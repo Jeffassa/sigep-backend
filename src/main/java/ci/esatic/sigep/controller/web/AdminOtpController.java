@@ -37,30 +37,12 @@ public class AdminOtpController {
     private final MailService mailService;
     private final ci.esatic.sigep.service.JournalSecuriteService journalSecurite;
     private final ci.esatic.sigep.security.ClientIpResolver resolveurIp;
-
-    /**
-     * Empreinte SHA-256 du code de secours, en hexadécimal.
-     *
-     * <p>Le second facteur repose sur un courriel — donc sur un service tiers. Quand cet envoi
-     * tombe en panne, l'administrateur possède toujours son mot de passe mais ne peut plus entrer :
-     * sa clé fonctionne, le portier est absent. Ce code, conservé hors ligne par l'exploitant,
-     * ouvre l'accès sans dépendre d'aucun envoi.
-     *
-     * <p>Seule l'EMPREINTE est configurée : le code lui-même n'existe nulle part sur le serveur,
-     * et une fuite de la configuration ne le révélerait pas. Vide par défaut — sans valeur, la
-     * fonction n'existe pas. Il reste un SECOND facteur : le mot de passe est déjà exigé pour
-     * atteindre cette page, et le quota de tentatives s'applique aussi à lui.
-     */
-    @org.springframework.beans.factory.annotation.Value("${app.security.admin-otp.recovery-hash:}")
-    private String empreinteCodeSecours;
+    private final ci.esatic.sigep.service.AbonnementService abonnementService;
+    private final ci.esatic.sigep.repository.EtablissementRepository etablissementRepository;
 
     @GetMapping("/admin-otp")
-    public String page(HttpSession session, Model model) {
-        if (Boolean.TRUE.equals(session.getAttribute(VERIFIED))) return redirectAfterOtp(session);
-        // Sans cette information, une variable d'environnement absente et un code erroné
-        // produisaient le MÊME message : impossible de savoir lequel des deux on affronte.
-        // Savoir qu'un filet existe n'aide personne à le franchir.
-        model.addAttribute("secoursConfigure", secoursConfigure());
+    public String page(HttpSession session, Authentication authentication) {
+        if (Boolean.TRUE.equals(session.getAttribute(VERIFIED))) return redirectAfterOtp(session, authentication);
         return "admin/otp";
     }
 
@@ -69,6 +51,8 @@ public class AdminOtpController {
                            Authentication authentication,
                            jakarta.servlet.http.HttpServletRequest requete) {
         if (authentication == null || !estAdmin(authentication)) return "redirect:/admin-login?error=true";
+        // Envoi en double (clic pendant l'envoi automatique) : la session est déjà vérifiée, on poursuit.
+        if (Boolean.TRUE.equals(session.getAttribute(VERIFIED))) return redirectAfterOtp(session, authentication);
         Integer attempts = (Integer) session.getAttribute(ATTEMPTS);
         if (attempts == null) attempts = 0;
         String expected = (String) session.getAttribute(HASH);
@@ -77,29 +61,15 @@ public class AdminOtpController {
         boolean codeRecuParMail = expected != null && expires != null
                 && Instant.now().getEpochSecond() <= expires
                 && constantTimeEquals(expected, hash(code));
-        // Volontairement indépendant de la session : le cas d'usage est précisément celui où
-        // aucun code n'a pu être préparé ni expédié.
-        boolean codeDeSecours = secoursConfigure() && correspondAuSecours(code);
-        boolean valide = quotaOuvert && (codeRecuParMail || codeDeSecours);
-        if (valide) {
-            if (codeDeSecours) {
-                // Trace volontairement bruyante : un code de secours ne sert qu'en incident.
-                // S'il apparaît sans incident connu, c'est le signal d'une compromission.
-                log.warn("SECURITE : acces administrateur ouvert par CODE DE SECOURS pour {}",
-                        authentication.getName());
-                journal(requete, ci.esatic.sigep.entity.TypeEvenement.OTP_CODE_SECOURS,
-                        ci.esatic.sigep.entity.SeveriteEvenement.CRITIQUE, authentication,
-                        "Second facteur contourne par le code de secours");
-            } else {
-                journal(requete, ci.esatic.sigep.entity.TypeEvenement.CONNEXION_ADMIN_REUSSIE,
-                        ci.esatic.sigep.entity.SeveriteEvenement.INFO, authentication,
-                        "Connexion administrateur menee a son terme");
-            }
+        if (quotaOuvert && codeRecuParMail) {
+            journal(requete, ci.esatic.sigep.entity.TypeEvenement.CONNEXION_ADMIN_REUSSIE,
+                    ci.esatic.sigep.entity.SeveriteEvenement.INFO, authentication,
+                    "Connexion administrateur menee a son terme");
             session.setAttribute(VERIFIED, true);
             session.removeAttribute(HASH);
             session.removeAttribute(EXPIRES);
             session.removeAttribute(ATTEMPTS);
-            return redirectAfterOtp(session);
+            return redirectAfterOtp(session, authentication);
         }
         session.setAttribute(ATTEMPTS, attempts + 1);
         journal(requete, ci.esatic.sigep.entity.TypeEvenement.OTP_ECHOUE,
@@ -109,10 +79,9 @@ public class AdminOtpController {
                         ? ci.esatic.sigep.entity.SeveriteEvenement.CRITIQUE
                         : ci.esatic.sigep.entity.SeveriteEvenement.ALERTE,
                 authentication, "Tentative " + (attempts + 1) + " sur " + MAX_ATTEMPTS);
-        model.addAttribute("secoursConfigure", secoursConfigure());
         model.addAttribute("error", attempts + 1 >= MAX_ATTEMPTS
                 ? "Trop de tentatives. Reconnectez-vous pour demander un nouveau code."
-                : messageEchec(code));
+                : "Code invalide ou expiré.");
         return "admin/otp";
     }
 
@@ -127,11 +96,10 @@ public class AdminOtpController {
     @PostMapping("/admin-otp/renvoyer")
     public String renvoyer(HttpSession session, Authentication authentication, Model model) {
         if (authentication == null || !estAdmin(authentication)) return "redirect:/admin-login?error=true";
-        if (Boolean.TRUE.equals(session.getAttribute(VERIFIED))) return redirectAfterOtp(session);
+        if (Boolean.TRUE.equals(session.getAttribute(VERIFIED))) return redirectAfterOtp(session, authentication);
 
         Integer envois = (Integer) session.getAttribute(RESENDS);
         if (envois == null) envois = 0;
-        model.addAttribute("secoursConfigure", secoursConfigure());
         if (envois >= MAX_RESENDS) {
             model.addAttribute("error",
                     "Trop de renvois pour cette session. Reconnectez-vous pour repartir de zéro.");
@@ -160,74 +128,6 @@ public class AdminOtpController {
         mailService.envoyerCodeOtpAdmin(email, code);
     }
 
-    /**
-     * Message d'échec, aussi précis que la saisie le permet.
-     *
-     * <p>« Code invalide » est un mur : il ne dit pas s'il faut corriger une lettre, attendre un
-     * nouveau courriel, ou chercher ailleurs. Or une confusion est prévisible — le code de secours
-     * s'accompagne d'une EMPREINTE à installer sur le serveur, et les deux valeurs voyagent
-     * ensemble. Saisir l'empreinte à la place du code est l'erreur naturelle ; autant la nommer.
-     *
-     * <p>Aucune information exploitable n'est divulguée : on confirme seulement à quelqu'un qui
-     * possède déjà l'empreinte qu'il détient bien l'empreinte.
-     */
-    private String messageEchec(String code) {
-        String saisi = code == null ? "" : code.trim();
-        String attendu = empreinteEpuree();
-        if (attendu != null && attendu.equals(saisi.toLowerCase())) {
-            return "Vous avez saisi l'empreinte — la valeur installée sur le serveur — et non le "
-                 + "code de secours. Le code se présente en 5 groupes de 4 caractères séparés "
-                 + "par des tirets.";
-        }
-        if (saisi.matches("(?i)[0-9a-f]{64}")) {
-            return "Cette valeur a la forme d'une empreinte, pas d'un code de secours. Le code se "
-                 + "présente en 5 groupes de 4 caractères séparés par des tirets.";
-        }
-        return "Code invalide ou expiré.";
-    }
-
-    /** Un code de secours est-il configuré sur ce serveur ? */
-    private boolean secoursConfigure() {
-        return empreinteEpuree() != null;
-    }
-
-    /**
-     * Empreinte configurée, débarrassée du bruit de saisie.
-     *
-     * <p>Les interfaces d'hébergeur invitent à coller la valeur entre guillemets, et un
-     * copier-coller emporte volontiers un espace ou un retour à la ligne. Aucun de ces accidents
-     * ne doit faire échouer silencieusement un filet de sécurité.
-     */
-    private String empreinteEpuree() {
-        if (empreinteCodeSecours == null) return null;
-        String v = empreinteCodeSecours.trim().replaceAll("^[\"']|[\"']$", "").trim().toLowerCase();
-        return v.isEmpty() ? null : v;
-    }
-
-    /**
-     * Le code saisi correspond-il au code de secours ?
-     *
-     * <p>Deux formes sont acceptées, et c'est délibéré : la chaîne EXACTE, et sa forme canonique
-     * — majuscules, sans tiret ni espace. Un code long se retape un jour d'incident, souvent sur
-     * un téléphone : refuser {@code a7k2 9qmr…} pour une question de casse ou d'espacement
-     * transformerait le filet en piège, sans rien gagner en sécurité (l'entropie tient aux
-     * caractères, pas à leur casse).
-     *
-     * <p>Les deux formes sont comparées à l'empreinte configurée, ce qui laisse le choix de
-     * l'empreinte : celle de la chaîne exacte reste valable, celle de la forme canonique rend la
-     * saisie tolérante.
-     */
-    private boolean correspondAuSecours(String code) {
-        String attendu = empreinteEpuree();
-        if (attendu == null) return false;
-        String saisi = code == null ? "" : code.trim();
-        if (saisi.isEmpty()) return false;
-        String canonique = saisi.toUpperCase().replaceAll("[^A-Z0-9]", "");
-        // Les deux comparaisons sont à temps constant ; l'opérateur | évite le court-circuit,
-        // qui rendrait le temps de réponse dépendant de la forme saisie.
-        return constantTimeEquals(attendu, hash(saisi)) | constantTimeEquals(attendu, hash(canonique));
-    }
-
     /** Le code lui-meme n'est JAMAIS journalise : seul l'echec l'est. */
     private void journal(jakarta.servlet.http.HttpServletRequest requete,
                          ci.esatic.sigep.entity.TypeEvenement type,
@@ -241,12 +141,24 @@ public class AdminOtpController {
 
     private boolean estAdmin(Authentication authentication) {
         return authentication.getAuthorities().stream().anyMatch(a ->
-                "ROLE_ADMIN".equals(a.getAuthority()) || "ROLE_SUPER_ADMIN".equals(a.getAuthority()));
+                !"ROLE_ENSEIGNANT".equals(a.getAuthority()));
     }
 
-    private String redirectAfterOtp(HttpSession session) {
+    /**
+     * Un établissement dont l'accès est suspendu (abonnement expiré, ou désactivé) arrive
+     * directement sur la page d'abonnement : il n'a rien d'autre à faire tant qu'il n'a pas payé.
+     */
+    private String redirectAfterOtp(HttpSession session, Authentication authentication) {
         String target = (String) session.getAttribute(TARGET);
-        return "redirect:" + (target == null ? "/admin/dashboard" : target);
+        if (target == null) target = "/admin/dashboard";
+        if (target.startsWith("/admin/") && authentication != null
+                && authentication.getPrincipal() instanceof ci.esatic.sigep.entity.User u
+                && u.getEtablissement() != null
+                && etablissementRepository.findById(u.getEtablissement().getId())
+                        .map(abonnementService::accesSuspendu).orElse(false)) {
+            target = "/admin/abonnement";
+        }
+        return "redirect:" + target;
     }
 
     private static String hash(String value) {
